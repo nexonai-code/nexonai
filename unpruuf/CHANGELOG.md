@@ -5,6 +5,30 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑24 · iOS: first real green Xcode build — Podfile + asset catalog
+
+**What was done**
+
+First successful real Xcode build of `unpruuf/ios/UnpruufApp` (see this same
+date's README.md/HANDOFF.md updates for the Sources/Info.plist path
+restructure and Copy-Bundle-Resources gotcha found in the same session).
+Local project setup added two new tracked pieces: `UnpruufApp/Podfile`
+(CocoaPods manifest for `Tor.framework`) and the `Assets.xcassets` /
+`AppIcon.appiconset` / `AccentColor.colorset` catalog `Contents.json` files.
+
+**Bug / cause**
+
+`Podfile`'s `platform :ios, '16.0'` didn't match the app's real minimum —
+`ContactListView.swift` uses `ContentUnavailableView`, which needs iOS 17,
+not 16 as originally assumed in `README.md`.
+
+**Fix**
+
+Bumped `Podfile`'s `platform :ios` to `'17.0'`, matching `README.md`'s
+corrected deployment target.
+
+---
+
 ## 2026‑09‑24 · node-mesh-server: standalone Windows binary (NODE_MESH_SPEC.md §8, last open piece — spec now fully built)
 
 **What was done**
