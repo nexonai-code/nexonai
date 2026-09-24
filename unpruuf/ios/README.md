@@ -60,8 +60,10 @@ project file that silently won't open. Instead:
    - Product Name: `UnpruufApp`. Interface: SwiftUI. Language: Swift.
    - Bundle Identifier: `com.nexonai.unpruuf` (matches the Android app's
      package, `com.nexonai.unpruuf`, for consistent branding).
-   - Minimum deployment target: iOS 16 (uses `NavigationStack`,
-     `VisionKit.DataScannerViewController`).
+   - Minimum deployment target: **iOS 17** (uses `NavigationStack`,
+     `VisionKit.DataScannerViewController`, and `ContentUnavailableView` in
+     `ContactListView.swift` — confirmed on real hardware/Xcode this needs 17,
+     not 16 as originally assumed; iPhone 12 and newer all support it fine).
 
 3. **Add `UnpruufCore` as a local Swift Package dependency:**
    - Xcode → File → Add Package Dependencies → Add Local... → select the
@@ -84,7 +86,7 @@ project file that silently won't open. Instead:
    ```
    Edit the generated `Podfile`:
    ```ruby
-   platform :ios, '15.0'
+   platform :ios, '17.0'
 
    target 'UnpruufApp' do
      use_frameworks!
@@ -129,6 +131,11 @@ project file that silently won't open. Instead:
    `UnpruufApp/Info.plist` (relative to the target folder). Do **not** let
    Xcode generate a fresh one and merge into it — use the tracked file as-is,
    or every fresh setup silently loses the camera/Face ID permission strings.
+   **Real gotcha, confirmed on real hardware**: after pointing "Info.plist
+   File" at the tracked file, also check Build Phases → Copy Bundle
+   Resources — if `Info.plist` is listed there too, remove it (Xcode
+   sometimes adds it automatically when the file is dragged in), otherwise
+   the build fails with a "multiple commands produce Info.plist" error.
 
 7. **Build.** Physical device recommended for testing (Tor + camera QR
    scanning; `DataScannerViewController` isn't available on the Simulator —
