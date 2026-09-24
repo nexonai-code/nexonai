@@ -1,0 +1,26 @@
+# This project's Xcode/CocoaPods scaffolding is intentionally not tracked —
+# see README.md "Setup" section. Everyone generates it locally from Sources/.
+
+# Xcode project (generated locally, never committed — see README.md)
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+*.moved-aside
+DerivedData/
+
+# CocoaPods (generated locally via `pod install`, never committed)
+Pods/
+Podfile.lock
+
+# Swift Package Manager
+.build/
+.swiftpm/
+.swiftpm-build/
+
+# Xcode-generated Info.plist / build products
+*.xcframework/
+*.app/
+*.ipa
+
+.DS_Store
