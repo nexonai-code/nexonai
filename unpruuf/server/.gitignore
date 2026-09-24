@@ -1,0 +1,25 @@
+node_modules/
+dist/
+build/
+relay.sqlite
+relay.sqlite-*
+*.log
+
+# Generated at runtime (Windows path) — never ship a real auth token or the Tor identity keys.
+relay-identity.json
+torrc
+tor-hidden-service/
+tor-data/
+
+# Second-relay-for-testing instances (see mac/start-relay-b.command) — same sensitive runtime
+# data as above, just nested under its own data directory instead of server/ itself.
+instances/
+
+# The Tor Expert Bundle itself — downloaded automatically now (see torDownload.ts) or fetched by
+# hand per windows/README.md / mac/README.md. Never redistribute a copy of it in this repo.
+windows/tor/*.exe
+windows/tor/*.dll
+windows/tor/pluggable_transports/
+mac/tor/tor
+mac/tor/*.dylib
+mac/tor/pluggable_transports/

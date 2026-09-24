@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Three handoff nodes — store-and-forward, the relay's whole job in one mark. Kept to plain
+     circles (no traced artwork) so it stays legible at launcher size. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#8DA09D"
+        android:pathData="M 33,54 m -7,0 a 7,7 0 1,0 14,0 a 7,7 0 1,0 -14,0" />
+    <path
+        android:fillColor="#45D0BB"
+        android:pathData="M 54,54 m -9,0 a 9,9 0 1,0 18,0 a 9,9 0 1,0 -18,0" />
+    <path
+        android:fillColor="#8DA09D"
+        android:pathData="M 75,54 m -7,0 a 7,7 0 1,0 14,0 a 7,7 0 1,0 -14,0" />
+    <path
+        android:strokeColor="#8DA09D"
+        android:strokeWidth="2.5"
+        android:pathData="M 40,54 L 45,54 M 63,54 L 68,54" />
+</vector>

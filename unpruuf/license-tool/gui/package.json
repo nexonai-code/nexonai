@@ -1,0 +1,13 @@
+{
+  "name": "unpruuf-license-gui",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local GUI for issuing and tracking unpruuf license codes offline — signs with the private key next to license-tool/, no network call, no server.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

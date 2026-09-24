@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name wird pro Edition (Flavor) in build.gradle.kts via resValue gesetzt -->
+    <string name="tor_channel_name">unpruuf Tor Connection</string>
+    <string name="p2p_channel_name">unpruuf P2P Listener</string>
+</resources>

@@ -1,0 +1,7 @@
+This folder gets tor.exe (and its DLLs) automatically now — start-windows.bat downloads and
+installs them here on first run, so you normally don't need to do anything with this folder.
+
+If automatic download fails (blocked network, very old Windows), you can still extract the Tor
+Expert Bundle for Windows here by hand, so this folder ends up containing tor.exe and its DLLs
+directly (not a nested "Tor" subfolder). See ../README.md ("If the automatic Tor download doesn't
+work") for the download link and full instructions.

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>unpruuf | Light Mode & Document Context</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; color: #111827; font-family: 'Inter', -apple-system, sans-serif; }
+        .squircle {
+            border-radius: 22.5%; /* Apple-style squircle approximation */
+        }
+        .paper-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <header class="mb-12 border-b border-gray-300 pb-6">
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900 mb-2">unpruuf <span class="text-gray-500 font-light">| Light Theme & Document Context</span></h1>
+        <p class="text-gray-600 max-w-3xl">So verhält sich das "Eclipse"-Konzept in der realen Geschäftswelt: Pitch-Decks, NDAs, Briefköpfe und helle App-Screens. Invertierte Gradients für maximale Lesbarkeit und Autorität.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-12">
+
+        <!-- CONTEXT 1: FREISTEHEND (WEB / PITCH DECK) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col shadow-sm">
+            <h2 class="text-lg font-bold text-gray-900 mb-6">1. Freistehend (Webseite / Deck)</h2>
+            <div class="flex-grow flex items-center justify-center py-12 relative">
+                <!-- SVG Logo Inverted -->
+                <svg viewBox="0 0 100 100" class="w-40 h-40 relative z-10">
+                    <defs>
+                        <linearGradient id="fadeBlack" x1="0%" y1="100%" x2="0%" y2="0%">
+                            <stop offset="0%" stop-color="#000000" stop-opacity="1" />
+                            <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="url(#fadeBlack)" stroke-width="8" stroke-linecap="round" fill="none"/>
+                </svg>
+                <div class="absolute bottom-8 right-1/4 text-sm tracking-[0.3em] text-gray-900 font-mono font-bold">unpruuf</div>
+            </div>
+            <p class="text-sm text-gray-500 border-t border-gray-100 pt-4 mt-4">
+                <strong>Regel:</strong> Keine Rahmen. Kein Schnickschnack. Das Logo atmet frei auf der Fläche. Es verblasst ins Nichts (transparent).
+            </p>
+        </div>
+
+        <!-- CONTEXT 2: APP ICON (LIGHT THEME) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col shadow-sm">
+            <h2 class="text-lg font-bold text-gray-900 mb-6">2. App Icon (Light Mode / iOS Style)</h2>
+            <div class="flex-grow flex items-center justify-center gap-8 py-12 bg-gray-50 rounded-xl inner-shadow">
+                
+                <!-- White Icon -->
+                <div class="flex flex-col items-center gap-3">
+                    <div class="w-20 h-20 bg-white squircle flex items-center justify-center shadow-md border border-gray-100">
+                        <svg viewBox="0 0 100 100" class="w-12 h-12">
+                            <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="url(#fadeBlack)" stroke-width="10" stroke-linecap="round" fill="none"/>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-gray-500">Light Icon</span>
+                </div>
+
+                <!-- Dark Icon (Alternative) -->
+                <div class="flex flex-col items-center gap-3">
+                    <div class="w-20 h-20 bg-gray-900 squircle flex items-center justify-center shadow-lg border border-gray-800">
+                        <svg viewBox="0 0 100 100" class="w-12 h-12">
+                            <defs>
+                                <linearGradient id="fadeWhite" x1="0%" y1="100%" x2="0%" y2="0%">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="url(#fadeWhite)" stroke-width="10" stroke-linecap="round" fill="none"/>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-gray-500">Dark Icon</span>
+                </div>
+
+            </div>
+            <p class="text-sm text-gray-500 border-t border-gray-100 pt-4 mt-4">
+                <strong>Regel:</strong> App-Icons brauchen zwingend eine Box (Squircle). Wir können dem User die Wahl zwischen einem weißen und einem schwarzen Icon lassen.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- CONTEXT 3: REAL WORLD DOCUMENT (NDA / BRIEFKOPF) -->
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">3. Real-World Simulation: Briefkopf / NDA</h2>
+    
+    <div class="w-full max-w-4xl mx-auto bg-white paper-shadow border border-gray-200 p-12 md:p-16 rounded-sm mb-16">
+        <!-- Letterhead Header -->
+        <div class="flex justify-between items-start border-b-2 border-gray-900 pb-8 mb-12">
+            <!-- Logo in Print Context -->
+            <div class="flex items-end gap-3">
+                <svg viewBox="0 0 100 100" class="w-14 h-14">
+                    <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="url(#fadeBlack)" stroke-width="10" stroke-linecap="round" fill="none"/>
+                </svg>
+                <div class="text-lg tracking-[0.2em] text-gray-900 font-mono font-bold mb-1">unpruuf</div>
+            </div>
+            
+            <div class="text-right text-xs text-gray-500 leading-relaxed font-mono">
+                NexonAI Consulting S.R.L.<br>
+                Alba Iulia, Romania<br>
+                CUI: 52473028
+            </div>
+        </div>
+
+        <!-- Document Content -->
+        <h1 class="text-xl font-bold text-center mb-8 uppercase tracking-wider">Non-Disclosure & Enterprise Agreement</h1>
+        <div class="space-y-4 text-sm text-gray-700 leading-relaxed max-w-2xl mx-auto">
+            <p><strong>RECITALS:</strong> This Agreement applies strictly to the use of the unpruuf Professional Tier (GRAL-15) and establishes the zero-infrastructure liability boundaries between NexonAI Consulting S.R.L. and the client.</p>
+            <p>The client acknowledges that due to the nature of hourly identity rotation and absolute ephemeral storage (RAM-only), forensic recovery of communications is mathematically impossible after a 60-minute interval...</p>
+            
+            <!-- Watermark / Abstract decoration -->
+            <div class="flex justify-center my-12 opacity-5">
+                <svg viewBox="0 0 100 100" class="w-48 h-48">
+                    <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="#000" stroke-width="6" stroke-linecap="round" fill="none"/>
+                </svg>
+            </div>
+
+            <div class="grid grid-cols-2 gap-12 mt-16 pt-8 border-t border-gray-200">
+                <div>
+                    <div class="border-b border-gray-400 w-full h-8 mb-2"></div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Gabriel Hategan, CEO</div>
+                </div>
+                <div>
+                    <div class="border-b border-gray-400 w-full h-8 mb-2"></div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Authorized Signatory</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTEXT 4: TIER COLORS ON WHITE -->
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">4. Die Tiers auf weißem Grund</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- PRO -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 flex flex-col items-center shadow-sm">
+            <svg viewBox="0 0 100 100" class="w-20 h-20 mb-4">
+                <defs>
+                    <linearGradient id="fadeGoldWhite" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <!-- Dunkleres Gold für Kontrast auf Weiß -->
+                        <stop offset="0%" stop-color="#b8860b" stop-opacity="1" /> 
+                        <stop offset="100%" stop-color="#b8860b" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
+                <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="url(#fadeGoldWhite)" stroke-width="10" stroke-linecap="round" fill="none"/>
+            </svg>
+            <div class="text-sm tracking-widest text-[#b8860b] font-mono font-bold">pro</div>
+        </div>
+
+        <!-- COMPLIANCE -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 flex flex-col items-center shadow-sm">
+            <svg viewBox="0 0 100 100" class="w-20 h-20 mb-4">
+                <defs>
+                    <linearGradient id="fadeGreenWhite" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <!-- Dunkleres Grün für Kontrast auf Weiß -->
+                        <stop offset="0%" stop-color="#059669" stop-opacity="1" />
+                        <stop offset="100%" stop-color="#059669" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
+                <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="url(#fadeGreenWhite)" stroke-width="10" stroke-linecap="round" fill="none"/>
+            </svg>
+            <div class="text-sm tracking-widest text-[#059669] font-mono font-bold">compliance</div>
+        </div>
+
+        <!-- CLIENT -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 flex flex-col items-center shadow-sm">
+            <svg viewBox="0 0 100 100" class="w-20 h-20 mb-4">
+                <defs>
+                    <linearGradient id="fadeBlueWhite" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <!-- Kräftiges Blau für Kontrast auf Weiß -->
+                        <stop offset="0%" stop-color="#0284c7" stop-opacity="1" />
+                        <stop offset="100%" stop-color="#0284c7" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
+                <path d="M20,20 L20,60 A30,30 0 0,0 80,60 L80,20" stroke="url(#fadeBlueWhite)" stroke-width="10" stroke-linecap="round" fill="none"/>
+            </svg>
+            <div class="text-sm tracking-widest text-[#0284c7] font-mono font-bold">client</div>
+        </div>
+
+    </div>
+
+</body>
+</html>

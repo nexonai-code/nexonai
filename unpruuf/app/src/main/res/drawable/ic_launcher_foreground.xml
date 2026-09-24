@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Standard edition launcher icon foreground — the "Eclipse" mark (see
+     BRANDING.md): a single open crescent/arc, never filled, always a
+     gradient stroke fading from solid at the bottom to transparent at the
+     top. Replaces the old placeholder tile per BRANDING.md's "Not yet done"
+     queue item. Near-black squircle background (see ic_launcher_background)
+     + white-gradient mark — one of the two approved monochrome app-icon
+     variants for this mark.
+
+     The path below is BRANDING.md's canonical 100x100-viewBox path
+     (M20,20 L20,60 A30,30 0 0,0 80,60 L80,20), scaled 0.75x and re-centered
+     into Android's 108dp adaptive-icon canvas so it sits inside the OS's
+     masked safe zone (roughly the centered 66dp circle) instead of being
+     clipped at the edges by a round/squircle mask. Geometry and fade
+     direction must stay in sync with the pro/client variants below if this
+     mark is ever redrawn. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M31.5,29.25 L31.5,59.25 A22.5,22.5 0 0,0 76.5,59.25 L76.5,29.25"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="54" android:startY="81.75"
+                android:endX="54" android:endY="29.25"
+                android:startColor="#FFFFFFFF"
+                android:endColor="#00FFFFFF" />
+        </aapt:attr>
+    </path>
+</vector>

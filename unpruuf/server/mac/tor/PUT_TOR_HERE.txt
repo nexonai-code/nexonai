@@ -1,0 +1,7 @@
+Tor is downloaded here automatically the first time you run start-mac.command / `npm run mac`
+(the macOS Tor Expert Bundle, matching Apple Silicon or Intel automatically).
+
+If the automatic download doesn't work (e.g. your network blocks torproject.org), see
+mac/README.md for how to install it by hand — either via Homebrew (`brew install tor`, no files
+needed here at all) or by placing a `tor` binary directly in this folder and making it
+executable (`chmod +x tor`).

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Client edition launcher icon foreground — same "Eclipse" mark and
+     geometry as the Standard/Pro variants (see BRANDING.md and
+     main/res/drawable/ic_launcher_foreground.xml's doc comment for the
+     shared path derivation). White squircle background (see this flavor's
+     ic_launcher_background override) + blue-gradient mark, using
+     BRANDING.md's "Tier colors on white" Client hex (#0284c7). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M31.5,29.25 L31.5,59.25 A22.5,22.5 0 0,0 76.5,59.25 L76.5,29.25"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="54" android:startY="81.75"
+                android:endX="54" android:endY="29.25"
+                android:startColor="#FF0284C7"
+                android:endColor="#000284C7" />
+        </aapt:attr>
+    </path>
+</vector>

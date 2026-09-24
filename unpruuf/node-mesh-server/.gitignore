@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+node-mesh.sqlite
+node-mesh.sqlite-*
+*.log
+
+# Generated at runtime — never ship a real owner secret.
+node-mesh-identity.json

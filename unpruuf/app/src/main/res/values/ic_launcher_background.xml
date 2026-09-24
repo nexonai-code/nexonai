@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Standard edition: near-black squircle behind the white-gradient
+         "Eclipse" mark, one of BRANDING.md's two approved app-icon
+         variants (#111827-ish). Pro/Client override this to white — see
+         app/src/pro/res/values/ic_launcher_background.xml and
+         app/src/client/res/values/ic_launcher_background.xml — to match
+         BRANDING.md's "Tier colors on white" spec for their gold/blue marks. -->
+    <color name="ic_launcher_background">#111827</color>
+</resources>

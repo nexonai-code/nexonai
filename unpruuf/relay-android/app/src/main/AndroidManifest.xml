@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.nexonai.unpruuf.relay">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:usesCleartextTraffic="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.UnpruufRelay">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Owns the Tor hidden service, the embedded HTTP server, and the TTL sweep loop.
+             stopWithTask="false": swiping the app away must not take the relay down — other
+             people's queued messages depend on it staying up, same reasoning as the main
+             unpruuf app's TorForegroundService. -->
+        <service
+            android:name=".service.RelayService"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
+    </application>
+</manifest>

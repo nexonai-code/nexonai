@@ -1,0 +1,32 @@
+{
+  "name": "unpruuf-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Blind store-and-forward relay for unpruuf. Holds already Double-Ratchet-encrypted, outer-AES-wrapped packets addressed only by rotating wire tag; never sees plaintext or contact identity.",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "win": "tsc -p tsconfig.json && node dist/windows-start.js",
+    "mac": "tsc -p tsconfig.json && node dist/mac-start.js",
+    "build:exe": "node build-exe.js",
+    "test": "tsc -p tsconfig.json && node --test dist/app.test.js dist/store/blobStore.test.js dist/connectionString.test.js dist/identity.test.js dist/windowsTor.test.js dist/macTor.test.js dist/torDownload.test.js dist/sqliteNativeBinding.test.js dist/relayEventLog.test.js dist/relayStatus.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.19.2",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.9",
+    "@types/qrcode-terminal": "^0.12.2",
+    "esbuild": "^0.28.2",
+    "postject": "1.0.0-alpha.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  }
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same "Quiet Ink" ink tone as the main unpruuf app's launcher background, so the two
+         apps read as one family on a home screen without sharing any code/module. -->
+    <color name="ic_launcher_background">#0E1517</color>
+</resources>

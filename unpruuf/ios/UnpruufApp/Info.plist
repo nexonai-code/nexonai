@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Matches the Android app's versioning scheme (see unpruuf/app/build.gradle.kts /
+	     STATUS.md's "Versioning" section, and SettingsView.swift, which reads this back out) —
+	     keep CFBundleShortVersionString in step with Android's versionName ("1.01", "1.02", ...)
+	     on every delivery that touches app behavior on either platform. -->
+	<key>CFBundleShortVersionString</key>
+	<string>1.01</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSCameraUsageDescription</key>
+	<string>unpruuf uses the camera to scan a contact's or relay's QR pairing code. Nothing is recorded or stored.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>unpruuf uses Face ID to unlock the app instead of typing your PIN. Nothing is recorded or stored.</string>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+</dict>
+</plist>

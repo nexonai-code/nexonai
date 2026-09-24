@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  relay:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - relay-data:/app/data
+    # No ports: published — the only way in is through the tor sidecar's hidden service,
+    # which reaches this container over the shared network namespace below.
+    network_mode: "none"
+
+  tor:
+    build: ./tor
+    restart: unless-stopped
+    depends_on:
+      - relay
+    # Shares relay's network namespace so tor can reach 127.0.0.1:8787 directly (see
+    # tor/torrc) without the app ever being exposed on a Docker bridge network or clearnet.
+    network_mode: "service:relay"
+    volumes:
+      - relay-hs:/var/lib/tor/unpruuf_relay
+
+volumes:
+  relay-data:
+  relay-hs:

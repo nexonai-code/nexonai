@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Overrides main's near-black default — BRANDING.md's "Tier colors on
+         white" spec puts the blue-gradient Eclipse mark on a white ground. -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>

@@ -1,0 +1,6 @@
+-keep class com.nexonai.unpruuf.data.model.** { *; }
+-keep class com.nexonai.unpruuf.screens.qrpair.QrPairingPayload { *; }
+-keep class net.sqlcipher.** { *; }
+-keep class net.sqlcipher.database.** { *; }
+-dontwarn info.guardianproject.**
+-keep class info.guardianproject.** { *; }
