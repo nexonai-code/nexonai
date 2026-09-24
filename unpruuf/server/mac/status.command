@@ -3,6 +3,10 @@
 # waiting to be collected. Safe to run while the relay is running (including as a background
 # service) — it only reads the relay's own files.
 cd "$(dirname "$0")/.."
+source "mac/lib/ensure-node.sh"
+if [ -d node_modules ] && ! node -e "require('better-sqlite3')" >/dev/null 2>&1; then
+  rm -rf node_modules
+fi
 if [ ! -d node_modules ] || [ ! -f dist/mac-start.js ]; then
   echo "Building first..."
   npm install >/dev/null 2>&1
