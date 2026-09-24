@@ -84,7 +84,7 @@ no metadata leak to Apple, since instant polling on open covers it).
   **per-pair monotonic generation counter**, starting at 0 at pairing,
   tracked **per direction** (each side's own outgoing generation, and its
   best-known copy of the contact's generation — see
-  `unpruuf/ios/UnpruufApp/Sources/Services/Contact.swift`'s
+  `unpruuf/ios/UnpruufApp/UnpruufApp/Sources/Services/Contact.swift`'s
   `myGeneration`/`theirGeneration`). Same wire-tag formula as Android
   (`HMAC(pairSecret, "userId:X")`), `X` = `generation` instead of `hour`.
 - The new generation + relay is sent to the contact as

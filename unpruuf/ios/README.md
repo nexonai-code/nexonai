@@ -110,10 +110,25 @@ project file that silently won't open. Instead:
    confirmed to still be the current class names — isolated so a fix stays
    contained to that one file if some other detail doesn't match.
 
-6. **Drag in the app source:** add `UnpruufApp/Sources/` (all of it) and
-   `UnpruufApp/Info.plist` (or merge its `NSCameraUsageDescription` entry
-   into the one Xcode generated) into the new project, unchecking "Copy
-   items if needed" is fine either way — Xcode will offer to copy.
+6. **Drag in the app source:** add `UnpruufApp/UnpruufApp/Sources/` (all of
+   it) into the new project. Xcode 26+ puts new projects' own target folder
+   at `<project root>/UnpruufApp/` (nested under the project root of the
+   same name) — that's why the tracked path already has the doubled
+   `UnpruufApp/UnpruufApp/` segment; drop `Sources/` straight into that
+   folder so the physical files sit where Xcode already expects target
+   sources, instead of moving them again.
+
+   **Info.plist**: `UnpruufApp/UnpruufApp/Info.plist` is tracked in git with
+   the real `NSCameraUsageDescription`/`NSFaceIDUsageDescription`/orientation
+   keys already filled in — because the `.xcodeproj` itself is never
+   committed (see above), this file is the *only* place those settings
+   persist across machines. Recent Xcode defaults new projects to
+   `GENERATE_INFOPLIST_FILE = YES` (no physical file, keys live in Build
+   Settings instead) — turn that **off** for the target: Build Settings →
+   search "Generate Info.plist File" → No, then set "Info.plist File" to
+   `UnpruufApp/Info.plist` (relative to the target folder). Do **not** let
+   Xcode generate a fresh one and merge into it — use the tracked file as-is,
+   or every fresh setup silently loses the camera/Face ID permission strings.
 
 7. **Build.** Physical device recommended for testing (Tor + camera QR
    scanning; `DataScannerViewController` isn't available on the Simulator —
