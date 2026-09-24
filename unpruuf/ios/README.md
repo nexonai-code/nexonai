@@ -99,6 +99,16 @@ project file that silently won't open. Instead:
    trap; opening the `.xcodeproj` after this gives a spurious `no such
    module 'Tor'` even though everything installed correctly.
 
+   **Xcode 27 gotcha, confirmed on real hardware, 2026‑09‑24**: `pod install`
+   fails with `ArgumentError: Unable to find compatibility version string for
+   object version '110'` — CocoaPods' bundled `xcodeproj` gem doesn't yet
+   recognize Xcode 27's newer project file format
+   ([CocoaPods/CocoaPods#12927](https://github.com/CocoaPods/CocoaPods/issues/12927),
+   open as of this writing). Until that's fixed upstream, run
+   `./pod-install-xcode27-workaround.sh` instead of `pod install` directly —
+   it temporarily lowers `objectVersion` to a value CocoaPods understands
+   (harmless for Xcode itself) and then runs `pod install`.
+
    **One more real gotcha before this links**: a fresh Xcode project has
    "User Script Sandboxing" on by default (Xcode 15+), which blocks
    CocoaPods' framework-embed script with `Sandbox: rsync deny(1)
