@@ -14,16 +14,16 @@
 	<string>unpruuf uses the camera to scan a contact's or relay's QR pairing code. Nothing is recorded or stored.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>unpruuf uses Face ID to unlock the app instead of typing your PIN. Nothing is recorded or stored.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-	</dict>
 </dict>
 </plist>
