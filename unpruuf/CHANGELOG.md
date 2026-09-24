@@ -5,6 +5,37 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑24 · server: auto-fall-back to a working Node when system Node is too new
+
+**What was done**
+
+`mac/lib/ensure-node.sh`: `start-mac.command` and `mac/status.command` now
+detect an incompatible system Node and download a known-good LTS build once
+into a persistent per-project cache (`~/Library/Application Support/`, not
+`/tmp`), instead of requiring manual `PATH` juggling every session. Also
+detects a `node_modules` compiled against the wrong Node
+(`require('better-sqlite3')` smoke test) and rebuilds automatically.
+
+**Bug / cause**
+
+The only system Node available (v26.9.0) is too new for `better-sqlite3
+^11.3.0`'s compiled addon (missing V8 APIs `GetPrototype`/`GetIsolate`/
+`This`) — `npm run build` failed with real compiler errors.
+
+**Fix**
+
+See "What was done" above.
+
+**Verified on real hardware, 2026‑09‑24**: full cold start (`rm -rf
+node_modules`, no pre-existing fallback cache) — `start-mac.command` and
+`mac/status.command` both downloaded Node 20.18.1 automatically, built,
+and ran with zero manual intervention; system Node untouched, no `sudo`.
+Server reached 100% Tor bootstrap, hidden service published, `status.command`
+showed the same onion address as before the fix (identity persisted
+correctly across the change).
+
+---
+
 ## 2026‑09‑24 · iOS: first real green Xcode build — Podfile + asset catalog
 
 **What was done**
