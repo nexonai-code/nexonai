@@ -27,19 +27,26 @@ fun HomeScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("unpruuf", fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(8.dp))
-                        // Farbiges Editions-Badge — sofort sichtbar welche Version.
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text(
-                                AppEdition.label.uppercase(),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
+                        // Farbiges Editions-Badge — sofort sichtbar welche Version. Bewusst
+                        // ausgeblendet für Whistleblower: ein sichtbares "WHISTLEBLOWER"-Label
+                        // auf dem Homescreen wäre selbst ein Risiko für den Melder, falls jemand
+                        // mitliest — die App soll unauffällig wie jeder andere Messenger wirken
+                        // (siehe AppEdition.kt, Theme.kt fällt aus demselben Grund auf den
+                        // Standard-Teal-Akzent zurück statt eine eigene Farbe zu bekommen).
+                        if (!AppEdition.isWhistleblower) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text(
+                                    AppEdition.label.uppercase(),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 },

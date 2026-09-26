@@ -21,8 +21,18 @@ setInterval(() => {
   if (removed > 0) console.log(`[sweep] removed ${removed} expired blob(s)`);
 }, SWEEP_INTERVAL_MS).unref();
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`unpruuf-relay listening on 127.0.0.1:${PORT} (reach it only via the Tor sidecar)`);
+// Deliberately 127.0.0.1 by default — reach this relay only via its Tor hidden service, never
+// directly. RELAY_BIND_HOST is an explicit, documented escape hatch for a demo/LAN scenario
+// (e.g. the officer-app and a web-based reporter reaching this relay directly over Wi-Fi
+// without Tor — see officer-app/README.md's "Known gaps") — never set it to 0.0.0.0 on a
+// relay meant to be reached only through Tor, since that would defeat the whole point of
+// running it as a hidden service in the first place.
+const BIND_HOST = process.env.RELAY_BIND_HOST ?? "127.0.0.1";
+app.listen(PORT, BIND_HOST, () => {
+  const reachability = BIND_HOST === "127.0.0.1"
+    ? "reach it only via the Tor sidecar"
+    : `reachable directly on ${BIND_HOST} — RELAY_BIND_HOST is set, this is a deliberate demo/LAN mode, not the default`;
+  console.log(`unpruuf-relay listening on ${BIND_HOST}:${PORT} (${reachability})`);
 });
 
 process.on("SIGTERM", () => { store.close(); process.exit(0); });

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>unpruuf Whistleblower — Officer Dashboard</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header>
+  <h1>unpruuf <span>Whistleblower</span> — Officer Dashboard</h1>
+  <button class="secondary" id="refreshBtn">Refresh</button>
+</header>
+
+<main>
+  <div id="listView">
+    <div class="card">
+      <h2>Your pairing code</h2>
+      <div class="qr-box">
+        <img id="qrImg" alt="pairing QR" width="200" height="200" />
+        <div style="flex:2; min-width:280px;">
+          <p class="disclaimer">
+            A reporter scans this in the unpruuf app to start a case. They can only reach you —
+            never you them — until they choose to share the code their app shows back.
+          </p>
+          <textarea id="myCode" readonly rows="4"></textarea>
+        </div>
+      </div>
+      <p class="disclaimer" style="margin-top:12px;">
+        Reporting via a browser instead of the app? They'll also need the relay address:
+        <code id="relayUrlHint" style="color:var(--accent);"></code>
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Add a case (paste the reporter's code)</h2>
+      <div class="row">
+        <textarea id="pasteInput" placeholder="Paste the code the reporter's app showed after they scanned yours…"></textarea>
+      </div>
+      <div style="margin-top:10px;">
+        <button id="addCaseBtn">Add case</button>
+        <span id="addCaseError" style="color:var(--red); margin-left:10px; font-size:13px;"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cases</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th><th>Category</th><th>Opened</th><th>Ack deadline</th><th>Feedback deadline</th><th>Last activity</th>
+          </tr>
+        </thead>
+        <tbody id="casesBody"></tbody>
+      </table>
+      <p id="noCases" class="disclaimer hidden">No cases yet — add one above once a reporter shares their code.</p>
+    </div>
+  </div>
+
+  <div id="detailView" class="hidden">
+    <a class="back" id="backLink">&larr; Back to cases</a>
+    <div class="card">
+      <h2>Case <span id="caseIdLabel"></span></h2>
+      <div class="row">
+        <div>
+          <label>Status</label>
+          <select id="statusSelect">
+            <option value="new">New</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="in_progress">In progress</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div>
+          <label>Category</label>
+          <input id="categoryInput" placeholder="e.g. financial misconduct, harassment…" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div><span class="disclaimer">Acknowledge within 7 days (EU 2019/1937 Art. 9(1)(a)). Feedback within 3 months (Art. 9(1)(f)).</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Thread</h2>
+      <div class="thread" id="thread"></div>
+      <div class="row" style="margin-top:14px;">
+        <textarea id="replyInput" placeholder="Write a reply…"></textarea>
+      </div>
+      <div style="margin-top:10px;">
+        <button id="sendReplyBtn">Send reply</button>
+        <span id="replyError" style="color:var(--red); margin-left:10px; font-size:13px;"></span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

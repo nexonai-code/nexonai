@@ -294,12 +294,21 @@ fun QrPairScreen(
             }
             }
 
-            // Debug-build only: a remote tester can't scan a QR code in person. Copy the exact
-            // same string the QR encodes and send it through any channel (message, email) —
-            // the tester pastes it into the "paste their code" field below on their own device.
-            // Deliberately not offered in release builds: an in-person scan is a real physical-
+            // Debug-build fallback for testers who can't be scanned in person — copy the exact
+            // same string the QR encodes and send it through any channel (message, email), the
+            // tester pastes it into the "paste their code" field below on their own device.
+            // Not offered in ordinary release builds: an in-person scan is a real physical-
             // proximity check a copy/pasted code sent over another channel doesn't have.
-            if (BuildConfig.DEBUG) {
+            //
+            // ALSO enabled on Whistleblower release builds, deliberately — this is the NORMAL
+            // pairing completion step there, not a testing fallback: after scanning the
+            // compliance officer's QR (see below), this app has no way to be scanned back (the
+            // officer runs a laptop dashboard with no camera to scan a phone screen with), so
+            // the reporter's own resulting code has to reach the officer through the same
+            // manual channel the whistleblowing report itself will eventually go through —
+            // that's expected here, unlike the "skips physical proximity" caveat below, which is
+            // about a DIFFERENT contact's identity being spoofable, not about this.
+            if (BuildConfig.DEBUG || AppEdition.isWhistleblower) {
                 val debugCode = if (nodeMeshMode) {
                     viewModel.myNodeMeshQrPayload()?.let { nodeMeshPayloadToJson(it) }
                 } else if (crossPlatformMode) {
@@ -315,7 +324,10 @@ fun QrPairScreen(
                     ) {
                         Icon(Icons.Default.ContentCopy, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Copy code (debug — share manually)")
+                        Text(
+                            if (AppEdition.isWhistleblower) "Copy my code (paste it into the officer's dashboard)"
+                            else "Copy code (debug — share manually)"
+                        )
                     }
                 }
             }
@@ -359,16 +371,18 @@ fun QrPairScreen(
                 Text("Scan their code", fontWeight = FontWeight.Bold)
             }
 
-            // Debug-build only, the other half of the copy button above: paste a code a
-            // remote tester sent you instead of scanning them in person. Feeds the exact
-            // same dispatch (onion format, then cross-platform format) and the exact same
-            // "name this contact" flow as a camera scan — no separate contact-creation path.
-            if (BuildConfig.DEBUG) {
+            // The other half of the copy button above: paste a code sent through another
+            // channel instead of scanning it in person. Feeds the exact same dispatch (onion
+            // format, then cross-platform format) and the exact same "name this contact" flow
+            // as a camera scan — no separate contact-creation path. Enabled on Whistleblower
+            // release builds for the same reason as the copy button above (not a debug-only
+            // testing affordance there — see that button's doc comment).
+            if (BuildConfig.DEBUG || AppEdition.isWhistleblower) {
                 Spacer(Modifier.height(14.dp))
                 OutlinedTextField(
                     value = pastedCode,
                     onValueChange = { pastedCode = it },
-                    label = { Text("Paste their code (debug)") },
+                    label = { Text(if (AppEdition.isWhistleblower) "Paste the officer's code" else "Paste their code (debug)") },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )

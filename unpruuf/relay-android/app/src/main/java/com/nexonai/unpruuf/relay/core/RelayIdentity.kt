@@ -35,6 +35,19 @@ class RelayIdentity(context: Context) {
         get() = prefs.getString(KEY_TOR_PRIVKEY, null)
         set(value) { prefs.edit().putString(KEY_TOR_PRIVKEY, value).apply() }
 
+    /**
+     * Off by default — mirrors `unpruuf/server`'s `RELAY_BIND_HOST` env var: when true, the
+     * embedded HTTP server binds `0.0.0.0` instead of `127.0.0.1`, reachable directly by
+     * anything on the same Wi-Fi (an officer-app dashboard or a browser-based reporter, neither
+     * of which speaks Tor — see `unpruuf/officer-app/README.md`'s "Known gaps"), not just
+     * through the Tor hidden service. A deliberate, explicit demo/LAN opt-in — leave this off
+     * for any real deployment, since it exposes the relay's queue to anyone on that network
+     * (still bearer-token-gated, but no longer hidden-service-anonymous on the receiving end).
+     */
+    var lanAccessEnabled: Boolean
+        get() = prefs.getBoolean(KEY_LAN_ACCESS, false)
+        set(value) { prefs.edit().putBoolean(KEY_LAN_ACCESS, value).apply() }
+
     /** Forces a fresh token — "credentials compromised, rotate them" (mirrors identity.ts's
      *  --regenerate flag). Every device paired with the OLD token loses access immediately;
      *  the UI must make that consequence explicit before calling this. */
@@ -60,5 +73,6 @@ class RelayIdentity(context: Context) {
         const val KEY_AUTH_TOKEN = "auth_token"
         const val KEY_TTL_HOURS = "ttl_hours"
         const val KEY_TOR_PRIVKEY = "tor_privkey"
+        const val KEY_LAN_ACCESS = "lan_access_enabled"
     }
 }

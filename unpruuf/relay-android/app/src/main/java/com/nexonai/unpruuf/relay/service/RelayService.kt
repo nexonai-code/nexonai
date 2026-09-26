@@ -93,6 +93,9 @@ class RelayService : Service() {
     private val _bridgeStatus = MutableStateFlow<String?>(null)
     val bridgeStatus: StateFlow<String?> = _bridgeStatus.asStateFlow()
 
+    private val _lanAccessEnabled = MutableStateFlow(false)
+    val lanAccessEnabled: StateFlow<Boolean> = _lanAccessEnabled.asStateFlow()
+
     override fun onCreate() {
         super.onCreate()
         identity = RelayIdentity(applicationContext)
@@ -102,6 +105,7 @@ class RelayService : Service() {
         _authToken.value = identity.authToken
         _bridgesEnabled.value = bridgeManager.isEnabled()
         _bridgeText.value = bridgeManager.getBridgeText()
+        _lanAccessEnabled.value = identity.lanAccessEnabled
         torManager = RelayTorManager(
             context = applicationContext,
             getPrivKey = { identity.torPrivKey },
@@ -145,7 +149,8 @@ class RelayService : Service() {
 
     private fun startRelay() {
         if (httpServer == null) {
-            httpServer = RelayHttpServer(RelayConstants.LOCAL_HTTP_PORT, blobStore) { identity.authToken }
+            val bindHost = if (identity.lanAccessEnabled) "0.0.0.0" else "127.0.0.1"
+            httpServer = RelayHttpServer(RelayConstants.LOCAL_HTTP_PORT, blobStore, { identity.authToken }, bindHost)
             runCatching { httpServer?.start() }
         }
         torManager.start()
@@ -184,6 +189,25 @@ class RelayService : Service() {
     fun setTtlHours(hours: Int) {
         identity.ttlHours = hours
         _ttlHours.value = identity.ttlHours
+    }
+
+    /**
+     * Toggles whether the embedded HTTP server binds `0.0.0.0` (LAN-reachable, for a Node
+     * officer-app or browser-based reporter with no Tor client of their own) instead of the
+     * default `127.0.0.1` (Tor-hidden-service-only) — see RelayIdentity.lanAccessEnabled's doc
+     * comment. NanoHTTPD binds its listening address at construction time, so applying this
+     * means tearing down and recreating the HTTP server, not just flipping a flag on the live
+     * instance — the Tor hidden service itself (and its onion address / already-paired
+     * contacts) is completely untouched by this, only the plain-HTTP listener is affected.
+     */
+    fun setLanAccessEnabled(enabled: Boolean) {
+        identity.lanAccessEnabled = enabled
+        _lanAccessEnabled.value = enabled
+        if (httpServer != null) {
+            runCatching { httpServer?.stop() }
+            httpServer = null
+            startRelay()
+        }
     }
 
     /** Manual, immediate reset — clears every queued message right now, regardless of TTL. */

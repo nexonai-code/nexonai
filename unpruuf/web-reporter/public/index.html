@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>unpruuf Whistleblower — Report in your browser</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header>
+  <h1>unpruuf <span>Whistleblower</span></h1>
+  <span class="subtitle">Browser reporting — no app install</span>
+</header>
+
+<div class="disclaimer-banner">
+  <strong>Read this first.</strong> This browser page gives you weaker protection than the
+  unpruuf app: no Tor by default (your network provider can see you're talking to this relay,
+  even though it can't read what's said), your device's normal storage keeps this conversation
+  until you delete it below (the app instead keeps messages only in RAM and wipes them), and
+  there's no protection against a compromised or monitored device/browser. If your organization
+  faces retaliation risk, prefer the unpruuf Android app over this page, and consider using
+  <a href="https://www.torproject.org/download/" target="_blank" rel="noopener">Tor Browser</a>
+  for an extra layer this page cannot provide on its own. Content is still end-to-end encrypted
+  either way — the relay operator and network observers cannot read your report.
+</div>
+
+<main>
+  <div id="setupView">
+    <div class="card">
+      <h2>Start a new report</h2>
+      <label>Compliance officer's pairing code</label>
+      <textarea id="officerCodeInput" rows="4" placeholder="Paste the code the officer's dashboard showed (or that was printed/shared with you)…"></textarea>
+      <label>Relay address</label>
+      <input id="relayUrlInput" placeholder="e.g. http://192.168.1.50:8787 — ask whoever gave you the pairing code" />
+      <div style="margin-top:14px;">
+        <button id="startBtn">Start report</button>
+        <span id="setupError" class="error"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="chatView" class="hidden">
+    <div class="card">
+      <h2>Your code — share this with the officer to receive replies</h2>
+      <textarea id="myCodeBox" readonly rows="4"></textarea>
+      <p class="hint">
+        Nobody can reply to you until you share this. It contains no information about who you
+        are — only random keys generated in this browser just now.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Conversation</h2>
+      <div class="thread" id="thread"></div>
+      <textarea id="composeInput" rows="3" placeholder="Write your report or reply…"></textarea>
+      <div style="margin-top:10px;">
+        <button id="sendBtn">Send</button>
+        <span id="sendError" class="error"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Danger zone</h2>
+      <p class="hint">Deletes everything this page remembers on this device — your identity, the case, and the message history. Do this if you're using a shared or borrowed device.</p>
+      <button id="resetBtn" class="danger">Delete everything from this browser</button>
+    </div>
+  </div>
+</main>
+
+<script src="bundle.js"></script>
+</body>
+</html>

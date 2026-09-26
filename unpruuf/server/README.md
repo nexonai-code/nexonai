@@ -50,7 +50,15 @@ The connection string / QR encodes both the address and the token together:
 ## API
 
 Only meant to be reached over the relay's own Tor hidden service. `/health` is unauthenticated;
-everything else requires the bearer token described above.
+everything else requires the bearer token described above. CORS is wide open (`Access-Control-
+Allow-Origin: *`) since every request is authenticated by the bearer token alone, not a cookie —
+this is what lets a browser-based client (`unpruuf/web-reporter/`) call the relay directly from
+whatever origin it's hosted on.
+
+By default the HTTP listener binds `127.0.0.1` only — reach it exclusively via the Tor sidecar.
+Set `RELAY_BIND_HOST` (e.g. `0.0.0.0`) to open it up for a LAN/demo scenario where a Node-based
+peer without Tor (the officer-app, or a browser) needs to reach it directly — a deliberate,
+explicit opt-in, never the production default (see `officer-app/README.md`'s "Known gaps").
 
 - `POST /v1/relay` — `{ "tag": "<wire tag>", "blob": "<base64>" }` → `201 { "stored": true }`.
 - `GET /v1/fetch?tag=<wire tag>` → `200 { "blobs": ["<base64>", ...] }`, and deletes them.

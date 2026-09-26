@@ -91,6 +91,21 @@ android {
             buildConfigField("String", "EDITION", "\"client\"")
             resValue("string", "app_name", "unpruuf Client")
         }
+        // Compliance/whistleblower product line (separate from Standard/Pro/Client — see
+        // CROSS_PLATFORM_PLAN.md "Two separate product lines" and AppEdition.kt). Deliberately
+        // has NO app/src/whistleblower/res of its own and no dedicated accent color (Theme.kt
+        // falls through to the Standard teal scheme) — an app that visibly announces itself as
+        // "Whistleblower" on a reporter's home screen or launcher is itself a safety risk if
+        // someone else glances at the phone. It inherits Standard's launcher icon/colors
+        // unchanged; the only visible difference is in Settings → About (deliberately NOT
+        // glanceable) and the pairing/relay behavior (see RelayManager.isMandatory()).
+        create("whistleblower") {
+            dimension = "edition"
+            applicationIdSuffix = ".whistleblower"
+            versionNameSuffix = "-whistleblower"
+            buildConfigField("String", "EDITION", "\"whistleblower\"")
+            resValue("string", "app_name", "unpruuf")
+        }
     }
 
     packaging {

@@ -1,6 +1,7 @@
 package com.nexonai.unpruuf.domain.network
 
 import android.content.Context
+import com.nexonai.unpruuf.domain.AppEdition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -56,14 +57,22 @@ class RelayManager @Inject constructor(
         return true
     }
 
-    /** True only when the relay is enabled (mode != OFF) AND a full, usable address+token pair
-     *  is configured. */
+    /** True only when the relay is enabled (mode != OFF, or [isMandatory] already forces it on —
+     *  see that function's doc comment) AND a full, usable address+token pair is configured. */
     fun isUsable(): Boolean =
-        getMode() != RelayMode.OFF && getRelayOnion().endsWith(".onion") && getAuthToken().isNotEmpty()
+        (isMandatory() || getMode() != RelayMode.OFF) &&
+            getRelayOnion().endsWith(".onion") && getAuthToken().isNotEmpty()
 
     /** Convenience for [P2PNetworkManager]'s delivery logic — true only when relay use should
-     *  bypass LAN/Tor-direct entirely for every contact, not just as a fallback. */
-    fun isMandatory(): Boolean = getMode() == RelayMode.MANDATORY
+     *  bypass LAN/Tor-direct entirely for every contact, not just as a fallback.
+     *
+     *  Forced permanently true for [AppEdition.WHISTLEBLOWER] — this product line's whole
+     *  compliance pitch is "anonymity through architecture, not a setting a reporter could
+     *  misconfigure or a support agent could talk them into turning off" (see COMPLIANCE.md).
+     *  Deliberately not just a different DEFAULT for [getMode]'s stored preference: the
+     *  Settings relay-mode picker itself must have no effect here, so nothing in the UI can
+     *  ever put a whistleblower build into a direct-P2P/onion-address-exposing mode at all. */
+    fun isMandatory(): Boolean = AppEdition.isWhistleblower || getMode() == RelayMode.MANDATORY
 
     /** Reconstructs the connection string for the CURRENTLY configured relay — the inverse of
      *  [applyConnectionString]. Used by cross-platform pairing (see CrossPlatformPairing.kt) to

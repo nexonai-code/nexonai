@@ -54,6 +54,7 @@ fun RelayScreen(service: RelayService?) {
     val bridgeText by service.bridgeText.collectAsState()
     val bridgeStatus by service.bridgeStatus.collectAsState()
     val activityLog by service.activityLog.collectAsState()
+    val lanAccessEnabled by service.lanAccessEnabled.collectAsState()
 
     var showWipeConfirm by remember { mutableStateOf(false) }
     var showRotateConfirm by remember { mutableStateOf(false) }
@@ -350,6 +351,36 @@ fun RelayScreen(service: RelayService?) {
                                 service.clearBridgeStatus()
                             }
                         }
+                    }
+                }
+            }
+
+            // ─── LAN access (demo/local-network mode, no Tor) ────────────────
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Allow LAN access",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "Also reachable directly on this Wi-Fi, not just via Tor — " +
+                                "for a laptop or browser client with no Tor of its own. Off by " +
+                                "default; leave off unless you know you need it (see officer-app/README.md).",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = lanAccessEnabled,
+                            onCheckedChange = { service.setLanAccessEnabled(it) }
+                        )
                     }
                 }
             }
