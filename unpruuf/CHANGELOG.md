@@ -5,6 +5,91 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑26 · unpruuf Whistleblower: new compliance product line (Android edition, officer-app, web-reporter)
+
+**What was done**
+
+New product line, separate from the Standard/Pro/Client consumer messenger (see
+CROSS_PLATFORM_PLAN.md's "enterprise compliance/whistleblower... product line
+scoped separately"), built for a pilot with Universitatea 1 Decembrie 1918 Alba
+Iulia: an EU Directive 2019/1937-shaped whistleblowing channel — anonymous
+reporter → compliance officer, with the officer side keeping a real case record
+(status, 7‑day acknowledgement deadline, 3‑month feedback deadline) instead of
+just being an anonymous chat.
+
+**What was added**
+
+- **Android — `whistleblower` edition** (new Gradle flavor, `app/build.gradle.kts`):
+  - `AppEdition.kt` — `WHISTLEBLOWER`/`OFFICER` constants; pairing rule is
+    Whistleblower↔Officer only, fully isolated from Standard/Pro/Client.
+  - `RelayManager.kt` — `isMandatory()`/`isUsable()` forced permanently true for
+    this edition: relay-only routing is architecture here, not a Settings toggle
+    a reporter (or a support agent) could turn off.
+  - `HomeScreen.kt` — the coloured edition badge is suppressed for this edition;
+    a visible "WHISTLEBLOWER" label on a reporter's home screen would itself be
+    a safety risk if someone else glances at the phone. No dedicated launcher
+    icon/accent colour either, for the same reason — it inherits Standard's look.
+  - `QrPairScreen.kt` — the existing debug-only "copy my code / paste their code"
+    flow is also enabled on Whistleblower release builds: it's the NORMAL pairing
+    step here (the officer's laptop dashboard has no camera to scan the phone
+    back with), not a testing affordance.
+  - **Not build-verified** — no Android SDK in this environment, same standing
+    caveat as every other Android change in this project's history (see STATUS.md
+    §3). Structurally reviewed only.
+- **`unpruuf/officer-app/`** (new) — the compliance officer's client, run on a
+  laptop: a genuine Double Ratchet peer (direct TypeScript port of
+  `domain/network/ratchet/*`, `RatchetFrame`, `NetworkObfuscation`,
+  `MessagePayload`, `CryptoManager`'s outer AES-256-GCM envelope, and the
+  cross-platform pairing QR codec) plus a local case-management dashboard
+  (Express + a small vanilla-JS UI) with the deadline fields above,
+  encrypted-at-rest (AES-256-GCM, key derived from an officer password via
+  scrypt). Pairing is one-sided-QR + pasted-code, since a laptop dashboard
+  can't scan a phone screen back — see its own README.md for the full flow.
+- **`unpruuf/web-reporter/`** (new) — a no-install, any-browser fallback
+  reporting channel: the same protocol, reimplemented independently in
+  browser-safe TypeScript (`@noble/curves`/`@noble/hashes`/`@noble/ciphers`
+  instead of Node/JVM primitives), bundled to one self-contained `bundle.js`
+  (esbuild, no CDN dependency at runtime). Carries an explicit in-page
+  disclaimer: weaker anonymity than the native app (no Tor by default, no
+  RAM-only/wipe-on-background, no device-compromise detection) — a deliberate
+  fallback channel, not a security-equivalent one.
+- **`unpruuf/server/`** — `RELAY_BIND_HOST` env var (default unchanged,
+  `127.0.0.1`) so an operator can opt a relay into LAN-reachability for a
+  Node/browser peer with no Tor client of its own; permissive CORS on every
+  route (safe — auth is bearer-token-only, not cookie-based).
+- **`unpruuf/relay-android/`** — the same LAN-reachability opt-in as a Settings
+  toggle ("Allow LAN access", off by default, `RelayIdentity.lanAccessEnabled`)
+  + the same CORS headers on every response.
+
+**Verification**
+
+Real, not just code review — the first time this project has had a genuine
+build+run loop for a *new* piece outside the Node relay:
+- X25519, HKDF-SHA256, XChaCha20-Poly1305 and AES-256-GCM cross-checked
+  byte-for-byte against a real `com.google.crypto.tink:tink:1.11.0` jar /
+  `javax.crypto.Cipher` for fixed test vectors, including the pure-JS
+  `@noble/ciphers` AES-GCM path web-reporter uses (a second, independent
+  library from what officer-app/Node uses for the same primitive).
+- `officer-app`'s TypeScript compiles clean (`npx tsc`, zero errors).
+- A full pairing → report → officer reply → reporter decrypt round trip run
+  against a real `server/` relay instance, using officer-app's own modules to
+  simulate the reporter side.
+- The SAME round trip re-run with web-reporter's independently-written modules
+  standing in for the reporter, against officer-app's real modules for the
+  officer side — two separately-implemented crypto ports agreeing end-to-end
+  over a real relay, not one codebase trusting its own math.
+- `server/`'s existing test suite (50/50) still passes after the
+  `RELAY_BIND_HOST`/CORS changes.
+
+**Not verified:** the Android app itself (see above); officer-app/web-reporter
+against the REAL Android app (only simulated so far); relay-android's Kotlin
+changes (no Android SDK here, same as always); Windows execution of any of the
+new `.bat` scripts (written on Linux, structurally reviewed only — see each
+new folder's README "Known gaps" section, and `unpruuf/WHISTLEBLOWER_DEMO.md`
+for the full demo runbook and setup steps).
+
+---
+
 ## 2026‑09‑24 · node-mesh-server: standalone Windows binary (NODE_MESH_SPEC.md §8, last open piece — spec now fully built)
 
 **What was done**
