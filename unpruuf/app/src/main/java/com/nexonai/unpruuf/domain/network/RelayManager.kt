@@ -7,6 +7,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Top-level, not nested in [RelayManager]'s companion object (moved 2026-09-26): a
+ * companion-object-nested `data class` failed to resolve from other files
+ * (`P2PNetworkManager.kt`) under this project's Kotlin/Gradle configuration — the first real
+ * compiler run this whole class had ever gone through (see STATUS.md §3's standing "never
+ * build-verified" caveat) surfaced this immediately as a hard "Unresolved reference" in every
+ * calling file, both as a type and as a constructor call. Top-level in the same package needs no
+ * qualification and has no such ambiguity.
+ */
+data class ParsedConnection(val address: String, val authToken: String)
+
+/**
  * Settings for the optional store-and-forward relay fallback (see server/README.md). Off by
  * default, consistent with the app's zero-infrastructure-by-default posture.
  *
@@ -115,8 +126,6 @@ class RelayManager @Inject constructor(
          *  is raised to match, an iOS peer parsing an Android QR keeps only the first two entries
          *  — the third is simply unused, not mis-parsed (see CROSS_PLATFORM_PLAN.md). */
         const val RELAY_POOL_MAX_SIZE = 3
-
-        data class ParsedConnection(val address: String, val authToken: String)
 
         /**
          * Kotlin port of server/src/connectionString.ts's parseConnectionString — see that

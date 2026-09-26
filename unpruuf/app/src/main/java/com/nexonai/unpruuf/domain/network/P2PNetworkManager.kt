@@ -475,7 +475,7 @@ class P2PNetworkManager @Inject constructor(
         // they had advertised per contact — which is why a standard pairing only ever received
         // anything over the relay when both sides happened to have configured the very same one.
         // Now every contact is polled at the addresses THEY were told to push to.
-        val tagsByTarget = LinkedHashMap<RelayManager.ParsedConnection, MutableSet<String>>()
+        val tagsByTarget = LinkedHashMap<ParsedConnection, MutableSet<String>>()
 
         for (c in contacts) {
             val fullPool = contactMyRelayList(c).mapNotNull { RelayManager.parseConnectionString(it) }
@@ -485,7 +485,7 @@ class P2PNetworkManager @Inject constructor(
                     // fallback — they are relay-only and must keep working even when the global
                     // relay fallback is switched off in Settings.
                     if (!c.crossPlatform && relayManager.isUsable()) {
-                        listOf(RelayManager.ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
+                        listOf(ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
                     } else emptyList()
                 }
             if (fullPool.isEmpty()) continue
@@ -2168,17 +2168,17 @@ class P2PNetworkManager @Inject constructor(
      * delivered when both sides happened to have configured the very same relay — which is
      * exactly the gap the advertised list closes.
      */
-    private fun relayTargetsFor(item: PendingDelivery): List<RelayManager.ParsedConnection> {
+    private fun relayTargetsFor(item: PendingDelivery): List<ParsedConnection> {
         val advertised = item.relayCandidates.orEmpty().mapNotNull { RelayManager.parseConnectionString(it) }
         if (advertised.isNotEmpty()) return advertised
         if (!relayManager.isUsable()) return emptyList()
-        return listOf(RelayManager.ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
+        return listOf(ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
     }
 
     /** Tries each target in order, stopping at the first success — a retry on the next candidate
      *  after one fails is "try somewhere else", not a double-send. */
     private suspend fun pushToRelays(
-        targets: List<RelayManager.ParsedConnection>,
+        targets: List<ParsedConnection>,
         wireId: String,
         padded: ByteArray
     ): Boolean = targets.any { relayClient.push(it.address, it.authToken, wireId, padded) }

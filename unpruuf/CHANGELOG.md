@@ -5,6 +5,68 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑26 (2) · First real Android compile + build in this project's history — 2 real bugs found
+
+**What was done**
+
+A full Android SDK (platform 34, build-tools 34.0.0) was set up in this
+session's environment for the first time ever (see STATUS.md §3's long-standing
+"no Android SDK here" caveat), the missing Unix `gradlew`/`gradle-wrapper.jar`
+at the `unpruuf/` root were generated (matching the already-pinned Gradle 8.6
+in `gradle-wrapper.properties` — `gradlew.bat` existed alone before, see
+HANDOFF.md's "bekannte Lücke"), and every edition of both Android apps
+(`unpruuf/app/` — standard/pro/client/whistleblower — and
+`unpruuf/relay-android/`) was **actually compiled, built into a signed debug
+APK, and unit-tested for the first time in this project's entire history.**
+
+**Bugs found and fixed — both real, both pre-existing, neither related to
+this session's Whistleblower work, both invisible until an actual compiler
+finally ran against this code:**
+
+1. **`RelayManager.kt`'s `ParsedConnection` data class**, declared nested
+   inside `RelayManager`'s `companion object`, failed to resolve at all
+   (`Unresolved reference`) everywhere it was referenced from
+   `P2PNetworkManager.kt` — as a type AND as a constructor call, five call
+   sites, all failing identically. Root cause not fully explained (this
+   qualified-nested-in-companion pattern is normally valid Kotlin), but 100%
+   reproducible under this project's exact Gradle/Kotlin/AGP configuration.
+   **Fixed** by moving `ParsedConnection` to a top-level, same-package class
+   — no qualification ambiguity possible — and updating all five call sites.
+2. **`TorManager.kt`'s `ensureVerifiedOnion()`** called
+   `ctrl.sendAndWaitForResponse("DEL_ONION $old", null)` directly —
+   `sendAndWaitForResponse` is `protected` in jtorctl's real
+   `TorControlConnection` class (confirmed via `javap` against the actual
+   `info.guardianproject:jtorctl:0.4.5.7` jar, not assumed), so this line
+   could never have compiled. **Fixed** by calling jtorctl's real public API
+   for the same operation, `ctrl.delOnion(old)`.
+3. **`RelayManagerListTest.kt`'s `RELAY_POOL_MAX_SIZE` test** asserted the pool
+   caps at 2 entries — true when the test was written, but
+   `RELAY_POOL_MAX_SIZE` was deliberately raised to 3 on 2026‑09‑17 (see that
+   constant's own doc comment) and the test was never updated to match, so it
+   was silently asserting stale, wrong behavior. **Fixed** by asserting the
+   real, current, intentional cap and adding a new test for the >3 case the
+   old test used to (accidentally) cover.
+
+**Verification**
+
+- `./gradlew assembleDebug` — all four `unpruuf/app/` editions
+  (standard/pro/client/whistleblower) build a real, signed debug APK.
+  `unpruuf/relay-android/` builds its own debug APK too.
+- `./gradlew test{Standard,Pro,Client,Whistleblower}DebugUnitTest` — 48 tests
+  per edition (192 total), **all passing**, including `DoubleRatchetTest`
+  (the same Double Ratchet algorithm this session's officer-app/web-reporter
+  TypeScript ports were separately cross-verified against — now confirmed
+  correct from the JVM side too, not just reasoned about).
+
+**Not verified — still real, honest limits:** no device, emulator, or camera
+exists in this sandbox (no KVM for accelerated emulation), so nothing about
+actually running the app, scanning a QR, or exercising Tor networking on a
+real device was or could be tested. "Compiles, builds, and unit-tests clean"
+is a large, genuinely new milestone for this project — it is not the same
+claim as "runs correctly on a phone."
+
+---
+
 ## 2026‑09‑26 · unpruuf Whistleblower: new compliance product line (Android edition, officer-app, web-reporter)
 
 **What was done**

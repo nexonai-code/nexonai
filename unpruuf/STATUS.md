@@ -15,6 +15,31 @@ Package: `com.nexonai.unpruuf` · Architecture: **GRAL** · Built by **NexonAI**
 
 ---
 
+## Build-verification baseline (2026‑09‑26)
+
+The "no Android SDK in this environment" caveat repeated throughout this file
+described this project's ENTIRE history until this date. As of 2026‑09‑26, a
+real Android SDK (platform 34, build-tools 34.0.0) was set up and `unpruuf/
+app/` (all four editions: standard/pro/client/whistleblower) and `unpruuf/
+relay-android/` were **actually compiled, packaged into signed debug APKs,
+and unit-tested** (`./gradlew assembleDebug testDebugUnitTest`, 48 tests ×
+4 editions, all passing) for the first time ever — see `CHANGELOG.md`'s
+"First real Android compile + build" entry for the two real, previously-
+invisible bugs this surfaced and fixed (`RelayManager.ParsedConnection`,
+`TorManager`'s protected-method call).
+
+**What this changes vs. every ⛔/🟡/"not build-verified" marker below:**
+compiles-and-unit-tests-clean is now an established, re-checkable baseline,
+not a one-off claim — but it is a DIFFERENT, WEAKER claim than "verified on
+real hardware." No device, emulator, or camera exists in the environment
+these sessions run in (no KVM for accelerated emulation), so every
+individual feature's own real-hardware status below is unchanged and still
+accurate — this note does not upgrade any of them. Re-run the same build+test
+pass after future Android changes to keep this baseline current; it costs
+a few minutes and would have caught both bugs above immediately.
+
+---
+
 ## Versioning
 
 Two-digit scheme requested by the user: **1.01, 1.02, 1.03, ...** — shown

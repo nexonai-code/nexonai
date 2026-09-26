@@ -438,7 +438,12 @@ class TorManager @Inject constructor(
             val serviceId = result[TorControlCommands.HS_ADDRESS] ?: return null
             identityManager.getLastVerifiedOnionServiceId()?.let { old ->
                 if (old != serviceId) {
-                    runCatching { ctrl.sendAndWaitForResponse("DEL_ONION $old", null) }
+                    // Was a raw "DEL_ONION $old" via sendAndWaitForResponse — that method is
+                    // protected in jtorctl's TorControlConnection (confirmed via javap against
+                    // the real info.guardianproject:jtorctl:0.4.5.7 jar, not assumed), so this
+                    // never compiled; the first real build of this file surfaced it. delOnion()
+                    // is jtorctl's actual public API for the same DEL_ONION command.
+                    runCatching { ctrl.delOnion(old) }
                 }
             }
             identityManager.saveLastVerifiedOnionServiceId(serviceId)

@@ -28,8 +28,22 @@ class RelayManagerListTest {
 
     @Test
     fun `build caps at RELAY_POOL_MAX_SIZE even with more entries given`() {
+        // RELAY_POOL_MAX_SIZE was 2 when this test was first written and is 3 since the
+        // 2026-09-17 pool-size bump (see RelayManager.kt's own doc comment on the constant) —
+        // this test was never updated to match at the time, so it silently asserted the OLD cap
+        // ever since. Never caught because these tests had never actually been run in this
+        // environment until the first real Gradle build (see STATUS.md §3) — fixed by asserting
+        // the real, current, intentional cap instead of lowering the production constant back
+        // down to match a stale assertion.
         val joined = RelayManager.buildConnectionStringList(listOf(relay1, relay2, relay3))
-        assertEquals("$relay1;$relay2", joined)
+        assertEquals("$relay1;$relay2;$relay3", joined)
+    }
+
+    @Test
+    fun `build still caps when even MORE than RELAY_POOL_MAX_SIZE entries are given`() {
+        val relay4 = "unpruuf-relay:v1:fourthrelay0123456789abcdefghijklmnopqrstuvwxyz01234.onion:tok3n4"
+        val joined = RelayManager.buildConnectionStringList(listOf(relay1, relay2, relay3, relay4))
+        assertEquals("$relay1;$relay2;$relay3", joined)
     }
 
     @Test
