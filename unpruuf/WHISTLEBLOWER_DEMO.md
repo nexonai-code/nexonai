@@ -30,23 +30,27 @@ Studio actually reports; the fix loop that's worked all project is: paste the ex
 back, get a fix, rebuild.
 
 ### 2.2 Tablet relay
-Install `relay-android` on the tablet. Open it, let Tor bootstrap, then:
-- **Settings → Allow LAN access → ON.** Without this the officer-app and web-reporter (neither
-  speaks Tor) cannot reach it — see officer-app/README.md's "Known gaps".
-- Note the tablet's Wi-Fi IP address (Android Settings → Wi-Fi → the connected network's
-  details). The local HTTP port is always **8787** (`RelayConstants.LOCAL_HTTP_PORT`). That
-  gives you `http://<tablet-ip>:8787` — this is `RELAY_REACHABLE_BASE_URL` below.
-- Copy the relay's connection string (`unpruuf-relay:v1:...`) shown on screen — this is
-  `RELAY_CONNECTION_STRING` below.
+Install `relay-android` on the tablet. Open it, let Tor bootstrap, then copy the relay's
+connection string (`unpruuf-relay:v1:...`) shown on screen — this is `RELAY_CONNECTION_STRING`
+below. That's it for Tor-based use (the officer-app and the Android reporter both reach it over
+Tor now — see officer-app/README.md's Architecture section).
 
-**Both devices (laptop running officer-app, and whatever runs web-reporter) must be on the same
-Wi-Fi as the tablet.** The Android reporter app itself still goes through Tor as normal — it
-doesn't need the same Wi-Fi, just working internet.
+Only needed for the **web-reporter** part of the demo (§2.4) — it has no Tor client of its own,
+so it needs the LAN path instead: **Settings → Allow LAN access → ON**, and note the tablet's
+Wi-Fi IP (Android Settings → Wi-Fi → the connected network's details) — the local HTTP port is
+always **8787**, so that's `http://<tablet-ip>:8787`, entered on the officer dashboard's first
+screen as the address a browser-based reporter should use.
 
 ### 2.3 Officer dashboard (Windows laptop)
 In `unpruuf/officer-app/`: run `install.bat` once, then `start.bat`. When prompted, paste the
-tablet's connection string and reachable address from 2.2, and pick an officer password (write
-it down somewhere safe — there is no recovery). Open `http://localhost:3000`.
+relay's connection string from 2.2 and pick an officer password (write it down somewhere safe —
+there is no recovery). First start downloads Tor (~30-50 MB, one-time) and bootstraps a real
+connection to the relay's onion address — watch the console for live progress. Once it says
+"Dashboard listening", open `http://localhost:3000`.
+
+Skip Tor for a quick offline test instead? Set `RELAY_REACHABLE_BASE_URL` to the tablet's LAN
+address (`http://<tablet-ip>:8787`) before running `start.bat` — this needs "Allow LAN access"
+from §2.2 turned on too. Not the real demo path; use only for a dry run without internet.
 
 ### 2.4 Web-reporter (optional, for the browser-fallback part of the demo)
 In `unpruuf/web-reporter/`: `install.bat` then `start.bat`. Open `http://localhost:5173` (or its
@@ -101,12 +105,13 @@ LAN address from another device) when you want to show that path.
 
 ## 5. If something breaks live
 
-- **Phone can't reach Tor / pairing hangs**: known risk of live-demo Tor bootstrap on unknown
-  venue Wi-Fi — mentioned explicitly in officer-app/README.md's gaps. Have mobile data as a
-  fallback network for the phone.
+- **Phone (or laptop) can't reach Tor / pairing hangs**: known risk of live-demo Tor bootstrap on
+  unknown venue Wi-Fi — both the phone and now the officer-app itself bootstrap real Tor
+  connections. Have mobile data as a fallback network for the phone; for the laptop, a wired/
+  tethered connection is a good backup if the venue Wi-Fi is flaky. As a last resort, set
+  `RELAY_REACHABLE_BASE_URL` to skip Tor on the laptop (see §2.3) — same-Wi-Fi-as-tablet only.
 - **Dashboard doesn't see the case after pasting the code**: check the officer-app console
-  window — it prints relay connectivity errors. Most likely cause: `RELAY_REACHABLE_BASE_URL`
-  wrong, or the tablet's "Allow LAN access" toggle got left off.
+  window — it prints Tor bootstrap and relay connectivity errors directly.
 - **Nothing arrives after ~30 seconds**: the poll interval is 8s by default; three misses in a
   row is a real problem, not just latency — check `relay-android`'s RECENT ACTIVITY log for
   whether anything was even STORED.
@@ -115,8 +120,12 @@ LAN address from another device) when you want to show that path.
 
 ## 6. What's explicitly NOT done yet (say so if asked, don't oversell)
 
-- Android build never compiled in this sandbox — first real compile happens on your machine.
-- No Tor client in officer-app yet — LAN-only for now, by design for this demo (see §2.2).
+- Android APKs were compiled and unit-tested here (see STATUS.md's "Build-verification baseline"),
+  but never installed/run on a real phone — first real device run happens on your machine.
+- officer-app's Tor client was verified reaching a real handshake with the live Tor network in
+  this session's sandbox, but a full bootstrap completing end-to-end on a real internet
+  connection hasn't been confirmed outside that sandbox yet — should behave like any other Tor
+  client (Tor Browser included), but confirm on your own laptop before the meeting.
 - Single-relay routing only — a case's replies always go through the one relay this officer-app
   instance is configured with, not a multi-relay pool.
 - No case export/audit-log/multi-officer support — this is the "Basis-Grundgerüst" you asked
