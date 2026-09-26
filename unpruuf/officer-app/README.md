@@ -23,10 +23,16 @@ addressed to them. Keep the two conceptually separate.
 2. Double-click `install.bat` (first time only).
 3. Double-click `start.bat`. It asks for:
    - the relay's connection string (paste what the relay printed)
-   - the relay's **reachable address** on your network, e.g. `http://192.168.1.50:8787` — see
-     "Known gaps" below for why this is a separate value from the connection string
    - your officer password (protects the case database; there is no recovery if you forget it)
-4. Open `http://localhost:3000` — your pairing QR is on the dashboard's first screen.
+4. First start downloads the Tor Expert Bundle (one-time, ~30-50 MB) and bootstraps a real Tor
+   connection — the same path the Android app uses, not a LAN shortcut (see "Architecture" below).
+   Takes a few seconds to under a minute depending on the network; progress prints live.
+5. Open `http://localhost:3000` — your pairing QR is on the dashboard's first screen.
+
+Don't have or want Tor for a quick local test? Set `RELAY_REACHABLE_BASE_URL` (e.g.
+`http://192.168.1.50:8787`) before starting — this skips Tor entirely and talks directly to the
+relay's LAN address instead (needs the relay's own "Allow LAN access" setting turned on too). See
+"Known gaps" for what this trades away.
 
 ## How a case gets started
 
@@ -49,7 +55,10 @@ line never does direct P2P — see the Android app's `AppEdition.WHISTLEBLOWER` 
 expected wire tags (`POST /v1/fetchMany`, one round-trip for every case), decrypts what comes
 back, and files it into `src/store/caseStore.ts` — an encrypted-at-rest SQLite database that
 also tracks each case's EU Art. 9 deadlines (acknowledge within 7 days, follow up within 3
-months).
+months). `src/tor/` bootstraps a real Tor client on startup (downloads the Expert Bundle on
+first run, same as `server/`'s own Windows/macOS deploy scripts) and `src/relay/relayClient.ts`
+routes every relay request through its local SOCKS port — this process reaches the relay's real
+`.onion` address, the same path every other unpruuf peer uses, not a LAN-only shortcut.
 
 ## How this was verified
 
@@ -62,18 +71,26 @@ months).
   run against a real `../server` relay instance in this repo's own dev sandbox, simulating the
   Android side with this app's own (wire-identical) crypto modules. All checks passed. This is
   NOT the same as running the real Android app — see "Known gaps".
+- **Tor bootstrap**: genuinely downloaded, spawned, and driven to a real handshake with the live
+  Tor network — not mocked. Found and fixed two real bugs doing this: the Linux Expert Bundle's
+  `tor` binary needs `LD_LIBRARY_PATH` pointed at its own directory to find its bundled
+  `libevent`/`libssl`/`libcrypto`, and the bundle's `debug/` folder ships a second, differently-
+  linked `tor` binary that a naive recursive file search can match instead of the real one under
+  `tor/` (confirmed by hash-comparing the two — the debug one doesn't execute at all).
 - **TypeScript build**: `npm run build` compiles clean, no errors — unlike the Android/iOS apps,
   this one has a real toolchain to build-verify in.
 
 ## Known gaps (read before a real deployment, not just a demo)
 
-- **No Tor.** `src/relay/relayClient.ts` talks plain HTTP(S) to the relay's reachable address.
-  Both `../server` and `../relay-android` deliberately bind their listener to `127.0.0.1` only
-  and are meant to be reached via their Tor hidden service — real security posture, not an
-  oversight. For a demo on one Wi-Fi network, opening the relay's bind host to the LAN (see
-  `../server`'s `RELAY_BIND_HOST` env var) is a documented, explicit simplification. A real
-  deployment should run this process behind a Tor client instead — `../server/src/windowsTor.ts`
-  already has a proven Tor-bootstrap implementation to adapt; not done this session.
+- **Tor is real but not yet hardened for unattended operation.** `src/tor/` downloads and
+  bootstraps a genuine Tor client on every start — verified against a real Tor process actually
+  connecting to the live Tor network (reached "Handshaking with a relay" in this project's own
+  dev sandbox before that sandbox's own network policy blocked the connection further — a sandbox
+  limitation, not a code defect; a normal internet connection should complete bootstrap the same
+  way Tor Browser does). Not yet built: automatic restart if Tor dies mid-session (`server/`'s
+  `keepTorAlive` exists for exactly this and could be adapted), and a friendlier in-dashboard
+  status indicator instead of only console log lines. `RELAY_REACHABLE_BASE_URL` remains as an
+  explicit LAN-only opt-out for a quick local test without Tor at all.
 - **Single relay only.** `sendReply.ts` always pushes to this process's one configured relay,
   not to whichever relay(s) a reporter's own pairing code advertised. Correct for a
   single-shared-relay demo; a real multi-relay-pool router is a fast-follow.

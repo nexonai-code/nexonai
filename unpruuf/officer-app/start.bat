@@ -8,9 +8,9 @@ if not exist dist (
   exit /b 1
 )
 
-rem Non-secret relay settings are remembered in officer.env.bat next to this script (not
-rem committed to git - see .gitignore) so you only have to paste them once. The officer
-rem password is NEVER remembered here - see README.md for why.
+rem The relay's connection string is remembered in officer.env.bat next to this script (not
+rem committed to git - see .gitignore) so you only have to paste it once. The officer password
+rem is NEVER remembered here - see README.md for why.
 if exist officer.env.bat call officer.env.bat
 
 if "%RELAY_CONNECTION_STRING%"=="" (
@@ -19,16 +19,11 @@ if "%RELAY_CONNECTION_STRING%"=="" (
   echo app on the tablet/laptop it runs on:
   set /p RELAY_CONNECTION_STRING=^>
 )
-if "%RELAY_REACHABLE_BASE_URL%"=="" (
-  echo.
-  echo Enter the relay's reachable address on this network, e.g. http://192.168.1.50:8787
-  set /p RELAY_REACHABLE_BASE_URL=^>
-)
 
 (
   echo @echo off
   echo set RELAY_CONNECTION_STRING=%RELAY_CONNECTION_STRING%
-  echo set RELAY_REACHABLE_BASE_URL=%RELAY_REACHABLE_BASE_URL%
+  if not "%RELAY_REACHABLE_BASE_URL%"=="" echo set RELAY_REACHABLE_BASE_URL=%RELAY_REACHABLE_BASE_URL%
 ) > officer.env.bat
 
 echo.
@@ -38,6 +33,12 @@ echo prompt does not hide what you type - make sure nobody is reading over your 
 set /p OFFICER_PASSWORD=^>
 
 echo.
-echo Starting the officer dashboard - open http://localhost:3000 in your browser once it says "listening".
+if "%RELAY_REACHABLE_BASE_URL%"=="" (
+  echo Starting Tor - first run downloads it ^(one-time, ~30-50 MB^), then bootstraps a real
+  echo connection to the relay's onion address. Takes a few seconds to under a minute.
+) else (
+  echo RELAY_REACHABLE_BASE_URL is set - skipping Tor, talking directly to %RELAY_REACHABLE_BASE_URL%.
+)
+echo Once it says "Dashboard listening", open http://localhost:3000 in your browser.
 node dist\index.js
 pause

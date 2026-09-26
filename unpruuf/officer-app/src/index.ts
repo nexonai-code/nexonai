@@ -1,9 +1,10 @@
-import { loadConfig } from "./config";
+import { loadConfig, relayBaseUrlFromAddress } from "./config";
 import { loadOrCreateOfficerIdentity, WrongPasswordError } from "./officer/officerIdentity";
 import { CaseStore, deriveDbKey } from "./store/caseStore";
 import { RelayClient } from "./relay/relayClient";
 import { PollAndIngestLoop } from "./officer/pollAndIngest";
 import { createDashboardApp } from "./web/app";
+import { startTorAndWaitReady, TorClient } from "./tor/tor";
 
 async function main() {
   const config = loadConfig();
@@ -28,13 +29,40 @@ async function main() {
   }
 
   const store = new CaseStore(config.dbPath, deriveDbKey(identity));
-  const relay = new RelayClient({ baseUrl: config.relayReachableBaseUrl, authToken: config.relayAuthToken });
+
+  let torClient: TorClient | undefined;
+  let relayReachableBaseUrl: string;
+  if (config.torEnabled) {
+    console.log("[startup] Starting Tor (this reaches the relay's real .onion address — the same path the Android app uses, not a LAN shortcut)...");
+    try {
+      torClient = await startTorAndWaitReady(config.dataDir, {
+        onProgress: (pct, line) => console.log(`[tor] ${pct}% — ${line}`),
+      });
+      console.log(`[startup] Tor bootstrapped — SOCKS proxy on 127.0.0.1:${torClient.socksPort}.`);
+    } catch (err) {
+      console.error(`\n[startup] Tor failed to bootstrap: ${(err as Error).message}`);
+      console.error("[startup] Check this machine's internet connection and try again.");
+      console.error("[startup] To run without Tor instead (LAN-only, weaker — see README.md's Known gaps),");
+      console.error("[startup] set RELAY_REACHABLE_BASE_URL to the relay's LAN address and restart.\n");
+      process.exit(1);
+    }
+    relayReachableBaseUrl = relayBaseUrlFromAddress(config.relayAddress);
+  } else {
+    relayReachableBaseUrl = config.relayReachableBaseUrlOverride!;
+    console.log(`[startup] TOR DISABLED — talking directly to ${relayReachableBaseUrl} (see README.md's Known gaps for what this trades away).`);
+  }
+
+  const relay = new RelayClient({
+    baseUrl: relayReachableBaseUrl,
+    authToken: config.relayAuthToken,
+    socksPort: torClient?.socksPort,
+  });
   const pollLoop = new PollAndIngestLoop(identity, store, relay);
 
-  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, config.relayReachableBaseUrl);
+  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl);
   app.listen(config.dashboardPort, () => {
     console.log(`[startup] Dashboard listening on http://localhost:${config.dashboardPort}`);
-    console.log(`[startup] Polling relay at ${config.relayReachableBaseUrl} every ${config.pollIntervalMs}ms.`);
+    console.log(`[startup] Polling relay at ${relayReachableBaseUrl} every ${config.pollIntervalMs}ms${torClient ? " (via Tor)" : ""}.`);
   });
 
   const pollTick = async () => {
@@ -47,8 +75,13 @@ async function main() {
   setInterval(pollTick, config.pollIntervalMs).unref();
   void pollTick();
 
-  process.on("SIGTERM", () => { store.close(); process.exit(0); });
-  process.on("SIGINT", () => { store.close(); process.exit(0); });
+  const shutdown = () => {
+    torClient?.stop();
+    store.close();
+    process.exit(0);
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 main().catch((err) => {

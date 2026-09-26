@@ -5,6 +5,71 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑26 (3) · officer-app: real Tor client (was LAN-only) — 2 more real bugs found
+
+**What was done**
+
+`unpruuf/officer-app/` now bootstraps a genuine Tor client on startup and reaches the relay over
+its real `.onion` address — the same path the Android app already uses — instead of the LAN-only
+HTTP shortcut this product line shipped with for its first demo. Requested explicitly ("Was
+laufen muss ist definitiv alles was mit unserer Architektur zu tun hat") since Tor-based
+reachability is core to the "anonymity through architecture, not policy" pitch, not an optional
+nicety.
+
+**What was added**
+
+- `src/tor/torDownload.ts` — downloads and installs the official Tor Expert Bundle on first run
+  (Windows/macOS/Linux), same mechanism `server/src/torDownload.ts` already uses for its own
+  Windows/macOS relay deployment, generalized to all three platforms and kept as its own copy
+  (no shared package between `server/` and `officer-app/` — same precedent CROSS_PLATFORM_PLAN.md
+  already documents for the two runtimes' crypto code).
+- `src/tor/torProcess.ts` — runs Tor as a pure outbound SOCKS client (no hidden service; officer-
+  app only ever needs to dial OUT, never be reached directly), parses its own bootstrap log for
+  live "Bootstrapped NN%" progress.
+- `src/tor/tor.ts` — ties the two together: ensure the binary, spawn it, wait for a real 100%
+  bootstrap, hand back the local SOCKS port.
+- `src/relay/relayClient.ts` — now routes every relay request through that SOCKS port via
+  `socks-proxy-agent` (`socks5h://`, so `.onion` hostname resolution happens on Tor's side, not
+  locally) using Node's classic `http` module; the previous plain-`fetch` LAN path is kept as an
+  explicit, opt-in fallback (`RELAY_REACHABLE_BASE_URL` set → Tor is skipped entirely).
+- `src/config.ts` — the relay's reachable address is now derived from its own connection string
+  (the same `.onion` + port-80 convention `RelayClient.kt` already uses on Android) instead of
+  requiring a separately-typed LAN URL; that env var becomes an explicit opt-out instead of a
+  required input.
+
+**Bugs found and fixed — both real, both only surfaced by actually running this for the first
+time, neither guessable from reading the code:**
+
+1. **Missing `LD_LIBRARY_PATH`** — the Linux Expert Bundle's `tor` binary ships next to its own
+   `libcrypto`/`libssl`/`libevent` `.so` files but has no RPATH pointing at its own directory, so
+   the dynamic linker can't find them at all ("cannot open shared object file") unless
+   `LD_LIBRARY_PATH` includes that directory. No equivalent needed on Windows (DLL search order
+   already includes the executable's own directory by default).
+2. **Wrong binary picked from the bundle** — the archive also ships a `debug/` directory with its
+   own same-named, full-debug-symbols `tor` binary; a blind recursive filename search matched
+   `debug/tor` instead of the intended `tor/tor` (`debug` sorts before `tor` alphabetically).
+   Confirmed by hash-comparing the two: the debug one is a different, larger file that fails to
+   execute at all ("Exec format error"), not just a slower equivalent. Fixed by preferring the
+   canonical `tor/<exeName>` path and only falling back to a recursive search if that's ever
+   missing.
+
+**Verification**
+
+Real, not simulated: the actual Tor binary was downloaded, spawned, and driven to a genuine
+handshake attempt with the live Tor network in this session's own sandbox — reached
+`Bootstrapped 14% (handshake): Handshaking with a relay` against several real relays before that
+sandbox's own outbound-network policy (not a code defect — confirmed separately: raw TCP to an
+arbitrary port is blocked there, port 443 is not) prevented the connection from completing
+further. The full pairing → report → reply round trip (see the entry below) was re-run after the
+`RelayClient` rewrite and still passes end-to-end.
+
+**Not verified:** a completed Tor bootstrap end-to-end (this session's sandbox network policy
+prevents it — see above; should complete normally on a real internet connection, the same way Tor
+Browser does), and automatic Tor-process recovery if it dies mid-session (`server/`'s
+`keepTorAlive` exists for exactly this and is a natural next port, not done this pass).
+
+---
+
 ## 2026‑09‑26 (2) · First real Android compile + build in this project's history — 2 real bugs found
 
 **What was done**
