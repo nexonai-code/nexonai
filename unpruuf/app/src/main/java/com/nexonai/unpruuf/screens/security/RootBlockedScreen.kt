@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 
 /**
  * The outermost gate — shown instead of everything else (PIN, license, chat list) the moment
@@ -39,24 +41,20 @@ fun RootBlockedScreen() {
             )
             Spacer(Modifier.height(20.dp))
             Text(
-                "This device appears to be rooted",
+                stringResource(R.string.security_rooted_title),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "unpruuf refuses to run on a rooted device. Root access lets an attacker read " +
-                "app memory, extract keys, and bypass screenshot protection directly — no " +
-                "app-layer defense can close that gap, so unpruuf doesn't try to run with it " +
-                "open. Nothing has been started: no keys generated, no connection made.",
+                stringResource(R.string.security_rooted_body),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Un-root this device, or install unpruuf on a device that isn't rooted, and " +
-                "try again.",
+                stringResource(R.string.security_rooted_hint),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

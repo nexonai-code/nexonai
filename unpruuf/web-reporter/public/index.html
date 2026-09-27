@@ -1,39 +1,40 @@
 <!doctype html>
-<html lang="en">
+<html lang="ro">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>unpruuf Whistleblower — Report in your browser</title>
+<title>unpruuf Whistleblower — Raportează din browser</title>
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <header>
   <h1>unpruuf <span>Whistleblower</span></h1>
-  <span class="subtitle">Browser reporting — no app install</span>
+  <span class="subtitle">Raportare din browser — fără instalare</span>
 </header>
 
 <div class="disclaimer-banner">
-  <strong>Read this first.</strong> This browser page gives you weaker protection than the
-  unpruuf app: no Tor by default (your network provider can see you're talking to this relay,
-  even though it can't read what's said), your device's normal storage keeps this conversation
-  until you delete it below (the app instead keeps messages only in RAM and wipes them), and
-  there's no protection against a compromised or monitored device/browser. If your organization
-  faces retaliation risk, prefer the unpruuf Android app over this page, and consider using
+  <strong>Citește asta întâi.</strong> Această pagină de browser îți oferă o protecție mai slabă decât
+  aplicația unpruuf: fără Tor implicit (furnizorul tău de internet poate vedea că vorbești cu acest releu,
+  chiar dacă nu poate citi ce se spune), stocarea normală a dispozitivului tău păstrează această conversație
+  până o ștergi mai jos (aplicația, în schimb, păstrează mesajele doar în memorie și le șterge), și
+  nu există protecție împotriva unui dispozitiv/browser compromis sau monitorizat. Dacă organizația ta
+  prezintă risc de represalii, preferă aplicația unpruuf pentru Android în locul acestei pagini, și ia în
+  considerare folosirea
   <a href="https://www.torproject.org/download/" target="_blank" rel="noopener">Tor Browser</a>
-  for an extra layer this page cannot provide on its own. Content is still end-to-end encrypted
-  either way — the relay operator and network observers cannot read your report.
+  pentru un nivel suplimentar pe care această pagină nu îl poate oferi singură. Conținutul rămâne oricum
+  criptat integral — operatorul releului și observatorii rețelei nu pot citi raportul tău.
 </div>
 
 <main>
   <div id="setupView">
     <div class="card">
-      <h2>Start a new report</h2>
-      <label>Compliance officer's pairing code</label>
-      <textarea id="officerCodeInput" rows="4" placeholder="Paste the code the officer's dashboard showed (or that was printed/shared with you)…"></textarea>
-      <label>Relay address</label>
-      <input id="relayUrlInput" placeholder="e.g. http://192.168.1.50:8787 — ask whoever gave you the pairing code" />
+      <h2>Începe un raport nou</h2>
+      <label>Codul de împerechere al ofițerului de conformitate</label>
+      <textarea id="officerCodeInput" rows="4" placeholder="Lipește codul afișat de panoul ofițerului (sau care ți-a fost transmis/tipărit)…"></textarea>
+      <label>Adresa releului</label>
+      <input id="relayUrlInput" placeholder="ex. http://192.168.1.50:8787 — întreabă persoana care ți-a dat codul de împerechere" />
       <div style="margin-top:14px;">
-        <button id="startBtn">Start report</button>
+        <button id="startBtn">Începe raportul</button>
         <span id="setupError" class="error"></span>
       </div>
     </div>
@@ -41,28 +42,28 @@
 
   <div id="chatView" class="hidden">
     <div class="card">
-      <h2>Your code — share this with the officer to receive replies</h2>
+      <h2>Codul tău — trimite-l ofițerului ca să poți primi răspunsuri</h2>
       <textarea id="myCodeBox" readonly rows="4"></textarea>
       <p class="hint">
-        Nobody can reply to you until you share this. It contains no information about who you
-        are — only random keys generated in this browser just now.
+        Nimeni nu îți poate răspunde până nu trimiți acest cod. Nu conține nicio informație despre cine
+        ești — doar chei aleatorii generate chiar acum în acest browser.
       </p>
     </div>
 
     <div class="card">
-      <h2>Conversation</h2>
+      <h2>Conversație</h2>
       <div class="thread" id="thread"></div>
-      <textarea id="composeInput" rows="3" placeholder="Write your report or reply…"></textarea>
+      <textarea id="composeInput" rows="3" placeholder="Scrie raportul sau răspunsul tău…"></textarea>
       <div style="margin-top:10px;">
-        <button id="sendBtn">Send</button>
+        <button id="sendBtn">Trimite</button>
         <span id="sendError" class="error"></span>
       </div>
     </div>
 
     <div class="card">
-      <h2>Danger zone</h2>
-      <p class="hint">Deletes everything this page remembers on this device — your identity, the case, and the message history. Do this if you're using a shared or borrowed device.</p>
-      <button id="resetBtn" class="danger">Delete everything from this browser</button>
+      <h2>Zonă de pericol</h2>
+      <p class="hint">Șterge tot ce reține această pagină pe acest dispozitiv — identitatea ta, cazul și istoricul mesajelor. Fă asta dacă folosești un dispozitiv comun sau împrumutat.</p>
+      <button id="resetBtn" class="danger">Șterge totul din acest browser</button>
     </div>
   </div>
 </main>

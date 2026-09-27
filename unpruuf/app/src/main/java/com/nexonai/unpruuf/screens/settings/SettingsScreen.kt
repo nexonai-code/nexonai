@@ -39,6 +39,7 @@ import com.nexonai.unpruuf.domain.license.LicenseState
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
 import com.nexonai.unpruuf.domain.network.RelayManager
 import com.nexonai.unpruuf.screens.qrpair.PortraitCaptureActivity
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +79,8 @@ fun SettingsScreen(
     val migratingAddress by viewModel.migratingAddress.collectAsState()
     val migrateInput by viewModel.migrateInput.collectAsState()
 
+    val scanRelayPrompt = stringResource(R.string.settings_scan_relay_prompt)
+    val scanNodePrompt = stringResource(R.string.settings_scan_node_prompt)
     val relayScanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         result.contents?.let { viewModel.onRelayQrScanned(it) }
     }
@@ -88,7 +91,7 @@ fun SettingsScreen(
             relayScanLauncher.launch(
                 ScanOptions().apply {
                     setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                    setPrompt("Scan relay QR code")
+                    setPrompt(scanRelayPrompt)
                     setBeepEnabled(false)
                     setBarcodeImageEnabled(false)
                     setOrientationLocked(true)
@@ -107,7 +110,7 @@ fun SettingsScreen(
             nodeMeshScanLauncher.launch(
                 ScanOptions().apply {
                     setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                    setPrompt("Scan node QR code")
+                    setPrompt(scanNodePrompt)
                     setBeepEnabled(false)
                     setBarcodeImageEnabled(false)
                     setOrientationLocked(true)
@@ -120,10 +123,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.settings_cd_back))
                     }
                 },
                 actions = {
@@ -152,9 +155,9 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SectionHeader("Security")
+            SectionHeader(stringResource(R.string.settings_section_security))
             ListItem(
-                headlineContent = { Text("App edition") },
+                headlineContent = { Text(stringResource(R.string.settings_app_edition)) },
                 supportingContent = {
                     Text(
                         "unpruuf ${AppEdition.label}",
@@ -166,7 +169,7 @@ fun SettingsScreen(
             )
             HorizontalDivider()
             ListItem(
-                headlineContent = { Text("App version") },
+                headlineContent = { Text(stringResource(R.string.settings_app_version)) },
                 // BuildConfig.VERSION_NAME already carries the per-edition suffix
                 // (e.g. "1.01-pro") set in build.gradle.kts's flavor blocks.
                 supportingContent = { Text(BuildConfig.VERSION_NAME) },
@@ -174,33 +177,30 @@ fun SettingsScreen(
             )
             HorizontalDivider()
             ListItem(
-                headlineContent = { Text("Network & security status") },
-                supportingContent = { Text("Tor connection state and GRAL security overview") },
+                headlineContent = { Text(stringResource(R.string.settings_network_security_status)) },
+                supportingContent = { Text(stringResource(R.string.settings_network_security_status_body)) },
                 leadingContent = { Icon(Icons.Default.Info, null) },
                 trailingContent = { Icon(Icons.Default.ChevronRight, null) },
                 modifier = Modifier.clickable(onClick = onNavigateToInfo)
             )
             HorizontalDivider()
             ListItem(
-                headlineContent = { Text("Screenshots") },
-                supportingContent = { Text("Blocked (FLAG_SECURE)") },
+                headlineContent = { Text(stringResource(R.string.settings_screenshots)) },
+                supportingContent = { Text(stringResource(R.string.settings_screenshots_body)) },
                 leadingContent = { Icon(Icons.Default.Shield, null) }
             )
             HorizontalDivider()
             ListItem(
-                headlineContent = { Text("Message storage") },
-                supportingContent = { Text("RAM-only (GRAL Pillar 2)") },
+                headlineContent = { Text(stringResource(R.string.settings_message_storage)) },
+                supportingContent = { Text(stringResource(R.string.settings_message_storage_body)) },
                 leadingContent = { Icon(Icons.Default.Shield, null) }
             )
             if (biometricAvailable) {
                 HorizontalDivider()
                 ListItem(
-                    headlineContent = { Text("Fingerprint unlock") },
+                    headlineContent = { Text(stringResource(R.string.settings_fingerprint_unlock)) },
                     supportingContent = {
-                        Text(
-                            "Alongside the PIN, not instead of it — can only unlock normally, " +
-                            "never the panic PIN. Off by default."
-                        )
+                        Text(stringResource(R.string.settings_fingerprint_unlock_body))
                     },
                     leadingContent = { Icon(Icons.Default.Fingerprint, null) },
                     trailingContent = {
@@ -213,16 +213,13 @@ fun SettingsScreen(
             }
             HorizontalDivider()
             ListItem(
-                headlineContent = { Text("Pairing identity") },
+                headlineContent = { Text(stringResource(R.string.settings_pairing_identity)) },
                 supportingContent = {
-                    Text(
-                        "The identity your own QR code shows to a NEW contact. Renewing it " +
-                        "doesn't affect contacts you've already paired with."
-                    )
+                    Text(stringResource(R.string.settings_pairing_identity_body))
                 },
                 leadingContent = { Icon(Icons.Default.Shield, null) },
                 trailingContent = {
-                    TextButton(onClick = { showRegenerateIdentityDialog = true }) { Text("Renew") }
+                    TextButton(onClick = { showRegenerateIdentityDialog = true }) { Text(stringResource(R.string.settings_renew)) }
                 }
             )
             identityStatus?.let {
@@ -237,11 +234,11 @@ fun SettingsScreen(
             }
             HorizontalDivider()
 
-            SectionHeader("Censorship Circumvention")
+            SectionHeader(stringResource(R.string.settings_section_censorship))
             ListItem(
-                headlineContent = { Text("Use Tor bridges") },
+                headlineContent = { Text(stringResource(R.string.settings_use_tor_bridges)) },
                 supportingContent = {
-                    Text("For networks that block Tor (e.g. certain countries/providers)")
+                    Text(stringResource(R.string.settings_use_tor_bridges_body))
                 },
                 leadingContent = { Icon(Icons.Default.Public, null) },
                 trailingContent = {
@@ -257,10 +254,7 @@ fun SettingsScreen(
             if (bridgesEnabled) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        "Paste bridge lines (one per line). Get them from " +
-                        "bridges.torproject.org or the Telegram bot @GetBridgesBot.\n" +
-                        "Vanilla bridges (IP:Port Fingerprint) work immediately. " +
-                        "obfs4/Snowflake follow in the next update.",
+                        stringResource(R.string.settings_bridges_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -268,7 +262,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = bridgeText,
                         onValueChange = { viewModel.onBridgeTextChange(it) },
-                        label = { Text("Bridge lines") },
+                        label = { Text(stringResource(R.string.settings_bridge_lines_field)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 100.dp),
@@ -278,7 +272,7 @@ fun SettingsScreen(
                     Button(
                         onClick = { viewModel.save() },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Save & reconnect Tor") }
+                    ) { Text(stringResource(R.string.settings_save_reconnect_tor)) }
                     status?.let {
                         Spacer(Modifier.height(8.dp))
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -295,7 +289,7 @@ fun SettingsScreen(
             // Client edition is free (see AppEdition/LicenseManager.requiresLicense) — no
             // license concept applies to it, so this section doesn't exist for that build.
             if (!AppEdition.isClient) {
-                SectionHeader("License")
+                SectionHeader(stringResource(R.string.settings_section_license))
                 val licenseInfo = when (val s = licenseState) {
                     is LicenseState.Valid -> s.info
                     is LicenseState.ExpiringSoon -> s.info
@@ -303,17 +297,18 @@ fun SettingsScreen(
                     else -> null
                 }
                 val licenseHeadline = when (val s = licenseState) {
-                    is LicenseState.Valid -> "Active — expires ${formatLicenseDate(s.info.expiresAtMs)}"
+                    is LicenseState.Valid -> stringResource(R.string.settings_license_active, formatLicenseDate(s.info.expiresAtMs))
                     is LicenseState.ExpiringSoon ->
-                        "Expires in ${s.daysLeft} day${if (s.daysLeft == 1L) "" else "s"} — renew soon"
-                    is LicenseState.Expired -> "Expired ${formatLicenseDate(s.info.expiresAtMs)}"
+                        if (s.daysLeft == 1L) stringResource(R.string.settings_license_expiring_one)
+                        else stringResource(R.string.settings_license_expiring_many, s.daysLeft)
+                    is LicenseState.Expired -> stringResource(R.string.settings_license_expired, formatLicenseDate(s.info.expiresAtMs))
                     is LicenseState.Invalid -> s.reason
-                    is LicenseState.NotConfigured -> "No license configured"
+                    is LicenseState.NotConfigured -> stringResource(R.string.settings_license_not_configured)
                 }
                 ListItem(
                     headlineContent = { Text(licenseHeadline) },
                     supportingContent = licenseInfo?.let {
-                        { Text("Serial ${it.serial} • ${it.customer}") }
+                        { Text(stringResource(R.string.settings_license_serial, it.serial, it.customer)) }
                     },
                     leadingContent = { Icon(Icons.Default.VerifiedUser, null) }
                 )
@@ -321,7 +316,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = licenseInput,
                         onValueChange = { viewModel.onLicenseInputChange(it) },
-                        label = { Text("License code") },
+                        label = { Text(stringResource(R.string.settings_license_code_field)) },
                         placeholder = { Text("unpruuf-license:v1:...") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -330,7 +325,7 @@ fun SettingsScreen(
                     Button(
                         onClick = { viewModel.saveLicense() },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Activate") }
+                    ) { Text(stringResource(R.string.settings_activate)) }
                     licenseStatus?.let {
                         Spacer(Modifier.height(8.dp))
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -344,17 +339,11 @@ fun SettingsScreen(
                 HorizontalDivider()
             }
 
-            SectionHeader("Relay (optional)")
+            SectionHeader(stringResource(R.string.settings_section_relay))
             ListItem(
-                headlineContent = { Text("Relay mode") },
+                headlineContent = { Text(stringResource(R.string.settings_relay_mode)) },
                 supportingContent = {
-                    Text(
-                        "Off: never used. Auto: best-effort store-and-forward mailbox — used " +
-                        "only when a contact can't be reached directly, or proactively for " +
-                        "transfers over 2 MB. Mandatory: every message routes through the " +
-                        "relay, LAN/Tor-direct skipped entirely — meant for testing the relay " +
-                        "path, switch freely. Off by default."
-                    )
+                    Text(stringResource(R.string.settings_relay_mode_body))
                 },
                 leadingContent = { Icon(Icons.Default.Send, null) }
             )
@@ -364,15 +353,15 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                RelayModeChip("Off", RelayManager.RelayMode.OFF, relayMode) {
+                RelayModeChip(stringResource(R.string.settings_relay_off), RelayManager.RelayMode.OFF, relayMode) {
                     viewModel.onRelayModeChange(it)
                     viewModel.saveRelay() // apply immediately, same as the old disable-switch did
                 }
-                RelayModeChip("Auto", RelayManager.RelayMode.AUTO, relayMode) {
+                RelayModeChip(stringResource(R.string.settings_relay_auto), RelayManager.RelayMode.AUTO, relayMode) {
                     viewModel.onRelayModeChange(it)
                     viewModel.saveRelay()
                 }
-                RelayModeChip("Mandatory", RelayManager.RelayMode.MANDATORY, relayMode) {
+                RelayModeChip(stringResource(R.string.settings_relay_mandatory), RelayManager.RelayMode.MANDATORY, relayMode) {
                     viewModel.onRelayModeChange(it)
                     viewModel.saveRelay()
                 }
@@ -381,7 +370,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     if (relayConfiguredOnion.isNotEmpty()) {
                         Text(
-                            "Configured: $relayConfiguredOnion",
+                            stringResource(R.string.settings_relay_configured, relayConfiguredOnion),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -393,11 +382,11 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Default.QrCodeScanner, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Scan QR code")
+                        Text(stringResource(R.string.settings_scan_qr_code))
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "or paste the connection string shown by the relay",
+                        stringResource(R.string.settings_relay_paste_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -405,7 +394,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = relayInput,
                         onValueChange = { viewModel.onRelayInputChange(it) },
-                        label = { Text("Connection string") },
+                        label = { Text(stringResource(R.string.settings_connection_string_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -413,7 +402,7 @@ fun SettingsScreen(
                     Button(
                         onClick = { viewModel.saveRelay() },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Save") }
+                    ) { Text(stringResource(R.string.settings_save)) }
                     relayStatus?.let {
                         Spacer(Modifier.height(8.dp))
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -427,14 +416,12 @@ fun SettingsScreen(
 
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        "Backup relays",
+                        stringResource(R.string.settings_backup_relays),
                         style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Tried in order if the primary relay above is unreachable. Both are " +
-                        "shared with new contacts in your QR code, so they can reach you even " +
-                        "when one relay is down. Leave empty if you don't have any.",
+                        stringResource(R.string.settings_backup_relays_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -442,7 +429,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = backupRelayInput,
                         onValueChange = { viewModel.onBackupRelayInputChange(it) },
-                        label = { Text("First backup") },
+                        label = { Text(stringResource(R.string.settings_first_backup_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -450,7 +437,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = backupRelay2Input,
                         onValueChange = { viewModel.onBackupRelay2InputChange(it) },
-                        label = { Text("Second backup") },
+                        label = { Text(stringResource(R.string.settings_second_backup_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -458,7 +445,7 @@ fun SettingsScreen(
                     Button(
                         onClick = { viewModel.saveBackupRelay() },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Save") }
+                    ) { Text(stringResource(R.string.settings_save)) }
                     backupRelayStatus?.let {
                         Spacer(Modifier.height(8.dp))
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -472,18 +459,16 @@ fun SettingsScreen(
             }
             HorizontalDivider()
 
-            SectionHeader("Company relay list (optional)")
+            SectionHeader(stringResource(R.string.settings_section_relay_pool))
             ListItem(
                 headlineContent = {
-                    Text(relayPoolLastImported?.let { "Imported: ${it.org} (${it.relays.size} relay${if (it.relays.size == 1) "" else "s"})" }
-                        ?: "No company relay list imported")
+                    Text(relayPoolLastImported?.let {
+                        if (it.relays.size == 1) stringResource(R.string.settings_relay_pool_imported_one, it.org)
+                        else stringResource(R.string.settings_relay_pool_imported_many, it.org, it.relays.size)
+                    } ?: stringResource(R.string.settings_relay_pool_none))
                 },
                 supportingContent = {
-                    Text(
-                        "Paste a signed relay list from your organization to fill the backup " +
-                        "relay above automatically. Re-importing an updated list replaces the " +
-                        "previous one."
-                    )
+                    Text(stringResource(R.string.settings_relay_pool_body))
                 },
                 leadingContent = { Icon(Icons.Default.Send, null) }
             )
@@ -491,7 +476,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = relayPoolInput,
                     onValueChange = { viewModel.onRelayPoolInputChange(it) },
-                    label = { Text("Relay list code") },
+                    label = { Text(stringResource(R.string.settings_relay_pool_code_field)) },
                     placeholder = { Text("unpruuf-relaypool:v1:...") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -500,7 +485,7 @@ fun SettingsScreen(
                 Button(
                     onClick = { viewModel.importRelayPool() },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Import") }
+                ) { Text(stringResource(R.string.settings_import)) }
                 relayPoolStatus?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -513,15 +498,11 @@ fun SettingsScreen(
             }
             HorizontalDivider()
 
-            SectionHeader("Business Node-Mesh (optional)")
+            SectionHeader(stringResource(R.string.settings_section_node_mesh))
             ListItem(
-                headlineContent = { Text("Your own nodes") },
+                headlineContent = { Text(stringResource(R.string.settings_your_own_nodes)) },
                 supportingContent = {
-                    Text(
-                        "Add your own unpruuf Node-Mesh server(s) — see node-mesh-server/README.md. " +
-                        "Only you can write to your own node; a Business/Node-Mesh contact can " +
-                        "read from it once paired. Up to ${NodeMeshManager.NODE_POOL_MAX_SIZE}."
-                    )
+                    Text(stringResource(R.string.settings_your_own_nodes_body, NodeMeshManager.NODE_POOL_MAX_SIZE))
                 },
                 leadingContent = { Icon(Icons.Default.Send, null) }
             )
@@ -536,14 +517,13 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = { viewModel.startMigrateNode(address) }) { Text("Migrate") }
-                        TextButton(onClick = { viewModel.removeMyNode(address) }) { Text("Remove") }
+                        TextButton(onClick = { viewModel.startMigrateNode(address) }) { Text(stringResource(R.string.settings_migrate)) }
+                        TextButton(onClick = { viewModel.removeMyNode(address) }) { Text(stringResource(R.string.settings_remove)) }
                     }
                     if (migratingAddress == address) {
                         Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
                             Text(
-                                "This node moved to a new address — every paired Business " +
-                                "Node-Mesh contact will be notified automatically.",
+                                stringResource(R.string.settings_node_migrated_notice),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -551,14 +531,14 @@ fun SettingsScreen(
                             OutlinedTextField(
                                 value = migrateInput,
                                 onValueChange = { viewModel.onMigrateInputChange(it) },
-                                label = { Text("New address") },
+                                label = { Text(stringResource(R.string.settings_new_address_field)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(Modifier.height(4.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = { viewModel.confirmMigrateNode() }) { Text("Confirm migration") }
-                                OutlinedButton(onClick = { viewModel.cancelMigrateNode() }) { Text("Cancel") }
+                                Button(onClick = { viewModel.confirmMigrateNode() }) { Text(stringResource(R.string.settings_confirm_migration)) }
+                                OutlinedButton(onClick = { viewModel.cancelMigrateNode() }) { Text(stringResource(R.string.settings_cancel)) }
                             }
                         }
                     }
@@ -570,11 +550,11 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Default.QrCodeScanner, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Scan node QR code")
+                    Text(stringResource(R.string.settings_scan_node_qr_code))
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "or paste the string shown by your node on first start",
+                    stringResource(R.string.settings_node_paste_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -582,7 +562,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = nodeMeshInput,
                     onValueChange = { viewModel.onNodeMeshInputChange(it) },
-                    label = { Text("Node owner string") },
+                    label = { Text(stringResource(R.string.settings_node_owner_string_field)) },
                     placeholder = { Text("unpruuf-node-owner:v1:...") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -591,7 +571,7 @@ fun SettingsScreen(
                 Button(
                     onClick = { viewModel.addMyNode() },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.settings_add)) }
                 nodeMeshStatus?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -604,21 +584,21 @@ fun SettingsScreen(
             }
             HorizontalDivider()
 
-            SectionHeader("About")
+            SectionHeader(stringResource(R.string.settings_section_about))
             ListItem(
-                headlineContent = { Text("unpruuf Standard") },
-                supportingContent = { Text("Version 1.0.0 • GRAL v3.0") },
+                headlineContent = { Text(stringResource(R.string.settings_about_name)) },
+                supportingContent = { Text(stringResource(R.string.settings_about_version)) },
                 leadingContent = { Icon(Icons.Default.Info, null) }
             )
             HorizontalDivider()
             ListItem(
-                headlineContent = { Text("Package") },
+                headlineContent = { Text(stringResource(R.string.settings_about_package)) },
                 supportingContent = { Text("com.nexonai.unpruuf") },
                 leadingContent = { Icon(Icons.Default.Info, null) }
             )
             HorizontalDivider()
             ListItem(
-                headlineContent = { Text("Created by") },
+                headlineContent = { Text(stringResource(R.string.settings_about_created_by)) },
                 supportingContent = { Text("NexonAI") },
                 leadingContent = { Icon(Icons.Default.Info, null) }
             )
@@ -661,22 +641,18 @@ fun SettingsScreen(
     if (showRegenerateIdentityDialog) {
         AlertDialog(
             onDismissRequest = { showRegenerateIdentityDialog = false },
-            title = { Text("Renew pairing identity?") },
+            title = { Text(stringResource(R.string.settings_renew_identity_title)) },
             text = {
-                Text(
-                    "Your own QR code will show a new identity from now on. Contacts you've " +
-                    "already paired with are unaffected — they already run on their own " +
-                    "per-contact identity, exchanged once right after pairing."
-                )
+                Text(stringResource(R.string.settings_renew_identity_body))
             },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.regeneratePairingIdentity()
                     showRegenerateIdentityDialog = false
-                }) { Text("Renew") }
+                }) { Text(stringResource(R.string.settings_renew)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRegenerateIdentityDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRegenerateIdentityDialog = false }) { Text(stringResource(R.string.settings_cancel)) }
             }
         )
     }

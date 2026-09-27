@@ -30,10 +30,10 @@ export function myPairingPayloadJson(identity: OfficerIdentity, advertisedRelayC
  */
 export function addCaseFromPastedCode(identity: OfficerIdentity, store: CaseStore, pastedJson: string): CaseRow {
   const payload = decodeCrossPlatformPayload(pastedJson.trim());
-  if (!payload) throw new InvalidPairingCodeError("That doesn't look like a valid unpruuf pairing code.");
+  if (!payload) throw new InvalidPairingCodeError("Acest cod nu pare a fi un cod de împerechere unpruuf valid.");
   if (payload.appEdition !== "whistleblower") {
     throw new InvalidPairingCodeError(
-      `This code is from a "${payload.appEdition}" app, not the Whistleblower edition — refusing to mix product lines.`,
+      `Acest cod provine dintr-o aplicație "${payload.appEdition}", nu din ediția Whistleblower — refuz să amestec liniile de produse.`,
     );
   }
 

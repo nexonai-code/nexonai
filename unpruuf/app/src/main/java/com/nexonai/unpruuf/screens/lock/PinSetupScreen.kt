@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.nexonai.unpruuf.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,7 +23,7 @@ fun PinSetupScreen(viewModel: LockViewModel) {
     var pin by remember { mutableStateOf("") }
     var pinRepeat by remember { mutableStateOf("") }
     var panic by remember { mutableStateOf("") }
-    var localError by remember { mutableStateOf<String?>(null) }
+    var pinsMismatch by remember { mutableStateOf(false) }
     val vmError by viewModel.error.collectAsState()
 
     Scaffold(
@@ -30,9 +32,9 @@ fun PinSetupScreen(viewModel: LockViewModel) {
             Surface(shadowElevation = 8.dp) {
                 Button(
                     onClick = {
-                        localError = null
+                        pinsMismatch = false
                         viewModel.clearError()
-                        if (pin != pinRepeat) { localError = "PINs do not match."; return@Button }
+                        if (pin != pinRepeat) { pinsMismatch = true; return@Button }
                         viewModel.setupPins(pin, panic)
                     },
                     enabled = pin.length >= 4 && pinRepeat.isNotEmpty() && panic.length >= 4,
@@ -41,7 +43,7 @@ fun PinSetupScreen(viewModel: LockViewModel) {
                         .navigationBarsPadding()
                         .imePadding()
                         .padding(horizontal = 24.dp, vertical = 12.dp)
-                ) { Text("Save PIN") }
+                ) { Text(stringResource(R.string.lock_save_pin)) }
             }
         }
     ) { padding ->
@@ -56,27 +58,32 @@ fun PinSetupScreen(viewModel: LockViewModel) {
             Spacer(Modifier.height(32.dp))
             Icon(Icons.Default.Lock, null, modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(16.dp))
-            Text("Set up PIN · B2", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.lock_setup_title), style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Set a PIN to open the app and a separate panic PIN. " +
-                "Entering the panic PIN instantly deletes all contacts and opens the app empty.",
+                stringResource(R.string.lock_setup_description),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(24.dp))
 
-            PinField(pin, { pin = it.filter(Char::isDigit) }, "PIN (min. 4 digits)")
+            PinField(pin, { pin = it.filter(Char::isDigit) }, stringResource(R.string.lock_field_pin))
             Spacer(Modifier.height(12.dp))
-            PinField(pinRepeat, { pinRepeat = it.filter(Char::isDigit) }, "Repeat PIN")
+            PinField(pinRepeat, { pinRepeat = it.filter(Char::isDigit) }, stringResource(R.string.lock_field_repeat_pin))
             Spacer(Modifier.height(12.dp))
-            PinField(panic, { panic = it.filter(Char::isDigit) }, "Panic PIN")
+            PinField(panic, { panic = it.filter(Char::isDigit) }, stringResource(R.string.lock_field_panic_pin))
 
-            val err = localError ?: vmError
-            if (err != null) {
+            val errText = when {
+                pinsMismatch -> stringResource(R.string.lock_err_pins_mismatch)
+                vmError == LockError.PIN_TOO_SHORT -> stringResource(R.string.lock_err_pin_too_short)
+                vmError == LockError.PANIC_SAME_AS_PIN -> stringResource(R.string.lock_err_panic_same_as_pin)
+                vmError == LockError.WRONG_PIN -> stringResource(R.string.lock_err_wrong_pin)
+                else -> null
+            }
+            if (errText != null) {
                 Spacer(Modifier.height(12.dp))
-                Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text(errText, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(Modifier.height(24.dp))
         }

@@ -100,7 +100,7 @@ function render(): void {
     textDiv.textContent = m.text;
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = `${m.direction === "in" ? "officer" : "you"} · ${new Date(m.ts).toLocaleTimeString()}`;
+    meta.textContent = `${m.direction === "in" ? "ofițer" : "tu"} · ${new Date(m.ts).toLocaleTimeString("ro-RO")}`;
     div.appendChild(textDiv);
     div.appendChild(meta);
     thread.appendChild(div);
@@ -131,7 +131,7 @@ async function sendReport(text: string): Promise<void> {
     saveMessages(msgs);
     render();
   } else {
-    throw new Error("The relay didn't accept the message — check the relay address and try again.");
+    throw new Error("Releul nu a acceptat mesajul — verifică adresa releului și încearcă din nou.");
   }
 }
 
@@ -215,23 +215,23 @@ startBtn.addEventListener("click", () => {
   const officerJson = officerCodeInput.value.trim();
   const relayUrl = relayUrlInput.value.trim().replace(/\/+$/, "");
   if (!officerJson || !relayUrl) {
-    setupError.textContent = "Both the officer's code and the relay address are required.";
+    setupError.textContent = "Sunt necesare atât codul ofițerului, cât și adresa releului.";
     return;
   }
   const payload = decodeCrossPlatformPayload(officerJson);
   if (!payload) {
-    setupError.textContent = "That doesn't look like a valid unpruuf pairing code.";
+    setupError.textContent = "Acesta nu pare a fi un cod de împerechere unpruuf valid.";
     return;
   }
   if (payload.appEdition !== "officer") {
-    setupError.textContent = `This code is from a "${payload.appEdition}" app, not a compliance officer's dashboard.`;
+    setupError.textContent = `Acest cod provine dintr-o aplicație "${payload.appEdition}", nu din panoul unui ofițer de conformitate.`;
     return;
   }
   const officerConn = payload.relayConnectionStrings[0];
   const parsed = officerConn?.split(":");
   const authToken = parsed && parsed.length >= 4 ? parsed[parsed.length - 1] : null;
   if (!authToken) {
-    setupError.textContent = "The officer's code doesn't carry a usable relay token.";
+    setupError.textContent = "Codul ofițerului nu conține un token de releu utilizabil.";
     return;
   }
 
@@ -280,7 +280,7 @@ sendBtn.addEventListener("click", async () => {
 });
 
 resetBtn.addEventListener("click", () => {
-  if (!confirm("This deletes your local identity, case and message history from this browser. You will need a new pairing code to start over. Continue?")) return;
+  if (!confirm("Aceasta șterge identitatea locală, cazul și istoricul mesajelor din acest browser. Vei avea nevoie de un cod de împerechere nou ca să reiei. Continui?")) return;
   localStorage.removeItem(LS_IDENTITY);
   localStorage.removeItem(LS_CASE);
   localStorage.removeItem(LS_MESSAGES);

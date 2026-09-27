@@ -15,10 +15,10 @@ class UnpruufApplication : Application() {
     private fun createNotificationChannels() {
         val channel = NotificationChannel(
             CHANNEL_MESSAGES,
-            "Messages",
+            getString(R.string.notif_channel_messages_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Incoming encrypted messages"
+            description = getString(R.string.notif_channel_messages_description)
             enableVibration(true)
             enableLights(true)
         }

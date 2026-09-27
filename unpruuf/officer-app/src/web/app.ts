@@ -39,7 +39,7 @@ export function createDashboardApp(
   app.post("/api/cases", (req, res) => {
     const pastedCode = req.body?.pastedCode;
     if (typeof pastedCode !== "string" || pastedCode.trim().length === 0) {
-      return res.status(400).json({ error: "pastedCode is required" });
+      return res.status(400).json({ error: "pastedCode este obligatoriu" });
     }
     try {
       const row = addCaseFromPastedCode(identity, store, pastedCode);
@@ -47,46 +47,46 @@ export function createDashboardApp(
     } catch (err) {
       if (err instanceof InvalidPairingCodeError) return res.status(400).json({ error: err.message });
       console.error("[api] addCaseFromPastedCode failed:", err);
-      return res.status(500).json({ error: "internal error" });
+      return res.status(500).json({ error: "eroare internă" });
     }
   });
 
   app.get("/api/cases/:id", (req, res) => {
     const row = store.getCase(req.params.id);
-    if (!row) return res.status(404).json({ error: "not found" });
+    if (!row) return res.status(404).json({ error: "nu a fost găsit" });
     return res.json({ ...row, messages: store.listMessages(row.id) });
   });
 
   const VALID_STATUSES: CaseStatus[] = ["new", "acknowledged", "in_progress", "closed"];
   app.post("/api/cases/:id/status", (req, res) => {
     const status = req.body?.status;
-    if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: `status must be one of ${VALID_STATUSES.join(", ")}` });
+    if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: `starea trebuie să fie una dintre: ${VALID_STATUSES.join(", ")}` });
     const row = store.getCase(req.params.id);
-    if (!row) return res.status(404).json({ error: "not found" });
+    if (!row) return res.status(404).json({ error: "nu a fost găsit" });
     store.setStatus(req.params.id, status);
     return res.json(store.getCase(req.params.id));
   });
 
   app.post("/api/cases/:id/category", (req, res) => {
     const category = req.body?.category;
-    if (typeof category !== "string") return res.status(400).json({ error: "category must be a string" });
+    if (typeof category !== "string") return res.status(400).json({ error: "categoria trebuie să fie un text" });
     const row = store.getCase(req.params.id);
-    if (!row) return res.status(404).json({ error: "not found" });
+    if (!row) return res.status(404).json({ error: "nu a fost găsit" });
     store.setCategory(req.params.id, category);
     return res.json(store.getCase(req.params.id));
   });
 
   app.post("/api/cases/:id/reply", async (req, res) => {
     const text = req.body?.text;
-    if (typeof text !== "string" || text.trim().length === 0) return res.status(400).json({ error: "text is required" });
+    if (typeof text !== "string" || text.trim().length === 0) return res.status(400).json({ error: "textul este obligatoriu" });
     const row = store.getCase(req.params.id);
-    if (!row) return res.status(404).json({ error: "not found" });
+    if (!row) return res.status(404).json({ error: "nu a fost găsit" });
     try {
       const sent = await sendReply(identity, store, relay, req.params.id, text.trim());
       return res.json({ sent, messages: store.listMessages(req.params.id) });
     } catch (err) {
       console.error("[api] sendReply failed:", err);
-      return res.status(500).json({ error: "failed to send — is the relay reachable? see server console." });
+      return res.status(500).json({ error: "trimiterea a eșuat — releul este accesibil? verifică fereastra serverului." });
     }
   });
 

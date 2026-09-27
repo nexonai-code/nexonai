@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.nexonai.unpruuf.domain.AppEdition
 import com.nexonai.unpruuf.domain.license.LicenseManager
 import com.nexonai.unpruuf.domain.license.LicenseState
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 
 /**
  * The hard gate for a Standard/Pro install with no valid license (see
@@ -46,7 +48,7 @@ fun LicenseLockScreen(licenseManager: LicenseManager) {
                         .navigationBarsPadding()
                         .imePadding()
                         .padding(horizontal = 24.dp, vertical = 12.dp)
-                ) { Text("Activate") }
+                ) { Text(stringResource(R.string.license_activate)) }
             }
         }
     ) { padding ->
@@ -65,7 +67,7 @@ fun LicenseLockScreen(licenseManager: LicenseManager) {
                 tint = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(16.dp))
-            Text("License required", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.license_required), style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(8.dp))
             Text(
                 statusText(state),
@@ -78,7 +80,7 @@ fun LicenseLockScreen(licenseManager: LicenseManager) {
             OutlinedTextField(
                 value = codeInput,
                 onValueChange = { error = null; codeInput = it },
-                label = { Text("License code") },
+                label = { Text(stringResource(R.string.license_code_field)) },
                 placeholder = { Text("unpruuf-license:v1:...") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
@@ -94,20 +96,19 @@ fun LicenseLockScreen(licenseManager: LicenseManager) {
     }
 }
 
+@Composable
 private fun statusText(state: LicenseState): String = when (state) {
     is LicenseState.NotConfigured ->
-        "unpruuf ${AppEdition.label} needs a license code to run. Paste the code you received " +
-        "from your reseller below."
+        stringResource(R.string.license_status_not_configured, AppEdition.label)
     is LicenseState.Expired ->
-        "The license for this device (${state.info.serial}) expired on " +
-        "${formatDate(state.info.expiresAtMs)}. Enter a renewal code to continue."
+        stringResource(R.string.license_status_expired, state.info.serial, formatDate(state.info.expiresAtMs))
     is LicenseState.Invalid ->
-        "${state.reason} Enter a valid license code to continue."
+        state.reason + " " + stringResource(R.string.license_status_enter_valid)
     is LicenseState.Valid, is LicenseState.ExpiringSoon ->
         // Unreachable in practice — MainActivity only shows this screen for the other three
         // states — but keeps `when` exhaustive without an `else` that would silently swallow a
         // future LicenseState case.
-        "Enter a valid license code to continue."
+        stringResource(R.string.license_status_enter_valid)
 }
 
 private fun formatDate(epochMs: Long): String =

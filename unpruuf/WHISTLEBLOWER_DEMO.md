@@ -1,5 +1,7 @@
 # unpruuf Whistleblower — Demo Runbook (Uni 1 Decembrie 1918 Alba Iulia)
 
+**Sprache:** Android-App (Whistleblower-Edition), Officer-Dashboard, Web-Reporter und Tablet-Relay (relay-android) sind komplett auf Rumänisch — Stand 2026-09-27, siehe CHANGELOG.md. Diese Runbook-Datei selbst bleibt Deutsch (nur für dich).
+
 What got built this session, and exactly how to run the demo you described: Android reporter
 scans an officer's QR and sends a message; a relay runs on a tablet; a Windows laptop runs the
 officer dashboard; plus a browser-only fallback channel with its own disclaimer.

@@ -21,11 +21,11 @@ async function main() {
   }
   const { identity, wasCreated } = identityResult;
   if (wasCreated) {
-    console.log(`[startup] Generated a new officer identity (userId ${identity.userId}).`);
-    console.log(`[startup] Wrote it, encrypted with OFFICER_PASSWORD, to ${config.identityPath}.`);
-    console.log(`[startup] Back this file up — losing it means every existing case's messages become unreadable.`);
+    console.log(`[startup] Identitate nouă de ofițer generată (userId ${identity.userId}).`);
+    console.log(`[startup] Salvată, criptată cu OFFICER_PASSWORD, în ${config.identityPath}.`);
+    console.log(`[startup] Fă o copie de siguranță a acestui fișier — dacă îl pierzi, mesajele din toate cazurile existente devin ilizibile.`);
   } else {
-    console.log(`[startup] Loaded existing officer identity (userId ${identity.userId}).`);
+    console.log(`[startup] Identitate de ofițer existentă încărcată (userId ${identity.userId}).`);
   }
 
   const store = new CaseStore(config.dbPath, deriveDbKey(identity));
@@ -33,23 +33,23 @@ async function main() {
   let torClient: TorClient | undefined;
   let relayReachableBaseUrl: string;
   if (config.torEnabled) {
-    console.log("[startup] Starting Tor (this reaches the relay's real .onion address — the same path the Android app uses, not a LAN shortcut)...");
+    console.log("[startup] Se pornește Tor (ajunge la adresa .onion reală a releului — aceeași cale folosită de aplicația Android, nu un scurtcircuit LAN)...");
     try {
       torClient = await startTorAndWaitReady(config.dataDir, {
         onProgress: (pct, line) => console.log(`[tor] ${pct}% — ${line}`),
       });
-      console.log(`[startup] Tor bootstrapped — SOCKS proxy on 127.0.0.1:${torClient.socksPort}.`);
+      console.log(`[startup] Tor pornit cu succes — proxy SOCKS pe 127.0.0.1:${torClient.socksPort}.`);
     } catch (err) {
-      console.error(`\n[startup] Tor failed to bootstrap: ${(err as Error).message}`);
-      console.error("[startup] Check this machine's internet connection and try again.");
-      console.error("[startup] To run without Tor instead (LAN-only, weaker — see README.md's Known gaps),");
-      console.error("[startup] set RELAY_REACHABLE_BASE_URL to the relay's LAN address and restart.\n");
+      console.error(`\n[startup] Tor nu a reușit să pornească: ${(err as Error).message}`);
+      console.error("[startup] Verifică conexiunea la internet a acestui calculator și încearcă din nou.");
+      console.error("[startup] Pentru a rula fără Tor (doar LAN, mai slab — vezi README.md, secțiunea Known gaps),");
+      console.error("[startup] setează RELAY_REACHABLE_BASE_URL la adresa LAN a releului și repornește.\n");
       process.exit(1);
     }
     relayReachableBaseUrl = relayBaseUrlFromAddress(config.relayAddress);
   } else {
     relayReachableBaseUrl = config.relayReachableBaseUrlOverride!;
-    console.log(`[startup] TOR DISABLED — talking directly to ${relayReachableBaseUrl} (see README.md's Known gaps for what this trades away).`);
+    console.log(`[startup] TOR DEZACTIVAT — se comunică direct cu ${relayReachableBaseUrl} (vezi README.md, secțiunea Known gaps, pentru ce se pierde astfel).`);
   }
 
   const relay = new RelayClient({
@@ -61,15 +61,15 @@ async function main() {
 
   const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl);
   app.listen(config.dashboardPort, () => {
-    console.log(`[startup] Dashboard listening on http://localhost:${config.dashboardPort}`);
-    console.log(`[startup] Polling relay at ${relayReachableBaseUrl} every ${config.pollIntervalMs}ms${torClient ? " (via Tor)" : ""}.`);
+    console.log(`[startup] Panoul ascultă pe http://localhost:${config.dashboardPort}`);
+    console.log(`[startup] Interoghez releul la ${relayReachableBaseUrl} la fiecare ${config.pollIntervalMs}ms${torClient ? " (prin Tor)" : ""}.`);
   });
 
   const pollTick = async () => {
     try {
       await pollLoop.pollOnce();
     } catch (err) {
-      console.error("[poll] round failed:", err instanceof Error ? err.message : err);
+      console.error("[poll] rundă eșuată:", err instanceof Error ? err.message : err);
     }
   };
   setInterval(pollTick, config.pollIntervalMs).unref();

@@ -1,22 +1,23 @@
 @echo off
 setlocal enabledelayedexpansion
+chcp 65001 >nul
 cd /d "%~dp0"
 
 if not exist dist (
-  echo Not built yet - run install.bat first.
+  echo Nu este inca construit - ruleaza install.bat mai intai.
   pause
   exit /b 1
 )
 
-rem The relay's connection string is remembered in officer.env.bat next to this script (not
-rem committed to git - see .gitignore) so you only have to paste it once. The officer password
-rem is NEVER remembered here - see README.md for why.
+rem Codul de conectare al releului este retinut in officer.env.bat langa acest script (nu
+rem este trimis in git - vezi .gitignore), asa ca il lipesti o singura data. Parola ofiterului
+rem NU este retinuta niciodata aici - vezi README.md pentru motiv.
 if exist officer.env.bat call officer.env.bat
 
 if "%RELAY_CONNECTION_STRING%"=="" (
   echo.
-  echo Paste the relay's connection string ^(unpruuf-relay:v1:...^) - printed by the relay
-  echo app on the tablet/laptop it runs on:
+  echo Lipeste codul de conectare al releului ^(unpruuf-relay:v1:...^) - afisat de aplicatia
+  echo de releu pe tableta/laptopul pe care ruleaza:
   set /p RELAY_CONNECTION_STRING=^>
 )
 
@@ -27,18 +28,19 @@ if "%RELAY_CONNECTION_STRING%"=="" (
 ) > officer.env.bat
 
 echo.
-echo Enter your officer password. This protects the case database and your identity key at
-echo rest - remember it, there is no recovery if you lose it. NOTE: this plain Windows
-echo prompt does not hide what you type - make sure nobody is reading over your shoulder.
+echo Introdu parola ta de ofiter. Aceasta protejeaza baza de date a cazurilor si cheia ta de
+echo identitate stocate local - tine-o minte, nu exista recuperare daca o pierzi. ATENTIE:
+echo aceasta fereastra simpla Windows nu ascunde ce scrii - asigura-te ca nimeni nu se uita.
 set /p OFFICER_PASSWORD=^>
 
 echo.
 if "%RELAY_REACHABLE_BASE_URL%"=="" (
-  echo Starting Tor - first run downloads it ^(one-time, ~30-50 MB^), then bootstraps a real
-  echo connection to the relay's onion address. Takes a few seconds to under a minute.
+  echo Pornesc Tor - la prima rulare se descarca ^(o singura data, ~30-50 MB^), apoi se
+  echo stabileste o conexiune reala catre adresa onion a releului. Dureaza de la cateva
+  echo secunde pana la un minut.
 ) else (
-  echo RELAY_REACHABLE_BASE_URL is set - skipping Tor, talking directly to %RELAY_REACHABLE_BASE_URL%.
+  echo RELAY_REACHABLE_BASE_URL este setat - Tor este omis, se comunica direct cu %RELAY_REACHABLE_BASE_URL%.
 )
-echo Once it says "Dashboard listening", open http://localhost:3000 in your browser.
+echo Cand apare "Panoul asculta", deschide http://localhost:3000 in browser.
 node dist\index.js
 pause

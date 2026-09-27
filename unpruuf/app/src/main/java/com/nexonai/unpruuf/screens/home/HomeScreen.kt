@@ -14,6 +14,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.nexonai.unpruuf.domain.AppEdition
 import com.nexonai.unpruuf.ui.components.EclipseMark
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +54,7 @@ fun HomeScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.home_cd_back))
                     }
                 }
             )
@@ -112,12 +114,12 @@ fun HomeScreen(
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
-                            if (isTorConnected) "Tor active" else "Connecting to Tor…",
+                            if (isTorConnected) stringResource(R.string.home_tor_active) else stringResource(R.string.home_connecting_to_tor),
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            if (isTorConnected) "P2P connection secured"
-                            else "Waiting for Tor network",
+                            if (isTorConnected) stringResource(R.string.home_p2p_secured)
+                            else stringResource(R.string.home_waiting_for_tor),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -133,13 +135,13 @@ fun HomeScreen(
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("GRAL Security Status", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.home_gral_status_title), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    SecurityStatusRow("Zero Infra", "P2P via Tor", true)
-                    SecurityStatusRow("RAM-Only", "No storage", true)
-                    SecurityStatusRow("Hourly Rotation", "Keys rotate", true)
-                    SecurityStatusRow("Dummy Traffic", "Active", true)
-                    SecurityStatusRow("Revoke", "Available", true)
+                    SecurityStatusRow(stringResource(R.string.home_row_zero_infra), stringResource(R.string.home_row_zero_infra_desc), true)
+                    SecurityStatusRow(stringResource(R.string.home_row_ram_only), stringResource(R.string.home_row_ram_only_desc), true)
+                    SecurityStatusRow(stringResource(R.string.home_row_hourly_rotation), stringResource(R.string.home_row_hourly_rotation_desc), true)
+                    SecurityStatusRow(stringResource(R.string.home_row_dummy_traffic), stringResource(R.string.home_row_dummy_traffic_desc), true)
+                    SecurityStatusRow(stringResource(R.string.home_row_revoke), stringResource(R.string.home_row_revoke_desc), true)
                 }
             }
 

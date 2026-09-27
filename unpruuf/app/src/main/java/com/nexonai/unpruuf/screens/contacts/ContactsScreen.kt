@@ -24,6 +24,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nexonai.unpruuf.data.model.Contact
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 import kotlinx.coroutines.launch
 
 // Fixed "new message" green, independent of the per-edition accent color
@@ -39,6 +41,7 @@ fun ContactsScreen(
     onVerifyContact: (Contact) -> Unit,
     viewModel: ContactsViewModel = hiltViewModel()
 ) {
+    val updatedSentText = stringResource(R.string.contacts_updated_sent)
     val contacts by viewModel.contacts.collectAsState()
     val unreadContactIds by viewModel.unreadContactIds.collectAsState()
     val legacyContactIds by viewModel.legacyContactIds.collectAsState()
@@ -70,7 +73,7 @@ fun ContactsScreen(
                     TorStatusPill(active = torActive, selfReachable = selfReachable)
                     Spacer(Modifier.width(6.dp))
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, "Settings")
+                        Icon(Icons.Default.Settings, stringResource(R.string.contacts_cd_settings))
                     }
                 }
             )
@@ -82,7 +85,7 @@ fun ContactsScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.QrCodeScanner, "Add contact")
+                Icon(Icons.Default.QrCodeScanner, stringResource(R.string.contacts_cd_add_contact))
             }
         }
     ) { padding ->
@@ -94,7 +97,7 @@ fun ContactsScreen(
                     viewModel.migrateLegacyContacts(legacyContactIds)
                     legacyBannerDismissed = true
                     scope.launch {
-                        snackbarHostState.showSnackbar("Updated connection info sent.")
+                        snackbarHostState.showSnackbar(updatedSentText)
                     }
                 },
                 onDismiss = { legacyBannerDismissed = true }
@@ -116,13 +119,13 @@ fun ContactsScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "No contacts yet",
+                        stringResource(R.string.contacts_empty_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Scan a QR code to add a contact",
+                        stringResource(R.string.contacts_empty_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -130,7 +133,7 @@ fun ContactsScreen(
                     Button(onClick = onAddContact) {
                         Icon(Icons.Default.QrCodeScanner, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Scan QR code")
+                        Text(stringResource(R.string.contacts_scan_qr_button))
                     }
                 }
             }
@@ -163,12 +166,12 @@ fun ContactsScreen(
     contactToRename?.let { contact ->
         AlertDialog(
             onDismissRequest = { contactToRename = null },
-            title = { Text("Rename contact") },
+            title = { Text(stringResource(R.string.contacts_rename_title)) },
             text = {
                 OutlinedTextField(
                     value = renameText,
                     onValueChange = { renameText = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.contacts_name_field)) },
                     singleLine = true
                 )
             },
@@ -180,10 +183,10 @@ fun ContactsScreen(
                         }
                         contactToRename = null
                     }
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.contacts_save)) }
             },
             dismissButton = {
-                TextButton(onClick = { contactToRename = null }) { Text("Cancel") }
+                TextButton(onClick = { contactToRename = null }) { Text(stringResource(R.string.contacts_cancel)) }
             }
         )
     }
@@ -191,9 +194,9 @@ fun ContactsScreen(
     contactToRevoke?.let { contact ->
         AlertDialog(
             onDismissRequest = { contactToRevoke = null },
-            title = { Text("Delete contact") },
+            title = { Text(stringResource(R.string.contacts_delete_title)) },
             text = {
-                Text("Do you really want to delete ${contact.displayName}? The contact and all messages will be permanently deleted on both devices immediately.")
+                Text(stringResource(R.string.contacts_delete_body, contact.displayName))
             },
             confirmButton = {
                 TextButton(
@@ -202,12 +205,12 @@ fun ContactsScreen(
                         contactToRevoke = null
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.contacts_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { contactToRevoke = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.contacts_cancel))
                 }
             }
         )
@@ -241,20 +244,20 @@ private fun LegacyOnionBanner(
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    if (count == 1) "1 contact may have an outdated address for this device"
-                    else "$count contacts may have an outdated address for this device",
+                    if (count == 1) stringResource(R.string.contacts_legacy_one)
+                    else stringResource(R.string.contacts_legacy_many, count),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Text(
-                    "Send your current connection info so they keep reaching you reliably.",
+                    stringResource(R.string.contacts_legacy_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Spacer(Modifier.height(8.dp))
                 Row {
-                    TextButton(onClick = onMigrate) { Text("Update now") }
-                    TextButton(onClick = onDismiss) { Text("Not now") }
+                    TextButton(onClick = onMigrate) { Text(stringResource(R.string.contacts_legacy_update)) }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.contacts_legacy_dismiss)) }
                 }
             }
         }
@@ -293,9 +296,9 @@ private fun TorStatusPill(active: Boolean, selfReachable: Boolean?) {
             Spacer(Modifier.width(6.dp))
             Text(
                 when {
-                    !active -> "CONNECTING"
-                    reconnecting -> "RECONNECTING"
-                    else -> "TOR ACTIVE"
+                    !active -> stringResource(R.string.contacts_status_connecting)
+                    reconnecting -> stringResource(R.string.contacts_status_reconnecting)
+                    else -> stringResource(R.string.contacts_status_tor_active)
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = fg
@@ -323,7 +326,7 @@ private fun ContactListItem(
             // stays out of sight; the monospace label voice says how this contact is
             // reachable right now.
             Text(
-                if (lanConnected) "same wi-fi · lan" else "direct · via tor",
+                if (lanConnected) stringResource(R.string.contacts_transport_lan) else stringResource(R.string.contacts_transport_tor),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -365,7 +368,7 @@ private fun ContactListItem(
                 IconButton(onClick = onVerify) {
                     Icon(
                         if (contact.isVerified) Icons.Default.VerifiedUser else Icons.Outlined.VerifiedUser,
-                        if (contact.isVerified) "Verified" else "Verify contact",
+                        if (contact.isVerified) stringResource(R.string.contacts_cd_verified) else stringResource(R.string.contacts_cd_verify_contact),
                         tint = if (contact.isVerified) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -373,14 +376,14 @@ private fun ContactListItem(
                 IconButton(onClick = onRename) {
                     Icon(
                         Icons.Default.Edit,
-                        "Rename",
+                        stringResource(R.string.contacts_cd_rename),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
                 IconButton(onClick = onRevoke) {
                     Icon(
                         Icons.Default.RemoveCircleOutline,
-                        "Delete",
+                        stringResource(R.string.contacts_cd_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

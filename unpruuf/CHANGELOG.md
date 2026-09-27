@@ -5,6 +5,77 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑27 (2) · Whistleblower pilot: full Romanian translation (Android app, officer-app, web-reporter, tablet relay)
+
+**What was done**
+
+Universitatea 1 Decembrie 1918 Alba Iulia is Romanian-speaking, so every piece they or their
+reporters/officers interact with is now Romanian, not just the demo runbook: the Android
+Whistleblower app, the officer-app dashboard (web UI + startup console + install/start.bat), the
+web-reporter browser fallback (page + startup scripts), and the tablet relay app (relay-android).
+
+**What was added**
+
+- `app/src/whistleblower/res/values/strings.xml` — a new Gradle-flavor resource override (280+
+  strings) covering every screen a reporter can reach: PIN lock/setup, QR pairing, chat, contact
+  list, contact detail (safety number), settings, home (security status), the license gate, and
+  the root/build-expired refusal screens, plus notification text. Standard/Pro/Client keep their
+  existing (English) text untouched — Gradle's flavor resource merging picks the whistleblower
+  override only for that one build variant, by resource name, regardless of the phone's own
+  language setting (a guaranteed Romanian demo, not a locale gamble).
+- `app/src/main/res/values/strings.xml` — the ~280 corresponding keys were extracted out of
+  hardcoded Compose `Text("...")` calls (this app had zero `stringResource` usage before this)
+  and given here as the default (English) value every other flavor keeps using.
+- `LockViewModel` — error messages changed from raw strings to a `LockError` enum, so the UI
+  layer (not the ViewModel) owns the localized wording.
+- `relay-android` — real Android locale resources instead of a flavor: `values/strings.xml`
+  (English default, ~70 keys) plus a new `values-ro/strings.xml` override. Unlike the main app,
+  this shows Romanian only when the *device's* language is Romanian — the right choice here
+  since relay-android's newer Business Node-Mesh mode (this session's earlier work) serves other,
+  non-Romanian NexonAI customers too, and shouldn't be forced into Romanian for them.
+- `officer-app/src/web/public/{index.html,app.js}` — dashboard UI, case table, thread view, all
+  translated directly (this deployment is the university's own dedicated instance, not a shared
+  multi-tenant one, so no i18n split was needed).
+- `officer-app/src/index.ts`, `src/officer/intake.ts`, `src/web/app.ts` — startup console
+  messages, pairing-code error messages, and dashboard API error messages translated.
+- `officer-app/install.bat`, `start.bat` — translated; `start.bat` now sets `chcp 65001` first so
+  Romanian diacritics render correctly in a plain Windows console instead of risking mojibake.
+- `web-reporter/public/index.html`, `src/main.ts`, `install.bat`, `start.bat` — translated,
+  including the security disclaimer banner (translated carefully — it's the page's most
+  important text) and the local-data-wipe confirmation dialog.
+
+**Bug found and fixed (real, caught by testing, not guessed)**
+
+Twelve English default strings (in the main app's `strings.xml`) and three in relay-android's
+contained an unescaped apostrophe (`doesn't`, `you've`, `officer's`, …). The whistleblower
+flavor never hit this — its Romanian override always shadowed those exact keys — so an
+initial `assembleWhistleblowerDebug` looked clean. Building the *other* three editions
+(`assembleStandardDebug`/`ProDebug`/`ClientDebug`), which fall through to the English default,
+failed AAPT2 resource merging with "Invalid unicode escape sequence in string" (AAPT2's actual
+wording for this, not literally about `\u` escapes). Fixed by escaping every literal apostrophe
+in both `strings.xml` files. This is exactly the kind of cross-edition regression the project's
+own "check all flavors, not just the one you're touching" habit exists to catch — confirmed by
+re-running all four editions' `test*DebugUnitTest` + `assemble*Debug` afterward.
+
+**Verification**
+
+- Android: `testStandardDebugUnitTest`/`testProDebugUnitTest`/`testClientDebugUnitTest`/
+  `testWhistleblowerDebugUnitTest` all 48/48, `assembleDebug` (all four flavors) green.
+- relay-android: `testDebugUnitTest` 8/8 (unchanged — UI text only), `assembleDebug` green.
+- officer-app: `npm run build` (tsc) clean.
+- web-reporter: `npm run build` clean, confirmed the Romanian strings actually landed in the
+  built `public/bundle.js` (grepped for them post-build, not just in `src/`).
+
+**Not verified**
+
+- Real device/browser rendering of the Romanian text (no emulator/browser display in this
+  sandbox) — confirm visually before the meeting, especially long strings in narrow Compose
+  cards and the officer-app table on a small laptop screen.
+- Windows console rendering of `officer-app`'s translated startup messages with `chcp 65001`
+  (the fix is standard and well-established, but wasn't tested on a real Windows box here).
+
+---
+
 ## 2026‑09‑27 · Node-Mesh v5: betriebsreif — eingebauter Tor + PoW, Profile, Android-Node, 1 Client-Bug + 1 Server-Bug
 
 **What was done**

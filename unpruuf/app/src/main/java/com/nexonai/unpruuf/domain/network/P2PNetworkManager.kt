@@ -1342,8 +1342,8 @@ class P2PNetworkManager @Inject constructor(
 
         val notification = NotificationCompat.Builder(context, UnpruufApplication.CHANNEL_MESSAGES)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("unpruuf")
-            .setContentText("New message received")
+            .setContentTitle(context.getString(R.string.notif_title))
+            .setContentText(context.getString(R.string.notif_new_message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setContentIntent(pendingIntent)

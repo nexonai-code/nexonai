@@ -3,4 +3,266 @@
     <!-- app_name wird pro Edition (Flavor) in build.gradle.kts via resValue gesetzt -->
     <string name="tor_channel_name">unpruuf Tor Connection</string>
     <string name="p2p_channel_name">unpruuf P2P Listener</string>
+
+    <!-- Lock / PIN — screens/lock. Default (English) text for standard/pro/client; the
+         whistleblower flavor overrides every key below with Romanian, see
+         app/src/whistleblower/res/values/strings.xml. -->
+    <string name="lock_enter_pin">Enter PIN · B2</string>
+    <string name="lock_cd_unlock_fingerprint">Unlock with fingerprint</string>
+    <string name="lock_biometric_title">Unlock unpruuf</string>
+    <string name="lock_biometric_subtitle">Confirm your fingerprint to continue</string>
+    <string name="lock_biometric_use_pin">Use PIN instead</string>
+    <string name="lock_err_pin_too_short">PIN must be at least 4 digits.</string>
+    <string name="lock_err_panic_same_as_pin">Panic PIN must differ from the PIN.</string>
+    <string name="lock_err_wrong_pin">Wrong PIN.</string>
+    <string name="lock_err_pins_mismatch">PINs do not match.</string>
+    <string name="lock_save_pin">Save PIN</string>
+    <string name="lock_setup_title">Set up PIN · B2</string>
+    <string name="lock_setup_description">Set a PIN to open the app and a separate panic PIN. Entering the panic PIN instantly deletes all contacts and opens the app empty.</string>
+    <string name="lock_field_pin">PIN (min. 4 digits)</string>
+    <string name="lock_field_repeat_pin">Repeat PIN</string>
+    <string name="lock_field_panic_pin">Panic PIN</string>
+
+    <!-- QR pairing — screens/qrpair. Default (English); whistleblower overrides in Romanian. -->
+    <string name="qr_scan_prompt">Scan unpruuf QR code</string>
+    <string name="qr_title_add_contact">Add contact</string>
+    <string name="qr_cd_back">Back</string>
+    <string name="qr_relay_only_mandatory">RELAY-ONLY PAIRING — MANDATORY MODE IS ON</string>
+    <string name="qr_chip_android_contact">Android contact</string>
+    <string name="qr_chip_ios_cross_platform">iOS / cross-platform</string>
+    <string name="qr_chip_business_node_mesh">Business (Node-Mesh)</string>
+    <string name="qr_your_code">YOUR CODE</string>
+    <string name="qr_cd_my_node_mesh_qr">My Business Node-Mesh QR code</string>
+    <string name="qr_configure_node_first">Configure a node first</string>
+    <string name="qr_configure_node_first_body">Business Node-Mesh pairing needs your own node — set one up in Settings → Business Node-Mesh, then come back here.</string>
+    <string name="qr_cd_my_cross_platform_qr">My cross-platform QR code</string>
+    <string name="qr_configure_relay_first">Configure a relay first</string>
+    <string name="qr_configure_relay_first_body">Cross-platform pairing needs a relay — set one up in Settings → Relay, then come back here.</string>
+    <string name="qr_cd_my_qr">My QR code</string>
+    <string name="qr_waiting_for_tor">Waiting for Tor network…</string>
+    <string name="qr_first_start_note">First start can take 10–30 s</string>
+    <string name="qr_copy_code_whistleblower">Copy my code (paste it into the officer\'s dashboard)</string>
+    <string name="qr_copy_code_debug">Copy code (debug — share manually)</string>
+    <string name="qr_tor_active">tor active — your code is ready</string>
+    <string name="qr_connecting_to_tor">connecting to tor…</string>
+    <string name="qr_scan_their_code">Scan their code</string>
+    <string name="qr_paste_officer_code">Paste the officer\'s code</string>
+    <string name="qr_paste_their_code_debug">Paste their code (debug)</string>
+    <string name="qr_add_from_pasted_code">Add from pasted code</string>
+    <string name="qr_pasted_code_warning">Testing only — a code shared this way (message, email) skips the in-person check a QR scan gives you. Anyone who intercepts it could pair as this contact.</string>
+    <string name="qr_both_devices_scan_footer">Both devices scan each other. The code carries your reachable address and keys — no account, no phone number, nothing else.</string>
+    <string name="qr_name_contact_title">Name contact</string>
+    <string name="qr_name_contact_body">What do you want to call this contact?</string>
+    <string name="qr_name_field">Name</string>
+    <string name="qr_add">Add</string>
+    <string name="qr_cancel">Cancel</string>
+
+    <!-- Chat — screens/chat. Default (English); whistleblower overrides in Romanian. -->
+    <string name="chat_temp_node_scan_prompt">Scan Temp Node connection string</string>
+    <string name="chat_delete_chat_title">Delete chat?</string>
+    <string name="chat_this_contact">this contact</string>
+    <string name="chat_delete_chat_body">All messages with %1$s will be wiped from RAM immediately – on both sides. The contact stays.
+
+This action cannot be undone.</string>
+    <string name="chat_delete_chat_button">Delete chat</string>
+    <string name="chat_cancel">Cancel</string>
+    <string name="chat_rename_contact_title">Rename contact</string>
+    <string name="chat_name_field">Name</string>
+    <string name="chat_save">Save</string>
+    <string name="chat_camera_permission_title">Camera permission needed</string>
+    <string name="chat_camera_permission_body">Allow camera access in system settings to take a photo.</string>
+    <string name="chat_ok">OK</string>
+    <string name="chat_e2e_encrypted_tap_to_rename">End-to-end encrypted • tap to rename</string>
+    <string name="chat_cd_back">Back</string>
+    <string name="chat_cd_rename">Rename</string>
+    <string name="chat_cd_send_connection_update">Send updated connection info</string>
+    <string name="chat_cd_wechsel">Wechsel (rotate wire tag)</string>
+    <string name="chat_cd_temp_node">Temp Node</string>
+    <string name="chat_cd_attach_file">Attach file</string>
+    <string name="chat_cd_take_photo">Take photo</string>
+    <string name="chat_message_placeholder">Message…</string>
+    <string name="chat_cd_send">Send</string>
+    <string name="chat_no_messages">No messages</string>
+    <string name="chat_no_messages_body">Messages are stored only in RAM
+and wiped when the screen locks</string>
+    <string name="chat_older_messages_wiped">older messages wiped from RAM</string>
+    <string name="chat_still_connecting">Still connecting…</string>
+    <string name="chat_still_connecting_body">first message on mobile data can take a few minutes</string>
+    <string name="chat_set_up_relay_hint">Set up a relay to avoid this wait — Settings ›</string>
+    <string name="chat_temp_node_title">Temp Node</string>
+    <string name="chat_temp_node_active">Active — this chat\'s outgoing traffic uses only this node.</string>
+    <string name="chat_temp_node_pending">Registered, not yet confirmed — sending on both the standard nodes and this one until the first message gets through.</string>
+    <string name="chat_temp_node_intro">Use a second device (phone, tablet, laptop) as an extra node for just this chat — scan or paste the connection string it prints on startup.</string>
+    <string name="chat_temp_node_connection_string_field">Connection string</string>
+    <string name="chat_temp_node_deactivate">Deactivate</string>
+    <string name="chat_temp_node_add">Add</string>
+    <string name="chat_temp_node_scan">Scan</string>
+    <string name="chat_close">Close</string>
+    <string name="chat_photo_fallback">Photo</string>
+
+    <!-- Contacts — screens/contacts. Default (English); whistleblower overrides in Romanian. -->
+    <string name="contacts_cd_settings">Settings</string>
+    <string name="contacts_cd_add_contact">Add contact</string>
+    <string name="contacts_updated_sent">Updated connection info sent.</string>
+    <string name="contacts_empty_title">No contacts yet</string>
+    <string name="contacts_empty_body">Scan a QR code to add a contact</string>
+    <string name="contacts_scan_qr_button">Scan QR code</string>
+    <string name="contacts_rename_title">Rename contact</string>
+    <string name="contacts_name_field">Name</string>
+    <string name="contacts_save">Save</string>
+    <string name="contacts_cancel">Cancel</string>
+    <string name="contacts_delete_title">Delete contact</string>
+    <string name="contacts_delete_body">Do you really want to delete %1$s? The contact and all messages will be permanently deleted on both devices immediately.</string>
+    <string name="contacts_delete">Delete</string>
+    <string name="contacts_legacy_one">1 contact may have an outdated address for this device</string>
+    <string name="contacts_legacy_many">%1$d contacts may have an outdated address for this device</string>
+    <string name="contacts_legacy_body">Send your current connection info so they keep reaching you reliably.</string>
+    <string name="contacts_legacy_update">Update now</string>
+    <string name="contacts_legacy_dismiss">Not now</string>
+    <string name="contacts_status_connecting">CONNECTING</string>
+    <string name="contacts_status_reconnecting">RECONNECTING</string>
+    <string name="contacts_status_tor_active">TOR ACTIVE</string>
+    <string name="contacts_transport_lan">same wi-fi · lan</string>
+    <string name="contacts_transport_tor">direct · via tor</string>
+    <string name="contacts_cd_verified">Verified</string>
+    <string name="contacts_cd_verify_contact">Verify contact</string>
+    <string name="contacts_cd_rename">Rename</string>
+    <string name="contacts_cd_delete">Delete</string>
+
+    <!-- Settings — screens/settings. Default (English); whistleblower overrides in Romanian. -->
+    <string name="settings_scan_relay_prompt">Scan relay QR code</string>
+    <string name="settings_scan_node_prompt">Scan node QR code</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_cd_back">Back</string>
+    <string name="settings_section_security">Security</string>
+    <string name="settings_app_edition">App edition</string>
+    <string name="settings_app_version">App version</string>
+    <string name="settings_network_security_status">Network &amp; security status</string>
+    <string name="settings_network_security_status_body">Tor connection state and GRAL security overview</string>
+    <string name="settings_screenshots">Screenshots</string>
+    <string name="settings_screenshots_body">Blocked (FLAG_SECURE)</string>
+    <string name="settings_message_storage">Message storage</string>
+    <string name="settings_message_storage_body">RAM-only (GRAL Pillar 2)</string>
+    <string name="settings_fingerprint_unlock">Fingerprint unlock</string>
+    <string name="settings_fingerprint_unlock_body">Alongside the PIN, not instead of it — can only unlock normally, never the panic PIN. Off by default.</string>
+    <string name="settings_pairing_identity">Pairing identity</string>
+    <string name="settings_pairing_identity_body">The identity your own QR code shows to a NEW contact. Renewing it doesn\'t affect contacts you\'ve already paired with.</string>
+    <string name="settings_renew">Renew</string>
+    <string name="settings_section_censorship">Censorship Circumvention</string>
+    <string name="settings_use_tor_bridges">Use Tor bridges</string>
+    <string name="settings_use_tor_bridges_body">For networks that block Tor (e.g. certain countries/providers)</string>
+    <string name="settings_bridges_help">Paste bridge lines (one per line). Get them from bridges.torproject.org or the Telegram bot @GetBridgesBot.
+Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow in the next update.</string>
+    <string name="settings_bridge_lines_field">Bridge lines</string>
+    <string name="settings_save_reconnect_tor">Save &amp; reconnect Tor</string>
+    <string name="settings_license_active">Active — expires %1$s</string>
+    <string name="settings_license_expiring_one">Expires in 1 day — renew soon</string>
+    <string name="settings_license_expiring_many">Expires in %1$d days — renew soon</string>
+    <string name="settings_license_expired">Expired %1$s</string>
+    <string name="settings_license_not_configured">No license configured</string>
+    <string name="settings_section_license">License</string>
+    <string name="settings_license_serial">Serial %1$s • %2$s</string>
+    <string name="settings_license_code_field">License code</string>
+    <string name="settings_activate">Activate</string>
+    <string name="settings_section_relay">Relay (optional)</string>
+    <string name="settings_relay_mode">Relay mode</string>
+    <string name="settings_relay_mode_body">Off: never used. Auto: best-effort store-and-forward mailbox — used only when a contact can\'t be reached directly, or proactively for transfers over 2 MB. Mandatory: every message routes through the relay, LAN/Tor-direct skipped entirely — meant for testing the relay path, switch freely. Off by default.</string>
+    <string name="settings_relay_off">Off</string>
+    <string name="settings_relay_auto">Auto</string>
+    <string name="settings_relay_mandatory">Mandatory</string>
+    <string name="settings_relay_configured">Configured: %1$s</string>
+    <string name="settings_scan_qr_code">Scan QR code</string>
+    <string name="settings_relay_paste_hint">or paste the connection string shown by the relay</string>
+    <string name="settings_connection_string_field">Connection string</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_backup_relays">Backup relays</string>
+    <string name="settings_backup_relays_body">Tried in order if the primary relay above is unreachable. Both are shared with new contacts in your QR code, so they can reach you even when one relay is down. Leave empty if you don\'t have any.</string>
+    <string name="settings_first_backup_field">First backup</string>
+    <string name="settings_second_backup_field">Second backup</string>
+    <string name="settings_section_relay_pool">Company relay list (optional)</string>
+    <string name="settings_relay_pool_imported_one">Imported: %1$s (1 relay)</string>
+    <string name="settings_relay_pool_imported_many">Imported: %1$s (%2$d relays)</string>
+    <string name="settings_relay_pool_none">No company relay list imported</string>
+    <string name="settings_relay_pool_body">Paste a signed relay list from your organization to fill the backup relay above automatically. Re-importing an updated list replaces the previous one.</string>
+    <string name="settings_relay_pool_code_field">Relay list code</string>
+    <string name="settings_import">Import</string>
+    <string name="settings_section_node_mesh">Business Node-Mesh (optional)</string>
+    <string name="settings_your_own_nodes">Your own nodes</string>
+    <string name="settings_your_own_nodes_body">Add your own unpruuf Node-Mesh server(s) — see node-mesh-server/README.md. Only you can write to your own node; a Business/Node-Mesh contact can read from it once paired. Up to %1$d.</string>
+    <string name="settings_migrate">Migrate</string>
+    <string name="settings_remove">Remove</string>
+    <string name="settings_node_migrated_notice">This node moved to a new address — every paired Business Node-Mesh contact will be notified automatically.</string>
+    <string name="settings_new_address_field">New address</string>
+    <string name="settings_confirm_migration">Confirm migration</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_scan_node_qr_code">Scan node QR code</string>
+    <string name="settings_node_paste_hint">or paste the string shown by your node on first start</string>
+    <string name="settings_node_owner_string_field">Node owner string</string>
+    <string name="settings_add">Add</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_about_name">unpruuf Standard</string>
+    <string name="settings_about_version">Version 1.0.0 • GRAL v3.0</string>
+    <string name="settings_about_package">Package</string>
+    <string name="settings_about_created_by">Created by</string>
+    <string name="settings_renew_identity_title">Renew pairing identity?</string>
+    <string name="settings_renew_identity_body">Your own QR code will show a new identity from now on. Contacts you\'ve already paired with are unaffected — they already run on their own per-contact identity, exchanged once right after pairing.</string>
+
+    <!-- Home — screens/home. Default (English); whistleblower overrides in Romanian. -->
+    <string name="home_cd_back">Back</string>
+    <string name="home_tor_active">Tor active</string>
+    <string name="home_connecting_to_tor">Connecting to Tor…</string>
+    <string name="home_p2p_secured">P2P connection secured</string>
+    <string name="home_waiting_for_tor">Waiting for Tor network</string>
+    <string name="home_gral_status_title">GRAL Security Status</string>
+    <string name="home_row_zero_infra">Zero Infra</string>
+    <string name="home_row_zero_infra_desc">P2P via Tor</string>
+    <string name="home_row_ram_only">RAM-Only</string>
+    <string name="home_row_ram_only_desc">No storage</string>
+    <string name="home_row_hourly_rotation">Hourly Rotation</string>
+    <string name="home_row_hourly_rotation_desc">Keys rotate</string>
+    <string name="home_row_dummy_traffic">Dummy Traffic</string>
+    <string name="home_row_dummy_traffic_desc">Active</string>
+    <string name="home_row_revoke">Revoke</string>
+    <string name="home_row_revoke_desc">Available</string>
+
+    <!-- Contact detail (safety number) — screens/contactdetail. Default (English); whistleblower overrides in Romanian. -->
+    <string name="cd_verify_contact_title">Verify contact</string>
+    <string name="cd_cd_back">Back</string>
+    <string name="cd_verified">Verified</string>
+    <string name="cd_your_safety_number">YOUR SAFETY NUMBER FOR THIS CONTACT</string>
+    <string name="cd_dash">—</string>
+    <string name="cd_them">them</string>
+    <string name="cd_compare_body">Compare this with %1$s over a call or voice message — NOT the same channel you used to share the pairing code. If both sides see the same number, the pairing code wasn\'t tampered with on the way.</string>
+    <string name="cd_enter_their_code">ENTER THEIR CODE</string>
+    <string name="cd_code_field">Code they read you</string>
+    <string name="cd_save">Save</string>
+    <string name="cd_relay_routing">RELAY ROUTING</string>
+    <string name="cd_this_contact">this contact</string>
+    <string name="cd_relay_routing_body">Which side\'s relay list is used to reach %1$s. Automatic switches on its own rhythm; pin it manually to force one side.</string>
+    <string name="cd_relay_automatic">Automatic</string>
+    <string name="cd_relay_mine">Mine</string>
+    <string name="cd_relay_theirs">Theirs</string>
+    <string name="cd_codes_match">Codes match — %1$s is verified.</string>
+    <string name="cd_codes_mismatch">Codes don\'t match. Do not assume this contact is who they claim — ask them to read their code again, or re-pair carefully.</string>
+
+    <!-- Security gate screens — screens/security. Default (English); whistleblower overrides in Romanian. -->
+    <string name="security_build_expired_title">This build has expired</string>
+    <string name="security_build_expired_body">This version of unpruuf is more than 6 months old and no longer runs. Please install the latest update.</string>
+    <string name="security_rooted_title">This device appears to be rooted</string>
+    <string name="security_rooted_body">unpruuf refuses to run on a rooted device. Root access lets an attacker read app memory, extract keys, and bypass screenshot protection directly — no app-layer defense can close that gap, so unpruuf doesn\'t try to run with it open. Nothing has been started: no keys generated, no connection made.</string>
+    <string name="security_rooted_hint">Un-root this device, or install unpruuf on a device that isn\'t rooted, and try again.</string>
+
+    <!-- License gate — screens/license. Default (English); whistleblower overrides in Romanian. -->
+    <string name="license_activate">Activate</string>
+    <string name="license_required">License required</string>
+    <string name="license_code_field">License code</string>
+    <string name="license_status_not_configured">unpruuf %1$s needs a license code to run. Paste the code you received from your reseller below.</string>
+    <string name="license_status_expired">The license for this device (%1$s) expired on %2$s. Enter a renewal code to continue.</string>
+    <string name="license_status_enter_valid">Enter a valid license code to continue.</string>
+
+    <!-- Notifications — UnpruufApplication / P2PNetworkManager. Default (English); whistleblower overrides in Romanian. -->
+    <string name="notif_channel_messages_name">Messages</string>
+    <string name="notif_channel_messages_description">Incoming encrypted messages</string>
+    <string name="notif_title">unpruuf</string>
+    <string name="notif_new_message">New message received</string>
 </resources>

@@ -15,6 +15,25 @@ Package: `com.nexonai.unpruuf` · Architecture: **GRAL** · Built by **NexonAI**
 
 ---
 
+## Whistleblower-Pilot — Rumänisch, Stand 2026‑09‑27
+
+Universitatea 1 Decembrie 1918 Alba Iulia ist rumänischsprachig — alles, was Melder/Ofițer direkt
+sehen, ist jetzt Rumänisch (Details: CHANGELOG.md).
+
+| Baustein | Status |
+|---|---|
+| Android Whistleblower-App | ✅ eigene Flavor-Ressource (280+ Strings), 48/48 Tests, alle 4 Editionen bauen · 🟡 nicht auf echtem Gerät gesehen |
+| relay-android (Tablet) | ✅ `values-ro` (Gerätesprache-abhängig, betrifft andere Kunden nicht), 8/8 Tests · 🟡 nicht auf Gerät gesehen |
+| officer-app (Dashboard) | ✅ Web-UI, Konsolentext, install/start.bat, `npm run build` sauber · 🟡 nicht im echten Browser/Windows gesehen |
+| web-reporter (Browser-Fallback) | ✅ Seite inkl. Sicherheitshinweis, install/start.bat, Bundle gebaut und geprüft · 🟡 nicht im echten Browser gesehen |
+
+**Echter Bug gefunden:** unescapte Apostrophe in mehreren Standard-(Englisch)-Strings brachen den
+Ressourcen-Build der drei anderen Editionen (Standard/Pro/Client) — die Whistleblower-Edition
+selbst war unauffällig, weil ihre rumänische Fassung dieselben Schlüssel überschreibt. Nur beim
+Bauen ALLER Editionen aufgefallen, jetzt behoben (Details: CHANGELOG.md).
+
+---
+
 ## unpruuf Business / Node-Mesh — Stand 2026‑09‑27 (Spec v5)
 
 | Baustein | Status |

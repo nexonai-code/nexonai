@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 
 /**
  * Out-of-band pairing verification (safety number) — see IdentityManager.safetyNumber's doc
@@ -35,10 +37,10 @@ fun ContactDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(contact?.displayName ?: "Verify contact") },
+                title = { Text(contact?.displayName ?: stringResource(R.string.cd_verify_contact_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.cd_cd_back))
                     }
                 }
             )
@@ -62,7 +64,7 @@ fun ContactDetailScreen(
                         Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Verified",
+                            stringResource(R.string.cd_verified),
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             fontWeight = FontWeight.Medium
                         )
@@ -72,21 +74,19 @@ fun ContactDetailScreen(
             }
 
             Text(
-                "YOUR SAFETY NUMBER FOR THIS CONTACT",
+                stringResource(R.string.cd_your_safety_number),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                mySafetyNumber ?: "—",
+                mySafetyNumber ?: stringResource(R.string.cd_dash),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Compare this with ${contact?.displayName ?: "them"} over a call or voice " +
-                "message — NOT the same channel you used to share the pairing code. If both " +
-                "sides see the same number, the pairing code wasn't tampered with on the way.",
+                stringResource(R.string.cd_compare_body, contact?.displayName ?: stringResource(R.string.cd_them)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -94,7 +94,7 @@ fun ContactDetailScreen(
             Spacer(Modifier.height(28.dp))
 
             Text(
-                "ENTER THEIR CODE",
+                stringResource(R.string.cd_enter_their_code),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -105,7 +105,7 @@ fun ContactDetailScreen(
                     enteredCode = it
                     viewModel.clearVerifyResult()
                 },
-                label = { Text("Code they read you") },
+                label = { Text(stringResource(R.string.cd_code_field)) },
                 placeholder = { Text("123 456") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -116,7 +116,7 @@ fun ContactDetailScreen(
                 enabled = enteredCode.isNotBlank() && mySafetyNumber != null,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.cd_save))
             }
 
             val hasRelay = contact?.myRelayConnectionString?.isNotBlank() == true ||
@@ -124,14 +124,13 @@ fun ContactDetailScreen(
             if (hasRelay) {
                 Spacer(Modifier.height(28.dp))
                 Text(
-                    "RELAY ROUTING",
+                    stringResource(R.string.cd_relay_routing),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Which side's relay list is used to reach ${contact?.displayName ?: "this contact"}. " +
-                        "Automatic switches on its own rhythm; pin it manually to force one side.",
+                    stringResource(R.string.cd_relay_routing_body, contact?.displayName ?: stringResource(R.string.cd_this_contact)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -139,9 +138,9 @@ fun ContactDetailScreen(
                 val manualOwner = contact?.manualRelayOwner
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf<Pair<String, Boolean?>>(
-                        "Automatic" to null,
-                        "Mine" to true,
-                        "Theirs" to false
+                        stringResource(R.string.cd_relay_automatic) to null,
+                        stringResource(R.string.cd_relay_mine) to true,
+                        stringResource(R.string.cd_relay_theirs) to false
                     ).forEach { (label, value) ->
                         val selected = when (value) {
                             null -> manualOwner == null
@@ -167,9 +166,8 @@ fun ContactDetailScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        if (matches) "Codes match — ${contact?.displayName ?: "this contact"} is verified."
-                        else "Codes don't match. Do not assume this contact is who they claim — " +
-                            "ask them to read their code again, or re-pair carefully.",
+                        if (matches) stringResource(R.string.cd_codes_match, contact?.displayName ?: stringResource(R.string.cd_this_contact))
+                        else stringResource(R.string.cd_codes_mismatch),
                         modifier = Modifier.padding(12.dp),
                         color = if (matches) MaterialTheme.colorScheme.onPrimaryContainer
                         else MaterialTheme.colorScheme.onErrorContainer

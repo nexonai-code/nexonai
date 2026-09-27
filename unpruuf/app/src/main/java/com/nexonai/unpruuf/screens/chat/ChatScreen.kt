@@ -45,6 +45,8 @@ import com.nexonai.unpruuf.data.model.Contact
 import com.nexonai.unpruuf.data.repository.MessageType
 import com.nexonai.unpruuf.data.repository.RamMessage
 import com.nexonai.unpruuf.screens.qrpair.PortraitCaptureActivity
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 import kotlinx.coroutines.delay
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -79,6 +81,7 @@ fun ChatScreen(
     var fullscreenImage by remember { mutableStateOf<RamMessage?>(null) }
     var showTempNodeDialog by remember { mutableStateOf(false) }
     val tempNodeError by viewModel.tempNodeError.collectAsState()
+    val tempNodeScanPrompt = stringResource(R.string.chat_temp_node_scan_prompt)
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -125,7 +128,7 @@ fun ChatScreen(
             tempNodeScanLauncher.launch(
                 ScanOptions().apply {
                     setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                    setPrompt("Scan Temp Node connection string")
+                    setPrompt(tempNodeScanPrompt)
                     setBeepEnabled(false)
                     setBarcodeImageEnabled(false)
                     setOrientationLocked(true)
@@ -165,13 +168,13 @@ fun ChatScreen(
                     tint = MaterialTheme.colorScheme.error
                 )
             },
-            title = { Text("Delete chat?") },
+            title = { Text(stringResource(R.string.chat_delete_chat_title)) },
             text = {
                 Text(
-                    "All messages with ${contact?.displayName ?: "this contact"} will be " +
-                    "wiped from RAM immediately – on both sides. " +
-                    "The contact stays.\n\n" +
-                    "This action cannot be undone.",
+                    stringResource(
+                        R.string.chat_delete_chat_body,
+                        contact?.displayName ?: stringResource(R.string.chat_this_contact)
+                    ),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -185,12 +188,12 @@ fun ChatScreen(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Delete chat", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.chat_delete_chat_button), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRevokeDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.chat_cancel))
                 }
             }
         )
@@ -199,12 +202,12 @@ fun ChatScreen(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename contact") },
+            title = { Text(stringResource(R.string.chat_rename_contact_title)) },
             text = {
                 OutlinedTextField(
                     value = renameText,
                     onValueChange = { renameText = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.chat_name_field)) },
                     singleLine = true
                 )
             },
@@ -216,10 +219,10 @@ fun ChatScreen(
                         }
                         showRenameDialog = false
                     }
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.chat_save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRenameDialog = false }) { Text(stringResource(R.string.chat_cancel)) }
             }
         )
     }
@@ -227,10 +230,10 @@ fun ChatScreen(
     if (cameraPermissionDenied) {
         AlertDialog(
             onDismissRequest = { cameraPermissionDenied = false },
-            title = { Text("Camera permission needed") },
-            text = { Text("Allow camera access in system settings to take a photo.") },
+            title = { Text(stringResource(R.string.chat_camera_permission_title)) },
+            text = { Text(stringResource(R.string.chat_camera_permission_body)) },
             confirmButton = {
-                TextButton(onClick = { cameraPermissionDenied = false }) { Text("OK") }
+                TextButton(onClick = { cameraPermissionDenied = false }) { Text(stringResource(R.string.chat_ok)) }
             }
         )
     }
@@ -246,7 +249,7 @@ fun ChatScreen(
                     tempNodeScanLauncher.launch(
                         ScanOptions().apply {
                             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                            setPrompt("Scan Temp Node connection string")
+                            setPrompt(tempNodeScanPrompt)
                             setBeepEnabled(false)
                             setBarcodeImageEnabled(false)
                             setOrientationLocked(true)
@@ -279,7 +282,7 @@ fun ChatScreen(
                     ) {
                         Text(contact?.displayName ?: "...")
                         Text(
-                            "End-to-end encrypted • tap to rename",
+                            stringResource(R.string.chat_e2e_encrypted_tap_to_rename),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -287,7 +290,7 @@ fun ChatScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.chat_cd_back))
                     }
                 },
                 actions = {
@@ -297,14 +300,14 @@ fun ChatScreen(
                     }) {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Rename",
+                            contentDescription = stringResource(R.string.chat_cd_rename),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
                     IconButton(onClick = { viewModel.sendConnectionInfoUpdate() }) {
                         Icon(
                             Icons.Default.Sync,
-                            contentDescription = "Send updated connection info",
+                            contentDescription = stringResource(R.string.chat_cd_send_connection_update),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -314,7 +317,7 @@ fun ChatScreen(
                         IconButton(onClick = { viewModel.wechsel() }) {
                             Icon(
                                 Icons.Default.Autorenew,
-                                contentDescription = "Wechsel (rotate wire tag)",
+                                contentDescription = stringResource(R.string.chat_cd_wechsel),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -324,7 +327,7 @@ fun ChatScreen(
                         IconButton(onClick = { showTempNodeDialog = true }) {
                             Icon(
                                 Icons.Default.Router,
-                                contentDescription = "Temp Node",
+                                contentDescription = stringResource(R.string.chat_cd_temp_node),
                                 tint = if (contact?.tempNodeAddress != null) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -333,7 +336,7 @@ fun ChatScreen(
                     IconButton(onClick = { showRevokeDialog = true }) {
                         Icon(
                             Icons.Default.DeleteForever,
-                            contentDescription = "Delete chat",
+                            contentDescription = stringResource(R.string.chat_delete_chat_button),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
@@ -356,7 +359,7 @@ fun ChatScreen(
                         viewModel.beginExternalPickerGrace()
                         filePicker.launch("*/*")
                     }) {
-                        Icon(Icons.Default.AttachFile, "Attach file")
+                        Icon(Icons.Default.AttachFile, stringResource(R.string.chat_cd_attach_file))
                     }
                     IconButton(onClick = {
                         // Same grace as the file picker — the camera (and on some OEMs even
@@ -366,13 +369,13 @@ fun ChatScreen(
                             PackageManager.PERMISSION_GRANTED
                         if (granted) cameraLauncher.launch(null) else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }) {
-                        Icon(Icons.Default.PhotoCamera, "Take photo")
+                        Icon(Icons.Default.PhotoCamera, stringResource(R.string.chat_cd_take_photo))
                     }
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Message…") },
+                        placeholder = { Text(stringResource(R.string.chat_message_placeholder)) },
                         shape = RoundedCornerShape(24.dp),
                         maxLines = 4
                     )
@@ -385,7 +388,7 @@ fun ChatScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Send, "Send")
+                        Icon(Icons.Default.Send, stringResource(R.string.chat_cd_send))
                     }
                 }
             }
@@ -425,13 +428,13 @@ fun ChatScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "No messages",
+                            stringResource(R.string.chat_no_messages),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Messages are stored only in RAM\nand wiped when the screen locks",
+                            stringResource(R.string.chat_no_messages_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -462,7 +465,7 @@ fun ChatScreen(
                                 )
                             ) {
                                 Text(
-                                    "older messages wiped from RAM",
+                                    stringResource(R.string.chat_older_messages_wiped),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
@@ -515,21 +518,21 @@ private fun StillConnectingHint(relayConfigured: Boolean, onSetUpRelay: () -> Un
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Still connecting…",
+                        stringResource(R.string.chat_still_connecting),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "first message on mobile data can take a few minutes",
+                        stringResource(R.string.chat_still_connecting_body),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
                 if (!relayConfigured) {
                     Text(
-                        "Set up a relay to avoid this wait — Settings ›",
+                        stringResource(R.string.chat_set_up_relay_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -566,13 +569,13 @@ private fun TempNodeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Router, contentDescription = null) },
-        title = { Text("Temp Node") },
+        title = { Text(stringResource(R.string.chat_temp_node_title)) },
         text = {
             Column {
                 if (contact.tempNodeAddress != null) {
                     Text(
-                        if (contact.tempNodeActive) "Active — this chat's outgoing traffic uses only this node."
-                        else "Registered, not yet confirmed — sending on both the standard nodes and this one until the first message gets through.",
+                        if (contact.tempNodeActive) stringResource(R.string.chat_temp_node_active)
+                        else stringResource(R.string.chat_temp_node_pending),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(8.dp))
@@ -583,14 +586,14 @@ private fun TempNodeDialog(
                     )
                 } else {
                     Text(
-                        "Use a second device (phone, tablet, laptop) as an extra node for just this chat — scan or paste the connection string it prints on startup.",
+                        stringResource(R.string.chat_temp_node_intro),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = pasteInput,
                         onValueChange = { pasteInput = it },
-                        label = { Text("Connection string") },
+                        label = { Text(stringResource(R.string.chat_temp_node_connection_string_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -608,20 +611,20 @@ private fun TempNodeDialog(
         confirmButton = {
             if (contact.tempNodeAddress != null) {
                 TextButton(onClick = onDeactivate) {
-                    Text("Deactivate", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.chat_temp_node_deactivate), color = MaterialTheme.colorScheme.error)
                 }
             } else {
                 TextButton(onClick = {
                     if (pasteInput.isNotBlank() && onPaste(pasteInput)) pasteInput = ""
-                }) { Text("Add") }
+                }) { Text(stringResource(R.string.chat_temp_node_add)) }
             }
         },
         dismissButton = {
             Row {
                 if (contact.tempNodeAddress == null) {
-                    TextButton(onClick = onScan) { Text("Scan") }
+                    TextButton(onClick = onScan) { Text(stringResource(R.string.chat_temp_node_scan)) }
                 }
-                TextButton(onClick = onDismiss) { Text("Close") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_close)) }
             }
         }
     )
@@ -696,7 +699,7 @@ private fun MessageBubble(message: RamMessage, displayText: String, delivered: B
                     )
                 } else {
                     Text(
-                        "📷 ${message.fileName ?: "Photo"}",
+                        "📷 ${message.fileName ?: stringResource(R.string.chat_photo_fallback)}",
                         color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer
                         else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(8.dp)

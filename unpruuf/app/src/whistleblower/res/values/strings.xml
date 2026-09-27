@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Traduceri în limba română — doar pentru ediția Whistleblower (Universitatea 1 Decembrie 1918
+  Alba Iulia). Gradle suprascrie automat, după numele cheii, textul din
+  app/src/main/res/values/strings.xml SPECIFIC acestei ediții — celelalte ediții
+  (standard/pro/client) rămân neschimbate.
+-->
+<resources>
+    <!-- Lock / PIN — screens/lock -->
+    <string name="lock_enter_pin">Introdu codul PIN · B2</string>
+    <string name="lock_cd_unlock_fingerprint">Deblochează cu amprenta</string>
+    <string name="lock_biometric_title">Deblochează unpruuf</string>
+    <string name="lock_biometric_subtitle">Confirmă amprenta pentru a continua</string>
+    <string name="lock_biometric_use_pin">Folosește codul PIN</string>
+    <string name="lock_err_pin_too_short">Codul PIN trebuie să aibă cel puțin 4 cifre.</string>
+    <string name="lock_err_panic_same_as_pin">Codul PIN de panică trebuie să fie diferit de codul PIN normal.</string>
+    <string name="lock_err_wrong_pin">Cod PIN greșit.</string>
+    <string name="lock_err_pins_mismatch">Codurile PIN nu coincid.</string>
+    <string name="lock_save_pin">Salvează codul PIN</string>
+    <string name="lock_setup_title">Configurează codul PIN · B2</string>
+    <string name="lock_setup_description">Stabilește un cod PIN pentru a deschide aplicația și un cod PIN de panică separat. Introducerea codului PIN de panică șterge instantaneu toate contactele și deschide aplicația goală.</string>
+    <string name="lock_field_pin">Cod PIN (minim 4 cifre)</string>
+    <string name="lock_field_repeat_pin">Repetă codul PIN</string>
+    <string name="lock_field_panic_pin">Cod PIN de panică</string>
+
+    <!-- QR pairing — screens/qrpair -->
+    <string name="qr_scan_prompt">Scanează codul QR unpruuf</string>
+    <string name="qr_title_add_contact">Adaugă contact</string>
+    <string name="qr_cd_back">Înapoi</string>
+    <string name="qr_relay_only_mandatory">ÎMPERECHERE DOAR PRIN RELEU — MODUL OBLIGATORIU ESTE ACTIV</string>
+    <string name="qr_chip_android_contact">Contact Android</string>
+    <string name="qr_chip_ios_cross_platform">iOS / multi-platformă</string>
+    <string name="qr_chip_business_node_mesh">Business (Node-Mesh)</string>
+    <string name="qr_your_code">CODUL TĂU</string>
+    <string name="qr_cd_my_node_mesh_qr">Codul meu QR Business Node-Mesh</string>
+    <string name="qr_configure_node_first">Configurează mai întâi un node</string>
+    <string name="qr_configure_node_first_body">Împerecherea Business Node-Mesh are nevoie de propriul tău node — configurează unul în Setări → Business Node-Mesh, apoi revino aici.</string>
+    <string name="qr_cd_my_cross_platform_qr">Codul meu QR multi-platformă</string>
+    <string name="qr_configure_relay_first">Configurează mai întâi un releu</string>
+    <string name="qr_configure_relay_first_body">Împerecherea multi-platformă are nevoie de un releu — configurează unul în Setări → Releu, apoi revino aici.</string>
+    <string name="qr_cd_my_qr">Codul meu QR</string>
+    <string name="qr_waiting_for_tor">Se așteaptă rețeaua Tor…</string>
+    <string name="qr_first_start_note">Prima pornire poate dura 10–30 s</string>
+    <string name="qr_copy_code_whistleblower">Copiază codul meu (lipește-l în panoul ofițerului)</string>
+    <string name="qr_copy_code_debug">Copiază codul (depanare — trimite manual)</string>
+    <string name="qr_tor_active">tor activ — codul tău este gata</string>
+    <string name="qr_connecting_to_tor">se conectează la tor…</string>
+    <string name="qr_scan_their_code">Scanează codul lor</string>
+    <string name="qr_paste_officer_code">Lipește codul ofițerului</string>
+    <string name="qr_paste_their_code_debug">Lipește codul lor (depanare)</string>
+    <string name="qr_add_from_pasted_code">Adaugă din codul lipit</string>
+    <string name="qr_pasted_code_warning">Doar pentru testare — un cod trimis astfel (mesaj, e-mail) omite verificarea în persoană pe care o oferă scanarea QR. Oricine îl interceptează s-ar putea împerechea drept acest contact.</string>
+    <string name="qr_both_devices_scan_footer">Ambele dispozitive se scanează reciproc. Codul conține adresa ta accesibilă și cheile — fără cont, fără număr de telefon, nimic altceva.</string>
+    <string name="qr_name_contact_title">Numește contactul</string>
+    <string name="qr_name_contact_body">Cum vrei să numești acest contact?</string>
+    <string name="qr_name_field">Nume</string>
+    <string name="qr_add">Adaugă</string>
+    <string name="qr_cancel">Anulează</string>
+
+    <!-- Chat — screens/chat -->
+    <string name="chat_temp_node_scan_prompt">Scanează codul de conectare al Temp Node</string>
+    <string name="chat_delete_chat_title">Ștergi conversația?</string>
+    <string name="chat_this_contact">acest contact</string>
+    <string name="chat_delete_chat_body">Toate mesajele cu %1$s vor fi șterse instantaneu din memorie – pe ambele părți. Contactul rămâne.
+
+Această acțiune nu poate fi anulată.</string>
+    <string name="chat_delete_chat_button">Șterge conversația</string>
+    <string name="chat_cancel">Anulează</string>
+    <string name="chat_rename_contact_title">Redenumește contactul</string>
+    <string name="chat_name_field">Nume</string>
+    <string name="chat_save">Salvează</string>
+    <string name="chat_camera_permission_title">Este necesară permisiunea pentru cameră</string>
+    <string name="chat_camera_permission_body">Permite accesul la cameră din setările sistemului pentru a face o fotografie.</string>
+    <string name="chat_ok">OK</string>
+    <string name="chat_e2e_encrypted_tap_to_rename">Criptat integral • atinge pentru a redenumi</string>
+    <string name="chat_cd_back">Înapoi</string>
+    <string name="chat_cd_rename">Redenumește</string>
+    <string name="chat_cd_send_connection_update">Trimite informații de conectare actualizate</string>
+    <string name="chat_cd_wechsel">Wechsel (rotește eticheta de rețea)</string>
+    <string name="chat_cd_temp_node">Temp Node</string>
+    <string name="chat_cd_attach_file">Atașează fișier</string>
+    <string name="chat_cd_take_photo">Fă o fotografie</string>
+    <string name="chat_message_placeholder">Mesaj…</string>
+    <string name="chat_cd_send">Trimite</string>
+    <string name="chat_no_messages">Niciun mesaj</string>
+    <string name="chat_no_messages_body">Mesajele sunt păstrate doar în memorie
+și șterse când ecranul se blochează</string>
+    <string name="chat_older_messages_wiped">mesajele mai vechi au fost șterse din memorie</string>
+    <string name="chat_still_connecting">Încă se conectează…</string>
+    <string name="chat_still_connecting_body">primul mesaj prin date mobile poate dura câteva minute</string>
+    <string name="chat_set_up_relay_hint">Configurează un releu ca să eviți această așteptare — Setări ›</string>
+    <string name="chat_temp_node_title">Temp Node</string>
+    <string name="chat_temp_node_active">Activ — traficul trimis din această conversație folosește doar acest node.</string>
+    <string name="chat_temp_node_pending">Înregistrat, dar neconfirmat încă — se trimite atât către nodurile standard, cât și către acesta, până la primul mesaj livrat.</string>
+    <string name="chat_temp_node_intro">Folosește un al doilea dispozitiv (telefon, tabletă, laptop) ca node suplimentar doar pentru această conversație — scanează sau lipește codul de conectare afișat la pornire.</string>
+    <string name="chat_temp_node_connection_string_field">Cod de conectare</string>
+    <string name="chat_temp_node_deactivate">Dezactivează</string>
+    <string name="chat_temp_node_add">Adaugă</string>
+    <string name="chat_temp_node_scan">Scanează</string>
+    <string name="chat_close">Închide</string>
+    <string name="chat_photo_fallback">Fotografie</string>
+
+    <!-- Contacts — screens/contacts -->
+    <string name="contacts_cd_settings">Setări</string>
+    <string name="contacts_cd_add_contact">Adaugă contact</string>
+    <string name="contacts_updated_sent">Informațiile de conectare actualizate au fost trimise.</string>
+    <string name="contacts_empty_title">Niciun contact încă</string>
+    <string name="contacts_empty_body">Scanează un cod QR pentru a adăuga un contact</string>
+    <string name="contacts_scan_qr_button">Scanează codul QR</string>
+    <string name="contacts_rename_title">Redenumește contactul</string>
+    <string name="contacts_name_field">Nume</string>
+    <string name="contacts_save">Salvează</string>
+    <string name="contacts_cancel">Anulează</string>
+    <string name="contacts_delete_title">Șterge contactul</string>
+    <string name="contacts_delete_body">Chiar vrei să ștergi contactul %1$s? Contactul și toate mesajele vor fi șterse definitiv, imediat, pe ambele dispozitive.</string>
+    <string name="contacts_delete">Șterge</string>
+    <string name="contacts_legacy_one">1 contact ar putea avea o adresă învechită pentru acest dispozitiv</string>
+    <string name="contacts_legacy_many">%1$d contacte ar putea avea o adresă învechită pentru acest dispozitiv</string>
+    <string name="contacts_legacy_body">Trimite informațiile tale de conectare actuale, ca să te poată contacta în continuare.</string>
+    <string name="contacts_legacy_update">Actualizează acum</string>
+    <string name="contacts_legacy_dismiss">Nu acum</string>
+    <string name="contacts_status_connecting">SE CONECTEAZĂ</string>
+    <string name="contacts_status_reconnecting">SE RECONECTEAZĂ</string>
+    <string name="contacts_status_tor_active">TOR ACTIV</string>
+    <string name="contacts_transport_lan">aceeași rețea wi-fi · lan</string>
+    <string name="contacts_transport_tor">direct · prin tor</string>
+    <string name="contacts_cd_verified">Verificat</string>
+    <string name="contacts_cd_verify_contact">Verifică contactul</string>
+    <string name="contacts_cd_rename">Redenumește</string>
+    <string name="contacts_cd_delete">Șterge</string>
+
+    <!-- Settings — screens/settings -->
+    <string name="settings_scan_relay_prompt">Scanează codul QR al releului</string>
+    <string name="settings_scan_node_prompt">Scanează codul QR al node-ului</string>
+    <string name="settings_title">Setări</string>
+    <string name="settings_cd_back">Înapoi</string>
+    <string name="settings_section_security">Securitate</string>
+    <string name="settings_app_edition">Ediția aplicației</string>
+    <string name="settings_app_version">Versiunea aplicației</string>
+    <string name="settings_network_security_status">Stare rețea și securitate</string>
+    <string name="settings_network_security_status_body">Starea conexiunii Tor și prezentarea securității GRAL</string>
+    <string name="settings_screenshots">Capturi de ecran</string>
+    <string name="settings_screenshots_body">Blocate (FLAG_SECURE)</string>
+    <string name="settings_message_storage">Stocarea mesajelor</string>
+    <string name="settings_message_storage_body">Doar în memorie (GRAL, pilonul 2)</string>
+    <string name="settings_fingerprint_unlock">Deblocare cu amprenta</string>
+    <string name="settings_fingerprint_unlock_body">Pe lângă codul PIN, nu în locul lui — poate debloca doar normal, niciodată codul PIN de panică. Dezactivat implicit.</string>
+    <string name="settings_pairing_identity">Identitatea de împerechere</string>
+    <string name="settings_pairing_identity_body">Identitatea pe care propriul tău cod QR o arată unui contact NOU. Reînnoirea ei nu afectează contactele cu care te-ai împerecheat deja.</string>
+    <string name="settings_renew">Reînnoiește</string>
+    <string name="settings_section_censorship">Ocolirea cenzurii</string>
+    <string name="settings_use_tor_bridges">Folosește punți Tor</string>
+    <string name="settings_use_tor_bridges_body">Pentru rețele care blochează Tor (de ex. anumite țări/furnizori)</string>
+    <string name="settings_bridges_help">Lipește liniile de punte (câte una pe rând). Le găsești pe bridges.torproject.org sau la botul de Telegram @GetBridgesBot.
+Punțile obișnuite (IP:Port Amprentă) funcționează imediat. obfs4/Snowflake urmează într-o actualizare viitoare.</string>
+    <string name="settings_bridge_lines_field">Linii de punte</string>
+    <string name="settings_save_reconnect_tor">Salvează și reconectează Tor</string>
+    <string name="settings_license_active">Activă — expiră %1$s</string>
+    <string name="settings_license_expiring_one">Expiră într-o zi — reînnoiește curând</string>
+    <string name="settings_license_expiring_many">Expiră în %1$d zile — reînnoiește curând</string>
+    <string name="settings_license_expired">Expirată %1$s</string>
+    <string name="settings_license_not_configured">Nicio licență configurată</string>
+    <string name="settings_section_license">Licență</string>
+    <string name="settings_license_serial">Serie %1$s • %2$s</string>
+    <string name="settings_license_code_field">Cod de licență</string>
+    <string name="settings_activate">Activează</string>
+    <string name="settings_section_relay">Releu (opțional)</string>
+    <string name="settings_relay_mode">Mod releu</string>
+    <string name="settings_relay_mode_body">Dezactivat: niciodată folosit. Automat: cutie poștală de rezervă, folosită doar când un contact nu poate fi contactat direct, sau preventiv pentru transferuri peste 2 MB. Obligatoriu: fiecare mesaj trece prin releu, conexiunea directă LAN/Tor este complet ocolită — util pentru testarea releului, poți schimba oricând. Dezactivat implicit.</string>
+    <string name="settings_relay_off">Dezactivat</string>
+    <string name="settings_relay_auto">Automat</string>
+    <string name="settings_relay_mandatory">Obligatoriu</string>
+    <string name="settings_relay_configured">Configurat: %1$s</string>
+    <string name="settings_scan_qr_code">Scanează codul QR</string>
+    <string name="settings_relay_paste_hint">sau lipește codul de conectare afișat de releu</string>
+    <string name="settings_connection_string_field">Cod de conectare</string>
+    <string name="settings_save">Salvează</string>
+    <string name="settings_backup_relays">Relee de rezervă</string>
+    <string name="settings_backup_relays_body">Încercate în ordine dacă releul principal de mai sus nu poate fi contactat. Ambele sunt trimise contactelor noi în codul tău QR, ca să te poată contacta chiar dacă un releu este oprit. Lasă gol dacă nu ai niciunul.</string>
+    <string name="settings_first_backup_field">Prima rezervă</string>
+    <string name="settings_second_backup_field">A doua rezervă</string>
+    <string name="settings_section_relay_pool">Lista de relee a organizației (opțional)</string>
+    <string name="settings_relay_pool_imported_one">Importat: %1$s (1 releu)</string>
+    <string name="settings_relay_pool_imported_many">Importat: %1$s (%2$d relee)</string>
+    <string name="settings_relay_pool_none">Nicio listă de relee a organizației importată</string>
+    <string name="settings_relay_pool_body">Lipește o listă de relee semnată de organizația ta, ca să completeze automat releul de rezervă de mai sus. Reimportarea unei liste actualizate o înlocuiește pe cea anterioară.</string>
+    <string name="settings_relay_pool_code_field">Cod listă de relee</string>
+    <string name="settings_import">Importă</string>
+    <string name="settings_section_node_mesh">Business Node-Mesh (opțional)</string>
+    <string name="settings_your_own_nodes">Nodurile tale proprii</string>
+    <string name="settings_your_own_nodes_body">Adaugă propriul (propriile) tale server(e) unpruuf Node-Mesh — vezi node-mesh-server/README.md. Doar tu poți scrie pe propriul node; un contact Business/Node-Mesh poate citi de pe el odată împerecheat. Până la %1$d.</string>
+    <string name="settings_migrate">Migrează</string>
+    <string name="settings_remove">Elimină</string>
+    <string name="settings_node_migrated_notice">Acest node s-a mutat la o adresă nouă — fiecare contact Business Node-Mesh împerecheat va fi notificat automat.</string>
+    <string name="settings_new_address_field">Adresă nouă</string>
+    <string name="settings_confirm_migration">Confirmă migrarea</string>
+    <string name="settings_cancel">Anulează</string>
+    <string name="settings_scan_node_qr_code">Scanează codul QR al node-ului</string>
+    <string name="settings_node_paste_hint">sau lipește codul afișat de node-ul tău la prima pornire</string>
+    <string name="settings_node_owner_string_field">Cod de proprietar al node-ului</string>
+    <string name="settings_add">Adaugă</string>
+    <string name="settings_section_about">Despre</string>
+    <string name="settings_about_name">unpruuf Standard</string>
+    <string name="settings_about_version">Versiunea 1.0.0 • GRAL v3.0</string>
+    <string name="settings_about_package">Pachet</string>
+    <string name="settings_about_created_by">Creat de</string>
+    <string name="settings_renew_identity_title">Reînnoiești identitatea de împerechere?</string>
+    <string name="settings_renew_identity_body">Codul tău QR va arăta de acum o identitate nouă. Contactele cu care te-ai împerecheat deja nu sunt afectate — ele folosesc deja propria identitate per-contact, schimbată o singură dată imediat după împerechere.</string>
+
+    <!-- Home — screens/home -->
+    <string name="home_cd_back">Înapoi</string>
+    <string name="home_tor_active">Tor activ</string>
+    <string name="home_connecting_to_tor">Se conectează la Tor…</string>
+    <string name="home_p2p_secured">Conexiune P2P securizată</string>
+    <string name="home_waiting_for_tor">Se așteaptă rețeaua Tor</string>
+    <string name="home_gral_status_title">Stare securitate GRAL</string>
+    <string name="home_row_zero_infra">Fără infrastructură</string>
+    <string name="home_row_zero_infra_desc">P2P prin Tor</string>
+    <string name="home_row_ram_only">Doar în memorie</string>
+    <string name="home_row_ram_only_desc">Fără stocare</string>
+    <string name="home_row_hourly_rotation">Rotație orară</string>
+    <string name="home_row_hourly_rotation_desc">Cheile se rotesc</string>
+    <string name="home_row_dummy_traffic">Trafic fals</string>
+    <string name="home_row_dummy_traffic_desc">Activ</string>
+    <string name="home_row_revoke">Revocare</string>
+    <string name="home_row_revoke_desc">Disponibilă</string>
+
+    <!-- Contact detail (safety number) — screens/contactdetail -->
+    <string name="cd_verify_contact_title">Verifică contactul</string>
+    <string name="cd_cd_back">Înapoi</string>
+    <string name="cd_verified">Verificat</string>
+    <string name="cd_your_safety_number">CODUL TĂU DE SIGURANȚĂ PENTRU ACEST CONTACT</string>
+    <string name="cd_dash">—</string>
+    <string name="cd_them">el/ea</string>
+    <string name="cd_compare_body">Compară acest cod cu %1$s printr-un apel sau mesaj vocal — NU pe același canal pe care ați folosit pentru codul de împerechere. Dacă ambele părți văd același număr, codul de împerechere nu a fost modificat pe drum.</string>
+    <string name="cd_enter_their_code">INTRODU CODUL LOR</string>
+    <string name="cd_code_field">Codul pe care ți l-au citit</string>
+    <string name="cd_save">Salvează</string>
+    <string name="cd_relay_routing">RUTARE PRIN RELEU</string>
+    <string name="cd_this_contact">acest contact</string>
+    <string name="cd_relay_routing_body">A cui listă de relee este folosită pentru a-l contacta pe %1$s. Automat comută în ritmul lui propriu; fixează manual pentru a forța o parte.</string>
+    <string name="cd_relay_automatic">Automat</string>
+    <string name="cd_relay_mine">A mea</string>
+    <string name="cd_relay_theirs">A lor</string>
+    <string name="cd_codes_match">Codurile coincid — %1$s este verificat.</string>
+    <string name="cd_codes_mismatch">Codurile nu coincid. Nu presupune că acest contact este cine pretinde — roagă-l să-ți citească din nou codul, sau reîmperecheați-vă cu atenție.</string>
+
+    <!-- Security gate screens — screens/security -->
+    <string name="security_build_expired_title">Această versiune a expirat</string>
+    <string name="security_build_expired_body">Această versiune de unpruuf are mai mult de 6 luni și nu mai funcționează. Instalează cea mai recentă actualizare.</string>
+    <string name="security_rooted_title">Acest dispozitiv pare să aibă acces root</string>
+    <string name="security_rooted_body">unpruuf refuză să funcționeze pe un dispozitiv cu acces root. Accesul root permite unui atacator să citească direct memoria aplicației, să extragă cheile și să ocolească protecția împotriva capturilor de ecran — nicio protecție la nivel de aplicație nu poate elimina acest risc, așa că unpruuf nu încearcă să funcționeze în aceste condiții. Nimic nu a fost pornit: nicio cheie generată, nicio conexiune stabilită.</string>
+    <string name="security_rooted_hint">Elimină accesul root de pe acest dispozitiv, sau instalează unpruuf pe un dispozitiv fără root, apoi încearcă din nou.</string>
+
+    <!-- License gate — screens/license -->
+    <string name="license_activate">Activează</string>
+    <string name="license_required">Este necesară o licență</string>
+    <string name="license_code_field">Cod de licență</string>
+    <string name="license_status_not_configured">unpruuf %1$s are nevoie de un cod de licență pentru a funcționa. Lipește mai jos codul primit de la distribuitorul tău.</string>
+    <string name="license_status_expired">Licența pentru acest dispozitiv (%1$s) a expirat pe %2$s. Introdu un cod de reînnoire pentru a continua.</string>
+    <string name="license_status_enter_valid">Introdu un cod de licență valid pentru a continua.</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_messages_name">Mesaje</string>
+    <string name="notif_channel_messages_description">Mesaje criptate primite</string>
+    <string name="notif_title">unpruuf</string>
+    <string name="notif_new_message">Ai primit un mesaj nou</string>
+</resources>

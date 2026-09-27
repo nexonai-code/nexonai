@@ -1,94 +1,94 @@
 <!doctype html>
-<html lang="en">
+<html lang="ro">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>unpruuf Whistleblower — Officer Dashboard</title>
+<title>unpruuf Whistleblower — Panoul ofițerului</title>
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <header>
-  <h1>unpruuf <span>Whistleblower</span> — Officer Dashboard</h1>
-  <button class="secondary" id="refreshBtn">Refresh</button>
+  <h1>unpruuf <span>Whistleblower</span> — Panoul ofițerului</h1>
+  <button class="secondary" id="refreshBtn">Reîmprospătează</button>
 </header>
 
 <main>
   <div id="listView">
     <div class="card">
-      <h2>Your pairing code</h2>
+      <h2>Codul tău de împerechere</h2>
       <div class="qr-box">
-        <img id="qrImg" alt="pairing QR" width="200" height="200" />
+        <img id="qrImg" alt="cod QR de împerechere" width="200" height="200" />
         <div style="flex:2; min-width:280px;">
           <p class="disclaimer">
-            A reporter scans this in the unpruuf app to start a case. They can only reach you —
-            never you them — until they choose to share the code their app shows back.
+            Un raportor scanează acest cod în aplicația unpruuf pentru a începe un caz. Te poate contacta
+            doar el pe tine — niciodată invers — până când alege să îți trimită codul afișat de aplicația lui.
           </p>
           <textarea id="myCode" readonly rows="4"></textarea>
         </div>
       </div>
       <p class="disclaimer" style="margin-top:12px;">
-        Reporting via a browser instead of the app? They'll also need the relay address:
+        Raportează printr-un browser în loc de aplicație? Va avea nevoie și de adresa releului:
         <code id="relayUrlHint" style="color:var(--accent);"></code>
       </p>
     </div>
 
     <div class="card">
-      <h2>Add a case (paste the reporter's code)</h2>
+      <h2>Adaugă un caz (lipește codul raportorului)</h2>
       <div class="row">
-        <textarea id="pasteInput" placeholder="Paste the code the reporter's app showed after they scanned yours…"></textarea>
+        <textarea id="pasteInput" placeholder="Lipește codul afișat de aplicația raportorului după ce a scanat codul tău…"></textarea>
       </div>
       <div style="margin-top:10px;">
-        <button id="addCaseBtn">Add case</button>
+        <button id="addCaseBtn">Adaugă cazul</button>
         <span id="addCaseError" style="color:var(--red); margin-left:10px; font-size:13px;"></span>
       </div>
     </div>
 
     <div class="card">
-      <h2>Cases</h2>
+      <h2>Cazuri</h2>
       <table>
         <thead>
           <tr>
-            <th>Status</th><th>Category</th><th>Opened</th><th>Ack deadline</th><th>Feedback deadline</th><th>Last activity</th>
+            <th>Stare</th><th>Categorie</th><th>Deschis</th><th>Termen confirmare</th><th>Termen răspuns</th><th>Ultima activitate</th>
           </tr>
         </thead>
         <tbody id="casesBody"></tbody>
       </table>
-      <p id="noCases" class="disclaimer hidden">No cases yet — add one above once a reporter shares their code.</p>
+      <p id="noCases" class="disclaimer hidden">Niciun caz încă — adaugă unul mai sus odată ce un raportor îți trimite codul.</p>
     </div>
   </div>
 
   <div id="detailView" class="hidden">
-    <a class="back" id="backLink">&larr; Back to cases</a>
+    <a class="back" id="backLink">&larr; Înapoi la cazuri</a>
     <div class="card">
-      <h2>Case <span id="caseIdLabel"></span></h2>
+      <h2>Cazul <span id="caseIdLabel"></span></h2>
       <div class="row">
         <div>
-          <label>Status</label>
+          <label>Stare</label>
           <select id="statusSelect">
-            <option value="new">New</option>
-            <option value="acknowledged">Acknowledged</option>
-            <option value="in_progress">In progress</option>
-            <option value="closed">Closed</option>
+            <option value="new">Nou</option>
+            <option value="acknowledged">Confirmat</option>
+            <option value="in_progress">În lucru</option>
+            <option value="closed">Închis</option>
           </select>
         </div>
         <div>
-          <label>Category</label>
-          <input id="categoryInput" placeholder="e.g. financial misconduct, harassment…" />
+          <label>Categorie</label>
+          <input id="categoryInput" placeholder="ex. abateri financiare, hărțuire…" />
         </div>
       </div>
       <div class="row" style="margin-top:10px;">
-        <div><span class="disclaimer">Acknowledge within 7 days (EU 2019/1937 Art. 9(1)(a)). Feedback within 3 months (Art. 9(1)(f)).</span></div>
+        <div><span class="disclaimer">Confirmă în 7 zile (Directiva UE 2019/1937, Art. 9(1)(a)). Răspuns în 3 luni (Art. 9(1)(f)).</span></div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Thread</h2>
+      <h2>Conversație</h2>
       <div class="thread" id="thread"></div>
       <div class="row" style="margin-top:14px;">
-        <textarea id="replyInput" placeholder="Write a reply…"></textarea>
+        <textarea id="replyInput" placeholder="Scrie un răspuns…"></textarea>
       </div>
       <div style="margin-top:10px;">
-        <button id="sendReplyBtn">Send reply</button>
+        <button id="sendReplyBtn">Trimite răspunsul</button>
         <span id="replyError" style="color:var(--red); margin-left:10px; font-size:13px;"></span>
       </div>
     </div>

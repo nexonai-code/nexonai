@@ -17,6 +17,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/** Kept as a code, not a string — the message shown lives in the UI layer (stringResource), so
+ *  each build flavor (e.g. whistleblower) can localize it without this ViewModel knowing about
+ *  Android resources. */
+enum class LockError { PIN_TOO_SHORT, PANIC_SAME_AS_PIN, WRONG_PIN }
+
 @HiltViewModel
 class LockViewModel @Inject constructor(
     private val pinManager: PinManager,
@@ -30,13 +35,13 @@ class LockViewModel @Inject constructor(
     val isPinSet: Boolean get() = pinManager.isPinSet()
     val isBiometricEnabled: Boolean get() = pinManager.isBiometricEnabled()
 
-    private val _error = MutableStateFlow<String?>(null)
+    private val _error = MutableStateFlow<LockError?>(null)
     val error = _error.asStateFlow()
 
     /** Ersteinrichtung: normale PIN + Panik-PIN festlegen. */
     fun setupPins(pin: String, panicPin: String): Boolean {
-        if (pin.length < 4) { _error.value = "PIN must be at least 4 digits."; return false }
-        if (pin == panicPin) { _error.value = "Panic PIN must differ from the PIN."; return false }
+        if (pin.length < 4) { _error.value = LockError.PIN_TOO_SHORT; return false }
+        if (pin == panicPin) { _error.value = LockError.PANIC_SAME_AS_PIN; return false }
         pinManager.setPins(pin, panicPin)
         appLockManager.unlock()
         return true
@@ -57,7 +62,7 @@ class LockViewModel @Inject constructor(
                 }
             }
             PinResult.WRONG -> {
-                _error.value = "Wrong PIN."
+                _error.value = LockError.WRONG_PIN
             }
         }
     }

@@ -32,6 +32,8 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.nexonai.unpruuf.BuildConfig
 import com.nexonai.unpruuf.domain.AppEdition
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,13 +97,14 @@ fun QrPairScreen(
         }
     }
 
+    val scanPrompt = stringResource(R.string.qr_scan_prompt)
     val cameraPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             val opts = ScanOptions().apply {
                 setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                setPrompt("Scan unpruuf QR code")
+                setPrompt(scanPrompt)
                 setBeepEnabled(false)
                 setBarcodeImageEnabled(false)
                 setOrientationLocked(true)
@@ -114,10 +117,10 @@ fun QrPairScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add contact") },
+                title = { Text(stringResource(R.string.qr_title_add_contact)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.qr_cd_back))
                     }
                 }
             )
@@ -132,7 +135,7 @@ fun QrPairScreen(
         ) {
             if (mandatoryActive) {
                 Text(
-                    "RELAY-ONLY PAIRING — MANDATORY MODE IS ON",
+                    stringResource(R.string.qr_relay_only_mandatory),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -145,12 +148,12 @@ fun QrPairScreen(
                     FilterChip(
                         selected = !crossPlatformMode,
                         onClick = { crossPlatformMode = false },
-                        label = { Text("Android contact") }
+                        label = { Text(stringResource(R.string.qr_chip_android_contact)) }
                     )
                     FilterChip(
                         selected = crossPlatformMode,
                         onClick = { crossPlatformMode = true },
-                        label = { Text("iOS / cross-platform") }
+                        label = { Text(stringResource(R.string.qr_chip_ios_cross_platform)) }
                     )
                 }
             }
@@ -165,12 +168,12 @@ fun QrPairScreen(
                 FilterChip(
                     selected = nodeMeshMode,
                     onClick = { nodeMeshMode = !nodeMeshMode },
-                    label = { Text("Business (Node-Mesh)") }
+                    label = { Text(stringResource(R.string.qr_chip_business_node_mesh)) }
                 )
             }
 
             Text(
-                "YOUR CODE",
+                stringResource(R.string.qr_your_code),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -186,7 +189,7 @@ fun QrPairScreen(
                         Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.size(280.dp)) {
                             Image(
                                 bitmap = it.asImageBitmap(),
-                                contentDescription = "My Business Node-Mesh QR code",
+                                contentDescription = stringResource(R.string.qr_cd_my_node_mesh_qr),
                                 filterQuality = FilterQuality.None,
                                 modifier = Modifier.fillMaxSize().background(Color.White).padding(8.dp)
                             )
@@ -199,13 +202,12 @@ fun QrPairScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            "Configure a node first",
+                            stringResource(R.string.qr_configure_node_first),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Business Node-Mesh pairing needs your own node — set one up in " +
-                            "Settings → Business Node-Mesh, then come back here.",
+                            stringResource(R.string.qr_configure_node_first_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -222,7 +224,7 @@ fun QrPairScreen(
                         Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.size(280.dp)) {
                             Image(
                                 bitmap = it.asImageBitmap(),
-                                contentDescription = "My cross-platform QR code",
+                                contentDescription = stringResource(R.string.qr_cd_my_cross_platform_qr),
                                 filterQuality = FilterQuality.None,
                                 modifier = Modifier.fillMaxSize().background(Color.White).padding(8.dp)
                             )
@@ -235,13 +237,12 @@ fun QrPairScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            "Configure a relay first",
+                            stringResource(R.string.qr_configure_relay_first),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Cross-platform pairing needs a relay — set one up in " +
-                            "Settings → Relay, then come back here.",
+                            stringResource(R.string.qr_configure_relay_first_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -260,7 +261,7 @@ fun QrPairScreen(
                     ) {
                         Image(
                             bitmap = it.asImageBitmap(),
-                            contentDescription = "Mein QR-Code",
+                            contentDescription = stringResource(R.string.qr_cd_my_qr),
                             // FilterQuality.None keeps module edges perfectly
                             // sharp black/white when Compose scales the bitmap
                             // up to fill the card — bilinear smoothing here
@@ -282,12 +283,12 @@ fun QrPairScreen(
                 CircularProgressIndicator()
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Waiting for Tor network…",
+                    stringResource(R.string.qr_waiting_for_tor),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "First start can take 10–30 s",
+                    stringResource(R.string.qr_first_start_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -325,8 +326,8 @@ fun QrPairScreen(
                         Icon(Icons.Default.ContentCopy, null)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            if (AppEdition.isWhistleblower) "Copy my code (paste it into the officer's dashboard)"
-                            else "Copy code (debug — share manually)"
+                            if (AppEdition.isWhistleblower) stringResource(R.string.qr_copy_code_whistleblower)
+                            else stringResource(R.string.qr_copy_code_debug)
                         )
                     }
                 }
@@ -350,8 +351,8 @@ fun QrPairScreen(
                 )
                 Spacer(Modifier.width(7.dp))
                 Text(
-                    if (myPayload != null) "tor active — your code is ready"
-                    else "connecting to tor…",
+                    if (myPayload != null) stringResource(R.string.qr_tor_active)
+                    else stringResource(R.string.qr_connecting_to_tor),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (myPayload != null) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.tertiary
@@ -368,7 +369,7 @@ fun QrPairScreen(
             ) {
                 Icon(Icons.Default.QrCodeScanner, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Scan their code", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qr_scan_their_code), fontWeight = FontWeight.Bold)
             }
 
             // The other half of the copy button above: paste a code sent through another
@@ -382,7 +383,7 @@ fun QrPairScreen(
                 OutlinedTextField(
                     value = pastedCode,
                     onValueChange = { pastedCode = it },
-                    label = { Text(if (AppEdition.isWhistleblower) "Paste the officer's code" else "Paste their code (debug)") },
+                    label = { Text(if (AppEdition.isWhistleblower) stringResource(R.string.qr_paste_officer_code) else stringResource(R.string.qr_paste_their_code_debug)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -416,13 +417,11 @@ fun QrPairScreen(
                     enabled = pastedCode.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Add from pasted code")
+                    Text(stringResource(R.string.qr_add_from_pasted_code))
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "Testing only — a code shared this way (message, email) skips the " +
-                    "in-person check a QR scan gives you. Anyone who intercepts it could " +
-                    "pair as this contact.",
+                    stringResource(R.string.qr_pasted_code_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -432,8 +431,7 @@ fun QrPairScreen(
             Spacer(Modifier.height(14.dp))
 
             Text(
-                "Both devices scan each other. The code carries your reachable address " +
-                "and keys — no account, no phone number, nothing else.",
+                stringResource(R.string.qr_both_devices_scan_footer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -483,18 +481,18 @@ fun QrPairScreen(
     pendingPayload?.let { payload ->
         AlertDialog(
             onDismissRequest = { pendingPayload = null },
-            title = { Text("Name contact") },
+            title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
                 Column {
                     Text(
-                        "What do you want to call this contact?",
+                        stringResource(R.string.qr_name_contact_body),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = contactName,
                         onValueChange = { contactName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.qr_name_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -509,10 +507,10 @@ fun QrPairScreen(
                         }
                     },
                     enabled = contactName.isNotBlank()
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.qr_add)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingPayload = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingPayload = null }) { Text(stringResource(R.string.qr_cancel)) }
             }
         )
     }
@@ -520,18 +518,18 @@ fun QrPairScreen(
     pendingCrossPlatformPayload?.let { payload ->
         AlertDialog(
             onDismissRequest = { pendingCrossPlatformPayload = null },
-            title = { Text("Name contact") },
+            title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
                 Column {
                     Text(
-                        "What do you want to call this contact?",
+                        stringResource(R.string.qr_name_contact_body),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = contactName,
                         onValueChange = { contactName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.qr_name_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -546,10 +544,10 @@ fun QrPairScreen(
                         }
                     },
                     enabled = contactName.isNotBlank()
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.qr_add)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingCrossPlatformPayload = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingCrossPlatformPayload = null }) { Text(stringResource(R.string.qr_cancel)) }
             }
         )
     }
@@ -557,18 +555,18 @@ fun QrPairScreen(
     pendingNodeMeshPayload?.let { payload ->
         AlertDialog(
             onDismissRequest = { pendingNodeMeshPayload = null },
-            title = { Text("Name contact") },
+            title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
                 Column {
                     Text(
-                        "What do you want to call this contact?",
+                        stringResource(R.string.qr_name_contact_body),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = contactName,
                         onValueChange = { contactName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.qr_name_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -583,10 +581,10 @@ fun QrPairScreen(
                         }
                     },
                     enabled = contactName.isNotBlank()
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.qr_add)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingNodeMeshPayload = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingNodeMeshPayload = null }) { Text(stringResource(R.string.qr_cancel)) }
             }
         )
     }

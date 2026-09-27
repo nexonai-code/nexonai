@@ -31,6 +31,8 @@ import com.google.zxing.common.BitMatrix
 import com.nexonai.unpruuf.relay.core.RelayConstants
 import com.nexonai.unpruuf.relay.core.RelayEventLog
 import com.nexonai.unpruuf.relay.service.RelayService
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.relay.R
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -84,15 +86,15 @@ fun RelayScreen(service: RelayService?) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    if (nodeMeshMode) "unpruuf Business Node" else "unpruuf Relay",
+                    if (nodeMeshMode) stringResource(R.string.title_business_node) else stringResource(R.string.title_relay),
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 22.sp,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    if (nodeMeshMode) "Your own Node-Mesh node — only you write, contacts only read"
-                    else "Blind store-and-forward for offline contacts",
+                    if (nodeMeshMode) stringResource(R.string.subtitle_node_mesh)
+                    else stringResource(R.string.subtitle_relay),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -130,7 +132,7 @@ fun RelayScreen(service: RelayService?) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "PAIR A DEVICE",
+                            stringResource(R.string.pair_a_device),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -141,7 +143,7 @@ fun RelayScreen(service: RelayService?) {
                             qrBitmap?.let {
                                 androidx.compose.foundation.Image(
                                     bitmap = it.asImageBitmap(),
-                                    contentDescription = "Relay connection QR code",
+                                    contentDescription = stringResource(R.string.cd_relay_qr),
                                     filterQuality = FilterQuality.None,
                                     modifier = Modifier
                                         .size(220.dp)
@@ -164,11 +166,11 @@ fun RelayScreen(service: RelayService?) {
                             }) {
                                 Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Copy connection string")
+                                Text(stringResource(R.string.copy_connection_string))
                             }
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Scan or paste this in the unpruuf app under Settings → Relay.",
+                                stringResource(R.string.scan_or_paste_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -179,12 +181,12 @@ fun RelayScreen(service: RelayService?) {
                                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                                     Spacer(Modifier.height(16.dp))
                                     Text(
-                                        "Waiting for Tor…",
+                                        stringResource(R.string.waiting_for_tor),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        "First start can take 10–30 s",
+                                        stringResource(R.string.first_start_note),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -202,14 +204,13 @@ fun RelayScreen(service: RelayService?) {
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            "MESSAGE EXPIRY",
+                            stringResource(R.string.message_expiry),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "A queued message is automatically deleted (\"reset\") after this many " +
-                            "hours if nobody has picked it up yet.",
+                            stringResource(R.string.message_expiry_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -227,12 +228,12 @@ fun RelayScreen(service: RelayService?) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "Queued right now",
+                                    stringResource(R.string.queued_right_now),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    if (queuedCount == 1L) "1 message" else "$queuedCount messages",
+                                    if (queuedCount == 1L) stringResource(R.string.one_message) else stringResource(R.string.n_messages, queuedCount),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -240,7 +241,7 @@ fun RelayScreen(service: RelayService?) {
                             TextButton(
                                 onClick = { showWipeConfirm = true },
                                 enabled = queuedCount > 0
-                            ) { Text("Reset now", color = MaterialTheme.colorScheme.error) }
+                            ) { Text(stringResource(R.string.reset_now), color = MaterialTheme.colorScheme.error) }
                         }
                     }
                 }
@@ -257,28 +258,26 @@ fun RelayScreen(service: RelayService?) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "RECENT ACTIVITY",
+                                stringResource(R.string.recent_activity),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                "What passes through this relay — never the message itself, " +
-                                "only when it arrived, its size, and how long it waited before " +
-                                "being picked up.",
+                                stringResource(R.string.recent_activity_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         if (activityLog.isNotEmpty()) {
-                            TextButton(onClick = { service.clearActivityLog() }) { Text("Clear") }
+                            TextButton(onClick = { service.clearActivityLog() }) { Text(stringResource(R.string.clear)) }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
 
                     if (activityLog.isEmpty()) {
                         Text(
-                            "Nothing yet — this fills up as devices push and fetch through this relay.",
+                            stringResource(R.string.activity_empty),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -304,14 +303,14 @@ fun RelayScreen(service: RelayService?) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Owner key", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.owner_key), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                             Text(
-                                "Rotate if this phone's write key may have leaked. You re-scan it into your own app; contacts are not affected.",
+                                stringResource(R.string.owner_key_body),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        TextButton(onClick = { showOwnerRotateConfirm = true }) { Text("Rotate") }
+                        TextButton(onClick = { showOwnerRotateConfirm = true }) { Text(stringResource(R.string.rotate)) }
                     }
                 }
             } else {
@@ -327,17 +326,17 @@ fun RelayScreen(service: RelayService?) {
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "Access token",
+                                stringResource(R.string.access_token),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                "Rotating breaks every device already paired with this relay.",
+                                stringResource(R.string.access_token_body),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        TextButton(onClick = { showRotateConfirm = true }) { Text("Rotate") }
+                        TextButton(onClick = { showRotateConfirm = true }) { Text(stringResource(R.string.rotate)) }
                     }
                 }
 
@@ -353,12 +352,12 @@ fun RelayScreen(service: RelayService?) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "Censorship circumvention",
+                                stringResource(R.string.censorship_circumvention),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                "Use Tor bridges — for networks that block Tor directly.",
+                                stringResource(R.string.censorship_circumvention_body),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -375,9 +374,7 @@ fun RelayScreen(service: RelayService?) {
                     if (bridgesEnabled) {
                         Spacer(Modifier.height(14.dp))
                         Text(
-                            "Paste bridge lines (one per line) from bridges.torproject.org or " +
-                            "the Telegram bot @GetBridgesBot. Vanilla bridges (IP:Port " +
-                            "Fingerprint) and obfs4/Snowflake lines both work.",
+                            stringResource(R.string.bridge_lines_help),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -385,7 +382,7 @@ fun RelayScreen(service: RelayService?) {
                         OutlinedTextField(
                             value = bridgeText,
                             onValueChange = { service.onBridgeTextChange(it) },
-                            placeholder = { Text("Bridge lines") },
+                            placeholder = { Text(stringResource(R.string.bridge_lines_field)) },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
                             minLines = 3,
                             textStyle = MaterialTheme.typography.labelSmall
@@ -394,7 +391,7 @@ fun RelayScreen(service: RelayService?) {
                         Button(
                             onClick = { service.saveBridges() },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Save & reconnect") }
+                        ) { Text(stringResource(R.string.save_and_reconnect)) }
 
                         bridgeStatus?.let {
                             Spacer(Modifier.height(8.dp))
@@ -419,14 +416,12 @@ fun RelayScreen(service: RelayService?) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "Allow LAN access",
+                                    stringResource(R.string.allow_lan_access),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    "Also reachable directly on this Wi-Fi, not just via Tor — " +
-                                    "for a laptop or browser client with no Tor of its own. Off by " +
-                                    "default; leave off unless you know you need it (see officer-app/README.md).",
+                                    stringResource(R.string.allow_lan_access_body),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -448,74 +443,74 @@ fun RelayScreen(service: RelayService?) {
     if (showWipeConfirm) {
         AlertDialog(
             onDismissRequest = { showWipeConfirm = false },
-            title = { Text("Reset now?") },
-            text = { Text("Deletes every currently queued message immediately. Devices that already picked theirs up are unaffected.") },
+            title = { Text(stringResource(R.string.reset_now_title)) },
+            text = { Text(stringResource(R.string.reset_now_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     service.wipeAllNow()
                     showWipeConfirm = false
-                }) { Text("Reset now", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.reset_now), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showWipeConfirm = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showWipeConfirm = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
     if (showRotateConfirm) {
         AlertDialog(
             onDismissRequest = { showRotateConfirm = false },
-            title = { Text("Rotate access token?") },
-            text = { Text("Every device currently paired with this relay will stop being able to use it until you share the new QR code with them again.") },
+            title = { Text(stringResource(R.string.rotate_access_token_title)) },
+            text = { Text(stringResource(R.string.rotate_access_token_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     service.regenerateToken()
                     showRotateConfirm = false
                     rotatedNotice = true
-                }) { Text("Rotate", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.rotate), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showRotateConfirm = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showRotateConfirm = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
     pendingModeSwitch?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingModeSwitch = null },
-            title = { Text(if (target) "Switch to Business Node?" else "Switch back to Relay?") },
+            title = { Text(if (target) stringResource(R.string.switch_to_business_title) else stringResource(R.string.switch_to_relay_title)) },
             text = {
                 Text(
-                    "This device gets a different onion address for the other mode, and everything " +
-                    "currently queued is deleted. " +
-                    if (target) "Relay contacts paired with this device will no longer reach it."
-                    else "Your own unpruuf app loses this node until you switch back."
+                    stringResource(R.string.switch_mode_body) + " " +
+                    if (target) stringResource(R.string.switch_mode_relay_lost)
+                    else stringResource(R.string.switch_mode_node_lost)
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     service.setNodeMeshMode(target)
                     pendingModeSwitch = null
-                }) { Text("Switch", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.switch_label), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { pendingModeSwitch = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { pendingModeSwitch = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
     if (showOwnerRotateConfirm) {
         AlertDialog(
             onDismissRequest = { showOwnerRotateConfirm = false },
-            title = { Text("Rotate owner key?") },
-            text = { Text("Your own unpruuf app can no longer write to this node until you scan the new QR code into it (Settings → Business Node-Mesh).") },
+            title = { Text(stringResource(R.string.rotate_owner_key_title)) },
+            text = { Text(stringResource(R.string.rotate_owner_key_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     service.regenerateNodeMeshOwnerSecret()
                     showOwnerRotateConfirm = false
-                }) { Text("Rotate", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.rotate), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showOwnerRotateConfirm = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showOwnerRotateConfirm = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
+    val tokenRotatedMessage = stringResource(R.string.token_rotated_snackbar)
     LaunchedEffect(rotatedNotice) {
         if (rotatedNotice) {
-            snackbarHostState.showSnackbar("Token rotated. Share the new code with paired devices.")
+            snackbarHostState.showSnackbar(tokenRotatedMessage)
             rotatedNotice = false
         }
     }
@@ -529,26 +524,26 @@ private fun ModeCard(nodeMeshMode: Boolean, onRequestSwitch: (Boolean) -> Unit) 
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text("MODE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.mode_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 FilterChip(
                     selected = !nodeMeshMode,
                     onClick = { if (nodeMeshMode) onRequestSwitch(false) },
-                    label = { Text("Relay") },
+                    label = { Text(stringResource(R.string.title_relay)) },
                     modifier = Modifier.weight(1f)
                 )
                 FilterChip(
                     selected = nodeMeshMode,
                     onClick = { if (!nodeMeshMode) onRequestSwitch(true) },
-                    label = { Text("Business Node") },
+                    label = { Text(stringResource(R.string.title_business_node)) },
                     modifier = Modifier.weight(1f)
                 )
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                if (nodeMeshMode) "unpruuf Business Node-Mesh: you write to your own node, contacts only read from it. Messages disappear after the profile's retention time."
-                else "Consumer relay: paired contacts drop messages here, the recipient picks them up (and deletes them).",
+                if (nodeMeshMode) stringResource(R.string.mode_card_business_body)
+                else stringResource(R.string.mode_card_relay_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -564,10 +559,10 @@ private fun NodeMeshOwnerCard(ownerConnectionString: String?, onCopy: (String) -
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("CONNECT YOUR OWN APP", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.connect_your_own_app), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(10.dp))
             Text(
-                "This is your WRITE KEY. Scan it only into your own unpruuf app (Settings → Business Node-Mesh). Never give it to a contact — contacts get this node's address automatically when you pair.",
+                stringResource(R.string.write_key_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center
@@ -578,7 +573,7 @@ private fun NodeMeshOwnerCard(ownerConnectionString: String?, onCopy: (String) -
                 qrBitmap?.let {
                     androidx.compose.foundation.Image(
                         bitmap = it.asImageBitmap(),
-                        contentDescription = "Owner QR code",
+                        contentDescription = stringResource(R.string.cd_owner_qr),
                         filterQuality = FilterQuality.None,
                         modifier = Modifier
                             .size(220.dp)
@@ -591,14 +586,14 @@ private fun NodeMeshOwnerCard(ownerConnectionString: String?, onCopy: (String) -
                 OutlinedButton(onClick = { onCopy(ownerConnectionString) }) {
                     Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Copy owner code")
+                    Text(stringResource(R.string.copy_owner_code))
                 }
             } else {
                 Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(16.dp))
-                        Text("Waiting for Tor…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.waiting_for_tor), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -621,7 +616,7 @@ private fun NodeMeshSettingsCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text("RETENTION PROFILE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.retention_profile), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
             RelayConstants.NODE_MESH_PROFILES.forEach { (name, hours) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -629,7 +624,7 @@ private fun NodeMeshSettingsCard(
                     Column(Modifier.weight(1f)) {
                         Text(name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                         Text(
-                            "Messages stay ${if (hours == 1) "1 hour" else "$hours hours"} on this node",
+                            if (hours == 1) stringResource(R.string.messages_stay_one_hour) else stringResource(R.string.messages_stay_n_hours, hours),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -639,35 +634,35 @@ private fun NodeMeshSettingsCard(
             Spacer(Modifier.height(14.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Spacer(Modifier.height(14.dp))
-            Text("NODE SLOT", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.node_slot), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(4.dp))
             Text(
-                "Give each of your (up to 3) nodes its own slot — their daily maintenance then never overlaps.",
+                stringResource(R.string.node_slot_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 (1..3).forEach { n ->
-                    FilterChip(selected = slot == n, onClick = { onSlot(n) }, label = { Text("Slot $n") })
+                    FilterChip(selected = slot == n, onClick = { onSlot(n) }, label = { Text(stringResource(R.string.slot_n, n)) })
                 }
             }
             Spacer(Modifier.height(14.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Spacer(Modifier.height(14.dp))
             Text(
-                if (queuedCount == 1L) "1 encrypted packet stored" else "$queuedCount encrypted packets stored",
+                if (queuedCount == 1L) stringResource(R.string.one_packet_stored) else stringResource(R.string.n_packets_stored, queuedCount),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                "Removed automatically when their time is up — reading never deletes.",
+                stringResource(R.string.removed_automatically),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             lastHygiene?.let {
                 Spacer(Modifier.height(6.dp))
-                Text("Last maintenance: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.last_maintenance, it), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -678,9 +673,9 @@ private val logTimeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 @Composable
 private fun ActivityLogRow(entry: RelayEventLog.Entry) {
     val (label, color) = when (entry.kind) {
-        RelayEventLog.Kind.STORED -> "stored" to MaterialTheme.colorScheme.onSurface
-        RelayEventLog.Kind.FETCHED -> "fetched" to MaterialTheme.colorScheme.primary
-        RelayEventLog.Kind.REJECTED -> "rejected" to MaterialTheme.colorScheme.error
+        RelayEventLog.Kind.STORED -> stringResource(R.string.log_stored) to MaterialTheme.colorScheme.onSurface
+        RelayEventLog.Kind.FETCHED -> stringResource(R.string.log_fetched) to MaterialTheme.colorScheme.primary
+        RelayEventLog.Kind.REJECTED -> stringResource(R.string.log_rejected) to MaterialTheme.colorScheme.error
     }
     Row(verticalAlignment = Alignment.Top) {
         Text(
@@ -697,11 +692,12 @@ private fun ActivityLogRow(entry: RelayEventLog.Entry) {
                 style = MaterialTheme.typography.bodySmall,
                 color = color
             )
+            val queuedForFmt = stringResource(R.string.queued_for)
             val detail = buildString {
                 if (entry.bytes > 0) append(formatBytes(entry.bytes))
                 entry.avgDwellMs?.let {
                     if (isNotEmpty()) append(" · ")
-                    append("queued ${formatDuration(it)}")
+                    append(queuedForFmt.format(formatDuration(it)))
                 }
                 entry.note?.let {
                     if (isNotEmpty()) append(" · ")
@@ -741,7 +737,7 @@ private fun StatusPill(active: Boolean) {
             Box(Modifier.size(7.dp).clip(CircleShape).background(fg))
             Spacer(Modifier.width(7.dp))
             Text(
-                if (active) "RELAY ACTIVE" else "CONNECTING",
+                if (active) stringResource(R.string.relay_active) else stringResource(R.string.connecting),
                 style = MaterialTheme.typography.labelSmall,
                 color = fg
             )
@@ -752,7 +748,7 @@ private fun StatusPill(active: Boolean) {
 @Composable
 private fun TtlStepper(hours: Int, onChange: (Int) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        StepButton(label = "−", enabled = hours > RelayConstants.MIN_TTL_HOURS) {
+        StepButton(label = "\u2212", enabled = hours > RelayConstants.MIN_TTL_HOURS) {
             onChange((hours - stepFor(hours)).coerceAtLeast(RelayConstants.MIN_TTL_HOURS))
         }
         Spacer(Modifier.width(4.dp))

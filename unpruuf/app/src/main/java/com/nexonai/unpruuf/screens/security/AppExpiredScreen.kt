@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 
 /**
  * The build-freshness gate — shown instead of everything else once
@@ -39,14 +41,13 @@ fun AppExpiredScreen() {
             )
             Spacer(Modifier.height(20.dp))
             Text(
-                "This build has expired",
+                stringResource(R.string.security_build_expired_title),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "This version of unpruuf is more than 6 months old and no longer runs. " +
-                "Please install the latest update.",
+                stringResource(R.string.security_build_expired_body),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

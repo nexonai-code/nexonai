@@ -16,7 +16,7 @@ async function api(path, options) {
 
 function fmtDate(ms) {
   if (!ms) return "—";
-  return new Date(ms).toLocaleString();
+  return new Date(ms).toLocaleString("ro-RO");
 }
 
 function deadlineInfo(dueAt) {
@@ -26,7 +26,7 @@ function deadlineInfo(dueAt) {
   let cls = "ok";
   if (remainingMs <= 0) cls = "overdue";
   else if (remainingMs < 2 * 24 * 60 * 60 * 1000) cls = "soon";
-  const label = remainingMs <= 0 ? `overdue by ${Math.abs(days)}d` : `${days}d left`;
+  const label = remainingMs <= 0 ? `întârziat cu ${Math.abs(days)}z` : `mai sunt ${days}z`;
   return { cls, label };
 }
 
@@ -35,6 +35,10 @@ async function loadMe() {
   document.getElementById("qrImg").src = me.qrDataUrl;
   document.getElementById("myCode").value = me.pairingCode;
   document.getElementById("relayUrlHint").textContent = me.relayReachableBaseUrl;
+}
+
+function statusLabel(status) {
+  return { new: "nou", acknowledged: "confirmat", in_progress: "în lucru", closed: "închis" }[status] || status;
 }
 
 async function loadCases() {
@@ -48,11 +52,11 @@ async function loadCases() {
     const tr = document.createElement("tr");
     tr.className = "case-row";
     tr.innerHTML = `
-      <td><span class="pill ${c.status}">${c.status.replace("_", " ")}</span></td>
-      <td>${c.category ? escapeHtml(c.category) : "<i style=\"color:var(--text-dim)\">uncategorized</i>"}</td>
+      <td><span class="pill ${c.status}">${statusLabel(c.status)}</span></td>
+      <td>${c.category ? escapeHtml(c.category) : "<i style=\"color:var(--text-dim)\">necategorizat</i>"}</td>
       <td>${fmtDate(c.openedAt)}</td>
-      <td class="deadline ${c.acknowledgedAt ? "ok" : ack.cls}">${c.acknowledgedAt ? "acknowledged" : ack.label}</td>
-      <td class="deadline ${c.status === "closed" ? "ok" : feedback.cls}">${c.status === "closed" ? "closed" : feedback.label}</td>
+      <td class="deadline ${c.acknowledgedAt ? "ok" : ack.cls}">${c.acknowledgedAt ? "confirmat" : ack.label}</td>
+      <td class="deadline ${c.status === "closed" ? "ok" : feedback.cls}">${c.status === "closed" ? "închis" : feedback.label}</td>
       <td>${fmtDate(c.lastActivityAt)}</td>
     `;
     tr.addEventListener("click", () => openCase(c.id));
@@ -77,7 +81,7 @@ function renderThread(messages) {
   for (const m of messages) {
     const div = document.createElement("div");
     div.className = `msg ${m.direction}`;
-    div.innerHTML = `${escapeHtml(m.text)}<div class="meta">${m.direction === "in" ? "reporter" : "you"} · ${fmtDate(m.createdAt)}</div>`;
+    div.innerHTML = `${escapeHtml(m.text)}<div class="meta">${m.direction === "in" ? "raportor" : "tu"} · ${fmtDate(m.createdAt)}</div>`;
     thread.appendChild(div);
   }
   thread.scrollTop = thread.scrollHeight;
@@ -130,7 +134,7 @@ document.getElementById("sendReplyBtn").addEventListener("click", async () => {
   if (!input.value.trim()) return;
   try {
     const result = await api(`/api/cases/${currentCaseId}/reply`, { method: "POST", body: JSON.stringify({ text: input.value }) });
-    if (!result.sent) errorEl.textContent = "Queued locally, but the relay didn't confirm receipt — check the relay is reachable.";
+    if (!result.sent) errorEl.textContent = "Pus în coadă local, dar releul nu a confirmat primirea — verifică dacă releul este accesibil.";
     input.value = "";
     renderThread(result.messages);
   } catch (err) {

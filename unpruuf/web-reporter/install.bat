@@ -4,27 +4,27 @@ cd /d "%~dp0"
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo Node.js was not found on PATH. Install it from https://nodejs.org and try again.
+  echo Node.js nu a fost gasit. Instaleaza-l de pe https://nodejs.org si incearca din nou.
   pause
   exit /b 1
 )
 
-echo Installing dependencies...
+echo Instalez dependintele...
 call npm install
 if errorlevel 1 (
-  echo npm install failed - see the error above.
+  echo npm install a esuat - vezi eroarea de mai sus.
   pause
   exit /b 1
 )
 
-echo Building the browser bundle...
+echo Construiesc pachetul pentru browser...
 call npm run build
 if errorlevel 1 (
-  echo Build failed - see the error above.
+  echo Build-ul a esuat - vezi eroarea de mai sus.
   pause
   exit /b 1
 )
 
 echo.
-echo Done. Run start.bat to serve the page.
+echo Gata. Ruleaza start.bat pentru a porni pagina.
 pause
