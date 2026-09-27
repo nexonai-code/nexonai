@@ -256,3 +256,21 @@ test("a node instance's owner secret does not work against a different node inst
     first.store.close();
   }
 });
+
+test("a rotated owner secret takes effect immediately — the old one stops working", async () => {
+  let secret = "before-rotation";
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-app-test-")), "node-mesh.sqlite");
+  const store = new NodeStore(file);
+  const server = createApp(store, () => secret).listen(0);
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const body = JSON.stringify({ routing_tag: "rot", ciphertext: Buffer.from("x").toString("base64") });
+  try {
+    assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders("before-rotation"), body })).status, 201);
+    secret = "after-rotation";
+    assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders("before-rotation"), body })).status, 401);
+    assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders("after-rotation"), body })).status, 201);
+  } finally {
+    server.close();
+    store.close();
+  }
+});

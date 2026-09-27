@@ -1,78 +1,91 @@
 # unpruuf-node-mesh
 
-Node server for the unpruuf **Business** product line — see `../NODE_MESH_SPEC.md` for the full
-architecture. **Not** the same product as `../server/` (the consumer app's optional store-and-
-forward relay), and not a drop-in replacement for it — that product is unchanged and keeps
-running exactly as before. This is a separate server for a separate, mandatory-node product line.
+Node server for the unpruuf **Business** product line — architecture in `../NODE_MESH_SPEC.md`.
+A separate product from `../server/` (the consumer app's optional relay); that one is unchanged.
 
-**Status: Phase 1 of the spec**, plus the server-side half of §7's Temp Node and a standalone
-Windows `.exe` build (see below). This package implements the core Node server API (`/deposit`,
-`/fetch`, `/fetchMany`) exactly as specified, fully tested (`npm test`). It does **not** yet
-include: a bundled Tor process manager (Windows/macOS start scripts that also manage Tor itself,
-like `../server/` has) or a Linux standalone binary build. See `NODE_MESH_SPEC.md` §12 for the
-full picture of what this is one piece of.
+## Schnellstart (Windows)
 
-## Temp Node mode
+1. `install.bat` doppelklicken (einmalig — braucht Node.js LTS von nodejs.org).
+2. `start.bat` doppelklicken. Beim ersten Start fragt es:
+   - **Slot 1, 2 oder 3** — welcher deiner bis zu 3 eigenen Nodes das ist.
+   - **Profil** — wie lange Nachrichten auf dem Node liegen (standard 6 h / high-security 1 h /
+     offline-tolerant 24 h).
+3. Der Node lädt Tor einmalig herunter, erstellt seine eigene `.onion`-Adresse und öffnet im
+   Browser die **Einrichtungsseite** mit dem Owner-QR.
+4. In der unpruuf-App: **Einstellungen → Business Node-Mesh → QR scannen**. Fertig.
 
-`EPHEMERAL=1` (or `--ephemeral`) starts this process as a one-off Temp Node (NODE_MESH_SPEC.md
-§7): a fresh owner secret generated in memory and an in-memory (`:memory:`) message store —
-**nothing touches disk**, and every restart is a brand new node identity, unlike the default mode's
-persisted `node-mesh-identity.json`/`node-mesh.sqlite`. The generated owner secret is printed once
-at startup; give that string (in the exact `unpruuf-node-owner:v1:<address>:<secret>` shape the
-app already understands for a standard node) to the app's Temp Node screen for the one chat this
-instance is meant to serve.
+Der Owner-QR ist dein **Schreibschlüssel** — nur in die eigene App, nie an Kontakte. Kontakte
+bekommen die Node-Adresse automatisch beim Pairing.
+
+**Temp Node** (für genau einen Chat, nur im Arbeitsspeicher): `start-tempnode.bat`, dann in der
+App im Chat **Temp Node** wählen und den QR von der Einrichtungsseite scannen.
+
+Ohne Node.js auf dem Zielrechner: siehe `EXE_BUILD.md` (fertiger Ordner mit `.exe` + denselben
+`start.bat`/`start-tempnode.bat`).
+
+## Linux / Docker
 
 ```bash
-npm run start:tempnode   # same as: EPHEMERAL=1 node dist/index.js
+./start.sh 1 standard          # slot, profile — setup page on http://localhost:8790
+./start-tempnode.sh            # Temp Node — setup page on http://localhost:8810
+docker compose up -d           # container, setup page on the host's http://localhost:8790
 ```
 
-## What makes this different from `../server/`
+## What the node does on its own
 
-| | `../server/` (consumer relay) | `node-mesh-server/` (this package) |
+| | |
+|---|---|
+| **Tor onion service** | Mandatory and fully managed: downloads the pinned Tor Expert Bundle once, runs its own Tor, publishes the node via the control port (`ADD_ONION`). The public API only listens on `127.0.0.1` — "the node never learns a sender IP" is structural, not a logging policy. |
+| **Stable address** | The onion key is stored in `data/node-<slot>/node-mesh-identity.json` (file mode 600) and reused on every start; restarts and the daily Reset never change the address. |
+| **Proof-of-work DoS defense** | Tor's onion-service PoW (`PoWDefensesEnabled=1`) is always on — flooding the node with connections costs the attacker CPU per attempt. The pinned bundle's Tor 0.4.9 ships the `pow` module (verified with `tor --list-modules`). |
+| **Self-healing** | If Tor crashes or the control connection drops, Tor restarts with backoff and re-adds the same key → same address. Tor also exits on its own if this process dies (`__OwningControllerProcess`), so no orphaned Tor keeps running. |
+| **Profiles** | `NODE_PROFILE=standard\|high-security\|offline-tolerant` (6 h / 1 h / 24 h). Max 24 h, because every unpruuf client polls a window sized for 24 h — so any profile is always fully covered without the client knowing which one a contact runs. Unknown names refuse to start. |
+| **Slots** | `NODE_SLOT=1\|2\|3`: staggered daily Reset at minute 0 / 20 / 40 (UTC-aligned, so nodes on different machines stagger correctly), own default ports and data folder per slot — all three can even run on one machine. |
+| **Reset (hygiene only)** | Closes idle HTTP sockets, verifies the onion is still registered (re-adds it with the same key if not), checkpoints SQLite. Never touches messages, rate-limit counters or the address (NODE_MESH_SPEC.md §5). |
+| **Cleanup** | TTL sweep every 5 min is the only deletion path; expired rows are already invisible to reads. SQLite `secure_delete` overwrites swept ciphertext instead of leaving it in free pages. |
+| **Setup page** | Separate port (never part of the onion's port mapping), bound to `127.0.0.1`, loopback `Host` header required (blocks DNS-rebinding pages from reading the owner secret). Shows owner QR, Tor state, profile, slot, stored packet count, and a "rotate owner secret" button (custom-header CSRF guard; takes effect immediately, address unchanged). |
+| **Temp Node** | `EPHEMERAL=1` / `--ephemeral`: owner secret, onion key and messages exist only in memory — the key goes to Tor over the control port, never through a `HiddenServiceDir`. Tor's own working folder is a temp dir deleted on exit. Every start = new address. |
+
+## Ports (defaults per slot)
+
+| Slot | API (loopback, behind the onion) | Setup page |
 |---|---|---|
-| Who writes | Any paired contact (shared bearer token) | **Only the node's own owner** (a secret never shared with contacts) |
-| Who reads | The node owner, delete-on-fetch | Any contact who knows a valid routing tag, **read-only** |
-| Cleanup | Delete-on-fetch + TTL sweep | **TTL sweep only** — fetch never deletes |
-| Auth on read | Bearer token required | None — the routing tag itself is the credential |
+| 1 | 8788 | 8790 |
+| 2 | 8798 | 8800 |
+| 3 | 8808 | 8810 |
 
-Same wire-format conventions otherwise (base64 blobs, `POST /fetchMany`'s `{tags, waitMs}` →
-`{blobs: {tag: [...]}}` shape, tag character class) — a client that already speaks the consumer
-relay's `/v1/fetchMany` needs almost no new parsing logic to also speak this.
+Override with `PORT` / `ADMIN_PORT`. Other env vars: `NODE_MESH_DATA_DIR`, `TOR_EXE_PATH` (use an
+existing Tor binary instead of downloading), `ADMIN_BIND` (Docker only), `NODE_MESH_TOR=0` +
+`NODE_MESH_PUBLIC_ADDRESS` (only if you run your own hidden service in front of `PORT` — never a
+LAN shortcut; the app always reaches nodes through Tor).
 
-## API
+## API (identical on the Android node — `../relay-android`, Business Node mode)
 
-Only meant to be reached over this node's own Tor hidden service. `/health` is unauthenticated
-and reveals nothing.
+- `PUT /deposit` — `{ "routing_tag", "ciphertext": "<base64>", "ttl"?: <ms> }` → `201`.
+  **Owner-only** (`Authorization: Bearer <ownerSecret>`). `ttl` may only shorten the profile's TTL.
+- `GET /fetch?tag=<routing_tag>` → `{ "blobs": [...] }`. Read-only, no auth — the tag is the
+  credential. Never deletes.
+- `POST /fetchMany` — `{ "tags": [...], "waitMs"? }` → `{ "blobs": { "<tag>": [...] } }`.
+  Read-only, optional long-poll (max 55 s).
+- `GET /health` → `{ "ok": true }`.
 
-- `PUT /deposit` — `{ "routing_tag": "...", "ciphertext": "<base64>", "ttl"?: <ms> }` →
-  `201 { "stored": true }`. **Owner-only**: requires `Authorization: Bearer <ownerSecret>`. This
-  secret is generated once (`node-mesh-identity.json`) and configured into the owner's own app
-  instance(s) — it must never be given to a contact. `ttl` may only shorten this node's own
-  configured default, never lengthen it.
-- `GET /fetch?tag=<routing_tag>` → `200 { "blobs": ["<base64>", ...] }`. **Read-only, no auth** —
-  the tag itself, HKDF-derived from a pairing secret, is the access credential. Never deletes.
-- `POST /fetchMany` — `{ "tags": [...], "waitMs"?: <ms, capped at MAX_WAIT_MS> }` →
-  `200 { "blobs": { "<tag>": ["<base64>", ...], ... } }`. Batched, optionally long-polling sibling
-  of `/fetch`. Read-only, same as `/fetch`.
+Read endpoints share a global token bucket (burst 30, 5/s) — every request arrives from local Tor,
+so there is no client IP to key on.
 
-Cleanup is TTL-only, on a periodic internal sweep — there is no delete endpoint and no
-delete-on-fetch anywhere. See `NODE_MESH_SPEC.md` §4/§8 for why.
+## Verified
 
-## Development
+- `npm test` — 38/38 (HTTP contract, store, rate limiter, profiles/slots, Tor control protocol
+  against a fake control port, torrc, setup page incl. DNS-rebinding refusal and CSRF-guarded owner-secret rotation).
+- Real Tor 0.4.9.11 in the dev sandbox: onion created with PoW via `ADD_ONION`; same address after
+  a restart; `kill -9` of Tor → automatic restart with the same address; Temp Node left no key on
+  disk and its temp folder was gone after exit; no orphaned Tor after shutdown.
+- Standalone binary (`npm run build:exe`) built and run on Linux with the same Tor: onion, setup
+  page and owner code all worked from the single executable.
 
-```bash
-npm install
-npm test    # compiles + runs the node:test suite (store, HTTP layer, rate limiter)
-npm run dev # ts-node, plain HTTP on 127.0.0.1:8788 — no Tor, no auth wrapper beyond the owner secret
-```
+## Not verified
 
-## Deployment
-
-- **`npm run build && npm start`** behind your own Tor hidden service — works everywhere Node.js
-  runs.
-- **Windows, no Node.js required on the machine that runs it:** see `EXE_BUILD.md` — produces a
-  standalone `unpruuf-node-mesh.exe` (same Node "Single Executable Application" technique
-  `../server/` already uses for `unpruuf-relay.exe`). Also the natural way to run a Temp Node
-  (`EPHEMERAL=1`, above) from a second Windows machine without installing anything on it first.
-- Docker/macOS packaging: not yet built out for this package — `../server/`'s scripts are the
-  reference to adapt once this reaches that phase.
+- Tor reaching 100 % bootstrap: the dev sandbox's network policy stops every Tor connection at the
+  handshake (same as for officer-app) — publishing to the real Tor network must be confirmed on a
+  normal internet connection.
+- A real Windows run of `start.bat` / the `.exe`, and the Docker image (the sandbox's Docker
+  build couldn't reach the npm registry). `docker compose up` on a normal machine is the check.

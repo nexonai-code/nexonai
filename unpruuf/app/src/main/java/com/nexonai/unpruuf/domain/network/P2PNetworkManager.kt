@@ -223,14 +223,15 @@ class P2PNetworkManager @Inject constructor(
         // exceeds it, rather than silently dropping tags past the cap.
         private const val MAX_FETCH_MANY_TAGS_PER_CALL = 64
 
-        // unpruuf Business / Node-Mesh (NODE_MESH_SPEC.md §3) — matches that document's
-        // confirmed defaults exactly, chosen there to stay consistent with the numbers this app
-        // and the consumer relay already use (hourly wire-ID rotation, 6h relay TTL default).
-        // Deliberately NOT coupled (rotation_interval independent of TTL) — see §3's reasoning:
-        // the tolerance window is computed FROM both via IdentityManager.nodeMeshToleranceEpochs,
-        // so any future change to either value here stays correct automatically.
+        // unpruuf Business / Node-Mesh (NODE_MESH_SPEC.md §3). Rotation is a protocol constant
+        // both contacts must share. The poll window is sized for the LONGEST retention any node
+        // profile allows (node-mesh-server/src/profiles.ts: MAX_TTL_HOURS = 24), not for one
+        // assumed profile — a contact's node running "offline-tolerant" (24h) would otherwise
+        // hold messages this app never asks for. Window = ceil(24h/1h)+1 = 25 epochs back plus
+        // the current one: 26 tags per contact, still one fetchMany call (server cap 64);
+        // profiles.test.ts pins the same window server-side.
         private const val NODE_MESH_ROTATION_INTERVAL_MS = 60 * 60 * 1000L
-        private const val NODE_MESH_DEFAULT_TTL_MS = 6 * 60 * 60 * 1000L
+        private const val NODE_MESH_MAX_TTL_MS = 24 * 60 * 60 * 1000L
 
         // Connect timeout for FRESH Tor connections to a CONTACT's onion (the pooled send
         // paths). 40s was enough for every path except the hardest one: mobile-data client
@@ -598,7 +599,7 @@ class P2PNetworkManager @Inject constructor(
                 .plus(c.theirTempNodeAddress?.let { listOf(it) } ?: emptyList())
                 .distinct()
             if (addresses.isEmpty()) continue
-            val tags = identityManager.nodeMeshToleranceEpochs(NODE_MESH_DEFAULT_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
+            val tags = identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
                 .map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch) }
             // Every address is this ONE contact's own redundant node pool — added independently
             // (a blob could be sitting on any of them, delete-on-fetch isn't in play here so
@@ -1287,7 +1288,7 @@ class P2PNetworkManager @Inject constructor(
             // determines which epochs are still worth checking.
             if (c.nodeMesh) {
                 val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: continue
-                for (epoch in identityManager.nodeMeshToleranceEpochs(NODE_MESH_DEFAULT_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)) {
+                for (epoch in identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)) {
                     if (identityManager.nodeMeshRoutingTag(seed, epoch) == wireId) return c.id
                 }
                 continue

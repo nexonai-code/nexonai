@@ -5,6 +5,75 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑27 · Node-Mesh v5: betriebsreif — eingebauter Tor + PoW, Profile, Android-Node, 1 Client-Bug + 1 Server-Bug
+
+**What was done**
+
+Review of the uploaded Node-Mesh brief against the repo: the upload was the old **v1** draft;
+the repo already had v3 + a built server and Android client. A second review ("what's missing
+for real customer operation?") found five gaps, all closed here. `NODE_MESH_SPEC.md` is now
+**v5** (history entry + [v5] blocks in §3/§5/§8/§9/§11/§12).
+
+**What was added**
+
+- `node-mesh-server/src/tor/` — Tor built in and mandatory: pinned Expert Bundle download (with
+  officer-app's two Linux fixes), Tor as pure onion host (`SocksPort 0`, auto control port,
+  cookie auth, `__OwningControllerProcess`), publication via control-port `ADD_ONION` with a
+  persisted key (address never changes) and **Tor's onion-service proof-of-work defense always
+  on**; self-healing restart with backoff; Temp Node key kept in memory only.
+- `node-mesh-server/src/profiles.ts` — profiles `standard` 6 h / `high-security` 1 h /
+  `offline-tolerant` 24 h (max 24 h), rotation fixed at 1 h as a protocol constant, slots 1–3
+  (Reset at minute 0/20/40, UTC-aligned; own ports + data folder per slot).
+- `node-mesh-server/src/admin/` — local setup page on its own loopback port (never behind the
+  onion), `Host`-header DNS-rebinding guard, owner QR, Tor state, CSRF-guarded owner-secret
+  rotation (takes effect immediately). Owner code + terminal QR also printed on first start.
+- Reset now does real hygiene: closes idle HTTP sockets, verifies/re-adds the onion (same key),
+  WAL checkpoint. SQLite `secure_delete` on; sweep every 5 min.
+- Packaging: `install.bat`, `start.bat` (slot/profile menu, remembers choice, opens setup page),
+  `start-tempnode.bat`, `start.sh`, `start-tempnode.sh`, `Dockerfile`, `docker-compose.yml`;
+  standalone exe folder now ships the same two `.bat` files (`exe-templates/`).
+- `relay-android` — **Business Node mode** (Android as node host, closes §8's platform list):
+  `NodeMeshHttpServer` (same contract as the PC node), `BlobStore` v2 with per-row `expires_at`,
+  read-only reads, TTL-only sweep, `secure_delete`; profiles, slots, owner QR, owner-key
+  rotation, separate onion key per mode; first unit test setup for the module.
+- `NODE_MESH_BETRIEB.md` — customer-facing operator guide (German), incl. one-node limitation
+  (§11 requirement), profiles, slots, Temp Node, Android-without-PoW caveat.
+
+**Bugs found and fixed**
+
+1. **Android client missed messages from nodes with TTL > 6 h** (`P2PNetworkManager`): the poll
+   window was computed with a hard-coded 6 h TTL, but a client can't know a contact's node TTL.
+   A 24-h node's messages older than ~7 h were never requested. Now the window is always sized
+   for the max allowed TTL (24 h → 26 tags/contact, still one `fetchMany`).
+2. **Stale 400 on kept-alive connections** (`relay-android` node server, found by the new HTTP
+   contract test): an error answered before reading the body left the body on the socket and the
+   next request got a stale 400. Fixed by closing the connection after every response. The same
+   latent pattern in relay mode's `RelayHttpServer` is documented, not changed (pre-demo risk).
+3. `start.bat` (during development, never shipped): `%errorlevel%` inside a parenthesized block is
+   expanded at parse time — the slot menu would always have saved a stale value. Switched to
+   `if errorlevel`.
+
+**Verification**
+
+- `node-mesh-server`: `npm test` **38/38** (11 new: profiles/slots, Tor control protocol vs. a
+  fake control port, torrc, setup page incl. DNS-rebinding + CSRF, rotation). Real Tor 0.4.9.11:
+  `tor --list-modules` → `pow: yes`; `ADD_ONION … PoWDefensesEnabled=1` accepted; same onion
+  address after restart; `kill -9` Tor → auto-restart, same address; Temp Node: no key on disk,
+  temp dir gone after exit; no orphaned Tor after shutdown.
+- Standalone binary rebuilt and run on Linux with real Tor: onion + setup page + owner code OK.
+- `relay-android`: compiles, `NodeMeshHttpServerTest` **8/8**, debug APK builds.
+- `app`: compiles, **48/48** unit tests (standard flavor).
+
+**Not verified**
+
+- Tor reaching 100 % bootstrap (sandbox network stops at the handshake — confirm on a real line).
+- Real Windows run of `start.bat`/exe; Docker image build (the sandbox's Docker couldn't reach
+  the npm registry; the build attempt with sandbox proxy injection was not permitted).
+- Any of it on a real phone: Android node mode and the client fix are compile- and unit-tested,
+  not device-tested.
+
+---
+
 ## 2026‑09‑26 (3) · officer-app: real Tor client (was LAN-only) — 2 more real bugs found
 
 **What was done**

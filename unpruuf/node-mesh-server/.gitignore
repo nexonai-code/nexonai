@@ -7,3 +7,6 @@ node-mesh.sqlite-*
 
 # Generated at runtime — never ship a real owner secret.
 node-mesh-identity.json
+data/
+tor-bin/
+node.env.bat

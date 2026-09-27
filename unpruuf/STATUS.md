@@ -15,6 +15,15 @@ Package: `com.nexonai.unpruuf` · Architecture: **GRAL** · Built by **NexonAI**
 
 ---
 
+## unpruuf Business / Node-Mesh — Stand 2026‑09‑27 (Spec v5)
+
+| Baustein | Status |
+|---|---|
+| `node-mesh-server` (Windows/Linux/Docker/exe) | ✅ eingebauter Tor + PoW, Profile, Slots, Einrichtungsseite, Temp Node — 38/38 Tests, echter Tor-Lauf bis Handshake · 🟡 Bootstrap 100 %, Windows-Lauf, Docker-Build noch auf echter Maschine prüfen |
+| Android als Node (`relay-android`, Business Node) | ✅ gebaut, 8/8 HTTP-Vertragstests · 🟡 nicht auf Gerät getestet, kein Tor-PoW |
+| Android-Client (Node-Mesh im Messenger) | ✅ Toleranzfenster-Bug behoben, 48/48 Tests · 🟡 nicht auf Gerät getestet |
+| Kundendoku | ✅ `NODE_MESH_BETRIEB.md` |
+
 ## Build-verification baseline (2026‑09‑26)
 
 The "no Android SDK in this environment" caveat repeated throughout this file

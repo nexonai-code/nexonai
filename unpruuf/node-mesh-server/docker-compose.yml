@@ -1,0 +1,15 @@
+# unpruuf Business Node — `docker compose up -d`, then open http://localhost:8790 on the host.
+services:
+  node:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_SLOT: "1"
+      NODE_PROFILE: standard   # standard | high-security | offline-tolerant
+      ADMIN_PORT: "8790"
+    ports:
+      - "127.0.0.1:8790:8790"  # setup page, host loopback only
+    volumes:
+      - node-data:/app/data    # node identity + onion key: keeps the .onion address stable
+volumes:
+  node-data:

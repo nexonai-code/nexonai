@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
  * at-rest encryption of the queue itself adds no real confidentiality — matching the Node
  * version's own plain-SQLite choice).
  */
-class BlobStore(context: Context) : SQLiteOpenHelper(context, "relay.db", null, 1) {
+class BlobStore(context: Context) : SQLiteOpenHelper(context, "relay.db", null, 2), NodeMeshStore {
 
     // Backs /v1/fetchMany's optional long-poll (see RelayHttpServer) — a caller thread can block
     // on several tags at once instead of the server blindly re-polling every few seconds. Purely
@@ -36,11 +36,20 @@ class BlobStore(context: Context) : SQLiteOpenHelper(context, "relay.db", null, 
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tag TEXT NOT NULL,
                 blob TEXT NOT NULL,
-                created_at INTEGER NOT NULL
+                created_at INTEGER NOT NULL,
+                expires_at INTEGER NOT NULL DEFAULT 0
             )
             """.trimIndent()
         )
         db.execSQL("CREATE INDEX idx_blobs_tag ON blobs(tag)")
+        db.execSQL("CREATE INDEX idx_blobs_expires_at ON blobs(expires_at)")
+    }
+
+    override fun onOpen(db: SQLiteDatabase) {
+        super.onOpen(db)
+        // Swept/expired ciphertext gets overwritten with zeros instead of lingering in free pages.
+        // PRAGMA returns a row, so it must go through rawQuery (execSQL rejects it on Android).
+        runCatching { db.rawQuery("PRAGMA secure_delete = ON", null).use { it.moveToFirst() } }
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -76,7 +85,7 @@ class BlobStore(context: Context) : SQLiteOpenHelper(context, "relay.db", null, 
      * arrived: several tags could have fired at once, and a timeout returns the same way a real
      * arrival does.
      */
-    fun waitForAny(tags: List<String>, timeoutMs: Long) {
+    override fun waitForAny(tags: List<String>, timeoutMs: Long) {
         if (tags.isEmpty() || timeoutMs <= 0) return
         val latch = CountDownLatch(1)
         for (tag in tags) {
@@ -123,11 +132,49 @@ class BlobStore(context: Context) : SQLiteOpenHelper(context, "relay.db", null, 
         }
     }
 
-    /** Deletes blobs older than [ttlMs]. Returns how many were removed. */
+    /** Deletes relay-mode blobs older than [ttlMs]. Returns how many were removed. */
     fun sweepExpired(ttlMs: Long, now: Long = System.currentTimeMillis()): Int {
         val cutoff = now - ttlMs
-        return writableDatabase.delete("blobs", "created_at < ?", arrayOf(cutoff.toString()))
+        return writableDatabase.delete("blobs", "expires_at = 0 AND created_at < ?", arrayOf(cutoff.toString()))
     }
+
+    // ─── unpruuf Business Node-Mesh mode (NODE_MESH_SPEC.md §4/§8) ───────────────────────
+    // Same table, different contract: every row carries its own expires_at, reads never delete,
+    // and the TTL sweep is the ONLY deletion path. Mirrors node-mesh-server's nodeStore.ts.
+
+    /** Owner deposit. Same per-tag and global caps as relay mode. */
+    override fun putNodeMesh(tag: String, blobBase64: String, expiresAt: Long): Boolean {
+        val db = writableDatabase
+        val count = DatabaseUtils.longForQuery(db, "SELECT COUNT(*) FROM blobs WHERE tag = ?", arrayOf(tag))
+        if (count >= RelayConstants.MAX_BLOBS_PER_TAG) return false
+        val totalCount = DatabaseUtils.longForQuery(db, "SELECT COUNT(*) FROM blobs", null)
+        if (totalCount >= RelayConstants.MAX_TOTAL_BLOBS) return false
+        val values = ContentValues().apply {
+            put("tag", tag)
+            put("blob", blobBase64)
+            put("created_at", System.currentTimeMillis())
+            put("expires_at", expiresAt)
+        }
+        val inserted = db.insert("blobs", null, values) != -1L
+        if (inserted) waiters[tag]?.forEach { it.countDown() }
+        return inserted
+    }
+
+    /** Read-only: every unexpired blob for [tag], oldest first. Deletes nothing. */
+    override fun readNodeMesh(tag: String, now: Long): List<StoredBlob> {
+        val blobs = ArrayList<StoredBlob>()
+        readableDatabase.rawQuery(
+            "SELECT blob, created_at FROM blobs WHERE tag = ? AND expires_at > ? ORDER BY id ASC",
+            arrayOf(tag, now.toString())
+        ).use { c ->
+            while (c.moveToNext()) blobs.add(StoredBlob(c.getString(0), c.getLong(1)))
+        }
+        return blobs
+    }
+
+    /** The only Node-Mesh deletion path — rows past their own expires_at. */
+    fun sweepNodeMeshExpired(now: Long = System.currentTimeMillis()): Int =
+        writableDatabase.delete("blobs", "expires_at > 0 AND expires_at < ?", arrayOf(now.toString()))
 
     /** Manual full reset — the user-triggered counterpart to the automatic TTL sweep. */
     fun wipeAll(): Int = writableDatabase.delete("blobs", null, null)

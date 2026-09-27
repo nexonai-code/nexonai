@@ -1,37 +1,118 @@
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { Server } from "http";
+import QRCode from "qrcode";
 import { createApp } from "./app";
+import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
-import { DB_PATH, IDENTITY_PATH, PORT, RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS } from "./config";
-import { createEphemeralIdentity, loadOrCreateIdentity, NodeIdentity } from "./nodeIdentity";
+import {
+  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW,
+  RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
+} from "./config";
+import { createEphemeralIdentity, loadOrCreateIdentity, NodeIdentity, regenerateSecret, saveIdentity } from "./nodeIdentity";
+import { NodeOnionService } from "./tor/onionService";
 
-// unpruuf Business Temp Node (NODE_MESH_SPEC.md §7 step 8): EPHEMERAL=1 starts this process as a
-// one-off Temp Node whose identity — and, since a persisted DB would otherwise outlive the
-// process and let a restart quietly pick the same messages back up, its message store too — never
-// touch disk at all. A regular (non-ephemeral) node keeps its usual on-disk identity/DB so a
-// restart doesn't lock the owner's own app instance(s) out; that distinction is the whole reason
-// this branches here instead of always going through loadOrCreateIdentity.
+// Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
+// Tor's own working files go to a throwaway temp folder that is deleted on exit.
 const ephemeral = process.env.EPHEMERAL === "1" || process.argv.includes("--ephemeral");
+const adminBind = process.env.ADMIN_BIND ?? "127.0.0.1";
+
 let identity: NodeIdentity;
+let torWorkDir: string;
+let wasCreated = false;
 if (ephemeral) {
-  identity = createEphemeralIdentity();
-  console.log(`[identity] EPHEMERAL mode — Temp Node identity generated in memory only, TTL ${identity.ttlHours}h, nothing written to disk`);
-  console.log(`[identity] owner secret (configure the app's "Activate Temp Node" screen with this): ${identity.ownerSecret}`);
+  identity = createEphemeralIdentity(NODE_PROFILE.ttlHours);
+  torWorkDir = fs.mkdtempSync(path.join(os.tmpdir(), "unpruuf-tempnode-"));
 } else {
-  const { identity: loaded, wasCreated } = loadOrCreateIdentity(IDENTITY_PATH);
-  identity = loaded;
-  if (wasCreated) {
-    // Only path to retrieve the secret for a Docker deployment is the container logs — printed
-    // once, at generation time, not on every subsequent start. Unlike the consumer relay's token,
-    // this NEVER gets handed to a contact — only into this node's own paired app instance(s), see
-    // NODE_MESH_SPEC.md §1/§8.
-    console.log(`[identity] generated a new owner secret (TTL ${identity.ttlHours}h): ${identity.ownerSecret}`);
-    console.log("[identity] configure this node's OWNER app instance(s) with this secret — see node-mesh-server/README.md");
-  } else {
-    console.log(`[identity] loaded existing identity (TTL ${identity.ttlHours}h)`);
-  }
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const loaded = loadOrCreateIdentity(IDENTITY_PATH, NODE_PROFILE.ttlHours);
+  identity = loaded.identity;
+  wasCreated = loaded.wasCreated;
+  torWorkDir = DATA_DIR;
 }
 
 const store = new NodeStore(ephemeral ? ":memory:" : DB_PATH, identity.ttlHours);
-const app = createApp(store, identity.ownerSecret);
+const app = createApp(store, () => identity.ownerSecret);
+
+let onion: NodeOnionService | null = null;
+if (TOR_ENABLED) {
+  onion = new NodeOnionService({
+    workDir: torWorkDir,
+    torBinDir: TOR_BIN_DIR,
+    localPort: PORT,
+    privateKey: ephemeral ? null : identity.onionKey ?? null,
+    onNewKey: (key) => {
+      if (ephemeral) return;
+      identity.onionKey = key;
+      saveIdentity(IDENTITY_PATH, identity);
+    },
+    pow: POW,
+  });
+}
+
+const operatorAddress = process.env.NODE_MESH_PUBLIC_ADDRESS?.trim() || null;
+const publicAddress = (): string | null => (onion ? onion.getStatus().onionAddress : operatorAddress);
+
+const adminApp = createAdminApp(
+  {
+    getOwnerSecret: () => identity.ownerSecret,
+    rotateOwnerSecret: ephemeral
+      ? undefined
+      : () => {
+          identity = regenerateSecret(IDENTITY_PATH, identity);
+          console.log("[identity] owner secret rotated — scan the new owner QR into your own app");
+        },
+    profile: NODE_PROFILE,
+    slot: NODE_SLOT,
+    ephemeral,
+    torEnabled: TOR_ENABLED,
+    publicAddress,
+    torStatus: () => onion?.getStatus() ?? null,
+    stats: () => store.stats(),
+  },
+  ADMIN_PORT,
+);
+
+const kind = ephemeral ? "Temp Node" : `Business Node (slot ${NODE_SLOT}/3)`;
+console.log(`unpruuf ${kind} — profile "${NODE_PROFILE.name}" (TTL ${NODE_PROFILE.ttlHours}h)`);
+if (ephemeral) console.log("[identity] Temp Node — identity, onion key and messages exist in memory only");
+else console.log(wasCreated ? "[identity] new node identity created" : "[identity] existing node identity loaded");
+
+const apiServer: Server = app.listen(PORT, "127.0.0.1", () => {
+  console.log(`[api] listening on 127.0.0.1:${PORT} — reachable from outside only through the onion service`);
+});
+apiServer.keepAliveTimeout = 5_000;
+
+const adminServer: Server = adminApp.listen(ADMIN_PORT, adminBind, () => {
+  console.log(`[setup] open http://localhost:${ADMIN_PORT} on THIS computer to connect your app (owner QR)`);
+});
+
+async function printOwnerCode(address: string): Promise<void> {
+  const code = ownerConnectionString(address, identity.ownerSecret);
+  const qr = await QRCode.toString(code, { type: "terminal", small: true });
+  console.log("\n================ OWNER CODE — scan with YOUR OWN app only, never share ================");
+  console.log(qr);
+  console.log(code);
+  console.log("========================================================================================\n");
+}
+
+if (onion) {
+  onion
+    .start()
+    .then(async (address) => {
+      console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
+      if (ephemeral || wasCreated) await printOwnerCode(address);
+    })
+    .catch((err) => {
+      console.error(`[tor] could not start yet: ${(err as Error).message}`);
+      console.error("[tor] keeps retrying automatically — the setup page shows the current state");
+    });
+} else {
+  console.warn("[tor] NODE_MESH_TOR=0 — this process publishes NO onion service itself.");
+  console.warn(`[tor] Only valid if you run your own Tor hidden service mapping port 80 to 127.0.0.1:${PORT}.`);
+  if (operatorAddress && (ephemeral || wasCreated)) void printOwnerCode(operatorAddress);
+}
 
 // The only deletion path (NODE_MESH_SPEC.md §4) — Reset below never touches message data.
 setInterval(() => {
@@ -39,32 +120,33 @@ setInterval(() => {
   if (removed > 0) console.log(`[sweep] removed ${removed} expired blob(s)`);
 }, SWEEP_INTERVAL_MS).unref();
 
-// NODE_MESH_SPEC.md §5's staggered Reset — connection/socket hygiene only. This Express +
-// better-sqlite3 process holds no outbound connection pool of its own to recycle (better-sqlite3
-// is a single synchronous connection, not a pool; there are no long-lived outbound sockets here
-// the way an Android/Windows client maintaining live Tor circuits would have) — so for this
-// specific implementation, Reset's real, honest content is a best-effort SQLite housekeeping
-// pass (WAL checkpoint) rather than invented connection-pool work that doesn't apply to this
-// process shape. Still on its own staggered schedule per §5, in case a future client-facing
-// (rather than server-facing) implementation of this same interval does need real connection
-// recycling — keeping the timing contract identical now avoids a later behavioral surprise.
-setInterval(() => {
+// NODE_MESH_SPEC.md §5 staggered Reset — connection/socket hygiene only: drop idle HTTP
+// keep-alive sockets, confirm the onion service is still registered (re-add with the same key if
+// not), fold the SQLite WAL back. Never messages, never rate-limit counters, never the address.
+async function resetHygiene(label: string): Promise<void> {
+  apiServer.closeIdleConnections();
+  adminServer.closeIdleConnections();
   store.checkpointWal();
-  console.log("[reset] connection/socket hygiene pass complete");
-}, RESET_INTERVAL_MS).unref();
-if (RESET_OFFSET_MS > 0) {
-  // First reset of THIS process's lifetime waits out its configured offset into the cycle before
-  // the regular interval above takes over — see config.ts's RESET_OFFSET_MS doc comment for why
-  // running multiple node instances each need a different offset.
-  setTimeout(() => {
-    store.checkpointWal();
-    console.log("[reset] connection/socket hygiene pass complete (initial, offset-aligned)");
-  }, RESET_OFFSET_MS).unref();
+  let torNote = "tor disabled";
+  if (onion) torNote = await onion.hygiene().catch((err) => `tor check failed: ${(err as Error).message}`);
+  console.log(`[reset] ${label}: idle sockets closed, WAL checkpointed, ${torNote}`);
 }
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`unpruuf-node-mesh listening on 127.0.0.1:${PORT} (reach it only via this node's own Tor hidden service)`);
-});
+// Aligned to the wall clock (UTC), not to process start — three nodes on three different machines,
+// started at arbitrary times, still land on 0 / 20 / 40 min of the same daily cycle.
+const msUntilFirstReset = (RESET_OFFSET_MS - (Date.now() % RESET_INTERVAL_MS) + RESET_INTERVAL_MS) % RESET_INTERVAL_MS;
+setTimeout(() => {
+  void resetHygiene("scheduled");
+  setInterval(() => void resetHygiene("scheduled"), RESET_INTERVAL_MS).unref();
+}, msUntilFirstReset).unref();
 
-process.on("SIGTERM", () => { store.close(); process.exit(0); });
-process.on("SIGINT", () => { store.close(); process.exit(0); });
+function shutdown(): void {
+  onion?.stop();
+  apiServer.close();
+  adminServer.close();
+  store.close();
+  if (ephemeral) fs.rmSync(torWorkDir, { recursive: true, force: true });
+  process.exit(0);
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

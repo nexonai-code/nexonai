@@ -58,6 +58,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     // Compose & UI — versions pinned identical to the main unpruuf app for consistency.
     implementation(platform("androidx.compose:compose-bom:2024.02.00"))
     implementation("androidx.compose.ui:ui")

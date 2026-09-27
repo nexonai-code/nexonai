@@ -11,6 +11,39 @@ project, own APK. It doesn't send or receive chat messages itself — it's infra
 unpruuf users can optionally point their own app at (Settings → "Use relay when contact is
 offline") when a direct connection isn't available.
 
+## Business Node mode (unpruuf Business / Node-Mesh)
+
+The same app can instead run as one of your own **Node-Mesh nodes** (`../NODE_MESH_SPEC.md`,
+operator guide `../NODE_MESH_BETRIEB.md`): tap **Business Node** at the top. A device is either a
+relay or a node, never both — they're different trust models:
+
+| | Relay mode | Business Node mode |
+|---|---|---|
+| Who writes | any paired contact (shared token) | **only you** (owner secret, never shared) |
+| Who reads | the recipient, delete-on-fetch | contacts with a valid routing tag, **read-only** |
+| Cleanup | fetch + TTL | **TTL only** (profile: 6 h / 1 h / 24 h) |
+| HTTP contract | `/v1/relay`, `/v1/fetch`, `/v1/fetchMany` | `/deposit`, `/fetch`, `/fetchMany` — identical to `node-mesh-server` |
+| LAN access | optional | never (onion only) |
+| Onion address | relay key | **separate** node key — switching modes changes the address |
+
+In node mode the screen shows the **owner QR** (scan it into your own unpruuf app: Settings →
+Business Node-Mesh — never give it to a contact), the retention profile, the node slot (1–3, for
+the staggered daily maintenance), and an "Owner key → Rotate" action. Switching modes wipes the
+queue.
+
+Verified: `./gradlew :app:testDebugUnitTest` runs `NodeMeshHttpServerTest` — the real NanoHTTPD
+server over real HTTP with the exact request shapes the messenger's `NodeMeshClient` sends (owner
+auth, read-only fetch, TTL-only-shortens, relay routes absent, rate limit). That test also found a
+real bug: error responses sent before the body was read left the body bytes on a kept-alive
+socket, so the *next* request on it got a stale 400 — fixed by closing the connection after every
+response (every real client arrives through Tor with `Connection: close` anyway). The same latent
+pattern exists in relay mode's `RelayHttpServer` (401/413 before `parseBody`); it only affects
+keep-alive clients after an error and was left unchanged here.
+
+**Not in node mode:** Tor's onion-service proof-of-work. `jtorctl`'s `addOnion` can't pass PoW
+parameters, and whether `tor-android` ships the `pow` module is unverified — Android nodes rely on
+the app-level read rate limit only. Prefer a PC/server node where flood resistance matters.
+
 ## Why native Kotlin instead of embedding the existing Node server
 
 The existing relay is a small TypeScript/Node app using `better-sqlite3` (a compiled native

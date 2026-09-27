@@ -34,6 +34,8 @@ export class NodeStore {
     const options = nativeBinding ? ({ nativeBinding } as unknown as Database.Options) : undefined;
     this.db = new Database(dbPath, options);
     this.db.pragma("journal_mode = WAL");
+    // Expired/swept ciphertext is overwritten with zeros instead of lingering in free pages.
+    this.db.pragma("secure_delete = ON");
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS blobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

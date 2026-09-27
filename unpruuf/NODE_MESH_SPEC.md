@@ -1,8 +1,8 @@
 # unpruuf Business — Node-Mesh Architektur
 ## Implementierungs-Briefing für Claude Code
 
-**Status:** Architektur-Spezifikation für den Business-Zweig von unpruuf, noch **nicht
-implementiert**. Ersetzt/erweitert den aktuellen "optionaler Relay, TTL-begrenzt,
+**Status:** Architektur-Spezifikation für den Business-Zweig von unpruuf — **implementiert**
+(Stand v5, 2026-09-27; siehe Versionsgeschichte). Ersetzt/erweitert den aktuellen "optionaler Relay, TTL-begrenzt,
 Opt-in"-Mechanismus aus `PRODUCT_CONTEXT.md` für alle Business-/Compliance-Deployments. Der
 bestehende Android-P2P-Chat bleibt als eigenständiges Produkt unverändert bestehen (siehe
 Abschnitt 0).
@@ -93,8 +93,24 @@ Abschnitt 0).
   NODE_MESH_SPEC.md vollständig implementiert** — keine offenen Punkte aus Abschnitt 12/den
   Phase-Status-Notizen mehr übrig.
 
-Alles hier Beschriebene ist neu gegenüber dem aktuellen Repo-Stand. Wo v1→v2→v3 etwas geändert
-hat, ist das mit **[v2]**/**[v3]** markiert.
+- **v5 (2026-09-27) — Betriebsreife.** Nach einer zweiten fachlichen Prüfung ("was fehlt für den
+  echten Kundenbetrieb?") fünf Lücken geschlossen:
+  1. **Tor ist jetzt eingebaut und Pflicht** (vorher: "Betreiber richtet selbst einen Hidden
+     Service ein"). `node-mesh-server` lädt Tor, startet es selbst und veröffentlicht den Node per
+     `ADD_ONION` — mit festem Schlüssel (Adresse ändert sich nie), Tor-eigenem Proof-of-Work-
+     DoS-Schutz, automatischem Neustart und RAM-only-Schlüssel beim Temp Node. Abschnitt 8 [v5].
+  2. **Profile statt freier Zahlen** (standard 6 h / high-security 1 h / offline-tolerant 24 h),
+     Rotation als festes Protokoll-Konstante 1 h. Abschnitt 3 [v5].
+  3. **Echter Bug behoben:** Der Android-Client ging fest von 6 h TTL beim Kontakt-Node aus —
+     ein Node mit längerer TTL hätte Nachrichten gehalten, die der Client nie abfragt. Das
+     Toleranzfenster deckt jetzt immer die maximal erlaubte TTL (24 h) ab. Abschnitt 3 [v5].
+  4. **Android als Node-Host** (`relay-android`, Modus "Business Node") — Abschnitt 8's
+     Plattformliste damit vollständig.
+  5. **Windows/Linux/Docker-Pakete** mit Einrichtungsseite (Owner-QR) statt Kommandozeile; Slots
+     1–3 für den versetzten Reset. Kundenseitige Betriebsdoku (Abschnitt 11): `NODE_MESH_BETRIEB.md`.
+
+Alles hier Beschriebene ist neu gegenüber dem aktuellen Repo-Stand. Wo v1→v2→v3→v5 etwas geändert
+hat, ist das mit **[v2]**/**[v3]**/**[v5]** markiert.
 
 ---
 
@@ -234,7 +250,23 @@ Epochen ab, alle in einem `fetchMany`-Request.
   dabei automatisch korrekt, ohne dass irgendwo ein zweiter, von Hand synchron zu haltender
   Toleranzwert gepflegt werden müsste.
 
-**Zu implementieren:**
+**[v5] Umsetzung — Profile, feste Rotation, festes Client-Fenster:**
+
+- `rotation_interval` ist eine **Protokoll-Konstante (1 h)**, kein Node-Parameter: Sender und
+  Empfänger müssen denselben Wert benutzen, sonst stimmen die Tags nicht überein. Eine
+  Konfiguration pro Node hätte Zustellung still gebrochen.
+- TTL wird pro Node über ein **Profil** gewählt: `standard` 6 h, `high-security` 1 h,
+  `offline-tolerant` 24 h (`node-mesh-server/src/profiles.ts`, identisch in `relay-android`).
+  Obergrenze `MAX_TTL_HOURS = 24`.
+- **Gefundener Bug (behoben):** Der Android-Client rechnete das Toleranzfenster mit fest 6 h TTL.
+  Der Client kennt aber die TTL des *Kontakt*-Nodes nicht — bei einem 24-h-Node hätte er
+  Nachrichten, die älter als 7 h sind, nie abgefragt. Jetzt rechnet der Client immer mit
+  `MAX_TTL_HOURS`: `ceil(24/1) + 1 = 25` Epochen zurück plus die aktuelle = **26 Tags pro
+  Kontakt**, weiterhin ein einziger `fetchMany`-Aufruf (Server-Cap 64). Damit ist *jedes* Profil
+  abgedeckt, ohne dass der Client wissen muss, welches der Kontakt fährt. `profiles.test.ts` pinnt
+  die Zahl serverseitig.
+
+**Zu implementieren (Stand v3, durch v5 ersetzt):**
 - Konfigurierbarer `rotation_interval` und `TTL`, unabhängig voneinander; Toleranzfenster wird
   **berechnet**, nie separat konfiguriert.
 - Beim Poll alle Tags im berechneten Toleranzfenster in **einem** gebündelten Request abfragen
@@ -310,6 +342,14 @@ Abschnitt 1 zur Betreiber-Unabhängigkeit), sondern höchstens Timing/Volumen ei
   - Versatz-Implementierung bei 3 Nodes: z. B. Node 1 bei Minute 0, Node 2 bei Minute 20, Node 3
     bei Minute 40 eines konfigurierbaren Zyklus (Default 24h, s. u.). Bei 2 Nodes entsprechend
     Minute 0 / Minute 30 pro 24h-Zyklus.
+
+**[v5] Umsetzung:** Jeder Node bekommt einen **Slot 1/2/3** (`NODE_SLOT`, in `relay-android`
+als Auswahl in der App). Der Reset läuft bei Minute 0/20/40 eines 24-h-Zyklus, **an der Uhrzeit
+(UTC) ausgerichtet**, nicht am Prozessstart — sonst würden drei Nodes, die zu beliebigen Zeiten
+gestartet wurden, nicht zuverlässig versetzt laufen. Inhalt des Resets auf dem PC-Node: offene
+Leerlauf-HTTP-Sockets schließen, prüfen, ob der Onion-Service noch bei Tor registriert ist (sonst
+mit demselben Schlüssel neu anmelden), SQLite-WAL zurückschreiben. Auf Android: dieselbe
+Onion-Prüfung.
 
 **Default [v3, festgelegt]:** Reset-Intervall 24h, konfigurierbar pro Deployment. Da Reset jetzt
 nachweislich nie Nachrichtendaten anfasst, ist die in v2 befürchtete Kollision mit einem laufenden
@@ -446,6 +486,40 @@ Modus hinterließ nachweislich keine Datei. Nicht verifiziert: ein echter Lauf a
 (kein Windows-Rechner zum Bauen/Testen verfügbar) — der Mechanismus selbst ist Node/OS-agnostisch
 und wurde real durchlaufen, nur die Windows-spezifische Ausführung des fertigen Binaries nicht.
 
+**[v5, gebaut] Tor ist eingebaut und Pflicht.** Vorher musste der Betreiber selbst einen Hidden
+Service vor den Node setzen — für die Zielgruppe (Compliance-Abteilungen, keine Tor-Admins)
+unrealistisch, und ohne Onion wäre "Node sieht nie eine Absender-IP" nur eine Regel statt einer
+Struktureigenschaft. Jetzt (`node-mesh-server/src/tor/`):
+
+- Tor Expert Bundle (gepinnt, 15.0.19 / Tor 0.4.9.11) wird beim ersten Start geladen; Tor läuft
+  als reiner Onion-Host (`SocksPort 0`), Control-Port auf freiem Port, Cookie-Auth,
+  `__OwningControllerProcess` (Tor beendet sich selbst, wenn der Node-Prozess stirbt).
+- Veröffentlichung per `ADD_ONION` über den Control-Port, **nie** per `HiddenServiceDir`: der
+  Schlüssel wird im Node-Identity-File (Modus 600) gespeichert und bei jedem Start wiederverwendet
+  → Adresse bleibt immer gleich. Temp Node: Schlüssel nur im Arbeitsspeicher.
+- **Proof-of-Work-DoS-Schutz** von Tor (`PoWDefensesEnabled=1`, Rate 250/Burst 2500) ist immer
+  an. Das ist die richtige Ebene für Flood-Schutz: Die Lese-Endpunkte sind absichtlich ohne Auth
+  (Tag = Credential), und einen Verbindungs-Flood kann nur Tor abwehren, bevor er den Node
+  erreicht. Die App-seitige Rate-Limitierung (Token-Bucket) bleibt als zweite Schicht.
+- Selbstheilung: Tor-Absturz oder Control-Verbindungsverlust → Neustart mit Backoff (2 s … 60 s),
+  gleicher Schlüssel, gleiche Adresse. Real getestet mit `kill -9`.
+- Einrichtungsseite auf eigenem Loopback-Port (nie Teil des Onion-Port-Mappings), mit
+  `Host`-Header-Prüfung gegen DNS-Rebinding — zeigt Owner-QR zum Scannen in die eigene App.
+
+**[v5, gebaut] Android als Node-Host.** `relay-android` hat einen Modus "Business Node": gleicher
+HTTP-Vertrag wie der PC-Node (per JVM-Vertragstest über echtes HTTP geprüft), Owner-only-Deposit,
+reines Lesen, TTL-only-Löschen, Profile und Slots, **eigener Onion-Schlüssel pro Modus** (ein
+Gerät, das vom Relay zum Node wechselt, bekommt eine neue Adresse — Relay-Kontakte landen nie
+versehentlich auf einem Node). **Einschränkung, ehrlich:** Die Android-Tor-Bibliothek (jtorctl)
+kann `ADD_ONION` keine PoW-Parameter mitgeben, und ob `tor-android` das PoW-Modul enthält, ist
+nicht belegt — Android-Nodes haben deshalb nur die App-seitige Rate-Limitierung, keinen
+Tor-PoW. Für Deployments, bei denen Flood-Schutz zählt: PC/Server-Node bevorzugen.
+
+**[v5] Per-Tag-Cap durchgerechnet (§9-Checkpunkt):** Die TTL spielt für den Per-Tag-Cap keine
+Rolle — der Routing-Tag rotiert stündlich, ein Tag sammelt also immer nur *eine Stunde* ausgehenden
+Verkehr *eines* Kontakts, egal wie lang die TTL ist. 1500 deckt einen vollen 5-MB-Anhang (~1311
+Chunks) innerhalb einer Stunde ab → Wert unverändert korrekt.
+
 **API-Oberfläche:**
 
 - `PUT /deposit` — `{ routing_tag, ciphertext, ttl }` → legt Nachricht ab.
@@ -524,6 +598,17 @@ Lese-Endpunkte kostet nichts und ist als Tiefenverteidigung sinnvoll.
 
 ---
 
+**[v5] Stand der Checkliste:** Owner-only-Deposit, reines Lesen, TTL-only-Löschen, "Tag kann TTL
+nur verkürzen" — per HTTP-Test auf beiden Node-Plattformen geprüft (`node-mesh-server` `npm test`,
+`relay-android` `NodeMeshHttpServerTest`). Reset rührt keine Nachrichten/Adresse an — per Code
+und Lauf geprüft (Adresse nach Neustart und nach Tor-Absturz identisch). Per-Tag-Cap —
+durchgerechnet (Abschnitt 8 [v5]). Temp-Node-Pause — Code-Review von
+`P2PNetworkManager.depositForNodeMesh`: im aktiven Zustand geht ausgehender Verkehr nur an den Temp
+Node; der Standard-Pool dient ausschließlich als Rettungsnetz für eine *einzelne* fehlgeschlagene
+Nachricht, bis der Heartbeat den Zustand zurücksetzt. Das ist spezifikationskonform, weil jede
+Seite nur ihren *eigenen* ausgehenden Verkehr steuert — eine "beidseitige" Pause gibt es im
+v2-Modell nicht.
+
 ## 10. Bewusst nicht Teil dieser Spezifikation
 
 - Kein Gruppenchat (weiterhin Architekturentscheidung, siehe bestehendes Produktwissen).
@@ -543,6 +628,9 @@ eigene, an dieses Dokument angelehnte Fassung — nicht die bestehenden vier Kap
 ergänzen, sobald implementiert. Muss explizit die Ein-Node-Einschränkung aus Abschnitt 6 enthalten
 — ein Kunde, der sich für ein Ein-Node-Deployment entscheidet, muss das vor dem Kauf/Deployment
 wissen, nicht erst beim ersten Adresswechsel entdecken.
+
+**[v5] Erledigt:** `NODE_MESH_BETRIEB.md` — kundenseitige Betriebsanleitung (Deutsch), inkl.
+Ein-Node-Einschränkung, Profilwahl, Slots, Temp Node und der Android-PoW-Einschränkung.
 
 ---
 
@@ -568,6 +656,14 @@ entschieden wurde:
 | Temp-Node-Bootstrap | Löst sich durch die neue Schreibrichtung von selbst, kein Sondercode nötig | 7 |
 | Implementierungs-Basis | Bestehender `server/`/`relay-android/`-Code, gezielt angepasst, nicht neu gebaut | 8 |
 | Per-Tag-Speicher-Cap | Ausgangswert vom bestehenden Relay übernehmen, gegen neue Defaults durchrechnen | 8, 9 |
+| **[v5]** Rotation | Protokoll-Konstante 1 h, nicht pro Node konfigurierbar (beide Seiten müssen übereinstimmen) | 3 |
+| **[v5]** TTL-Konfiguration | Nur über Profile (6/1/24 h), Maximum 24 h | 3 |
+| **[v5]** Client-Toleranzfenster | Immer für MAX_TTL (24 h) berechnet — 26 Tags/Kontakt, deckt jedes Profil ab | 3 |
+| **[v5]** Tor | Eingebaut und Pflicht; `ADD_ONION` mit festem Schlüssel, Tor-PoW an, Selbstheilung | 8 |
+| **[v5]** Flood-Schutz | Tor-PoW (PC/Server) + App-Token-Bucket auf Lese-Endpunkten (alle Plattformen) | 8 |
+| **[v5]** Reset-Takt | Slot 1/2/3 → Minute 0/20/40, an UTC ausgerichtet | 5 |
+| **[v5]** Android-Node | `relay-android` Modus "Business Node", eigener Onion-Schlüssel pro Modus, ohne Tor-PoW | 8 |
+| **[v5]** Multi-Device | Bewusst nicht vorgesehen — keine Konten, jede Identität = genau ein Gerät | 0, 9 |
 
 ---
 

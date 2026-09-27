@@ -24,9 +24,9 @@ class NodeMeshClient @Inject constructor(
     private val torManager: TorManager
 ) {
     companion object {
-        // Virtual port a Node-Mesh node's Tor hidden service listens on — same convention as
-        // RelayClient.RELAY_PORT (see node-mesh-server's own eventual torrc, not yet built in
-        // this phase — see node-mesh-server/README.md's status note).
+        // Virtual port a Node-Mesh node's onion service listens on — same convention as
+        // RelayClient.RELAY_PORT. node-mesh-server (src/tor/onionService.ts) and relay-android's
+        // Node-Mesh mode both map exactly this port.
         private const val NODE_PORT = 80
         private const val CONNECT_TIMEOUT_MS = 40_000
         private const val SOCKET_TIMEOUT_MS = 40_000

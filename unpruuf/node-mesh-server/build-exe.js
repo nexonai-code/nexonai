@@ -93,20 +93,22 @@ function main() {
   fs.mkdirSync(nativeDestDir, { recursive: true });
   fs.copyFileSync(nativeSrc, path.join(nativeDestDir, "better_sqlite3.node"));
 
+  // Same slot/profile start menu as the source package's start.bat, pointed at the exe.
+  for (const name of ["start.bat", "start-tempnode.bat"]) {
+    fs.copyFileSync(path.join(ROOT, "exe-templates", name), path.join(OUT_DIR, name));
+  }
+
   // Clean up build-only intermediate files — keep the shipped folder minimal.
   fs.rmSync(bundlePath, { force: true });
   fs.rmSync(seaConfigPath, { force: true });
   fs.rmSync(blobPath, { force: true });
 
   console.log(`\n[build-exe] Done. Hand out the whole "${path.relative(ROOT, OUT_DIR)}" folder — ` +
-    `keep dist/ and native/ together, don't move the .exe out on its own.\n` +
-    `Double-clicking dist\\${EXE_NAME} is now the entire setup for whoever receives it: no ` +
-    `Node.js to install. It still needs to be reachable only via this node's own Tor hidden ` +
-    `service, set up separately (this package has no bundled Tor process manager yet — see ` +
-    `README.md's status note) — same as running it via "npm start" already does today.\n` +
-    `Set EPHEMERAL=1 before launching (or pass --ephemeral) to run it as a Temp Node instead ` +
-    `(NODE_MESH_SPEC.md §7) — identity and message store both stay in memory only, nothing ` +
-    `written next to the exe.`);
+    `keep dist/, native/ and the two .bat files together.\n` +
+    `Double-click start.bat: no Node.js needed. On first start the node downloads Tor once, ` +
+    `creates its own onion service (address stays the same on every restart) and opens the ` +
+    `setup page with the owner QR. start-tempnode.bat runs a memory-only Temp Node ` +
+    `(NODE_MESH_SPEC.md §7).`);
 }
 
 main();

@@ -1,0 +1,45 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+
+if not exist dist (
+  echo Noch nicht installiert - bitte zuerst install.bat ausfuehren.
+  pause
+  exit /b 1
+)
+
+rem Profil und Slot werden beim ersten Start abgefragt und in node.env.bat gemerkt
+rem ^(nicht in git - siehe .gitignore^). Zum Aendern node.env.bat loeschen.
+if exist node.env.bat call node.env.bat
+
+if "%NODE_SLOT%"=="" (
+  echo.
+  echo Welcher deiner Nodes ist das? ^(bis zu 3 eigene Nodes, jeder auf eigenem Geraet^)
+  choice /c 123 /n /m "Slot 1, 2 oder 3: "
+  if errorlevel 3 (set NODE_SLOT=3) else if errorlevel 2 (set NODE_SLOT=2) else (set NODE_SLOT=1)
+)
+
+if "%NODE_PROFILE%"=="" (
+  echo.
+  echo Wie lange sollen Nachrichten auf dem Node liegen?
+  echo   1 = standard          ^(6 Stunden - empfohlen^)
+  echo   2 = high-security     ^(1 Stunde - am wenigsten Daten gespeichert^)
+  echo   3 = offline-tolerant  ^(24 Stunden - fuer oft offline Kontakte^)
+  choice /c 123 /n /m "Profil 1, 2 oder 3: "
+  if errorlevel 3 (set NODE_PROFILE=offline-tolerant) else if errorlevel 2 (set NODE_PROFILE=high-security) else (set NODE_PROFILE=standard)
+)
+
+(
+  echo @echo off
+  echo set NODE_SLOT=%NODE_SLOT%
+  echo set NODE_PROFILE=%NODE_PROFILE%
+) > node.env.bat
+
+set /a ADMIN_PORT_DEFAULT=8790 + (%NODE_SLOT% - 1) * 10
+echo.
+echo Starte Node %NODE_SLOT% mit Profil %NODE_PROFILE% ...
+echo Die Einrichtungsseite oeffnet sich gleich im Browser: http://localhost:%ADMIN_PORT_DEFAULT%
+echo Dieses Fenster offen lassen - schliessen stoppt den Node.
+start "" /b cmd /c "timeout /t 4 /nobreak >nul & start http://localhost:%ADMIN_PORT_DEFAULT%"
+node dist\index.js
+pause

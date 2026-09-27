@@ -48,6 +48,48 @@ class RelayIdentity(context: Context) {
         get() = prefs.getBoolean(KEY_LAN_ACCESS, false)
         set(value) { prefs.edit().putBoolean(KEY_LAN_ACCESS, value).apply() }
 
+    /** Which product this device serves: false = consumer relay (shared token, delete-on-fetch),
+     *  true = unpruuf Business Node-Mesh node (owner-only write, read-only fetch, TTL-only
+     *  cleanup — NODE_MESH_SPEC.md). Never both at once: they're different trust models. */
+    var nodeMeshMode: Boolean
+        get() = prefs.getBoolean(KEY_NODE_MESH_MODE, false)
+        set(value) { prefs.edit().putBoolean(KEY_NODE_MESH_MODE, value).apply() }
+
+    /** Node-Mesh write key — goes ONLY into the owner's own unpruuf app, never to a contact.
+     *  Deliberately separate from [authToken]: a relay token is meant to be shared, this is not. */
+    val nodeMeshOwnerSecret: String
+        get() = prefs.getString(KEY_NODE_MESH_OWNER_SECRET, null) ?: regenerateNodeMeshOwnerSecret()
+
+    fun regenerateNodeMeshOwnerSecret(): String {
+        val secret = randomToken()
+        prefs.edit().putString(KEY_NODE_MESH_OWNER_SECRET, secret).apply()
+        return secret
+    }
+
+    var nodeMeshProfile: String
+        get() = prefs.getString(KEY_NODE_MESH_PROFILE, null)
+            ?.takeIf { it in RelayConstants.NODE_MESH_PROFILES }
+            ?: RelayConstants.NODE_MESH_DEFAULT_PROFILE
+        set(value) {
+            require(value in RelayConstants.NODE_MESH_PROFILES) { "unknown profile $value" }
+            prefs.edit().putString(KEY_NODE_MESH_PROFILE, value).apply()
+        }
+
+    val nodeMeshTtlHours: Int
+        get() = RelayConstants.NODE_MESH_PROFILES.getValue(nodeMeshProfile)
+
+    /** Which of the owner's (up to 3) nodes this is — only decides where in the 24h cycle this
+     *  node's hygiene Reset runs (NODE_MESH_SPEC.md §5). */
+    var nodeMeshSlot: Int
+        get() = prefs.getInt(KEY_NODE_MESH_SLOT, 1).coerceIn(1, 3)
+        set(value) { prefs.edit().putInt(KEY_NODE_MESH_SLOT, value.coerceIn(1, 3)).apply() }
+
+    /** Separate onion key for Node-Mesh mode: a device switching from relay to node gets a new
+     *  address, so relay clients can't accidentally land on a node (or the other way round). */
+    var nodeMeshTorPrivKey: String?
+        get() = prefs.getString(KEY_NODE_MESH_TOR_PRIVKEY, null)
+        set(value) { prefs.edit().putString(KEY_NODE_MESH_TOR_PRIVKEY, value).apply() }
+
     /** Forces a fresh token — "credentials compromised, rotate them" (mirrors identity.ts's
      *  --regenerate flag). Every device paired with the OLD token loses access immediately;
      *  the UI must make that consequence explicit before calling this. */
@@ -74,5 +116,10 @@ class RelayIdentity(context: Context) {
         const val KEY_TTL_HOURS = "ttl_hours"
         const val KEY_TOR_PRIVKEY = "tor_privkey"
         const val KEY_LAN_ACCESS = "lan_access_enabled"
+        const val KEY_NODE_MESH_MODE = "node_mesh_mode"
+        const val KEY_NODE_MESH_OWNER_SECRET = "node_mesh_owner_secret"
+        const val KEY_NODE_MESH_PROFILE = "node_mesh_profile"
+        const val KEY_NODE_MESH_SLOT = "node_mesh_slot"
+        const val KEY_NODE_MESH_TOR_PRIVKEY = "node_mesh_tor_privkey"
     }
 }
