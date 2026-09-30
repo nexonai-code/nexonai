@@ -12,15 +12,18 @@ import com.nexonai.unpruuf.domain.network.NodeMeshManager
  * secret — see [NodeMeshManager]'s doc comment for why that split exists) and combined with a
  * genuinely separate secret from the message key, per `NODE_MESH_SPEC.md` §2.
  *
- * Wire format: `{"v":1,"u":"<compact userId>","p":"<myMessageKey b64>","k":"<x25519 ratchet
- * pubkey b64>","s":"<nodeMeshRoutingSeed b64>","n":"<node1>[;<node2>...]","e":"<edition>"}` —
- * same compact-UUID convention as the other two QR formats (see [compactUserId]/[expandUserId]
- * in QrCodec.kt). `n` holds up to [NodeMeshManager.NODE_POOL_MAX_SIZE] `;`-joined node addresses
- * (the `unpruuf-node:v1:` prefix stripped, same space-saving trick the relay pool field uses).
+ * Wire format (v2): `{"v":2,"p":"<myMessageKey b64>","k":"<x25519 ratchet pubkey b64>",
+ * "s":"<nodeMeshRoutingSeed b64>","n":"<node1>[;<node2>...]","e":"<edition>"}`. `n` holds up to
+ * [NodeMeshManager.NODE_POOL_MAX_SIZE] `;`-joined node addresses (the `unpruuf-node:v1:` prefix
+ * stripped, same space-saving trick the relay pool field uses).
+ *
+ * No userId (v1 carried one as `u`): nothing in Node-Mesh routing or crypto ever read it, and a
+ * single identifier handed to every contact is exactly what lets two contacts link you without
+ * any cryptanalysis. Its absence also makes this format unambiguous against
+ * [jsonToCrossPlatformPayload], which requires `u`.
  */
 data class NodeMeshPairingPayload(
-    val version: Int = 1,
-    val userId: String,
+    val version: Int = 2,
     val messageKeyBase64: String,
     val x25519RatchetPublicKeyBase64: String,
     val nodeMeshRoutingSeedBase64: String,
@@ -31,9 +34,8 @@ data class NodeMeshPairingPayload(
 private const val NODE_ADDRESS_PREFIX = NodeMeshManager.NODE_ADDRESS_PREFIX
 
 fun nodeMeshPayloadToJson(payload: NodeMeshPairingPayload): String {
-    val compact = compactUserId(payload.userId) ?: payload.userId
     val n = escapeNodeMesh(payload.nodeAddresses.joinToString(";") { it.removePrefix(NODE_ADDRESS_PREFIX) })
-    return """{"v":${payload.version},"u":"$compact","p":"${payload.messageKeyBase64}","k":"${payload.x25519RatchetPublicKeyBase64}","s":"${payload.nodeMeshRoutingSeedBase64}","n":"$n","e":"${payload.appEdition}"}"""
+    return """{"v":${payload.version},"p":"${payload.messageKeyBase64}","k":"${payload.x25519RatchetPublicKeyBase64}","s":"${payload.nodeMeshRoutingSeedBase64}","n":"$n","e":"${payload.appEdition}"}"""
 }
 
 /** Returns null if [json] isn't a Node-Mesh payload at all (no "s" key — the routing seed is
@@ -43,7 +45,6 @@ fun nodeMeshPayloadToJson(payload: NodeMeshPairingPayload): String {
 fun jsonToNodeMeshPayload(json: String): NodeMeshPairingPayload? {
     return try {
         val map = parseSimpleJson(json)
-        val compact = map["u"] ?: return null
         val seed = map["s"] ?: return null
         val n = map["n"] ?: return null
         val addresses = unescapeNodeMesh(n).split(";")
@@ -54,7 +55,6 @@ fun jsonToNodeMeshPayload(json: String): NodeMeshPairingPayload? {
         if (addresses.isEmpty()) return null
         NodeMeshPairingPayload(
             version = map["v"]?.toIntOrNull() ?: 1,
-            userId = expandUserId(compact) ?: return null,
             messageKeyBase64 = map["p"] ?: return null,
             x25519RatchetPublicKeyBase64 = map["k"] ?: return null,
             nodeMeshRoutingSeedBase64 = seed,

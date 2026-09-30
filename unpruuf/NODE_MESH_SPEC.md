@@ -173,6 +173,15 @@ Beim Pairing tauschen beide Kontakte aus:
 - mit welchem Code sie die Nachrichten des jeweils anderen wiederfinden (Abhol-Code, s.
   Abschnitt 3)
 
+**Keine User-ID (QR-Format v2, 2026-09-30).** Der Node-Mesh-Pairing-QR enthält nur noch
+Nachrichtenschlüssel (`p`), Ratchet-Public-Key (`k`), Routing-Seed (`s`), Node-Adressen (`n`) und
+Edition (`e`). Die frühere `u`-User-ID wurde von Routing und Krypto nie gelesen und war eine
+kontaktübergreifend identische Kennung — genau das, womit zwei Kontakte dich ohne jede
+Kryptoanalyse verknüpfen könnten. Duplikaterkennung beim erneuten Scannen läuft über den
+Nachrichtenschlüssel. Das Telefon selbst hat im Node-Mesh-Pfad ohnehin keine eigene
+Onion-Adresse: es ist reiner Tor-Client; beim Ablegen weist es sich per Owner-Secret aus, beim
+Abholen per Routing-Tag. v1-QR-Codes (mit `u`) werden weiterhin gelesen, das Feld wird ignoriert.
+
 ---
 
 ## 2. Zwei Codes, zwei getrennte Aufgaben — nicht vermischen

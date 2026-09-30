@@ -57,6 +57,11 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE remoteUserId = :remoteUserId LIMIT 1")
     suspend fun getContactByRemoteUserId(remoteUserId: String): Contact?
 
+    /** Re-scan check for Node-Mesh pairings, which carry no userId — see
+     *  QrPairViewModel.handleScannedNodeMeshQr. */
+    @Query("SELECT * FROM contacts WHERE publicKey = :publicKey AND nodeMesh = 1 LIMIT 1")
+    suspend fun getNodeMeshContactByPublicKey(publicKey: String): Contact?
+
     /** Sets or clears (pass null) the manual relay-owner override — see
      *  P2PNetworkManager.switchRelayOwner()/IdentityManager.relayOwnerIsMine(). [owner] is
      *  "mine", "theirs", or null to fall back to the automatic rhythm. */

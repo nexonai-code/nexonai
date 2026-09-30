@@ -299,7 +299,6 @@ class QrPairViewModel @Inject constructor(
     fun myNodeMeshQrPayload(): NodeMeshPairingPayload? {
         if (!nodeMeshManager.isUsable()) return null
         return NodeMeshPairingPayload(
-            userId = identityManager.userId,
             messageKeyBase64 = android.util.Base64.encodeToString(
                 identityManager.myMessageKey, android.util.Base64.NO_WRAP
             ),
@@ -329,11 +328,11 @@ class QrPairViewModel @Inject constructor(
                 return@launch
             }
 
-            val existing = contactDao.getContactByRemoteUserId(payload.userId)
+            // No userId in this format, so the message key is the re-scan key. A reset device
+            // gets a fresh message key and therefore pairs as a new contact.
+            val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
             if (existing != null) {
-                if (existing.publicKey != payload.messageKeyBase64 ||
-                    existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64
-                ) {
+                if (existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64) {
                     _errorState.value = "This contact's key has changed since you last paired " +
                         "with them. If they reinstalled or reset the app, re-verify their safety " +
                         "number before trusting this. To replace them, delete the old contact first."
@@ -351,7 +350,6 @@ class QrPairViewModel @Inject constructor(
                 displayName = displayName,
                 isClientSlot = payload.appEdition == AppEdition.CLIENT,
                 x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
-                remoteUserId = payload.userId,
                 nodeMesh = true,
                 theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
                 theirNodeAddresses = NodeMeshManager.buildNodeConnectionStringList(payload.nodeAddresses)

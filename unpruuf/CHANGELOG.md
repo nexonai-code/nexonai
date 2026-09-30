@@ -5,6 +5,38 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑30 · Business Node-Mesh: userId removed from the pairing QR (format v2)
+
+**What was done**
+
+- The Node-Mesh pairing QR no longer carries a userId (`u` field). It now holds only message key,
+  ratchet public key, routing seed, node addresses and edition. The userId was never read by
+  Node-Mesh routing or crypto, and one identifier shown identically to every contact is exactly
+  what lets two contacts link you without any cryptanalysis.
+- Re-scan duplicate detection now uses the contact's message key
+  (`ContactDao.getNodeMeshContactByPublicKey`). A reset device has a new key and pairs as a new
+  contact.
+- Old v1 QR codes (with `u`) are still accepted; the field is ignored.
+- Confirmed in code: in the Node-Mesh path the phone has no onion address of its own — it is a
+  pure Tor client (owner secret to deposit, routing tag to fetch).
+- New unit test `NodeMeshPairingTest` (5 tests): no `u` in output, round trip, v1 compatibility,
+  missing routing seed rejected, Node-Mesh QR never misread as a cross-platform QR.
+- `NODE_MESH_SPEC.md` §1 documents the change.
+
+**Which bug appeared**
+
+None in the build. Side finding: the cross-platform parser identified its QR by `u` + `n`, both of
+which the old Node-Mesh QR also carried — format detection only worked because Node-Mesh node
+addresses happen not to parse as relay connection strings. Without `u` the formats are now
+unambiguous by construction.
+
+**Verification**
+
+Unit tests and `assemble*Debug` for all four editions (standard, pro, client, whistleblower):
+green. Whistleblower/cross-platform pairing (officer-app, web-reporter) unchanged.
+
+---
+
 ## 2026‑09‑27 (2) · Whistleblower pilot: full Romanian translation (Android app, officer-app, web-reporter, tablet relay)
 
 **What was done**
