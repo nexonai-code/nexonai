@@ -5,6 +5,33 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑30 (3) · German solution document Business-first, plus web page
+
+**What was done**
+
+- German solution document (Claude Docs:
+  https://claude.ai/code/artifact/e95b9483-c3a1-4794-baf8-a4c5311ff335) restructured like the
+  Romanian one: renamed "unpruuf — Lösungsübersicht (Business und Whistleblower)", Business tab
+  first as main product, Whistleblower second, all customer-specific references removed.
+- Same corrections as in Romanian: Art. 9(1)(b) for the 7-day acknowledgement, Legea nr. 361/2022
+  named, officer dashboard over Tor (security table now has its own officer row), 53 tests,
+  Romanian translation row in the build table. Typos "geschuetzt"/"Faelle" fixed.
+- New web page `LOESUNGSUEBERSICHT.html` (also published as a private artifact:
+  https://claude.ai/artifact/BB75eipRQBz1aHHRTE5xQy): the German overview as one page, Business
+  first, with a new diagram and table explaining the connection to the node (write key to deposit,
+  hourly pickup code to fetch, no user ID, no onion address on the phone). Light and dark theme,
+  works at phone width.
+
+**Which bug appeared**
+
+None.
+
+**Verification**
+
+Page rendered at phone width in Chromium: no horizontal page scroll, diagram labels clear.
+
+---
+
 ## 2026‑09‑30 (2) · Solution document in Romanian, Business-first
 
 **What was done**

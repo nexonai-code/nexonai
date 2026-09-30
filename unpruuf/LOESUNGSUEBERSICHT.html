@@ -1,0 +1,409 @@
+<title>unpruuf Lösungsübersicht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87,600;87,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, sticky product switcher, tables and diagrams in their own scroll boxes */
+:root {
+  --bg: #f5f7f7;
+  --surface: #ffffff;
+  --ink: #16211f;
+  --muted: #56645f;
+  --line: #d6dedb;
+  --accent: #0f6b62;
+  --accent-soft: #e2f0ed;
+  --good: #1f7a3f;
+  --good-soft: #e3f2e7;
+  --warn: #8a5a00;
+  --warn-soft: #fbf0d9;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101615; --surface: #172020; --ink: #e4ecea; --muted: #9aaba6; --line: #2b3836;
+    --accent: #5cc3b5; --accent-soft: #173a36; --good: #6fd08f; --good-soft: #183323;
+    --warn: #e7b85a; --warn-soft: #3a2e14; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101615; --surface: #172020; --ink: #e4ecea; --muted: #9aaba6; --line: #2b3836;
+  --accent: #5cc3b5; --accent-soft: #173a36; --good: #6fd08f; --good-soft: #183323;
+  --warn: #e7b85a; --warn-soft: #3a2e14; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-inline: 16px; padding-block: 0 64px;
+}
+.wrap { max-width: 780px; margin: 0 auto; }
+header.top { padding-block: 40px 20px; display: grid; gap: 8px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1, h2, h3 { font-family: var(--font-display); font-stretch: 87%; text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 42px); font-weight: 700; }
+.lead { color: var(--muted); max-width: 62ch; margin: 0; }
+nav.switch {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  display: flex; gap: 4px; padding-block: 10px; flex-wrap: wrap;
+}
+nav.switch a {
+  font-family: var(--font-body); font-weight: 600; font-size: 14.5px; text-decoration: none;
+  color: var(--muted); padding: 6px 12px; border-radius: 6px;
+}
+nav.switch a:hover { color: var(--ink); background: var(--surface); }
+nav.switch a:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+nav.switch a.main { color: var(--accent); background: var(--accent-soft); }
+section.product { padding-top: 40px; display: grid; gap: 28px; }
+.product-head { display: grid; gap: 6px; border-top: 3px solid var(--ink); padding-top: 16px; }
+.product-head h2 { font-size: 30px; }
+.tag { font-family: var(--font-mono); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
+.block { display: grid; gap: 12px; min-width: 0; }
+h3 { font-size: 21px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+ul, ol { margin: 0; padding-left: 1.25em; display: grid; gap: 8px; max-width: 68ch; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+strong { font-weight: 600; }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14.5px; line-height: 1.5; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; font-size: 13px; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.yes { color: var(--good); background: var(--good-soft); }
+.pill.no { color: var(--warn); background: var(--warn-soft); }
+.pill.none { color: var(--accent); background: var(--accent-soft); }
+figure { margin: 0; display: grid; gap: 8px; }
+figure .scroll { padding: 8px; }
+figure svg { display: block; width: 100%; min-width: 520px; height: auto; }
+figcaption { font-size: 13.5px; color: var(--muted); }
+.note { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 12px 14px; border-radius: 0 6px 6px 0; max-width: 68ch; }
+.quote { border-left: 3px solid var(--line); padding-left: 14px; font-style: italic; color: var(--muted); max-width: 68ch; }
+.svg-ink { fill: var(--ink); }
+.svg-muted { fill: var(--muted); }
+.svg-edge { stroke: var(--muted); }
+.svg-box { fill: none; stroke: var(--muted); stroke-width: 1.25; }
+.svg-main { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+.svg-arrow { fill: var(--muted); }
+footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+@media (max-width: 480px) { h1 { font-size: 28px; } .product-head h2 { font-size: 25px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">NexonAI Consulting SRL · Stand 30.09.2026</span>
+    <h1>unpruuf — Lösungsübersicht</h1>
+    <p class="lead">Zwei Produktlinien, ein Prinzip: Sicherheit entsteht durch die Architektur, nicht durch ein Versprechen. Jede Organisation betreibt ihre Infrastruktur selbst, NexonAI hostet nichts.</p>
+  </header>
+
+  <nav class="switch" aria-label="Produktlinien">
+    <a class="main" href="#business">Business-Kommunikation</a>
+    <a href="#whistleblower">Whistleblower</a>
+  </nav>
+
+  <!-- ============ BUSINESS ============ -->
+  <section class="product" id="business">
+    <div class="product-head">
+      <span class="tag">Hauptprodukt · Spezifikation v5</span>
+      <h2>Business-Kommunikation / Node-Mesh</h2>
+    </div>
+
+    <div class="block">
+      <h3>Zusammenfassung</h3>
+      <p>unpruuf Business / Node-Mesh ist die Hauptproduktlinie von unpruuf für sichere Kommunikation in Unternehmen und Institutionen. Statt eines gemeinsamen Relays betreibt jede Seite ihre <strong>eigenen</strong> Nodes (bis zu 3), schreibt nur dorthin, und Kontakte lesen dort nur, löschen nie. Spezifikation v5 ist vollständig umgesetzt: Server für Windows, Linux und Docker, Android als Node-Host und der Messenger-Client für Android.</p>
+      <p>Weil jede Organisation ausschließlich ihre eigene Infrastruktur betreibt und NexonAI keinen einzigen Node hostet, ist dasselbe System ohne Code-Änderung bei jeder weiteren Organisation einsetzbar. Jede bekommt ihre eigenen Nodes und Schlüssel. Das ist eine Eigenschaft der Architektur, kein Zusatzaufwand.</p>
+    </div>
+
+    <div class="block">
+      <h3>So funktioniert die Verbindung zum Node</h3>
+      <figure>
+        <div class="scroll">
+          <svg viewBox="0 0 760 356" role="img" aria-label="Jeder schreibt nur auf seinen eigenen Node">
+            <defs><marker id="nm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="svg-arrow"/></marker></defs>
+            <text x="24" y="28" font-size="15" font-weight="600" class="svg-ink" font-family="IBM Plex Sans, sans-serif">Jeder schreibt nur auf seinen eigenen Node</text>
+            <g fill="none" class="svg-edge" stroke-width="1.25">
+              <path d="M150 162L270 94" marker-end="url(#nm-arrow)"/>
+              <path d="M490 94L610 162" marker-end="url(#nm-arrow)"/>
+              <path d="M610 218L490 286" marker-end="url(#nm-arrow)"/>
+              <path d="M270 286L150 218" marker-end="url(#nm-arrow)"/>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="12" class="svg-muted">
+              <text x="204" y="116" text-anchor="end">ablegen (Schreibschlüssel)</text>
+              <text x="556" y="116">abholen (Abhol-Code)</text>
+              <text x="562" y="266">ablegen (Schreibschlüssel)</text>
+              <text x="198" y="266" text-anchor="end">abholen (Abhol-Code)</text>
+              <text x="380" y="194" text-anchor="middle">alle Wege laufen über Tor</text>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" text-anchor="middle">
+              <rect x="30" y="162" width="180" height="56" rx="8" class="svg-box"/>
+              <text x="120" y="186" font-size="13.5" font-weight="600" class="svg-ink">Handy A</text>
+              <text x="120" y="204" font-size="11.5" class="svg-muted">reiner Tor-Client</text>
+              <rect x="550" y="162" width="180" height="56" rx="8" class="svg-box"/>
+              <text x="640" y="186" font-size="13.5" font-weight="600" class="svg-ink">Handy B</text>
+              <text x="640" y="204" font-size="11.5" class="svg-muted">reiner Tor-Client</text>
+              <rect x="270" y="52" width="220" height="56" rx="8" class="svg-main"/>
+              <text x="380" y="76" font-size="13.5" font-weight="600" class="svg-ink">Node A</text>
+              <text x="380" y="94" font-size="11.5" class="svg-muted">gehört A · feste Onion-Adresse</text>
+              <rect x="270" y="272" width="220" height="56" rx="8" class="svg-main"/>
+              <text x="380" y="296" font-size="13.5" font-weight="600" class="svg-ink">Node B</text>
+              <text x="380" y="314" font-size="11.5" class="svg-muted">gehört B · feste Onion-Adresse</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>A legt auf Node A ab, B holt dort ab. Der Rückweg läuft genauso über Node B.</figcaption>
+      </figure>
+      <ul>
+        <li><strong>Ablegen:</strong> Das Handy legt die verschlüsselte Nachricht auf den <strong>eigenen</strong> Node. Schreiben darf nur, wer den Schreibschlüssel hat, also der Besitzer.</li>
+        <li><strong>Abholen:</strong> Der Kontakt holt sie dort mit dem Abhol-Code ab. Der Code wechselt jede Stunde, beide Seiten berechnen ihn selbst.</li>
+        <li><strong>Lesen:</strong> Abholen heißt nicht lesen. Entschlüsseln kann nur, wer den zweiten Schlüssel hat, also nur die beiden Gesprächspartner.</li>
+      </ul>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Element</th><th>Gibt es?</th><th>Wozu</th></tr></thead>
+          <tbody>
+            <tr><td>User-ID</td><td><span class="pill none">Nein, gestrichen</span></td><td>Wurde nie gebraucht und war das Einzige, was bei allen Kontakten gleich war</td></tr>
+            <tr><td>Onion-Adresse des Handys</td><td><span class="pill none">Nein</span></td><td>Das Handy verbindet sich nur nach außen, es empfängt nie direkt</td></tr>
+            <tr><td>Onion-Adresse des Nodes</td><td><span class="pill yes">Ja, fest</span></td><td>Damit der Kontakt weiß, wo er abholen muss</td></tr>
+            <tr><td>Schreibschlüssel</td><td><span class="pill yes">Ja, nur der Besitzer</span></td><td>Damit niemand fremde Daten auf den Node legt</td></tr>
+            <tr><td>Abhol-Code</td><td><span class="pill yes">Ja, stündlich neu</span></td><td>Findet die Nachricht, ohne einen Namen zu nennen</td></tr>
+            <tr><td>Entschlüsselungs-Schlüssel</td><td><span class="pill yes">Ja, nur die zwei Partner</span></td><td>Macht den Inhalt lesbar</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Der Node weiß nicht, wer ablegt oder abholt, und nicht, was drinsteht. Die App weiß nicht, mit wem sie spricht: Sie hat nur zwei Codes, einen zum Finden und einen zum Entschlüsseln. Zwei Kontakte derselben Person können nicht abgleichen, ob sie mit derselben Person sprechen.</p>
+    </div>
+
+    <div class="block">
+      <h3>Architektur v5: was neu ist</h3>
+      <ul>
+        <li><strong>Tor eingebaut und Pflicht.</strong> Der Node startet Tor selbst, veröffentlicht sich per <code>ADD_ONION</code> mit einem dauerhaft gespeicherten Schlüssel (die Adresse ändert sich nie), nutzt den Proof-of-Work-Schutz von Tor gegen Verbindungsflut und startet sich nach einem Absturz selbst neu, mit derselben Adresse.</li>
+        <li><strong>Profile statt freier Zahlen:</strong> <code>standard</code> (6 Std.), <code>high-security</code> (1 Std.), <code>offline-tolerant</code> (24 Std.). Der Abhol-Code rotiert fest jede Stunde und ist nicht pro Node einstellbar, sonst passen die Codes von Sender und Empfänger nicht mehr zusammen.</li>
+        <li><strong>Slots 1–3:</strong> Die tägliche Wartung der bis zu drei eigenen Nodes läuft versetzt (Minute 0, 20, 40), nie alle gleichzeitig.</li>
+        <li><strong>Einrichtungsseite im Browser</strong>, nur vom eigenen Rechner erreichbar: zeigt den Schreibschlüssel als QR-Code zum Scannen in die eigene App, dazu ein Knopf zum Erneuern.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Komponenten</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Baustein</th><th>Plattform</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><code>node-mesh-server</code></td><td>Windows, Linux, Docker, eigenständige .exe</td><td>Gebaut, eingebauter Tor mit Proof-of-Work</td></tr>
+            <tr><td><code>relay-android</code>, Modus „Business Node“</td><td>Android</td><td>Gebaut, gleiche Schnittstelle wie der PC-Node, ohne Tor-Proof-of-Work</td></tr>
+            <tr><td>Messenger-App (Node-Mesh-Client)</td><td>Android</td><td>Gebaut, Abholfenster deckt jedes Profil ab</td></tr>
+            <tr><td><code>NODE_MESH_BETRIEB.md</code></td><td>–</td><td>Betriebsanleitung für Kunden, Deutsch</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="block">
+      <h3>Sicherheitsmodell</h3>
+      <ul>
+        <li>Abhol-Code (wer holt ab) und Verschlüsselungsschlüssel (was steht drin) stammen aus zwei getrennten Geheimnissen. Ein Node sieht nie beides zusammen.</li>
+        <li>Schreiben nur durch den Besitzer (eigener Schlüssel, nie mit Kontakten geteilt). Lesen löscht nie; gelöscht wird nur durch Ablauf der Speicherzeit.</li>
+        <li>Kein Node sieht beide Richtungen eines Gesprächs, solange die Nodes beider Seiten von unabhängigen Stellen betrieben werden. Das ist eine Annahme über die Aufstellung, keine kryptographische Garantie.</li>
+        <li>Tor macht „der Node sieht nie eine Absender-IP“ zur Eigenschaft der Technik, nicht nur zur Regel.</li>
+        <li><strong>Keine User-ID</strong> (Pairing-QR v2, seit 30.09.2026). Der QR enthält nur Nachrichtenschlüssel, Ratchet-Schlüssel, Abhol-Seed, Node-Adressen und Edition.</li>
+        <li><strong>Das Handy hat keine eigene Onion-Adresse.</strong> Beim Ablegen weist es sich mit dem Schreibschlüssel aus, beim Abholen mit dem Abhol-Code. Auf dem Gerät gibt es nichts Festes, das eine Verbindung einer Person zuordnet.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Build- und Verifikationsstatus</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Teil</th><th>Getestet</th><th>Echt gelaufen</th></tr></thead>
+          <tbody>
+            <tr><td><code>node-mesh-server</code></td><td class="num">38/38 automatisierte Tests</td><td><span class="pill yes">Ja</span> Echtes Tor 0.4.9.11: gleiche Adresse nach Neustart und nach hartem Absturz, Proof-of-Work akzeptiert, Temp Node hinterlässt keinen Schlüssel auf der Platte</td></tr>
+            <tr><td><code>relay-android</code> (Business Node)</td><td class="num">8/8 HTTP-Vertragstests</td><td><span class="pill no">Nicht auf Gerät</span> Kompiliert, APK gebaut</td></tr>
+            <tr><td>Messenger-App</td><td class="num">53/53 Unit-Tests</td><td><span class="pill no">Nicht auf Gerät</span> Kompiliert, inkl. 5 Tests für das neue QR-Format</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><strong>Noch nicht verifiziert:</strong> Tor-Verbindungsaufbau bis 100 % auf normaler Internetleitung, echter Lauf von <code>start.bat</code> unter Windows, Docker-Image-Build, jede Funktion auf echter Hardware.</p>
+    </div>
+
+    <div class="block">
+      <h3>Bekannte Lücken</h3>
+      <ul>
+        <li>Android-Nodes haben <strong>keinen</strong> Tor-Proof-of-Work-Schutz, weil die genutzte Tor-Bibliothek ihn nicht unterstützt. Wo Überflutungsschutz wichtig ist, einen PC- oder Server-Node nehmen.</li>
+        <li>Kein unabhängiges Sicherheits-Audit bisher.</li>
+        <li>Keine Nutzung auf mehreren Geräten. Bewusst so: keine Konten, jede Identität lebt auf genau einem Gerät.</li>
+        <li>Folge der fehlenden User-ID: Setzt ein Kontakt sein Gerät zurück, erscheint er als neuer Kontakt. Eine Warnung „Schlüssel hat sich geändert“ gibt es dann nicht. Alte QR-Codes mit User-ID werden weiter gelesen.</li>
+        <li>Vor dem echten Einsatz: Tor-Bootstrap auf normaler Leitung, Windows-Lauf und Docker-Build auf einer echten Maschine bestätigen.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ WHISTLEBLOWER ============ -->
+  <section class="product" id="whistleblower">
+    <div class="product-head">
+      <span class="tag">Zweite Produktlinie · EU-Richtlinie 2019/1937</span>
+      <h2>Whistleblower</h2>
+    </div>
+
+    <div class="block">
+      <h3>Zusammenfassung</h3>
+      <p>unpruuf Whistleblower ist ein anonymer Meldekanal nach EU-Richtlinie 2019/1937 für Organisationen, die einen internen Meldekanal anbieten müssen. Melder und Compliance-Officer kommunizieren Ende-zu-Ende-verschlüsselt über einen blinden Relay-Server, der nie Inhalt oder Identität sieht.</p>
+      <p>Vier Komponenten bilden die Lösung: eine Android-App fürs Melder-Handy, ein Relay auf Tablet oder Server, ein Dashboard für den Compliance-Officer und eine Browser-Variante ohne Installation als Fallback. Alle Oberflächen gibt es vollständig auch auf Rumänisch.</p>
+      <p>Kernaussage: Anonymität entsteht durch Architektur, nicht durch einen Vertrag. Der Relay kann nicht mitlesen, wer mit wem spricht oder was gesagt wird. Klassische Whistleblower-SaaS-Lösungen machen starke Zusagen, könnten technisch aber mitlesen.</p>
+    </div>
+
+    <div class="block">
+      <h3>Architektur</h3>
+      <p>Der Relay ist eine blinde Mailbox in der Mitte: Er speichert nur verschlüsselte Blöcke unter einem stündlich wechselnden Tag und kann weder Inhalt noch Identität ablesen. Alle drei Clients sprechen nur mit dem Relay, nie direkt miteinander.</p>
+      <figure>
+        <div class="scroll">
+          <svg viewBox="0 0 760 392" role="img" aria-label="Relay sieht nie Inhalt oder Identität">
+            <defs><marker id="wb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="svg-arrow"/></marker></defs>
+            <text x="24" y="28" font-size="15" font-weight="600" class="svg-ink" font-family="IBM Plex Sans, sans-serif">Relay sieht nie Inhalt oder Identität</text>
+            <g fill="none" class="svg-edge" stroke-width="1.25">
+              <path d="M245 110L310 176" marker-start="url(#wb-arrow)" marker-end="url(#wb-arrow)"/>
+              <path d="M515 110L450 176" marker-start="url(#wb-arrow)" marker-end="url(#wb-arrow)"/>
+              <path d="M380 316L380 224" marker-start="url(#wb-arrow)" marker-end="url(#wb-arrow)"/>
+              <path d="M264 86L496 86" stroke-dasharray="4 4" marker-end="url(#wb-arrow)"/>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="12" class="svg-muted">
+              <text x="380" y="76" text-anchor="middle">Pairing-Code, einmalig, außerhalb</text>
+              <text x="262" y="152" text-anchor="end">senden / abholen</text>
+              <text x="498" y="152">senden / abholen</text>
+              <text x="392" y="274">senden / abholen</text>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="13.5" font-weight="600" text-anchor="middle" class="svg-ink">
+              <rect x="24" y="62" width="240" height="48" rx="8" class="svg-box"/>
+              <text x="144" y="90">Melder-App (Android)</text>
+              <rect x="496" y="62" width="240" height="48" rx="8" class="svg-box"/>
+              <text x="616" y="90">Officer-Dashboard (Laptop)</text>
+              <rect x="260" y="176" width="240" height="48" rx="8" class="svg-main"/>
+              <text x="380" y="204">Relay (Tablet oder Server)</text>
+              <rect x="275" y="316" width="210" height="48" rx="8" class="svg-box"/>
+              <text x="380" y="344">Web-Reporter (Browser)</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>Einzige Ausnahme: Der einmalige Pairing-Code beim Fall-Start wird außerhalb ausgetauscht (QR-Scan durch den Melder, Einfügen durch den Officer). Danach läuft alles über den Relay.</figcaption>
+      </figure>
+    </div>
+
+    <div class="block">
+      <h3>Die vier Komponenten</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Komponente</th><th>Läuft auf</th><th>Aufgabe</th><th>Wichtigste Grenze</th></tr></thead>
+          <tbody>
+            <tr><td>Melder-App (Whistleblower-Edition)</td><td>Android-Handy des Melders</td><td>Officer-QR scannen, Meldung Ende-zu-Ende-verschlüsselt über Tor senden und empfangen</td><td>Kein sichtbares App-Icon oder Branding, damit ein Blick aufs Handy den Melder nicht verrät</td></tr>
+            <tr><td>Relay</td><td>Tablet (relay-android) oder Laptop/Server</td><td>Blinde Mailbox: speichert nur verschlüsselte Blöcke unter wechselndem Tag, löscht nach Abholung</td><td>Sieht nie Inhalt oder Identität, kann also nicht mehr preisgeben, als es hat</td></tr>
+            <tr><td>Officer-Dashboard</td><td>Laptop des Compliance-Officers</td><td>Verschlüsselungs-Partner: zeigt eigenen Pairing-Code, verwaltet Fälle mit Fristen, ver- und entschlüsselt Nachrichten</td><td>Das Passwort schützt die Daten, nicht den lokalen Webserver. Nicht ins offene Internet stellen</td></tr>
+            <tr><td>Web-Reporter</td><td>Jeder Browser, keine Installation</td><td>Gleiche Verschlüsselung wie die App, als Notfall-Kanal ohne Installation</td><td>Kein Tor, keine reine RAM-Speicherung, kein Geräteschutz. Sichtbarer Warnhinweis auf der Seite</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="block">
+      <h3>Rechtlicher Rahmen: EU-Richtlinie 2019/1937</h3>
+      <p>Das Officer-Dashboard führt eine echte Fallakte statt nur eines anonymen Chats. Jeder Fall bekommt beim Anlegen automatisch zwei Fristen nach Art. 9 Abs. 1:</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Pflicht</th><th>Frist</th><th>Ausgelöst</th><th>Im Dashboard</th></tr></thead>
+          <tbody>
+            <tr><td>Eingangsbestätigung (Art. 9(1)(b))</td><td class="num">7 Tage</td><td>Beim Anlegen des Falls (Pairing-Code eingefügt)</td><td>Countdown-Spalte, färbt sich bei Nähe oder Überschreitung</td></tr>
+            <tr><td>Rückmeldung an den Melder (Art. 9(1)(f))</td><td class="num">3 Monate</td><td>Beim Anlegen des Falls</td><td>Eigene Countdown-Spalte, unabhängig von der ersten Frist</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Den Status je Fall (Neu, Bestätigt, In Bearbeitung, Abgeschlossen) setzt der Officer von Hand. Die Software erinnert an Fristen, ersetzt aber nicht die inhaltliche Prüfung.</p>
+      <p class="note">Das ist Software-Unterstützung für den Prozess, keine Rechtsberatung und keine Zertifizierung. Ob die Umsetzung in der Organisation alle nationalen Anforderungen erfüllt (in Rumänien: Legea nr. 361/2022), bestätigt deren Rechtsabteilung.</p>
+    </div>
+
+    <div class="block">
+      <h3>Sicherheits- und Datenschutzmodell</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Wer</th><th>Sieht Inhalt?</th><th>Sieht Identität?</th><th>Wie geschützt</th></tr></thead>
+          <tbody>
+            <tr><td>Relay-Betreiber</td><td><span class="pill yes">Nein</span></td><td><span class="pill yes">Nein</span></td><td>Blöcke nur unter wechselndem Tag, nie entschlüsselt gespeichert</td></tr>
+            <tr><td>Netzwerk-Beobachter (Melder-App)</td><td><span class="pill yes">Nein</span></td><td><span class="pill yes">Nein</span></td><td>Tor Hidden Service, IP nie sichtbar</td></tr>
+            <tr><td>Netzwerk-Beobachter (Officer-Seite)</td><td><span class="pill yes">Nein</span></td><td><span class="pill yes">Nein</span></td><td>Dashboard verbindet sich über Tor mit dem Relay, wie die Android-App</td></tr>
+            <tr><td>Netzwerk-Beobachter (Web-Reporter)</td><td><span class="pill yes">Nein</span></td><td><span class="pill no">Teilweise</span></td><td>Kein Tor standardmäßig: sieht, dass jemand mit dem Relay spricht, nicht was</td></tr>
+            <tr><td>Officer</td><td><span class="pill no">Ja, nach Pairing</span></td><td><span class="pill yes">Nein</span></td><td>Passwortgeschützte, lokal verschlüsselte Fallakte. Identität nur, wenn der Melder sie selbst preisgibt</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Warnhinweis, den jeder Web-Reporter-Nutzer zuerst sieht:</strong></p>
+      <p class="quote">Diese Seite schützt schwächer als die App: kein Tor standardmäßig, der normale Gerätespeicher behält das Gespräch, bis du es löschst, kein Schutz gegen ein kompromittiertes Gerät. Bei Risiko von Repressalien lieber die App nutzen oder zusätzlich Tor Browser. Der Inhalt bleibt trotzdem Ende-zu-Ende-verschlüsselt.</p>
+      <p>Die Verschlüsselung (Double Ratchet, X25519, XChaCha20-Poly1305 / AES-256-GCM) ist in Officer-App und Web-Reporter unabhängig voneinander umgesetzt und gegeneinander getestet. Es gibt keinen gemeinsamen Code, der einen gemeinsamen Fehler haben könnte.</p>
+    </div>
+
+    <div class="block">
+      <h3>Build- und Verifikationsstatus</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Was</th><th>Wie verifiziert</th><th>Ergebnis</th></tr></thead>
+          <tbody>
+            <tr><td>Krypto-Grundbausteine (X25519, HKDF, XChaCha20-Poly1305, AES-256-GCM)</td><td>Byte für Byte gegen Tink/Java und javax.crypto.Cipher</td><td><span class="pill yes">Identisch</span></td></tr>
+            <tr><td>Melder ↔ Officer, kompletter Protokollfluss</td><td>End-to-End-Test gegen einen echten Relay-Server-Prozess</td><td><span class="pill yes">Bestanden</span></td></tr>
+            <tr><td>Officer-App ↔ Web-Reporter (zwei unabhängige Umsetzungen)</td><td>Gegeneinander getestet über echten Relay</td><td><span class="pill yes">Bestanden</span></td></tr>
+            <tr><td>Android-App (alle 4 Editionen)</td><td>Mit Android SDK kompiliert, gebaut, unit-getestet</td><td><span class="pill yes">53 Tests × 4</span> 2 vorher unbekannte Fehler gefunden und behoben</td></tr>
+            <tr><td>relay-android</td><td>Kompiliert und gebaut</td><td><span class="pill yes">Baut sauber</span></td></tr>
+            <tr><td>Rumänische Übersetzung</td><td>Alle Editionen nach der Übersetzung gebaut</td><td><span class="pill yes">Behoben</span> 1 Fehler mit Sonderzeichen in Standardtexten</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><strong>Noch nicht verifiziert:</strong> echtes Gerät, Kamera-Scan, Tor auf echter Hardware. „Kompiliert und getestet“ ist nicht dasselbe wie „läuft auf einem echten Handy“. Das ist der nächste Schritt vor dem produktiven Einsatz.</p>
+    </div>
+
+    <div class="block">
+      <h3>Bekannte Lücken</h3>
+      <ul>
+        <li><strong>Nur ein Relay gleichzeitig.</strong> Officer und Melder nutzen denselben Relay, kein Routing über mehrere.</li>
+        <li><strong>Ein Officer, ein Passwort.</strong> Kein Mehrbenutzer-Zugriff, kein Vier-Augen-Prinzip im Dashboard.</li>
+        <li><strong>Kein Fall-Export.</strong> Fälle liegen nur in der lokalen, verschlüsselten Datenbank auf dem Officer-Laptop; kein PDF-Export, kein Audit-Log-Download.</li>
+        <li><strong>Web-Reporter: ein Fall pro Browser.</strong> Ein neuer Bericht überschreibt den alten, kein Verlauf mehrerer Fälle.</li>
+        <li><strong>Android-App nie auf echtem Gerät getestet.</strong> Wichtigster nächster Schritt vor dem produktiven Einsatz.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h3>Demo-Ablauf</h3>
+      <ol>
+        <li>Officer-Dashboard läuft und zeigt den eigenen Pairing-Code.</li>
+        <li>Das Handy scannt den Code. Die Melder-App zeigt danach ihren eigenen Code zum Kopieren.</li>
+        <li>Der Officer fügt den Code ein. Ein neuer Fall erscheint, die Fristen laufen automatisch.</li>
+        <li>Das Handy sendet eine Nachricht, die eigentliche Meldung.</li>
+        <li>Die Nachricht erscheint nach wenigen Sekunden im Fall-Verlauf am Laptop.</li>
+        <li>Der Officer antwortet, die Antwort erscheint am Handy.</li>
+        <li>Optional: Relay-Log auf dem Tablet zeigen (gespeichert / abgeholt, nie Inhalt) als sichtbaren Beleg für „Architektur statt Vertrag“.</li>
+        <li>Optional: Web-Reporter als Browser-Fallback zeigen, mit Warnhinweis.</li>
+      </ol>
+      <p>Ausführliches Runbook mit Setup, Fehlerbehebung und Gesprächspunkten: <code>unpruuf/WHISTLEBLOWER_DEMO.md</code>.</p>
+    </div>
+
+    <div class="block">
+      <h3>Wichtige Dateien</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Was</th><th>Wo</th></tr></thead>
+          <tbody>
+            <tr><td>Quellcode</td><td><a href="https://github.com/nexonai-code/nexonai/tree/android">github.com/nexonai-code/nexonai</a>, Branch <code>android</code> (nur mit GitHub-Zugang)</td></tr>
+            <tr><td>Demo-Runbook</td><td><code>unpruuf/WHISTLEBLOWER_DEMO.md</code></td></tr>
+            <tr><td>Officer-App, Quellcode und README</td><td><code>unpruuf/officer-app/</code></td></tr>
+            <tr><td>Web-Reporter, Quellcode und README</td><td><code>unpruuf/web-reporter/</code></td></tr>
+            <tr><td>Node-Mesh-Spezifikation</td><td><code>unpruuf/NODE_MESH_SPEC.md</code></td></tr>
+            <tr><td>Änderungsverlauf</td><td><code>unpruuf/CHANGELOG.md</code></td></tr>
+            <tr><td>Technischer Stand aller Editionen</td><td><code>unpruuf/STATUS.md</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>NexonAI Consulting SRL · unpruuf · Stand 30.09.2026</footer>
+</div>
