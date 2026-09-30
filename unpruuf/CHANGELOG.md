@@ -5,6 +5,34 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑09‑30 (2) · Solution document in Romanian, Business-first
+
+**What was done**
+
+- New Romanian solution document "unpruuf — Prezentarea soluției (Business și Whistleblower)"
+  (Claude Docs: https://claude.ai/code/artifact/8129d2e1-5d72-4ee0-82ba-fc9826e2a00c).
+- Business / Node-Mesh is the first tab and is presented as the main product line; Whistleblower
+  is the second tab, written for any organisation that needs an internal reporting channel — no
+  customer-specific references.
+- Content brought up to date while translating: officer dashboard reaches the relay over Tor
+  (no longer LAN), 53 unit tests, pairing QR v2 without userId, phone has no onion address of its
+  own in the Node-Mesh path, Romanian UI across all components.
+- Legal references corrected: the 7-day acknowledgement is Art. 9(1)(b) of Directive (EU)
+  2019/1937 (the German document says (a)); the Romanian transposition, Legea nr. 361/2022, is
+  named.
+- Private repository links replaced by a list of what the customer receives.
+
+**Which bug appeared**
+
+None in code. The German solution document still carries the Art. 9(1)(a) error and
+Whistleblower-first order — not yet changed.
+
+**Verification**
+
+Architecture diagram rendered and checked (no clipped labels). No code changes in this entry.
+
+---
+
 ## 2026‑09‑30 · Business Node-Mesh: userId removed from the pairing QR (format v2)
 
 **What was done**
