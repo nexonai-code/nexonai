@@ -60,7 +60,8 @@ class P2PNetworkManager @Inject constructor(
     private val nodeMeshClient: NodeMeshClient
 ) {
     companion object {
-        private const val SERVICE_TYPE = "_unpruuf._tcp."
+        // LAN discovery on/off + hourly name rotation is re-checked this often.
+        private const val LAN_CHECK_INTERVAL_MS = 60_000L
 
         // Virtueller Onion-Port: identisch für ALLE Editionen — darauf verbinden
         // sich Sender (onionAddress:ONION_PORT). Darf sich nie unterscheiden.
@@ -232,6 +233,15 @@ class P2PNetworkManager @Inject constructor(
         // profiles.test.ts pins the same window server-side.
         private const val NODE_MESH_ROTATION_INTERVAL_MS = 60 * 60 * 1000L
         private const val NODE_POOL_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000L
+        // Node-Mesh polling: one rhythm for every state (see startNodeMeshPoll).
+        private const val NODE_MESH_POLL_BASE_MS = 20_000L
+        private const val NODE_MESH_POLL_JITTER_MS = 5_000L
+        private const val NODE_MESH_POLL_WAIT_MS = 20_000L
+        // Cover deposits: on average one every 15 min per Node-Mesh contact.
+        private const val NODE_MESH_COVER_MEAN_MS = 15 * 60 * 1000L
+        private const val NODE_MESH_COVER_MIN_MS = 20_000L
+        private const val NODE_MESH_COVER_MAX_MS = 60 * 60 * 1000L
+        private const val LOCKED_SERVER_CHECK_INTERVAL_MS = 15 * 60 * 1000L
         private const val NODE_MESH_MAX_TTL_MS = 24 * 60 * 60 * 1000L
 
         // Connect timeout for FRESH Tor connections to a CONTACT's onion (the pooled send
@@ -384,10 +394,8 @@ class P2PNetworkManager @Inject constructor(
     fun start() {
         if (started) return
         started = true
-        acquireMulticastLock()
         startServer()
-        registerService()
-        discoverPeers()
+        startLanDiscoveryLoop()
 
         // Sobald Tor (wieder) bereit ist: Warteschlange sofort abarbeiten
         scope.launch {
@@ -414,7 +422,9 @@ class P2PNetworkManager @Inject constructor(
         startActiveChatWarmup()
         startRelayPoll()
         startNodeMeshPoll()
+        startNodeMeshCoverTraffic()
         startNodePoolRefresh()
+        startLockedServerCheck()
         startTempNodeHeartbeat()
         startPeriodicReachabilityCheck()
     }
@@ -579,13 +589,89 @@ class P2PNetworkManager @Inject constructor(
         }
     }
 
+    // Constant rhythm, whatever the user does: the same jittered interval and the same long-poll
+    // wait whether a chat is open or the phone sits in a pocket. The old 6 s (chat open) / 90 s
+    // (idle) split let anyone watching a node — or the encrypted Tor stream — read off WHEN a
+    // chat was open. The long-poll (now effective thanks to the fetch cursor) keeps delivery fast.
     private fun startNodeMeshPoll() {
         scope.launch {
             while (isActive) {
-                val active = isChatActiveOrRecent()
-                delay(if (active) RELAY_POLL_INTERVAL_ACTIVE_MS else RELAY_POLL_INTERVAL_IDLE_MS)
+                delay(nodeMeshPollDelayMs())
                 pollNodeMeshOnce()
             }
+        }
+    }
+
+    private fun nodeMeshPollDelayMs(): Long =
+        NODE_MESH_POLL_BASE_MS + kotlin.random.Random.nextLong(-NODE_MESH_POLL_JITTER_MS, NODE_MESH_POLL_JITTER_MS + 1)
+
+    // ─── Node-Mesh cover traffic ──────────────────────────────────────────────────────────────
+    // Without it every deposit on a node was a real message, so a node operator (or whoever
+    // seized and kept running a node) could log exactly when this device wrote to a contact.
+    // Now each Node-Mesh contact also gets dummy deposits at random (exponentially distributed)
+    // times: same tag, same padded size, same nodes — indistinguishable from a real message
+    // without the contact's key. The receiver decrypts and silently drops them (DUMMY_SIGNAL).
+    private fun startNodeMeshCoverTraffic() {
+        scope.launch {
+            while (isActive) {
+                val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+                    .filter { it.nodeMesh && it.theirNodeMeshRoutingSeed.isNotBlank() }
+                delay(nextCoverDelayMs(contacts.size))
+                if (contacts.isEmpty() || !torManager.isReady.value) continue
+                runCatching { sendNodeMeshCover(contacts.random()) }
+            }
+        }
+    }
+
+    private suspend fun sendNodeMeshCover(contact: com.nexonai.unpruuf.data.model.Contact) {
+        val key = runCatching {
+            android.util.Base64.decode(contact.publicKey, android.util.Base64.DEFAULT)
+        }.getOrNull()?.takeIf { it.size == 32 } ?: return
+        val encrypted = runCatching { cryptoManager.encryptForContact(DUMMY_SIGNAL, key) }.getOrNull() ?: return
+        if (encrypted.size > NetworkObfuscation.PACKET_SIZE - 8) return
+        val tag = nodeMeshTagFor(contact) ?: return
+        depositForNodeMesh(contact.id, tag, NetworkObfuscation.padPacket(encrypted), myNodesFor(contact))
+    }
+
+    // Mean NODE_MESH_COVER_MEAN_MS per contact → mean / n across n contacts, exponentially
+    // distributed (a Poisson process has no rhythm to recognise), clamped to sane bounds.
+    private fun nextCoverDelayMs(contactCount: Int): Long {
+        if (contactCount == 0) return NODE_MESH_COVER_MEAN_MS
+        val mean = NODE_MESH_COVER_MEAN_MS.toDouble() / contactCount
+        val u = kotlin.random.Random.nextDouble().coerceAtLeast(1e-9)
+        return (-mean * kotlin.math.ln(u)).toLong().coerceIn(NODE_MESH_COVER_MIN_MS, NODE_MESH_COVER_MAX_MS)
+    }
+
+    // ─── Sealed own servers ───────────────────────────────────────────────────────────────────
+    private val _lockedServers = MutableStateFlow<List<NodeMeshManager.LockedServer>>(emptyList())
+    /** Own servers that restarted and wait for the user to unlock them (Settings shows these). */
+    val lockedServers: StateFlow<List<NodeMeshManager.LockedServer>> = _lockedServers.asStateFlow()
+
+    private fun startLockedServerCheck() {
+        scope.launch {
+            while (isActive) {
+                torManager.isReady.filter { it }.first()
+                if (nodeMeshManager.getControlAddresses().isNotEmpty()) {
+                    _lockedServers.value = runCatching { nodeMeshManager.findLockedServers(nodeMeshClient) }.getOrDefault(emptyList())
+                }
+                delay(LOCKED_SERVER_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+
+    fun checkLockedServersNow() {
+        scope.launch {
+            if (!torManager.isReady.value) return@launch
+            _lockedServers.value = runCatching { nodeMeshManager.findLockedServers(nodeMeshClient) }.getOrDefault(emptyList())
+        }
+    }
+
+    /** Unlocks [server] — called only from the confirm dialog in Settings. */
+    fun unlockServer(server: NodeMeshManager.LockedServer, onDone: (Boolean) -> Unit) {
+        scope.launch {
+            val ok = torManager.isReady.value && runCatching { nodeMeshManager.unlockServer(nodeMeshClient, server) }.getOrDefault(false)
+            if (ok) _lockedServers.update { list -> list.filter { it.sourceAddress != server.sourceAddress } }
+            onDone(ok)
         }
     }
 
@@ -612,8 +698,6 @@ class P2PNetworkManager @Inject constructor(
             .filter { it.nodeMesh }
         if (contacts.isEmpty()) return
 
-        val waitMs = if (isChatActiveOrRecent()) RELAY_POLL_WAIT_MS_ACTIVE else RELAY_POLL_WAIT_MS_IDLE
-
         val tagsByAddress = LinkedHashMap<String, MutableSet<String>>()
         for (c in contacts) {
             val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: continue
@@ -639,22 +723,60 @@ class P2PNetworkManager @Inject constructor(
         if (tagsByAddress.isEmpty()) return
 
         // Every distinct address is fetched concurrently, same reasoning as pollRelayOnce's own
-        // concurrent target fetch — a long-poll blocks its own call for up to waitMs, and
+        // concurrent target fetch — a long-poll blocks its own call for up to the wait, and
         // sequential addresses would otherwise multiply that wait by the number of distinct
         // node servers in play this round instead of paying it once, in parallel.
         coroutineScope {
             tagsByAddress.map { (address, tags) ->
-                async {
-                    for (chunk in tags.chunked(MAX_FETCH_MANY_TAGS_PER_CALL)) {
-                        val result = runCatching {
-                            nodeMeshClient.fetchMany(address, chunk, waitMs)
-                        }.getOrDefault(emptyMap())
-                        for ((tag, blobs) in result) {
-                            for (blob in blobs) runCatching { ingestPacket(tag, blob) }
-                        }
-                    }
-                }
+                async { pollNodeMeshAddress(address, tags.toList()) }
             }.awaitAll()
+        }
+        // Forget cursors of addresses no contact uses any more.
+        nodeMeshCursors.keys.retainAll(tagsByAddress.keys)
+    }
+
+    // Per node address: the server cursor up to which every blob of [NodeMeshCursor.tags] has
+    // been downloaded. Memory only — after an app restart the first poll fetches everything
+    // once (ingestPacket's dedup drops what was already seen).
+    private data class NodeMeshCursor(val cursor: Long, val tags: Set<String>)
+    private val nodeMeshCursors = ConcurrentHashMap<String, NodeMeshCursor>()
+
+    /**
+     * Tags already covered by the cursor are fetched incrementally (long-poll, only new blobs).
+     * Tags that just entered the window (a new hour) are fetched once from 0 — a sender whose
+     * clock runs ahead may have deposited under them before our cursor moved past. A node
+     * without cursor support (old server, Android node) answers without one; then every poll
+     * stays a full fetch, exactly as before.
+     */
+    private suspend fun pollNodeMeshAddress(address: String, tags: List<String>) {
+        val state = nodeMeshCursors[address]
+        val known = state?.tags ?: emptySet()
+        val fresh = tags.filter { it !in known }
+        val covered = tags.filter { it in known }
+        val cursors = ArrayList<Long?>()
+        var failed = false
+
+        suspend fun run(group: List<String>, since: Long, wait: Long) {
+            val chunks = group.chunked(MAX_FETCH_MANY_TAGS_PER_CALL)
+            for (chunk in chunks) {
+                // Only a single-chunk call long-polls — several sequential waits would stack up.
+                val result = nodeMeshClient.fetchManySince(address, chunk, if (chunks.size == 1) wait else 0L, since)
+                if (result == null) { failed = true; return }
+                cursors.add(result.cursor)
+                for ((tag, blobs) in result.blobs) {
+                    for (blob in blobs) runCatching { ingestPacket(tag, blob) }
+                }
+            }
+        }
+
+        if (fresh.isNotEmpty()) run(fresh, 0L, if (covered.isEmpty()) NODE_MESH_POLL_WAIT_MS else 0L)
+        if (covered.isNotEmpty() && !failed) run(covered, state!!.cursor, NODE_MESH_POLL_WAIT_MS)
+
+        if (failed) return
+        if (cursors.isEmpty() || cursors.any { it == null }) {
+            nodeMeshCursors.remove(address)
+        } else {
+            nodeMeshCursors[address] = NodeMeshCursor(cursors.filterNotNull().min(), tags.toSet())
         }
     }
 
@@ -676,7 +798,8 @@ class P2PNetworkManager @Inject constructor(
             // background relay poll — check right now, so anything already queued (relay
             // MANDATORY contacts especially) shows up as fast as the Tor RTT allows.
             pollRelayNow()
-            pollNodeMeshNow()
+            // No extra Node-Mesh poll here on purpose: one right when a chat opens would tell
+            // the node exactly that. The constant long-poll rhythm delivers just as fast.
         } else {
             recentContactId?.let {
                 recentContactWarmUntil = System.currentTimeMillis() + ACTIVE_CHAT_GRACE_MS
@@ -1005,30 +1128,33 @@ class P2PNetworkManager @Inject constructor(
         }
     }
 
-    private fun acquireMulticastLock() {
-        val wifi = context.getSystemService(WifiManager::class.java)
-        multicastLock = wifi?.createMulticastLock("unpruuf_nsd")?.apply { acquire() }
-    }
-
     private fun startServer() {
         scope.launch {
             try {
-                val ss = ServerSocket(LOCAL_PORT).also { serverSocket = it }
-                while (isActive) {
-                    val client = runCatching { ss.accept() }.getOrNull() ?: break
-                    if (!acceptSemaphore.tryAcquire()) {
-                        client.runCatching { close() }
-                        continue
-                    }
-                    launch {
-                        try {
-                            receiveMessage(client)
-                        } finally {
-                            acceptSemaphore.release()
-                        }
-                    }
-                }
+                // Loopback only: this socket is what the own onion service maps to, and nothing
+                // else needs it. Bound to all interfaces it was a fixed, edition-specific open
+                // port (5432x) that any port scan in the same Wi-Fi could see. Same-Wi-Fi direct
+                // contacts get their own random-port socket from the LAN loop instead.
+                val ss = ServerSocket(LOCAL_PORT, 50, java.net.InetAddress.getByName("127.0.0.1")).also { serverSocket = it }
+                acceptLoop(ss)
             } catch (_: Exception) {}
+        }
+    }
+
+    private suspend fun acceptLoop(ss: ServerSocket) = coroutineScope {
+        while (isActive) {
+            val client = runCatching { ss.accept() }.getOrNull() ?: break
+            if (!acceptSemaphore.tryAcquire()) {
+                client.runCatching { close() }
+                continue
+            }
+            launch {
+                try {
+                    receiveMessage(client)
+                } finally {
+                    acceptSemaphore.release()
+                }
+            }
         }
     }
 
@@ -2580,12 +2706,73 @@ class P2PNetworkManager @Inject constructor(
      *  UI-only (transport line in the contact list) — delivery decides per attempt. */
     fun isLanPeer(contactId: String) = lanPeers.containsKey(contactId.take(8))
 
-    private fun registerService() {
-        nsdManager = context.getSystemService(NsdManager::class.java) ?: return
+    // ---- Same-Wi-Fi fast path (direct contacts only) — see LanDiscovery for the why. ----
+
+    private var lanServerSocket: ServerSocket? = null
+    private var lanServerJob: Job? = null
+    private var lanRegisteredName: String? = null
+    private var lanActive = false
+    // Announced name → contact short id (remoteUserId.take(8), the key lanPeers already uses).
+    @Volatile private var lanNameToPeer: Map<String, String> = emptyMap()
+
+    /** LAN discovery exists for direct (onion) contacts. Business/Node-Mesh and cross-platform
+     *  contacts never use it, and the whistleblower edition must never announce anything. */
+    private suspend fun lanDiscoveryNeeded(): Boolean {
+        if (AppEdition.isWhistleblower) return false
+        val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrNull() ?: return false
+        return contacts.any { !it.nodeMesh && !it.crossPlatform && it.remoteUserId.isNotBlank() }
+    }
+
+    private fun startLanDiscoveryLoop() {
+        scope.launch {
+            while (isActive) {
+                runCatching { updateLanDiscovery() }
+                delay(LAN_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun updateLanDiscovery() {
+        if (!lanDiscoveryNeeded()) {
+            if (lanActive) stopLan()
+            return
+        }
+        val epoch = LanDiscovery.epoch()
+        lanNameToPeer = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+            .filter { !it.nodeMesh && !it.crossPlatform && it.remoteUserId.isNotBlank() }
+            .flatMap { c -> LanDiscovery.candidateNames(c.remoteUserId, epoch).map { it to c.remoteUserId.take(8) } }
+            .toMap()
+        if (!lanActive) {
+            lanActive = true
+            acquireMulticastLock()
+            openLanServer()
+            discoverPeers()
+        }
+        val name = LanDiscovery.serviceName(identityManager.userId, epoch)
+        if (name != lanRegisteredName) registerService(name)
+    }
+
+    // Random port on all interfaces, only while LAN discovery runs — a fixed port number would
+    // be its own fingerprint.
+    private fun openLanServer() {
+        val ss = runCatching { ServerSocket(0) }.getOrNull() ?: return
+        lanServerSocket = ss
+        lanServerJob = scope.launch { runCatching { acceptLoop(ss) } }
+    }
+
+    private fun acquireMulticastLock() {
+        val wifi = context.getSystemService(WifiManager::class.java)
+        multicastLock = wifi?.createMulticastLock("lan")?.apply { setReferenceCounted(false); acquire() }
+    }
+
+    private fun registerService(name: String) {
+        val port = lanServerSocket?.localPort ?: return
+        nsdManager = nsdManager ?: context.getSystemService(NsdManager::class.java) ?: return
+        regListener?.let { runCatching { nsdManager?.unregisterService(it) } }
         val info = NsdServiceInfo().apply {
-            serviceName = "unpruuf_${identityManager.userId.take(8)}"
-            serviceType = SERVICE_TYPE
-            port = LOCAL_PORT
+            serviceName = name
+            serviceType = LanDiscovery.SERVICE_TYPE
+            this.port = port
         }
         regListener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(i: NsdServiceInfo) {}
@@ -2594,42 +2781,57 @@ class P2PNetworkManager @Inject constructor(
             override fun onUnregistrationFailed(i: NsdServiceInfo, code: Int) {}
         }
         nsdManager?.registerService(info, NsdManager.PROTOCOL_DNS_SD, regListener)
+        lanRegisteredName = name
     }
 
     private fun discoverPeers() {
+        nsdManager = nsdManager ?: context.getSystemService(NsdManager::class.java) ?: return
         discListener = object : NsdManager.DiscoveryListener {
             override fun onStartDiscoveryFailed(st: String, code: Int) {}
             override fun onStopDiscoveryFailed(st: String, code: Int) {}
             override fun onDiscoveryStarted(st: String) {}
             override fun onDiscoveryStopped(st: String) {}
             override fun onServiceFound(service: NsdServiceInfo) {
-                if (service.serviceName.startsWith("unpruuf_")) {
-                    nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(i: NsdServiceInfo, code: Int) {}
-                        override fun onServiceResolved(i: NsdServiceInfo) {
-                            val shortId = i.serviceName.removePrefix("unpruuf_")
-                            if (shortId == identityManager.userId.take(8)) return
-                            val host = i.host?.hostAddress ?: return
-                            lanPeers[shortId] = Pair(host, i.port)
-                            flushQueue()
-                        }
-                    })
-                }
+                // Only names a known direct contact can be announcing are resolved at all — every
+                // other HTTP service on the network (printers, TVs) is ignored untouched.
+                val shortId = lanNameToPeer[service.serviceName] ?: return
+                nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(i: NsdServiceInfo, code: Int) {}
+                    override fun onServiceResolved(i: NsdServiceInfo) {
+                        val host = i.host?.hostAddress ?: return
+                        lanPeers[shortId] = Pair(host, i.port)
+                        flushQueue()
+                    }
+                })
             }
             override fun onServiceLost(service: NsdServiceInfo) {
-                lanPeers.remove(service.serviceName.removePrefix("unpruuf_"))
+                lanNameToPeer[service.serviceName]?.let { lanPeers.remove(it) }
             }
         }
-        nsdManager?.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discListener)
+        nsdManager?.discoverServices(LanDiscovery.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discListener)
+    }
+
+    private fun stopLan() {
+        lanActive = false
+        regListener?.let { runCatching { nsdManager?.unregisterService(it) } }
+        discListener?.let { runCatching { nsdManager?.stopServiceDiscovery(it) } }
+        regListener = null
+        discListener = null
+        lanRegisteredName = null
+        lanServerSocket?.runCatching { close() }
+        lanServerSocket = null
+        lanServerJob?.cancel()
+        lanServerJob = null
+        lanPeers.clear()
+        multicastLock?.runCatching { release() }
+        multicastLock = null
     }
 
     fun stop() {
         started = false
-        runCatching { nsdManager?.unregisterService(regListener) }
-        runCatching { nsdManager?.stopServiceDiscovery(discListener) }
+        stopLan()
         closeAllPooledConnections()
         serverSocket?.runCatching { close() }
-        multicastLock?.runCatching { release() }
         scope.cancel()
     }
 }

@@ -268,4 +268,11 @@ Punțile obișnuite (IP:Port Amprentă) funcționează imediat. obfs4/Snowflake 
     <string name="settings_nodes_count">%1$d noduri proprii</string>
     <string name="settings_show_all_nodes">Arată toate cele %1$d</string>
     <string name="settings_show_fewer_nodes">Arată mai puține</string>
+    <string name="settings_server_locked_title">Server blocat după repornire</string>
+    <string name="settings_server_locked_body">%1$d dintre nodurile tale sunt offline până deblochezi acest server. Deblochează doar dacă TU (sau furnizorul tău) l-ai repornit.</string>
+    <string name="settings_unlock">Deblochează</string>
+    <string name="settings_unlock_confirm_title">Deblochezi serverul?</string>
+    <string name="settings_unlock_confirm_body">Cheia ta de proprietar este trimisă serverului, ca nodurile să revină online la aceleași adrese.\n\nFă asta doar dacă știi de ce a repornit. Dacă serverul ar fi putut fi confiscat sau copiat, NU debloca — configurează un server nou.</string>
+    <string name="settings_unlock_done">Server deblocat. Nodurile revin online.</string>
+    <string name="settings_unlock_failed">Deblocare eșuată — serverul nu răspunde sau cheia a fost refuzată.</string>
 </resources>

@@ -77,10 +77,49 @@ class NodeMeshManager @Inject constructor(
     suspend fun importSiblings(client: NodeMeshClient): Int {
         val before = getMyNodePool().size
         for (source in getPoolSources()) {
-            val addresses = client.listPool(source.address, source.ownerSecret) ?: continue
-            addMyNodes(addresses, source.ownerSecret)
+            val info = client.listPoolWithControl(source.address, source.ownerSecret) ?: continue
+            addMyNodes(info.addresses, source.ownerSecret)
+            info.controlAddress?.let { setControlAddress(source.address, it) }
         }
         return getMyNodePool().size - before
+    }
+
+    // ─── Sealed servers (node-mesh-server NODE_MESH_KEY_STORAGE=sealed) ──────────────────────
+    // Such a server keeps its node keys only encrypted under the owner secret: after a restart
+    // its nodes stay offline until this app unlocks it over the server's control address. The
+    // control address comes with GET /pool and is stored per pool source (= per server).
+
+    /** A restarted server waiting for its owner. [sourceAddress] identifies it in the pool. */
+    data class LockedServer(val sourceAddress: String, val controlAddress: String, val nodeCount: Int)
+
+    fun getControlAddresses(): Map<String, String> =
+        (prefs.getString("control_addresses", "") ?: "").split(";")
+            .mapNotNull { e -> e.split("=").takeIf { it.size == 2 && it[0].isNotBlank() && it[1].isNotBlank() }?.let { it[0] to it[1] } }
+            .toMap()
+
+    private fun setControlAddress(sourceAddress: String, controlAddress: String) {
+        val updated = getControlAddresses() + (sourceAddress to controlAddress)
+        prefs.edit().putString("control_addresses", updated.entries.joinToString(";") { "${it.key}=${it.value}" }).apply()
+    }
+
+    /** Asks every known control address whether its server is locked. Sends nothing secret. */
+    fun findLockedServers(client: NodeMeshClient): List<LockedServer> {
+        val sources = getPoolSources().associateBy { it.address }
+        val pool = getMyNodePool()
+        return getControlAddresses().mapNotNull { (sourceAddress, control) ->
+            val source = sources[sourceAddress] ?: return@mapNotNull null
+            if (client.lockStatus(control) != true) return@mapNotNull null
+            LockedServer(sourceAddress, control, pool.count { it.ownerSecret == source.ownerSecret })
+        }
+    }
+
+    /** Sends the owner secret of [server] to its control address. Only call after the user
+     *  confirmed it. True if the server accepted it and its nodes are coming back online. */
+    fun unlockServer(client: NodeMeshClient, server: LockedServer): Boolean {
+        val source = getPoolSources().find { it.address == server.sourceAddress } ?: return false
+        val addresses = client.unlock(server.controlAddress, source.ownerSecret) ?: return false
+        if (addresses.isNotEmpty()) addMyNodes(addresses, source.ownerSecret)
+        return true
     }
 
     /**

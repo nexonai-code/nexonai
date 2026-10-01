@@ -7,10 +7,12 @@ import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
 import {
-  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, NODE_COUNT, NODE_PROFILE, NODE_SLOT, PORT, POW,
+  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, NODE_COUNT, NODE_PROFILE, NODE_SLOT, PORT, POW,
   RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
 } from "./config";
-import { createEphemeralIdentity, loadOrCreateIdentity, NodeIdentity, regenerateSecret, saveIdentity } from "./nodeIdentity";
+import {
+  createEphemeralIdentity, isLocked, loadOrCreateIdentity, NodeIdentity, regenerateSecret, saveIdentity, unlockIdentity,
+} from "./nodeIdentity";
 import { NodeOnionService } from "./tor/onionService";
 
 // Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
@@ -26,11 +28,12 @@ if (ephemeral) {
   torWorkDir = fs.mkdtempSync(path.join(os.tmpdir(), "unpruuf-tempnode-"));
 } else {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const loaded = loadOrCreateIdentity(IDENTITY_PATH, NODE_PROFILE.ttlHours);
+  const loaded = loadOrCreateIdentity(IDENTITY_PATH, NODE_PROFILE.ttlHours, KEY_STORAGE);
   identity = loaded.identity;
   wasCreated = loaded.wasCreated;
   torWorkDir = DATA_DIR;
 }
+const sealed = !ephemeral && identity.keyStorage === "sealed";
 
 // A Temp Node is one address for one chat by definition.
 const nodeCount = ephemeral ? 1 : NODE_COUNT;
@@ -51,19 +54,49 @@ if (TOR_ENABLED) {
       identity.onionKeys = keys;
       saveIdentity(IDENTITY_PATH, identity);
     },
+    controlKey: sealed ? identity.controlKey ?? null : undefined,
+    onNewControlKey: (key) => {
+      identity.controlKey = key;
+      saveIdentity(IDENTITY_PATH, identity);
+    },
+    locked: sealed && isLocked(identity),
     pow: POW,
   });
 }
+
+// Sealed servers: the owner app (or the setup page) proves the owner secret, the node keys are
+// unsealed into memory and the node onions go online again under their old addresses.
+async function unlock(secret: string): Promise<string[] | null> {
+  if (!unlockIdentity(identity, secret)) return null;
+  if (KEY_STORAGE === "disk") identity.keyStorage = "disk";
+  saveIdentity(IDENTITY_PATH, identity);
+  if (!onion) return publicAddresses();
+  const keys = identity.onionKeys ?? [];
+  const addresses = await onion.unlock(Array.from({ length: nodeCount }, (_, i) => keys[i] ?? null));
+  console.log(`[keys] unlocked by the owner — ${addresses.length} node onion(s) published again`);
+  return addresses;
+}
+const lockControl = sealed
+  ? {
+      isLocked: () => isLocked(identity),
+      unlock,
+      controlAddress: () => onion?.getStatus().controlAddress ?? null,
+    }
+  : undefined;
 
 const operatorAddress = process.env.NODE_MESH_PUBLIC_ADDRESS?.trim() || null;
 const publicAddress = (): string | null => (onion ? onion.getStatus().onionAddress : operatorAddress);
 const publicAddresses = (): string[] =>
   onion ? onion.getStatus().onionAddresses : operatorAddress ? [operatorAddress] : [];
-const app = createApp(store, () => identity.ownerSecret, publicAddresses);
+const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl);
 
 const adminApp = createAdminApp(
   {
     getOwnerSecret: () => identity.ownerSecret,
+    isLocked: () => isLocked(identity),
+    unlock: sealed ? unlock : undefined,
+    sealed,
+    controlAddress: () => onion?.getStatus().controlAddress ?? null,
     rotateOwnerSecret: ephemeral
       ? undefined
       : () => {
@@ -88,6 +121,12 @@ const kind = ephemeral
 console.log(`unpruuf ${kind} — profile "${NODE_PROFILE.name}" (TTL ${NODE_PROFILE.ttlHours}h)`);
 if (ephemeral) console.log("[identity] Temp Node — identity, onion key and messages exist in memory only");
 else console.log(wasCreated ? "[identity] new node identity created" : "[identity] existing node identity loaded");
+if (sealed && isLocked(identity)) {
+  console.log("[keys] LOCKED — node keys are sealed and only exist on disk encrypted. Nodes stay offline until");
+  console.log("[keys] you unlock: unpruuf app → Settings → Your own nodes → Unlock (or the setup page).");
+} else if (sealed) {
+  console.log("[keys] sealed storage — after a restart this server stays locked until your app unlocks it");
+}
 
 const apiServer: Server = app.listen(PORT, "127.0.0.1", () => {
   console.log(`[api] listening on 127.0.0.1:${PORT} — reachable from outside only through the onion service`);
@@ -111,7 +150,12 @@ if (onion) {
   onion
     .start()
     .then(async (address) => {
-      const all = onion!.getStatus().onionAddresses;
+      const st = onion!.getStatus();
+      const all = st.onionAddresses;
+      if (st.locked) {
+        console.log(`[tor] locked — only the control onion is online: ${st.controlAddress}`);
+        return;
+      }
       if (all.length > 1) console.log(`[tor] ${all.length} onion addresses registered, first: ${address} (Tor proof-of-work defense on)`);
       else console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
       if (ephemeral || wasCreated) await printOwnerCode(address);

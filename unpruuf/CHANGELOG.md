@@ -5,6 +5,67 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑01 (6) · Hardening against outside observers: LAN, poll rhythm, cover traffic, sealed node keys
+
+**What was done**
+
+1. **The app no longer announces itself on Wi-Fi.** Before, every edition (including Whistleblower
+   and Business) announced `_unpruuf._tcp` as `unpruuf_<8 chars of the userId>` in every network,
+   and listened on a fixed port (5432x) on all interfaces. Anyone on the same Wi-Fi could see "unpruuf
+   runs here" and recognise the same phone again elsewhere. Now:
+   - LAN discovery runs only while a direct (onion) contact exists, never in Whistleblower, never for
+     Business/Node-Mesh-only users.
+   - Where it runs: generic service type `_http._tcp`, name = 16 hex chars of HMAC(userId, hour),
+     changing every hour and computable only by direct contacts. Random port.
+   - The onion's local socket now listens on 127.0.0.1 only.
+2. **Constant poll rhythm (Node-Mesh).** Previously every 6 s with an open chat, 90 s otherwise, plus an
+   extra poll at the moment a chat was opened. Anyone watching a node could read off when a chat was
+   open. Now there is a single rhythm (20 s ± 5 s, long-poll 20 s) and no extra poll on chat open.
+3. **Cover traffic in Node-Mesh.** On average one dummy deposit every 15 minutes per contact, at random
+   times (exponentially distributed). Each has the same tag, the same size and goes to the same nodes
+   as a real message, so a deposit no longer proves that a message was sent.
+4. **Sealed node keys on the server (`NODE_MESH_KEY_STORAGE=sealed`, now the default).**
+   - The owner secret and the onion keys are only stored encrypted (AES-256-GCM under a key derived
+     from the owner secret).
+   - After a restart the server is locked: only a control onion is online.
+   - The app shows "Server locked after restart → Unlock" (with a warning dialog). Only then does it
+     send the owner secret, and the nodes come back under the same addresses.
+   - Alternatively, paste the owner code on the setup page.
+   - A seized, powered-off server can no longer be run on under the same addresses.
+   - `NODE_MESH_KEY_STORAGE=disk` keeps the old behaviour.
+   - Old plain files are converted in place on first start; their addresses stay the same.
+5. **Fetch cursor (`POST /fetchMany` with `since`).** The app downloads each blob only once instead of
+   the whole TTL window on every poll. This makes cover traffic affordable and lets the long-poll
+   really wait.
+
+**Which bug appeared**
+
+The LAN broadcast was already listed as a "known gap" in `SECURITY_CLAIMS.md`. It was worse than noted
+there because it ran in every edition, not only for direct contacts. It is now closed.
+
+While building the fetch cursor, the existing `fetchMany` tests expected the exact old response. The
+cursor is therefore returned only when the client sends `since`, so old clients see no change.
+
+**Open**
+
+- Not tested on a real device or the live Tor network. The sealed restart and unlock were run with
+  real local Tor: the same 3 node addresses came back after the unlock.
+- The Android node (`relay-android`) does not support the cursor yet. The app falls back to a full
+  fetch there.
+- Unlock trust: whoever has seized a server could pose as its control address and wait for the
+  unlock. The app therefore only unlocks after confirmation, with a warning to set up a new server if
+  in doubt.
+- A live RAM dump of a running VPS (by the hoster) still yields the keys. That is unavoidable.
+
+**Verification**
+
+- Server: 51/51 tests (sealed storage, wrong secret, migration of old files, rotation, locked routes,
+  cursor, long-poll with cursor), plus a real local Tor run as described above.
+- App: 65/65 tests in each of the 4 editions (new: `LanDiscoveryTest`, `NodeMeshClientParseTest`).
+  All 4 APKs build.
+
+---
+
 ## 2026‑10‑01 (5) · German versions of both presentations
 
 **What was done**

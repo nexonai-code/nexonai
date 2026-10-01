@@ -295,3 +295,91 @@ test("GET /pool lists every node address, but only for the owner", async () => {
     store.close();
   }
 });
+
+test("POST /fetchMany with since returns only newer blobs and a cursor, cursor first in the JSON", async () => {
+  const { server, store, base } = startServer();
+  try {
+    const put = (c: string) =>
+      fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "tagA", ciphertext: c }) });
+    await put("Zmlyc3Q=");
+    const first = await fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: ["tagA"], since: 0 }),
+    });
+    const firstText = await first.text();
+    assert.match(firstText, /^\{"cursor":\d+,"blobs":/);
+    const firstBody = JSON.parse(firstText);
+    assert.deepEqual(firstBody.blobs.tagA, ["Zmlyc3Q="]);
+
+    await put("c2Vjb25k");
+    const second: any = await (await fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: ["tagA"], since: firstBody.cursor }),
+    })).json();
+    assert.deepEqual(second.blobs.tagA, ["c2Vjb25k"]);
+    assert.ok(second.cursor > firstBody.cursor);
+
+    // Without since: everything, as before.
+    const all: any = await (await fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: ["tagA"] }),
+    })).json();
+    assert.deepEqual(all.blobs.tagA, ["Zmlyc3Q=", "c2Vjb25k"]);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("POST /fetchMany long-poll with since waits even though older blobs exist", async () => {
+  const { server, store, base } = startServer();
+  try {
+    await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "tagW", ciphertext: "b2xk" }) });
+    const cursor = store.currentCursor();
+    const started = Date.now();
+    const poll = fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: ["tagW"], since: cursor, waitMs: 2000 }),
+    });
+    setTimeout(() => {
+      void fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "tagW", ciphertext: "bmV3" }) });
+    }, 300);
+    const body: any = await (await poll).json();
+    assert.deepEqual(body.blobs.tagW, ["bmV3"]);
+    assert.ok(Date.now() - started >= 250);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("a locked server refuses owner routes, reports its lock, and unlocks only with the right secret", async () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-app-test-")), "node-mesh.sqlite");
+  const store = new NodeStore(file);
+  let secret = "";
+  const lock = {
+    isLocked: () => secret === "",
+    unlock: async (s: string) => {
+      if (s !== OWNER_SECRET) return null;
+      secret = s;
+      return ["aaaa.onion"];
+    },
+    controlAddress: () => "ctrl.onion",
+  };
+  const server = createApp(store, () => secret, () => (secret ? ["aaaa.onion"] : []), lock).listen(0);
+  const { port } = server.address() as AddressInfo;
+  const base = `http://127.0.0.1:${port}`;
+  const body = JSON.stringify({ routing_tag: "abcDEF123", ciphertext: "aGVsbG8=" });
+  try {
+    assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body })).status, 423);
+    assert.deepEqual(await (await fetch(`${base}/lock-status`)).json(), { locked: true });
+    assert.equal((await fetch(`${base}/unlock`, { method: "POST", headers: ownerHeaders("wrong") })).status, 401);
+    assert.equal((await fetch(`${base}/unlock`, { method: "POST" })).status, 401);
+    const ok = await fetch(`${base}/unlock`, { method: "POST", headers: ownerHeaders() });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(await ok.json(), { unlocked: true, addresses: ["aaaa.onion"] });
+    assert.deepEqual(await (await fetch(`${base}/lock-status`)).json(), { locked: false });
+    assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body })).status, 201);
+    const pool = await (await fetch(`${base}/pool`, { headers: ownerHeaders() })).json();
+    assert.deepEqual(pool, { control: "ctrl.onion", addresses: ["aaaa.onion"] });
+  } finally {
+    server.close();
+    store.close();
+  }
+});

@@ -18,7 +18,11 @@ export function requireOwner(ownerSecret: OwnerSecretSource) {
   return (req: Request, res: Response, next: NextFunction) => {
     const header = req.header("authorization") ?? "";
     // Read per request, so a rotated secret takes effect immediately without a restart.
-    const expected = `Bearer ${resolveOwnerSecret(ownerSecret)}`;
+    const secret = resolveOwnerSecret(ownerSecret);
+    // Empty = a sealed server that hasn't been unlocked since its restart (nodeIdentity.ts):
+    // there is no secret in memory to compare against, so nothing owner-only can run yet.
+    if (!secret) return res.status(423).json({ error: "locked" });
+    const expected = `Bearer ${secret}`;
     if (!timingSafeEqual(header, expected)) {
       return res.status(401).json({ error: "unauthorized" });
     }

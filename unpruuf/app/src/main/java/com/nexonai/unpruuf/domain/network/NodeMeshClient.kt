@@ -51,6 +51,73 @@ class NodeMeshClient @Inject constructor(
                 .filter { ONION_ADDRESS.matches(it) }
                 .distinct()
         }
+
+        /** `"cursor":123` at the top of a /fetchMany reply; null when the node has no cursors. */
+        fun parseCursor(body: String): Long? =
+            Regex(""""cursor"\s*:\s*(\d+)""").find(body)?.groupValues?.get(1)?.toLongOrNull()
+
+        /** `"control":"x.onion"` in a GET /pool reply (sealed servers only). */
+        fun parseControlAddress(body: String): String? =
+            Regex(""""control"\s*:\s*"([a-z2-7]{56}\.onion)"""").find(body)?.groupValues?.get(1)
+
+        fun parseLocked(body: String): Boolean =
+            Regex(""""locked"\s*:\s*true""").containsMatchIn(body)
+    }
+
+    /** One incremental [fetchManySince] round: the blobs plus the server's cursor (null = an
+     *  older node without cursor support — the caller then simply fetches everything again). */
+    data class FetchResult(val blobs: Map<String, List<ByteArray>>, val cursor: Long?)
+
+    /**
+     * [fetchMany] with a cursor: only blobs the node stored after [since] (0 = everything). Each
+     * blob is downloaded once instead of on every poll — which keeps cover traffic cheap and lets
+     * the long-poll actually wait. Null if the node couldn't be reached.
+     */
+    fun fetchManySince(nodeAddress: String, tags: List<String>, waitMs: Long, since: Long): FetchResult? {
+        if (tags.isEmpty()) return FetchResult(emptyMap(), since)
+        val tagsJson = tags.joinToString(",") { "\"$it\"" }
+        val body = """{"tags":[$tagsJson],"waitMs":$waitMs,"since":$since}"""
+        val socketTimeoutMs = (waitMs + FETCH_MANY_TIMEOUT_MARGIN_MS).coerceAtLeast(SOCKET_TIMEOUT_MS.toLong()).toInt()
+        val response = runCatching {
+            request(nodeAddress, "POST", "/fetchMany", body, socketTimeoutMs = socketTimeoutMs)
+        }.getOrNull() ?: return null
+        if (response.status !in 200..299) return null
+        val blobs = parseBlobsMapBody(response.body).mapValues { (_, blobsB64) ->
+            blobsB64.mapNotNull { runCatching { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) }.getOrNull() }
+        }
+        return FetchResult(blobs, parseCursor(response.body))
+    }
+
+    data class PoolInfo(val addresses: List<String>, val controlAddress: String?)
+
+    /** GET /pool plus the server's control address (sealed servers only — where the app reaches
+     *  that server after a restart to unlock it). Null if unreachable or not authorized. */
+    fun listPoolWithControl(nodeAddress: String, ownerSecret: String): PoolInfo? {
+        val response = runCatching {
+            request(nodeAddress, "GET", "/pool", null, ownerSecret = ownerSecret)
+        }.getOrNull() ?: return null
+        if (response.status !in 200..299) return null
+        return PoolInfo(parsePoolAddresses(response.body), parseControlAddress(response.body))
+    }
+
+    /** Sealed server: true = restarted and waiting for its owner, false = running, null = not
+     *  reachable. Sends nothing secret, so it is safe to ask automatically. */
+    fun lockStatus(controlAddress: String): Boolean? {
+        val response = runCatching {
+            request(controlAddress, "GET", "/lock-status", null, socketTimeoutMs = HEALTH_CHECK_TIMEOUT_MS)
+        }.getOrNull() ?: return null
+        if (response.status !in 200..299) return null
+        return parseLocked(response.body)
+    }
+
+    /** Sends the owner secret to a locked server's control address — only ever after the user
+     *  confirmed it in Settings. The node addresses on success, null otherwise. */
+    fun unlock(controlAddress: String, ownerSecret: String): List<String>? {
+        val response = runCatching {
+            request(controlAddress, "POST", "/unlock", null, ownerSecret = ownerSecret)
+        }.getOrNull() ?: return null
+        if (response.status !in 200..299) return null
+        return parsePoolAddresses(response.body)
     }
 
     /**
@@ -112,13 +179,8 @@ class NodeMeshClient @Inject constructor(
 
     /** Every node address the server behind [nodeAddress] runs (owner-only `GET /pool`). Null if
      *  the server can't be reached or predates multi-node servers. */
-    fun listPool(nodeAddress: String, ownerSecret: String): List<String>? {
-        val response = runCatching {
-            request(nodeAddress, "GET", "/pool", null, ownerSecret = ownerSecret)
-        }.getOrNull() ?: return null
-        if (response.status !in 200..299) return null
-        return parsePoolAddresses(response.body)
-    }
+    fun listPool(nodeAddress: String, ownerSecret: String): List<String>? =
+        listPoolWithControl(nodeAddress, ownerSecret)?.addresses
 
     /**
      * Temp Node liveness probe (NODE_MESH_SPEC.md §7 step 7's heartbeat) — hits the node's

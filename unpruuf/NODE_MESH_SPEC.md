@@ -696,3 +696,38 @@ entschieden wurde:
 ---
 
 *unpruuf Business · NexonAI Consulting SRL · Alba Iulia, Romania*
+
+---
+
+## 13. [v6, gebaut 2026‑10‑01] Härtung gegen Beobachtung von außen
+
+Ziel: Wer nur von außen zuschaut (WLAN, Netzbetreiber, ein beschlagnahmter oder mitgeschnittener
+Node), soll weder erkennen, **dass** unpruuf läuft, noch **wann** wirklich geschrieben oder ein Chat
+geöffnet wird.
+
+1. **Keine WLAN-Ankündigung.** LAN-Erkennung nur, solange ein Direkt-(Onion-)Kontakt existiert; nie in
+   Whistleblower, nie bei reinen Business-Nutzern. Dienst-Typ `_http._tcp`, Name = 16 Hex-Zeichen
+   HMAC(userId, Stunde) — stündlich neu, nur für Direktkontakte berechenbar, zufälliger Port. Der
+   Onion-Socket hört nur auf 127.0.0.1 (`LanDiscovery.kt`).
+2. **Ein Abholtakt.** Node-Mesh fragt immer im selben Rhythmus ab (20 s ± 5 s, Long-Poll 20 s), egal ob
+   ein Chat offen ist. Kein Extra-Abruf beim Öffnen eines Chats.
+3. **Tarn-Ablagen.** Pro Node-Mesh-Kontakt im Mittel eine Dummy-Ablage alle 15 min, exponentiell
+   verteilt: gleicher Tag, gleiche Größe, gleiche Nodes wie eine echte Nachricht. Der Empfänger
+   entschlüsselt und verwirft sie (`DUMMY_SIGNAL`). Eine Ablage beweist damit keine Nachricht mehr.
+4. **Abhol-Cursor.** `POST /fetchMany` nimmt optional `since` (Server-Zeilen-ID) und antwortet mit
+   `{"cursor":N,"blobs":{…}}`. Jeder Blob wird nur einmal geladen; Tags, die neu ins Fenster kommen,
+   einmal ab 0. Ohne `since` bleibt die Antwort exakt wie vorher. (Android-Node: noch ohne Cursor,
+   App fällt dort auf Voll-Abruf zurück.)
+5. **Versiegelte Node-Schlüssel (`NODE_MESH_KEY_STORAGE=sealed`, Standard).** Owner-Secret und
+   Onion-Schlüssel liegen nur verschlüsselt auf der Platte (AES-256-GCM, Schlüssel per HKDF aus dem
+   Owner-Secret, das selbst nirgends gespeichert ist). Nach einem Neustart ist der Server **gesperrt**:
+   nur eine Control-Onion (Schlüssel im Klartext, trägt keine Nachrichten) ist online, `/deposit` und
+   `/pool` antworten `423`. Die App erfährt die Control-Adresse über `GET /pool` (`"control"`), fragt
+   `GET /lock-status` (ohne Geheimnis) und sendet `POST /unlock` (Bearer Owner-Secret) **erst nach
+   Bestätigung durch den Nutzer**. Danach gehen die Nodes unter denselben Adressen wieder online.
+   Ersatzweg: Owner-Code auf der Einrichtungsseite einfügen. Ein ausgeschalteter, beschlagnahmter
+   Server lässt sich damit nicht unter denselben Adressen weiterbetreiben.
+   **Grenzen:** Wer den Server hat, kann die Control-Adresse imitieren und auf das Entsperren
+   warten — darum Bestätigung mit Warnung („im Zweifel neuen Server aufsetzen“). Ein RAM-Abbild eines
+   laufenden VPS (durch den Hoster) enthält die Schlüssel weiterhin. `NODE_MESH_KEY_STORAGE=disk`
+   behält das alte Verhalten (unbeaufsichtigte Neustarts).

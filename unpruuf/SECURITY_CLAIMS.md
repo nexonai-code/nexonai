@@ -123,13 +123,13 @@ overwrite their stored keys via Room's insert-replace behavior — it's
 rejected with a warning instead (see `handleScannedQr` in
 `QrPairViewModel.kt`).
 
-**Known gap, not yet closed:** LAN (same-Wi-Fi) peer discovery still
-broadcasts the global, pre-renewal `userId` as its mDNS/NSD service name
-(`unpruuf_<first 8 chars>`), visible to anyone on the same Wi-Fi network —
-this is a coarser, LAN-local version of the same correlation class the fix
-above addresses for the wire-tag. Not addressed in this pass; would need
-per-contact LAN service registration, a larger change against Android's NSD
-framework limits. See `STATUS.md` §3.
+**Closed 2026‑10‑01:** LAN (same-Wi-Fi) discovery used to announce
+`_unpruuf._tcp` / `unpruuf_<first 8 chars of the userId>` in every edition.
+Now it runs only while a direct (onion) contact exists (never in the
+whistleblower edition, never for Business/Node-Mesh-only users), announces
+the generic `_http._tcp` type under an hourly-rotating HMAC(userId, hour)
+name only direct contacts can compute, on a random port. The onion socket
+listens on 127.0.0.1 only. See `LanDiscovery.kt`.
 
 ---
 

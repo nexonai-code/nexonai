@@ -21,6 +21,10 @@ A separate product from `../server/` (the consumer app's optional relay); that o
 Der Owner-QR ist dein **Schreibschlüssel** — nur in die eigene App, nie an Kontakte. Kontakte
 bekommen die Node-Adresse automatisch beim Pairing.
 
+**Nach jedem Neustart ist der Server gesperrt** (Schlüssel liegen nur verschlüsselt auf der Platte).
+In der App erscheint unter Einstellungen → Eigene Nodes **„Server gesperrt → Entsperren“** — antippen,
+bestätigen, fertig. Nur entsperren, wenn du weißt, warum er neu gestartet ist.
+
 **Temp Node** (für genau einen Chat, nur im Arbeitsspeicher): `start-tempnode.bat`, dann in der
 App im Chat **Temp Node** wählen und den QR von der Einrichtungsseite scannen.
 
@@ -41,7 +45,8 @@ docker compose up -d           # container, setup page on the host's http://loca
 |---|---|
 | **Tor onion service** | Mandatory and fully managed: downloads the pinned Tor Expert Bundle once, runs its own Tor, publishes the node via the control port (`ADD_ONION`). The public API only listens on `127.0.0.1` — "the node never learns a sender IP" is structural, not a logging policy. |
 | **Many nodes, one process** | `NODE_MESH_NODES=1..500` (default 1; `start.bat`/`start.sh` default 10): one Tor process publishes that many onion services, all mapped to the same local API and store. Each is a separate address to the outside; the owner's app hands different ones to different contacts. |
-| **Stable addresses** | One onion key per node is stored in `data/node-<slot>/node-mesh-identity.json` (`onionKeys`, file mode 600) and reused on every start; restarts and the daily Reset never change any address. Raising `NODE_MESH_NODES` later adds new addresses and keeps the existing ones. |
+| **Stable addresses** | One onion key per node, kept in `data/node-<slot>/node-mesh-identity.json` (file mode 600) and reused on every start; restarts and the daily Reset never change any address. Raising `NODE_MESH_NODES` later adds new addresses and keeps the existing ones. |
+| **Sealed keys (default)** | `NODE_MESH_KEY_STORAGE=sealed`: owner secret and node keys are stored **only encrypted** (AES-256-GCM under the owner secret, which is never written down). After a restart the server is **locked** — only a control onion is online, nodes stay offline. Unlock in the app (Settings → Your own nodes → **Unlock**) or paste the owner code on the setup page; the nodes come back under the same addresses. A seized, powered-off server can't be run on under your addresses. `NODE_MESH_KEY_STORAGE=disk` = old behaviour (plain file, unattended restarts). Old plain files are sealed in place on first start. |
 | **Proof-of-work DoS defense** | Tor's onion-service PoW (`PoWDefensesEnabled=1`) is always on — flooding the node with connections costs the attacker CPU per attempt. The pinned bundle's Tor 0.4.9 ships the `pow` module (verified with `tor --list-modules`). |
 | **Self-healing** | If Tor crashes or the control connection drops, Tor restarts with backoff and re-adds the same key → same address. Tor also exits on its own if this process dies (`__OwningControllerProcess`), so no orphaned Tor keeps running. |
 | **Profiles** | `NODE_PROFILE=standard\|high-security\|offline-tolerant` (6 h / 1 h / 24 h). Max 24 h, because every unpruuf client polls a window sized for 24 h — so any profile is always fully covered without the client knowing which one a contact runs. Unknown names refuse to start. |
@@ -70,10 +75,14 @@ LAN shortcut; the app always reaches nodes through Tor).
   **Owner-only** (`Authorization: Bearer <ownerSecret>`). `ttl` may only shorten the profile's TTL.
 - `GET /fetch?tag=<routing_tag>` → `{ "blobs": [...] }`. Read-only, no auth — the tag is the
   credential. Never deletes.
-- `POST /fetchMany` — `{ "tags": [...], "waitMs"? }` → `{ "blobs": { "<tag>": [...] } }`.
-  Read-only, optional long-poll (max 55 s).
-- `GET /pool` → `{ "addresses": [...] }` — every node address this server runs. **Owner-only**;
-  the app calls it after the owner QR is scanned. Contacts never see this list.
+- `POST /fetchMany` — `{ "tags": [...], "waitMs"?, "since"? }` → `{ "blobs": { "<tag>": [...] } }`.
+  Read-only, optional long-poll (max 55 s). With `since` (a cursor from the previous reply): only
+  newer blobs, reply `{ "cursor": N, "blobs": {...} }`.
+- `GET /pool` → `{ "control"?, "addresses": [...] }` — every node address this server runs (plus the
+  control address on sealed servers). **Owner-only**; the app calls it after the owner QR is
+  scanned. Contacts never see this list.
+- `GET /lock-status` → `{ "locked": bool }` and `POST /unlock` (Bearer owner secret) — sealed
+  servers only, reached over the control onion. Locked servers answer owner routes with `423`.
 - `GET /health` → `{ "ok": true }`.
 
 Read endpoints share a global token bucket (burst 30, 5/s) — every request arrives from local Tor,

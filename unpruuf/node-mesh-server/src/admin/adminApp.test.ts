@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as http from "http";
 import type { AddressInfo } from "net";
-import { createAdminApp, isLoopbackHost, ownerConnectionString } from "./adminApp";
+import { createAdminApp, isLoopbackHost, ownerConnectionString, ownerSecretFromCode } from "./adminApp";
 import { PROFILES } from "../profiles";
 
 function request(port: number, host: string, path: string): Promise<{ status: number; body: string }> {
@@ -59,7 +59,7 @@ test("setup page serves owner code + QR to localhost and refuses foreign hosts",
       ephemeral: false,
       torEnabled: true,
       publicAddress: () => "abcdef.onion",
-      torStatus: () => ({ state: "ready", bootstrapPercent: 100, onionAddress: "abcdef.onion", onionAddresses: ["abcdef.onion"], restarts: 0, lastError: null, powEnabled: true }),
+      torStatus: () => ({ state: "ready", bootstrapPercent: 100, onionAddress: "abcdef.onion", onionAddresses: ["abcdef.onion"], controlAddress: null, locked: false, restarts: 0, lastError: null, powEnabled: true }),
       stats: () => ({ queued: 3, tags: 1, oldestAgeMs: 10 }),
     },
     port,
@@ -89,6 +89,47 @@ test("setup page serves owner code + QR to localhost and refuses foreign hosts",
     assert.equal(rotated.status, 200);
     const after = JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body);
     assert.equal(after.ownerString, "unpruuf-node-owner:v1:abcdef.onion:rotated-secret");
+  } finally {
+    listener.close();
+  }
+});
+
+test("the setup page's unlock accepts a pasted owner code or a bare secret", () => {
+  assert.equal(ownerSecretFromCode("unpruuf-node-owner:v1:abc.onion:Secret_123-abcdefgh"), "Secret_123-abcdefgh");
+  assert.equal(ownerSecretFromCode("Secret_123-abcdefgh"), "Secret_123-abcdefgh");
+  assert.equal(ownerSecretFromCode("short"), null);
+});
+
+test("a locked server hides the owner QR and refuses rotation", async () => {
+  const port = 18000 + Math.floor(Math.random() * 1000);
+  let locked = true;
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "",
+      rotateOwnerSecret: () => {},
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      torEnabled: true,
+      publicAddress: () => null,
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      sealed: true,
+      isLocked: () => locked,
+      unlock: async (s) => (s === "Right_secret_0123456789" ? ((locked = false), ["a.onion"]) : null),
+      controlAddress: () => "ctrl.onion",
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  try {
+    const status = JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body);
+    assert.equal(status.locked, true);
+    assert.equal(status.ownerString, null);
+    assert.equal(status.canRotate, false);
+    const page = await request(port, `localhost:${port}`, "/");
+    assert.match(page.body, /Gesperrt nach Neustart/);
+    assert.equal((await post(port, `localhost:${port}`, "/rotate-owner-secret", { "x-unpruuf-admin": "1" })).status, 423);
   } finally {
     listener.close();
   }

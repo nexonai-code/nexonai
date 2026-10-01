@@ -69,6 +69,12 @@ ausfällt — nach drei verpassten Lebenszeichen).
 ## Was der Node selbst erledigt
 
 - Eigene, feste Tor-Adresse — ändert sich bei Neustarts nicht.
+- Schlüssel liegen nur verschlüsselt auf der Platte. **Nach einem Neustart ist der Server gesperrt**,
+  bis Sie ihn in der App entsperren (Einstellungen → Eigene Nodes → Entsperren). Ein beschlagnahmter,
+  ausgeschalteter Server kann so nicht unter Ihren Adressen weiterlaufen. Nur entsperren, wenn Sie
+  wissen, warum er neu gestartet ist — im Zweifel einen neuen Server aufsetzen.
+- Die App legt zusätzlich in zufälligen Abständen leere Tarn-Pakete ab und fragt immer im selben
+  Takt ab. Wer den Node beobachtet, sieht nicht, wann wirklich geschrieben oder ein Chat geöffnet wird.
 - Schutz gegen Überflutung: Tor-Proof-of-Work (Windows/Linux/Docker) plus Begrenzung der
   Leseanfragen (alle Plattformen). **Android-Nodes haben keinen Tor-Proof-of-Work** — wo
   Überflutungsschutz wichtig ist, einen PC/Server-Node verwenden.

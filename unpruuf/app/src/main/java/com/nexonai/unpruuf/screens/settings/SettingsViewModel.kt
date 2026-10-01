@@ -271,6 +271,24 @@ class SettingsViewModel @Inject constructor(
 
     fun clearNodeMeshStatus() { _nodeMeshStatus.value = null }
 
+    // ─── Sealed own servers: locked after a restart until unlocked here ──────────────────────
+    val lockedServers = p2pNetworkManager.lockedServers
+
+    // true = unlocked, false = failed, null = nothing to show.
+    private val _unlockResult = MutableStateFlow<Boolean?>(null)
+    val unlockResult = _unlockResult.asStateFlow()
+
+    fun checkLockedServers() = p2pNetworkManager.checkLockedServersNow()
+
+    fun unlockServer(server: NodeMeshManager.LockedServer) {
+        p2pNetworkManager.unlockServer(server) { ok ->
+            _unlockResult.value = ok
+            if (ok) _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
+        }
+    }
+
+    fun clearUnlockResult() { _unlockResult.value = null }
+
     // ─── Node address migration (NODE_MESH_SPEC.md §6) ─────────────────────────────────────
     // Which of this device's own nodes (by its current address) is being migrated right now, if
     // any — drives an inline "enter the new address" affordance per row in Settings, rather than

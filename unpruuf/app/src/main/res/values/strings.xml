@@ -268,4 +268,11 @@ Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow i
     <string name="settings_nodes_count">%1$d own nodes</string>
     <string name="settings_show_all_nodes">Show all %1$d</string>
     <string name="settings_show_fewer_nodes">Show fewer</string>
+    <string name="settings_server_locked_title">Server locked after restart</string>
+    <string name="settings_server_locked_body">%1$d of your nodes are offline until you unlock this server. Unlock only if YOU (or your provider) restarted it.</string>
+    <string name="settings_unlock">Unlock</string>
+    <string name="settings_unlock_confirm_title">Unlock server?</string>
+    <string name="settings_unlock_confirm_body">This sends your owner key to the server so it can bring its nodes back online under the same addresses.\n\nDo this only if you know why it restarted. If the server may have been taken or copied, do NOT unlock — set up a new server instead.</string>
+    <string name="settings_unlock_done">Server unlocked. Its nodes are coming back online.</string>
+    <string name="settings_unlock_failed">Unlock failed — server not reachable or the key was refused.</string>
 </resources>

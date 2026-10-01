@@ -87,6 +87,26 @@ export class NodeStore {
   }
 
   /**
+   * Incremental read for /fetchMany's cursor: blobs under [tag] with a row id above [sinceId].
+   * Combined with [currentCursor] a client only ever downloads each blob once instead of the
+   * whole TTL window on every poll — which is what makes cover traffic affordable.
+   */
+  fetchSince(tag: string, sinceId: number): string[] {
+    const rows = this.db
+      .prepare("SELECT blob FROM blobs WHERE tag = ? AND id > ? AND expires_at > ? ORDER BY id ASC")
+      .all(tag, sinceId, Date.now()) as { blob: string }[];
+    return rows.map((r) => r.blob);
+  }
+
+  /** Highest row id ever handed out (0 for an empty store). Every blob with an id up to this
+   *  existed when it was read — better-sqlite3 is synchronous, so no insert can slip between a
+   *  fetchSince() and this call in the same request handler. */
+  currentCursor(): number {
+    const row = this.db.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'blobs'").get() as { seq: number } | undefined;
+    return row?.seq ?? 0;
+  }
+
+  /**
    * Blocks (via the returned Promise) until any of [tags] has a new blob, or [timeoutMs] elapses
    * — whichever comes first. Never rejects. Mirrors the consumer relay's BlobStore.waitForAny
    * exactly — see routes/node.ts's fetchMany handler for why the caller must always re-check the

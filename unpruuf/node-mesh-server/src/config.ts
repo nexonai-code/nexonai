@@ -50,5 +50,10 @@ export const TOR_BIN_DIR = process.env.NODE_MESH_TOR_BIN_DIR ?? path.join(PACKAG
 // operator who already runs their own Tor hidden service in front of PORT — never a LAN shortcut.
 export const TOR_ENABLED = process.env.NODE_MESH_TOR !== "0";
 
+// Where owner secret + node keys live between restarts (nodeIdentity.ts). "sealed" (default):
+// encrypted under the owner secret, server stays locked after a restart until the owner app
+// unlocks it. "disk": plain file, unattended restarts.
+export const KEY_STORAGE: "sealed" | "disk" = process.env.NODE_MESH_KEY_STORAGE === "disk" ? "disk" : "sealed";
+
 // Tor's onion-service proof-of-work defense (Tor ≥ 0.4.8). Values are Tor's own defaults.
 export const POW = { queueRate: 250, queueBurst: 2500 };

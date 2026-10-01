@@ -78,6 +78,10 @@ fun SettingsScreen(
     val nodeMeshStatus by viewModel.nodeMeshStatus.collectAsState()
     val migratingAddress by viewModel.migratingAddress.collectAsState()
     val migrateInput by viewModel.migrateInput.collectAsState()
+    val lockedServers by viewModel.lockedServers.collectAsState()
+    val unlockResult by viewModel.unlockResult.collectAsState()
+    var unlockCandidate by remember { mutableStateOf<NodeMeshManager.LockedServer?>(null) }
+    LaunchedEffect(Unit) { viewModel.checkLockedServers() }
 
     val scanRelayPrompt = stringResource(R.string.settings_scan_relay_prompt)
     val scanNodePrompt = stringResource(R.string.settings_scan_node_prompt)
@@ -507,6 +511,40 @@ fun SettingsScreen(
                 leadingContent = { Icon(Icons.Default.Send, null) }
             )
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                lockedServers.forEach { server ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                stringResource(R.string.settings_server_locked_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.settings_server_locked_body, server.nodeCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Button(onClick = { unlockCandidate = server }) { Text(stringResource(R.string.settings_unlock)) }
+                        }
+                    }
+                }
+                unlockResult?.let { ok ->
+                    Text(
+                        stringResource(if (ok) R.string.settings_unlock_done else R.string.settings_unlock_failed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LaunchedEffect(ok) {
+                        kotlinx.coroutines.delay(6000)
+                        viewModel.clearUnlockResult()
+                    }
+                }
                 var showAllNodes by remember { mutableStateOf(false) }
                 val collapsible = myNodeAddresses.size > 5
                 if (myNodeAddresses.isNotEmpty()) {
@@ -652,6 +690,23 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    unlockCandidate?.let { server ->
+        AlertDialog(
+            onDismissRequest = { unlockCandidate = null },
+            title = { Text(stringResource(R.string.settings_unlock_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_unlock_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.unlockServer(server)
+                    unlockCandidate = null
+                }) { Text(stringResource(R.string.settings_unlock)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { unlockCandidate = null }) { Text(stringResource(R.string.settings_cancel)) }
+            }
+        )
     }
 
     if (showRegenerateIdentityDialog) {
