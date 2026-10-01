@@ -5,6 +5,27 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑01 (4) · Phone number in both presentations, PDF and PowerPoint downloads
+
+**What was done**
+
+- Phone number +40 773 829 646 on the last slide of both presentations (online decks updated).
+- Every slide rendered to an image; from those: `presentations/export/unpruuf_Business_RO.pdf`
+  / `.pptx` and `unpruuf_Compliance_RO.pdf` / `.pptx`. The PowerPoint files hold the slides as
+  pictures (not editable text) plus the speaker notes; an editable PowerPoint comes from the
+  online deck's Share → Export.
+
+**Which bug appeared**
+
+In the compliance architecture diagram the label "Panoul responsabilului" was wider than its box
+— shortened to "Panou responsabil" (online deck updated too).
+
+**Verification**
+
+Both decks rendered and looked over as contact sheets; no other overflow found.
+
+---
+
 ## 2026‑10‑01 (3) · Two Romanian presentations: Business and Compliance
 
 **What was done**

@@ -157,7 +157,7 @@ S.append(("pasi", sec("pasi", f'''{eyebrow("Pașii următori", ON_DARK)}
 <li>Instalarea serverului propriu și a aplicațiilor</li>
 <li>Pilot cu o echipă, apoi extindere</li>
 </ol>
-<p style="font-size:32px;color:{ON_DARK}">NexonAI Consulting SRL · nexonai.consulting@gmail.com · [telefon]</p>''', bg=TEAL, color=ON_DARK, extra="display:flex;flex-direction:column;justify-content:center;gap:40px")))
+<p style="font-size:32px;color:{ON_DARK}">NexonAI Consulting SRL · nexonai.consulting@gmail.com · +40 773 829 646</p>''', bg=TEAL, color=ON_DARK, extra="display:flex;flex-direction:column;justify-content:center;gap:40px")))
 
 sections = {
     "s1": {"description": "Problema: fiecare mesager are un proprietar.", "start": "cover"},

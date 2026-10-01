@@ -52,7 +52,7 @@ S.append(("instrumentul", sec("instrumentul", f'''{eyebrow("Instrumentul", ON_DA
 # 5 how it works
 S.append(("functionare", sec("functionare", f'''{head("Cum funcționează", "Releul nu vede nici conținut, nici identitate")}
 {box(128, 400, 360, 110, "Aplicația avertizor", "Android, prin Tor")}
-{box(1432, 400, 360, 110, "Panoul responsabilului", "laptop, prin Tor")}
+{box(1432, 400, 360, 110, "Panou responsabil", "laptop, prin Tor")}
 {box(780, 580, 360, 110, "Releul organizației", "cutie poștală oarbă", True)}
 {box(800, 790, 320, 100, "Raportor web", "browser, fără instalare")}
 <x-connector x1="488" y1="440" x2="1432" y2="440" head="end" style="color:{MUTED};border-width:3px;border-style:dashed"></x-connector>
@@ -149,7 +149,7 @@ S.append(("pasi", sec("pasi", f'''{eyebrow("Pașii următori", ON_DARK)}
 <li>Instalarea releului și a panoului</li>
 <li>Pilot, apoi lansarea către angajați</li>
 </ol>
-<p style="font-size:32px;color:{ON_DARK}">NexonAI Consulting SRL · nexonai.consulting@gmail.com · [telefon]</p>''', bg=TEAL, color=ON_DARK, extra="display:flex;flex-direction:column;justify-content:center;gap:40px")))
+<p style="font-size:32px;color:{ON_DARK}">NexonAI Consulting SRL · nexonai.consulting@gmail.com · +40 773 829 646</p>''', bg=TEAL, color=ON_DARK, extra="display:flex;flex-direction:column;justify-content:center;gap:40px")))
 
 sections = {
     "s1": {"description": "Obligația legală și problema soluțiilor clasice.", "start": "cover"},
