@@ -5,6 +5,28 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑01 (5) · German versions of both presentations
+
+**What was done**
+
+- unpruuf Business (DE), 14 slides: https://claude.ai/artifact/JP11hQVZbqVTUqGt1ahysF
+- unpruuf Compliance (DE), 13 slides: https://claude.ai/artifact/Rwc3AVsDLhhZHZXmgmULdA
+- Same structure and design as the Romanian decks. The compliance deck names the EU directive and
+  "the national implementing law" instead of only the Romanian law, so it works for German
+  customers too.
+- PDF and PowerPoint in `presentations/export/` (`*_DE.pdf`, `*_DE.pptx`, slides as pictures).
+
+**Which bug appeared**
+
+Longer German words: "Relay der Organisation" overflowed its diagram box (now "Eigenes Relay")
+and one table cell wrapped to four lines (shortened). Both found on the rendered contact sheets.
+
+**Verification**
+
+Both German decks rendered and looked over; no Romanian text left (checked by script).
+
+---
+
 ## 2026‑10‑01 (4) · Phone number in both presentations, PDF and PowerPoint downloads
 
 **What was done**
