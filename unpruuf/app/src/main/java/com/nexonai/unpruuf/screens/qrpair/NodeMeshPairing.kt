@@ -19,8 +19,9 @@ import com.nexonai.unpruuf.domain.network.NodeMeshManager
  *
  * No userId (v1 carried one as `u`): nothing in Node-Mesh routing or crypto ever read it. Its
  * absence also makes this format unambiguous against [jsonToCrossPlatformPayload], which
- * requires `u`. The remaining fields are still device-global, so two contacts comparing their
- * QR codes can still tell they paired with the same device.
+ * requires `u`. Every value in it is generated for one pairing only (see
+ * IdentityManager.pendingNodeMeshPairing), so two contacts comparing their QR codes find nothing
+ * in common.
  */
 data class NodeMeshPairingPayload(
     val version: Int = 2,

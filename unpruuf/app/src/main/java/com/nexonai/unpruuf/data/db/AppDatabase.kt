@@ -32,7 +32,10 @@ import com.nexonai.unpruuf.data.model.Contact
     // theirTempNodeAddress for Node-Mesh's Temp Node feature (NODE_MESH_SPEC.md §7) — a
     // per-chat, one-off additional own node, distinct from NodeMeshManager's global standard
     // pool. Same destructive-migration precedent again — all contacts must be re-paired.
-    version = 9,
+    // v10: per-contact own pairing values for Node-Mesh (Contact.myPairMessageKey/
+    // myPairRatchetPrivateKey/myPairRatchetPublicKey/myPairRoutingSeed/myNodeAddresses), so no
+    // two contacts share a key, seed or node. Same destructive-migration precedent again.
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

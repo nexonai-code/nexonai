@@ -12,9 +12,17 @@ const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
  * that already speaks that format needs no new parsing logic, only a different auth/delete
  * contract per endpoint (see each route's own comment for what changed and why).
  */
-export function nodeRouter(store: NodeStore, ownerSecret: OwnerSecretSource): Router {
+export function nodeRouter(store: NodeStore, ownerSecret: OwnerSecretSource, addresses: () => string[] = () => []): Router {
   const router = Router();
   const fetchRateLimit = new TokenBucket(30, 5); // burst of 30, refills 5/sec
+  const poolRateLimit = new TokenBucket(5, 1);
+
+  // Owner-only: every onion address this process serves. The owner's app scans ONE address +
+  // the owner secret and learns all sibling nodes here, so a server with hundreds of nodes still
+  // needs only one QR. Contacts never call this — they only ever learn the nodes assigned to them.
+  router.get("/pool", rateLimited(poolRateLimit), requireOwner(ownerSecret), (_req, res) => {
+    return res.status(200).json({ addresses: addresses() });
+  });
 
   // Owner-only — see ownerAuth.ts's doc comment. No contact, no stranger who merely learns this
   // node's address can ever write here, regardless of whether they know a valid routing_tag.

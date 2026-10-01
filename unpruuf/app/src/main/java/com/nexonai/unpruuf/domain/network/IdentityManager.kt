@@ -1,5 +1,6 @@
 package com.nexonai.unpruuf.domain.network
 
+import com.nexonai.unpruuf.data.model.Contact
 import android.content.Context
 import com.google.crypto.tink.subtle.X25519
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -252,9 +253,8 @@ class IdentityManager @Inject constructor(
      * [contactMsgKeyB64]/[myMessageKey] are each individually per-device and NOT shared — do not
      * use either of those alone where a symmetric secret is required.
      */
-    fun pairSecret(contactMsgKeyB64: String): ByteArray {
+    fun pairSecret(contactMsgKeyB64: String, mine: ByteArray = myMessageKey): ByteArray {
         val other = android.util.Base64.decode(contactMsgKeyB64, android.util.Base64.DEFAULT)
-        val mine = myMessageKey
         val (a, b) = if (compareUnsigned(mine, other) <= 0) mine to other else other to mine
         val md = MessageDigest.getInstance("SHA-256")
         md.update(a); md.update(b)
@@ -363,8 +363,12 @@ class IdentityManager @Inject constructor(
      * pairing code was tampered with in transit, the ratchet key baked into it changes and so
      * does this code — that's the whole point: a mismatch here means don't trust this contact.
      */
-    fun safetyNumber(theirX25519RatchetPublicKeyBase64: String): String {
-        val mine = myX25519RatchetKeyPair.publicKey
+    /** Safety number for [contact] — uses the per-contact ratchet key it was paired with, so both
+     *  devices compare the same two keys. */
+    fun safetyNumberFor(contact: Contact): String =
+        safetyNumber(contact.x25519RatchetPublicKey, ratchetKeyPairFor(contact).publicKey)
+
+    fun safetyNumber(theirX25519RatchetPublicKeyBase64: String, mine: ByteArray = myX25519RatchetKeyPair.publicKey): String {
         val theirs = android.util.Base64.decode(theirX25519RatchetPublicKeyBase64, android.util.Base64.DEFAULT)
         val (a, b) = if (compareUnsigned(mine, theirs) <= 0) mine to theirs else theirs to mine
         val md = MessageDigest.getInstance("SHA-256")
@@ -435,9 +439,8 @@ class IdentityManager @Inject constructor(
      * contact will have deposited under, without any live exchange beyond the one-time seed swap
      * at pairing.
      */
-    fun nodeMeshPairSecret(theirRoutingSeedB64: String): ByteArray {
+    fun nodeMeshPairSecret(theirRoutingSeedB64: String, mine: ByteArray = myNodeMeshRoutingSeed): ByteArray {
         val other = android.util.Base64.decode(theirRoutingSeedB64, android.util.Base64.DEFAULT)
-        val mine = myNodeMeshRoutingSeed
         val (a, b) = if (compareUnsigned(mine, other) <= 0) mine to other else other to mine
         val md = MessageDigest.getInstance("SHA-256")
         md.update(a); md.update(b)
@@ -459,8 +462,92 @@ class IdentityManager @Inject constructor(
      * be independently computable by both sides of ONE pair, not disambiguate between several
      * candidate identities the way the onion-based scheme's wire-ID does.
      */
-    fun nodeMeshRoutingTag(theirRoutingSeedB64: String, epoch: Long): String =
-        hmac(nodeMeshPairSecret(theirRoutingSeedB64), "routing:$epoch")
+    fun nodeMeshRoutingTag(theirRoutingSeedB64: String, epoch: Long, mySeed: ByteArray = myNodeMeshRoutingSeed): String =
+        hmac(nodeMeshPairSecret(theirRoutingSeedB64, mySeed), "routing:$epoch")
+
+    /** [nodeMeshRoutingTag] with the routing seed this device used when pairing with [contact]. */
+    fun nodeMeshRoutingTagFor(contact: Contact, epoch: Long): String? {
+        val theirs = contact.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: return null
+        return nodeMeshRoutingTag(theirs, epoch, myRoutingSeedFor(contact))
+    }
+
+    // ─── Per-contact own pairing values (Node-Mesh) ─────────────────────────────────────────
+    // Every Node-Mesh pairing gets a fresh message key, ratchet key pair and routing seed, shown
+    // only in the QR that one contact scans. Contacts paired before this (fields null) keep the
+    // device-global values above.
+
+    fun myMessageKeyFor(contact: Contact): ByteArray =
+        contact.myPairMessageKey?.let { b64(it) } ?: myMessageKey
+
+    fun pairSecretFor(contact: Contact): ByteArray = pairSecret(contact.publicKey, myMessageKeyFor(contact))
+
+    fun ratchetKeyPairFor(contact: Contact): X25519KeyPair {
+        val priv = contact.myPairRatchetPrivateKey ?: return myX25519RatchetKeyPair
+        val pub = contact.myPairRatchetPublicKey ?: return myX25519RatchetKeyPair
+        return X25519KeyPair(b64(priv), b64(pub))
+    }
+
+    fun myRoutingSeedFor(contact: Contact): ByteArray =
+        contact.myPairRoutingSeed?.let { b64(it) } ?: myNodeMeshRoutingSeed
+
+    /** One pairing's worth of fresh own values plus the own nodes chosen for that contact. */
+    data class PendingNodeMeshPairing(
+        val messageKey: String,
+        val ratchetPrivateKey: String,
+        val ratchetPublicKey: String,
+        val routingSeed: String,
+        val nodeAddresses: List<String>
+    )
+
+    /**
+     * The values the Node-Mesh QR currently on screen carries. Persisted (encrypted) until a
+     * scan binds them to a new contact, so leaving the screen between showing the QR and
+     * scanning theirs doesn't strand a contact who already scanned mine. [chooseNodes] is only
+     * called when a new set is created.
+     */
+    fun pendingNodeMeshPairing(chooseNodes: () -> List<String>): PendingNodeMeshPairing {
+        prefs.getString("pending_nm_pairing", null)?.let { stored ->
+            runCatching { parsePending(String(decryptSecret(stored), Charsets.UTF_8)) }.getOrNull()?.let { return it }
+        }
+        val random = java.security.SecureRandom()
+        val msgKey = ByteArray(32).also { random.nextBytes(it) }
+        val seed = ByteArray(32).also { random.nextBytes(it) }
+        val priv = X25519.generatePrivateKey()
+        val pending = PendingNodeMeshPairing(
+            messageKey = b64(msgKey),
+            ratchetPrivateKey = b64(priv),
+            ratchetPublicKey = b64(X25519.publicFromPrivate(priv)),
+            routingSeed = b64(seed),
+            nodeAddresses = chooseNodes()
+        )
+        prefs.edit().putString("pending_nm_pairing", encryptSecret(serializePending(pending).toByteArray(Charsets.UTF_8))).apply()
+        return pending
+    }
+
+    /** Called once a scan has bound the pending values to a contact — the next QR gets new ones. */
+    fun clearPendingNodeMeshPairing() {
+        prefs.edit().remove("pending_nm_pairing").apply()
+    }
+
+    private fun serializePending(p: PendingNodeMeshPairing): String =
+        org.json.JSONObject()
+            .put("m", p.messageKey).put("rp", p.ratchetPrivateKey).put("rk", p.ratchetPublicKey)
+            .put("s", p.routingSeed).put("n", p.nodeAddresses.joinToString(";"))
+            .toString()
+
+    private fun parsePending(json: String): PendingNodeMeshPairing {
+        val o = org.json.JSONObject(json)
+        return PendingNodeMeshPairing(
+            messageKey = o.getString("m"),
+            ratchetPrivateKey = o.getString("rp"),
+            ratchetPublicKey = o.getString("rk"),
+            routingSeed = o.getString("s"),
+            nodeAddresses = o.getString("n").split(";").filter { it.isNotBlank() }
+        )
+    }
+
+    private fun b64(s: String): ByteArray = android.util.Base64.decode(s, android.util.Base64.NO_WRAP)
+    private fun b64(bytes: ByteArray): String = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
 
     /**
      * NODE_MESH_SPEC.md §3's tolerance-window formula — `ceil(TTL / rotation_interval) + 1`,

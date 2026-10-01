@@ -29,15 +29,24 @@ if "%NODE_PROFILE%"=="" (
   if errorlevel 3 (set NODE_PROFILE=offline-tolerant) else if errorlevel 2 (set NODE_PROFILE=high-security) else (set NODE_PROFILE=standard)
 )
 
+if "%NODE_MESH_NODES%"=="" (
+  echo.
+  echo Wie viele Nodes soll dieser Server betreiben? ^(1 bis 500^)
+  echo Jeder Kontakt bekommt eigene Nodes - mehr Nodes, mehr Kontakte ohne gemeinsame Adressen.
+  set /p NODE_MESH_NODES="Anzahl ^(Enter = 10^): "
+)
+if "%NODE_MESH_NODES%"=="" set NODE_MESH_NODES=10
+
 (
   echo @echo off
   echo set NODE_SLOT=%NODE_SLOT%
   echo set NODE_PROFILE=%NODE_PROFILE%
+  echo set NODE_MESH_NODES=%NODE_MESH_NODES%
 ) > node.env.bat
 
 set /a ADMIN_PORT_DEFAULT=8790 + (%NODE_SLOT% - 1) * 10
 echo.
-echo Starte Node %NODE_SLOT% mit Profil %NODE_PROFILE% ...
+echo Starte Server %NODE_SLOT% mit %NODE_MESH_NODES% Nodes, Profil %NODE_PROFILE% ...
 echo Die Einrichtungsseite oeffnet sich gleich im Browser: http://localhost:%ADMIN_PORT_DEFAULT%
 echo Dieses Fenster offen lassen - schliessen stoppt den Node.
 start "" /b cmd /c "timeout /t 4 /nobreak >nul & start http://localhost:%ADMIN_PORT_DEFAULT%"

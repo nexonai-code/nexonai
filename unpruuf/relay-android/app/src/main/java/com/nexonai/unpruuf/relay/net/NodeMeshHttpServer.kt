@@ -18,6 +18,7 @@ import java.security.MessageDigest
  *                       `{"routing_tag":"...","ciphertext":"<base64>","ttl"?:<ms>}` → 201
  *   GET  /fetch?tag=    read-only, no auth (the routing tag is the credential) → `{"blobs":[...]}`
  *   POST /fetchMany     read-only, `{"tags":[...],"waitMs"?:<ms>}` → `{"blobs":{"<tag>":[...]}}`
+ *   GET  /pool          OWNER ONLY → `{"addresses":["<this node's onion>"]}` (one node per tablet)
  *
  * Nothing ever deletes on read; only the TTL sweep (RelayService) removes rows. Always bound to
  * 127.0.0.1 — Node-Mesh is onion-only, there is no LAN mode for it. No CORS headers either: no
@@ -27,7 +28,8 @@ class NodeMeshHttpServer(
     port: Int,
     private val blobStore: NodeMeshStore,
     private val getOwnerSecret: () -> String,
-    private val getTtlMs: () -> Long
+    private val getTtlMs: () -> Long,
+    private val getOnionAddress: () -> String? = { null }
 ) : NanoHTTPD("127.0.0.1", port) {
 
     private val readLimit = TokenBucket(RelayConstants.NODE_MESH_READ_BURST, RelayConstants.NODE_MESH_READ_REFILL_PER_SEC)
@@ -51,6 +53,7 @@ class NodeMeshHttpServer(
             session.method == Method.PUT && uri == "/deposit" -> handleDeposit(session)
             session.method == Method.GET && uri == "/fetch" -> rateLimited { handleFetch(session) }
             session.method == Method.POST && uri == "/fetchMany" -> rateLimited { handleFetchMany(session) }
+            session.method == Method.GET && uri == "/pool" -> handlePool(session)
             else -> json(Response.Status.NOT_FOUND, """{"error":"not found"}""")
         }
     }
@@ -95,6 +98,15 @@ class NodeMeshHttpServer(
         }
         RelayEventLog.logStored(tag, decodedLength)
         return json(Response.Status.CREATED, """{"stored":true}""")
+    }
+
+    private fun handlePool(session: IHTTPSession): Response {
+        val auth = session.headers["authorization"] ?: ""
+        if (!timingSafeEquals(auth, "Bearer ${getOwnerSecret()}")) {
+            return json(Response.Status.UNAUTHORIZED, """{"error":"unauthorized"}""")
+        }
+        val list = getOnionAddress()?.let { "\"$it\"" } ?: ""
+        return json(Response.Status.OK, "{\"addresses\":[$list]}")
     }
 
     private fun handleFetch(session: IHTTPSession): Response {

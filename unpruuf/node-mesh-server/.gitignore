@@ -10,3 +10,4 @@ node-mesh-identity.json
 data/
 tor-bin/
 node.env.bat
+tools/measure-runs/

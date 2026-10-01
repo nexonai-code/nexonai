@@ -29,7 +29,7 @@ class NodeMeshManager @Inject constructor(
     fun getMyNodePool(): List<ParsedNodeConnection> =
         parseNodeConnectionStringList(prefs.getString("my_nodes", "") ?: "")
             .mapNotNull { parseOwnerConnectionString(it) }
-            .take(NODE_POOL_MAX_SIZE)
+            .take(OWN_NODES_MAX)
 
     private fun getMyNodeConnectionStrings(): List<String> =
         parseNodeConnectionStringList(prefs.getString("my_nodes", "") ?: "")
@@ -38,18 +38,59 @@ class NodeMeshManager @Inject constructor(
      * Adds one of this device's own nodes from a scanned/pasted `unpruuf-node-owner:v1:...`
      * string (what a Node-Mesh server prints at setup — see `node-mesh-server/README.md`).
      * Returns false (and stores nothing) if [raw] doesn't parse, or if the pool is already at
-     * [NODE_POOL_MAX_SIZE]. Deduplicates by address — re-adding the same node (e.g. after
-     * rotating its owner secret) replaces the old entry rather than creating a second one.
+     * [OWN_NODES_MAX]. Deduplicates by address — re-adding the same node (e.g. after rotating
+     * its owner secret) replaces the old entry rather than creating a second one. The scanned
+     * node is also remembered as a pool source, so its sibling nodes can be imported (see
+     * [importSiblings]).
      */
     fun addMyNode(raw: String): Boolean {
         val parsed = parseOwnerConnectionString(raw) ?: return false
+        if (!addMyNodes(listOf(parsed.address), parsed.ownerSecret)) return false
+        val sources = getPoolSources().filter { it.address != parsed.address } + parsed
+        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+        return true
+    }
+
+    /** Adds every address in [addresses] under one owner secret (one server's nodes). Returns
+     *  false if nothing could be added because the pool is full. */
+    fun addMyNodes(addresses: List<String>, ownerSecret: String): Boolean {
+        val incoming = addresses.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        if (incoming.isEmpty()) return false
         val existing = getMyNodeConnectionStrings().mapNotNull { parseOwnerConnectionString(it) }
-        val withoutDuplicate = existing.filter { it.address != parsed.address }
-        if (withoutDuplicate.size >= NODE_POOL_MAX_SIZE) return false
-        val updated = (withoutDuplicate + parsed).map { buildOwnerConnectionString(it) }
+        val kept = existing.filter { e -> incoming.none { it == e.address } }
+        val room = OWN_NODES_MAX - kept.size
+        if (room <= 0) return false
+        val updated = (kept + incoming.take(room).map { ParsedNodeConnection(it, ownerSecret) })
+            .map { buildOwnerConnectionString(it) }
         prefs.edit().putString("my_nodes", updated.joinToString(";")).apply()
         return true
     }
+
+    /** The node strings scanned from servers' setup pages — each one can list its siblings. */
+    fun getPoolSources(): List<ParsedNodeConnection> =
+        parseNodeConnectionStringList(prefs.getString("pool_sources", "") ?: "")
+            .mapNotNull { parseOwnerConnectionString(it) }
+
+    /** Asks each pool source for every node its server runs and adds the ones not known yet.
+     *  A server that doesn't answer (offline, or an older node without GET /pool) is skipped —
+     *  the node scanned from it stays usable on its own. Returns how many nodes were added. */
+    suspend fun importSiblings(client: NodeMeshClient): Int {
+        val before = getMyNodePool().size
+        for (source in getPoolSources()) {
+            val addresses = client.listPool(source.address, source.ownerSecret) ?: continue
+            addMyNodes(addresses, source.ownerSecret)
+        }
+        return getMyNodePool().size - before
+    }
+
+    /**
+     * Picks up to [NODE_POOL_MAX_SIZE] own nodes for a new contact: the least-used ones first
+     * ([usage] = how many existing contacts already have each address), spread over as many
+     * different servers (owner secrets) as possible, ties broken at random. With enough nodes
+     * every contact ends up on nodes no other contact knows.
+     */
+    fun chooseNodesForNewContact(usage: Map<String, Int>): List<String> =
+        chooseNodes(getMyNodePool().shuffled(), usage, NODE_POOL_MAX_SIZE)
 
     /**
      * NODE_MESH_SPEC.md §6 — one of this device's own nodes changed address (e.g. server moved),
@@ -68,6 +109,10 @@ class NodeMeshManager @Inject constructor(
             if (it.address == oldAddress) ParsedNodeConnection(newAddress, match.ownerSecret) else it
         }
         prefs.edit().putString("my_nodes", updated.map { buildOwnerConnectionString(it) }.joinToString(";")).apply()
+        val sources = getPoolSources().map {
+            if (it.address == oldAddress) ParsedNodeConnection(newAddress, it.ownerSecret) else it
+        }
+        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
         return true
     }
 
@@ -79,6 +124,8 @@ class NodeMeshManager @Inject constructor(
             .filter { it.address != address }
             .map { buildOwnerConnectionString(it) }
         prefs.edit().putString("my_nodes", remaining.joinToString(";")).apply()
+        val sources = getPoolSources().filter { it.address != address }
+        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
     }
 
     /** The address-only list this device advertises to a new contact at pairing time — never
@@ -99,9 +146,12 @@ class NodeMeshManager @Inject constructor(
          *  list (analogous to [RelayManager]'s relay pool field) is built from. */
         const val NODE_ADDRESS_PREFIX = "unpruuf-node:v1:"
 
-        /** Same redundancy cap as [RelayManager.RELAY_POOL_MAX_SIZE] — NODE_MESH_SPEC.md §5's
-         *  "up to 3 own nodes" recommendation. */
+        /** How many own nodes one CONTACT gets (and how many of theirs I poll) — NODE_MESH_SPEC.md
+         *  §5's "up to 3 own nodes" redundancy recommendation, now applied per contact. */
         const val NODE_POOL_MAX_SIZE = 3
+
+        /** How many own nodes this device can hold in total, across all servers. */
+        const val OWN_NODES_MAX = 500
 
         data class ParsedNodeConnection(val address: String, val ownerSecret: String)
 
@@ -119,6 +169,22 @@ class NodeMeshManager @Inject constructor(
             val ownerSecret = rest.substring(lastColon + 1)
             if (address.isEmpty() || ownerSecret.isEmpty()) return null
             return ParsedNodeConnection(address, ownerSecret)
+        }
+
+        /** Pure core of [chooseNodesForNewContact]: least-used first (stable for equal usage, so
+         *  the caller's shuffle decides ties), one node per server before any server repeats. */
+        fun chooseNodes(pool: List<ParsedNodeConnection>, usage: Map<String, Int>, count: Int): List<String> {
+            val ordered = pool.sortedBy { usage[it.address] ?: 0 }
+            val picked = mutableListOf<ParsedNodeConnection>()
+            for (node in ordered) {
+                if (picked.size >= count) break
+                if (picked.none { it.ownerSecret == node.ownerSecret }) picked += node
+            }
+            for (node in ordered) {
+                if (picked.size >= count) break
+                if (node !in picked) picked += node
+            }
+            return picked.map { it.address }
         }
 
         fun buildOwnerConnectionString(parsed: ParsedNodeConnection): String =

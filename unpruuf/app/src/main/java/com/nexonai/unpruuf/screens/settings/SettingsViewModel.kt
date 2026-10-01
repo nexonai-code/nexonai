@@ -253,9 +253,13 @@ class SettingsViewModel @Inject constructor(
         if (nodeMeshManager.addMyNode(pasted)) {
             _nodeMeshInput.value = ""
             _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
-            _nodeMeshStatus.value = "Node added."
+            _nodeMeshStatus.value = "Node added. Looking for more nodes on the same server…"
+            p2pNetworkManager.refreshNodePoolNow { added ->
+                _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
+                _nodeMeshStatus.value = if (added > 0) "Node added, plus $added more from the same server." else "Node added."
+            }
         } else {
-            _nodeMeshStatus.value = "Unreadable node string, or already at the ${NodeMeshManager.NODE_POOL_MAX_SIZE}-node limit — check the QR/text and try again."
+            _nodeMeshStatus.value = "Unreadable node string, or already at the ${NodeMeshManager.OWN_NODES_MAX}-node limit — check the QR/text and try again."
         }
     }
 

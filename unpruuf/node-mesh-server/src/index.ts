@@ -7,7 +7,7 @@ import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
 import {
-  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW,
+  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, NODE_COUNT, NODE_PROFILE, NODE_SLOT, PORT, POW,
   RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
 } from "./config";
 import { createEphemeralIdentity, loadOrCreateIdentity, NodeIdentity, regenerateSecret, saveIdentity } from "./nodeIdentity";
@@ -32,19 +32,23 @@ if (ephemeral) {
   torWorkDir = DATA_DIR;
 }
 
+// A Temp Node is one address for one chat by definition.
+const nodeCount = ephemeral ? 1 : NODE_COUNT;
 const store = new NodeStore(ephemeral ? ":memory:" : DB_PATH, identity.ttlHours);
-const app = createApp(store, () => identity.ownerSecret);
 
 let onion: NodeOnionService | null = null;
 if (TOR_ENABLED) {
+  const saved = ephemeral ? [] : identity.onionKeys ?? [];
   onion = new NodeOnionService({
     workDir: torWorkDir,
     torBinDir: TOR_BIN_DIR,
     localPort: PORT,
-    privateKey: ephemeral ? null : identity.onionKey ?? null,
-    onNewKey: (key) => {
+    privateKeys: Array.from({ length: nodeCount }, (_, i) => saved[i] ?? null),
+    onNewKey: (index, key) => {
       if (ephemeral) return;
-      identity.onionKey = key;
+      const keys = identity.onionKeys ?? [];
+      keys[index] = key;
+      identity.onionKeys = keys;
       saveIdentity(IDENTITY_PATH, identity);
     },
     pow: POW,
@@ -53,6 +57,9 @@ if (TOR_ENABLED) {
 
 const operatorAddress = process.env.NODE_MESH_PUBLIC_ADDRESS?.trim() || null;
 const publicAddress = (): string | null => (onion ? onion.getStatus().onionAddress : operatorAddress);
+const publicAddresses = (): string[] =>
+  onion ? onion.getStatus().onionAddresses : operatorAddress ? [operatorAddress] : [];
+const app = createApp(store, () => identity.ownerSecret, publicAddresses);
 
 const adminApp = createAdminApp(
   {
@@ -68,13 +75,16 @@ const adminApp = createAdminApp(
     ephemeral,
     torEnabled: TOR_ENABLED,
     publicAddress,
+    publicAddresses,
     torStatus: () => onion?.getStatus() ?? null,
     stats: () => store.stats(),
   },
   ADMIN_PORT,
 );
 
-const kind = ephemeral ? "Temp Node" : `Business Node (slot ${NODE_SLOT}/3)`;
+const kind = ephemeral
+  ? "Temp Node"
+  : `Business Node server (slot ${NODE_SLOT}/3, ${nodeCount} node${nodeCount === 1 ? "" : "s"})`;
 console.log(`unpruuf ${kind} — profile "${NODE_PROFILE.name}" (TTL ${NODE_PROFILE.ttlHours}h)`);
 if (ephemeral) console.log("[identity] Temp Node — identity, onion key and messages exist in memory only");
 else console.log(wasCreated ? "[identity] new node identity created" : "[identity] existing node identity loaded");
@@ -101,7 +111,9 @@ if (onion) {
   onion
     .start()
     .then(async (address) => {
-      console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
+      const all = onion!.getStatus().onionAddresses;
+      if (all.length > 1) console.log(`[tor] ${all.length} onion addresses registered, first: ${address} (Tor proof-of-work defense on)`);
+      else console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
       if (ephemeral || wasCreated) await printOwnerCode(address);
     })
     .catch((err) => {

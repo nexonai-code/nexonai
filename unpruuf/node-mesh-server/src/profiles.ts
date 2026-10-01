@@ -61,6 +61,21 @@ export function clientToleranceEpochs(): number {
 }
 
 /**
+ * How many independent nodes (onion addresses) this one process serves. All of them share one
+ * Tor process, one API port and one store; each has its own persisted onion key, so each is a
+ * separate address to the outside. The owner's app hands out different ones to different
+ * contacts. 500 is a safety cap, not a measured limit — see NODE_MESH_SPEC.md for measurements.
+ */
+export const MAX_NODES_PER_SERVER = 500;
+
+export function resolveNodeCount(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === "") return 1;
+  const n = Number(raw.trim());
+  if (Number.isInteger(n) && n >= 1 && n <= MAX_NODES_PER_SERVER) return n;
+  throw new Error(`Invalid NODE_MESH_NODES "${raw}". Use a whole number from 1 to ${MAX_NODES_PER_SERVER}.`);
+}
+
+/**
  * Up to three own nodes (NODE_MESH_SPEC.md §5). The slot decides where in the 24h Reset cycle
  * this node's hygiene pass falls (0 / 20 / 40 minutes) and gives each slot its own default ports
  * and data folder, so all three can even run side by side on one machine for testing.

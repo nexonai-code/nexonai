@@ -22,6 +22,8 @@ export interface AdminState {
   /** Address contacts reach this node at: the managed onion, or NODE_MESH_PUBLIC_ADDRESS when
    *  the operator runs their own hidden service (Tor disabled here). */
   publicAddress: () => string | null;
+  /** Every node address this process serves (one entry per node). */
+  publicAddresses?: () => string[];
   torStatus: () => OnionStatus | null;
   stats: () => { queued: number; tags: number; oldestAgeMs: number | null };
 }
@@ -67,6 +69,7 @@ export async function statusPayload(state: AdminState) {
     torEnabled: state.torEnabled,
     tor,
     address,
+    addresses: state.publicAddresses ? state.publicAddresses() : address ? [address] : [],
     ownerString,
     ownerQr: ownerString ? await QRCode.toDataURL(ownerString, { margin: 1, width: 320 }) : null,
     stats: state.stats(),
@@ -138,6 +141,9 @@ ${tempBanner}
 ${qrBlock}
 </div>
 <div class="card"><h2>2. Status</h2><dl id="status">${renderStatus(s)}</dl></div>
+${s.addresses.length > 1 ? `<div class="card"><h2>Nodes auf diesem Server: ${s.addresses.length}</h2>
+<p>Ein Scan reicht: Die App holt sich alle ${s.addresses.length} Adressen selbst und gibt jedem Kontakt eigene Nodes. Kein Kontakt sieht diese Liste.</p>
+<details><summary>Adressen anzeigen</summary><p class="code">${s.addresses.map(escapeHtml).join("<br>")}</p></details></div>` : ""}
 ${s.canRotate ? `<div class="card"><h2>3. Schreibschlüssel erneuern</h2>
 <p>Nur nötig, wenn der Owner-QR in falsche Hände geraten sein könnte. Danach den neuen QR in deine eigene App scannen. Kontakte sind nicht betroffen.</p>
 <button id="rotate">Schreibschlüssel erneuern</button></div>` : ""}
@@ -166,5 +172,5 @@ function renderStatus(s: Awaited<ReturnType<typeof statusPayload>>): string {
   return `<dt>Tor</dt><dd>${tor}</dd><dt>PoW-Schutz</dt><dd>${s.torEnabled ? "aktiv" : "—"}</dd>` +
     `<dt>Adresse</dt><dd class="code">${escapeHtml(s.address ?? "…")}</dd>` +
     `<dt>Profil</dt><dd>${escapeHtml(s.profile.name)} — ${escapeHtml(s.profile.description)}</dd>` +
-    `<dt>Slot</dt><dd>${s.slot} von 3</dd><dt>Gespeichert</dt><dd>${s.stats.queued} verschlüsselte Pakete</dd>`;
+    `<dt>Slot</dt><dd>${s.slot} von 3</dd><dt>Nodes</dt><dd>${s.addresses.length || 1}</dd><dt>Gespeichert</dt><dd>${s.stats.queued} verschlüsselte Pakete</dd>`;
 }

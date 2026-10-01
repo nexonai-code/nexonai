@@ -25,7 +25,10 @@ export type OnionState = "starting" | "bootstrapping" | "ready" | "restarting" |
 export interface OnionStatus {
   state: OnionState;
   bootstrapPercent: number;
+  /** First node's address — the one shown in the owner QR. */
   onionAddress: string | null;
+  /** Every node's address, index = node number. Empty until Tor has registered them. */
+  onionAddresses: string[];
   restarts: number;
   lastError: string | null;
   powEnabled: boolean;
@@ -38,10 +41,10 @@ export interface OnionServiceOptions {
   torBinDir: string;
   /** Local port of the public API that the onion's virtual port 80 maps to. */
   localPort: number;
-  /** Persisted onion key (`ED25519-V3:...`) or null to generate one. */
-  privateKey: string | null;
-  /** Called once with a newly generated key — persist it (or, for a Temp Node, don't). */
-  onNewKey: (privateKey: string) => void;
+  /** One entry per node: its persisted onion key (`ED25519-V3:...`), or null to generate one. */
+  privateKeys: Array<string | null>;
+  /** Called once per newly generated key — persist it (or, for a Temp Node, don't). */
+  onNewKey: (index: number, privateKey: string) => void;
   pow: { queueRate: number; queueBurst: number };
   log?: (line: string) => void;
 }
@@ -53,8 +56,8 @@ export class NodeOnionService {
   private status: OnionStatus;
   private proc: TorProcessHandle | null = null;
   private control: TorControl | null = null;
-  private privateKey: string | null;
-  private serviceId: string | null = null;
+  private privateKeys: Array<string | null>;
+  private serviceIds: string[] = [];
   private stopping = false;
   private backoffMs = 2_000;
   private restartTimer: NodeJS.Timeout | null = null;
@@ -62,12 +65,13 @@ export class NodeOnionService {
   private readonly log: (line: string) => void;
 
   constructor(private readonly opts: OnionServiceOptions) {
-    this.privateKey = opts.privateKey;
+    this.privateKeys = [...opts.privateKeys];
     this.log = opts.log ?? ((l) => console.log(l));
     this.status = {
       state: "starting",
       bootstrapPercent: 0,
       onionAddress: null,
+      onionAddresses: [],
       restarts: 0,
       lastError: null,
       powEnabled: true,
@@ -115,25 +119,30 @@ export class NodeOnionService {
       const controlPort = await waitForControlPort(handle);
       const control = await TorControl.connect(controlPort);
       await control.authenticateWithCookie(handle.cookiePath);
-      const { serviceId, privateKey } = await control.addOnion({
-        privateKey: this.privateKey,
-        localPort: this.opts.localPort,
-        pow: this.opts.pow,
-      });
-      if (!this.privateKey) {
-        this.privateKey = privateKey;
-        this.opts.onNewKey(privateKey);
+      const serviceIds: string[] = [];
+      for (let i = 0; i < this.privateKeys.length; i++) {
+        const { serviceId, privateKey } = await control.addOnion({
+          privateKey: this.privateKeys[i],
+          localPort: this.opts.localPort,
+          pow: this.opts.pow,
+        });
+        if (!this.privateKeys[i]) {
+          this.privateKeys[i] = privateKey;
+          this.opts.onNewKey(i, privateKey);
+        }
+        serviceIds.push(serviceId);
       }
       this.control = control;
-      this.serviceId = serviceId;
-      this.status.onionAddress = `${serviceId}.onion`;
+      this.serviceIds = serviceIds;
+      this.status.onionAddresses = serviceIds.map((id) => `${id}.onion`);
+      this.status.onionAddress = this.status.onionAddresses[0] ?? null;
       if (this.status.state !== "ready") this.status.state = "bootstrapping";
       this.status.lastError = null;
       control.onClose(() => {
         if (this.stopping || this.control !== control) return;
         this.onUnexpectedLoss("tor control connection closed", torExePath);
       });
-      return this.status.onionAddress;
+      return this.status.onionAddress!;
     } catch (err) {
       this.status.lastError = (err as Error).message;
       handle.proc.kill();
@@ -165,16 +174,23 @@ export class NodeOnionService {
 
   /**
    * Part of the staggered Reset (NODE_MESH_SPEC.md §5): connection hygiene only. Confirms Tor
-   * still has this node's onion registered and re-adds it (same key → same address) if not.
-   * Never touches message data, rate-limit counters, or the address.
+   * still has every node's onion registered and re-adds any missing one (same key → same
+   * address). Never touches message data, rate-limit counters, or any address.
    */
   async hygiene(): Promise<string> {
     const control = this.control;
-    if (!control || control.isClosed || !this.serviceId) return "tor not connected — self-healing restart handles it";
-    const current = await control.getInfo("onions/current");
-    if (current.split(/\s+/).includes(this.serviceId)) return "onion service registered";
-    await control.addOnion({ privateKey: this.privateKey, localPort: this.opts.localPort, pow: this.opts.pow });
-    return "onion service was missing — re-added with the same key";
+    if (!control || control.isClosed || this.serviceIds.length === 0) return "tor not connected — self-healing restart handles it";
+    const current = new Set((await control.getInfo("onions/current")).split(/\s+/));
+    let readded = 0;
+    for (let i = 0; i < this.serviceIds.length; i++) {
+      if (current.has(this.serviceIds[i])) continue;
+      await control.addOnion({ privateKey: this.privateKeys[i], localPort: this.opts.localPort, pow: this.opts.pow });
+      readded++;
+    }
+    const total = this.serviceIds.length;
+    return readded === 0
+      ? `${total} onion service(s) registered`
+      : `${readded} of ${total} onion service(s) were missing — re-added with the same key`;
   }
 
   stop(): void {

@@ -231,6 +231,7 @@ class P2PNetworkManager @Inject constructor(
         // the current one: 26 tags per contact, still one fetchMany call (server cap 64);
         // profiles.test.ts pins the same window server-side.
         private const val NODE_MESH_ROTATION_INTERVAL_MS = 60 * 60 * 1000L
+        private const val NODE_POOL_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000L
         private const val NODE_MESH_MAX_TTL_MS = 24 * 60 * 60 * 1000L
 
         // Connect timeout for FRESH Tor connections to a CONTACT's onion (the pooled send
@@ -331,7 +332,10 @@ class P2PNetworkManager @Inject constructor(
         // reason crossPlatformWireId is: sendDeleteContact removes the contact row in the same
         // coroutine that enqueues the delete signal, so a live lookup would already be gone by
         // delivery time. Null for every non-Node-Mesh item.
-        val nodeMeshRoutingTag: String? = null
+        val nodeMeshRoutingTag: String? = null,
+        // The own nodes this contact was given (Contact.myNodeAddresses), snapshotted for the
+        // same reason — a delete signal must still land where the contact actually polls.
+        val nodeMeshNodes: List<String>? = null
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -410,6 +414,7 @@ class P2PNetworkManager @Inject constructor(
         startActiveChatWarmup()
         startRelayPoll()
         startNodeMeshPoll()
+        startNodePoolRefresh()
         startTempNodeHeartbeat()
         startPeriodicReachabilityCheck()
     }
@@ -551,6 +556,29 @@ class P2PNetworkManager @Inject constructor(
     // pooled across contacts the way relay targets can be). Same adaptive interval/wait
     // constants as the relay loop, reused rather than duplicated — the reasoning ("tight while a
     // chat's open, relaxed otherwise") applies identically here.
+    /** Imports every sibling node of the scanned servers as soon as Tor is up; [onDone] gets the
+     *  number of nodes added. */
+    fun refreshNodePoolNow(onDone: (Int) -> Unit) {
+        scope.launch {
+            val ready = withTimeoutOrNull(120_000) { torManager.isReady.filter { it }.first() }
+            val added = if (ready == null) 0 else runCatching { nodeMeshManager.importSiblings(nodeMeshClient) }.getOrDefault(0)
+            onDone(added)
+        }
+    }
+
+    // Picks up nodes a server owner added later (more NODE_MESH_NODES) without a new scan.
+    private fun startNodePoolRefresh() {
+        scope.launch {
+            while (isActive) {
+                torManager.isReady.filter { it }.first()
+                if (nodeMeshManager.getPoolSources().isNotEmpty()) {
+                    runCatching { nodeMeshManager.importSiblings(nodeMeshClient) }
+                }
+                delay(NODE_POOL_REFRESH_INTERVAL_MS)
+            }
+        }
+    }
+
     private fun startNodeMeshPoll() {
         scope.launch {
             while (isActive) {
@@ -600,7 +628,7 @@ class P2PNetworkManager @Inject constructor(
                 .distinct()
             if (addresses.isEmpty()) continue
             val tags = identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
-                .map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch) }
+                .map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch, identityManager.myRoutingSeedFor(c)) }
             // Every address is this ONE contact's own redundant node pool — added independently
             // (a blob could be sitting on any of them, delete-on-fetch isn't in play here so
             // there's no "already drained" risk in checking all).
@@ -1093,15 +1121,22 @@ class P2PNetworkManager @Inject constructor(
     private suspend fun ingestPacketInner(wireId: String, packet: ByteArray): Boolean {
         // Unpad → decrypt with OUR OWN receive key (the key we shared in our QR code)
         val padded = runCatching { NetworkObfuscation.unpadPacket(packet) }.getOrNull() ?: return false
+        // A Node-Mesh contact paired with per-contact keys encrypts to the key I gave only them,
+        // so the sender has to be known before decrypting. Everything else uses the global key.
+        val earlySender = resolveSender(wireId)
+        val receiveKey = earlySender?.let { contactDao.getContactById(it) }
+            ?.takeIf { it.myPairMessageKey != null }
+            ?.let { identityManager.myMessageKeyFor(it) }
+            ?: identityManager.myMessageKey
         val plaintext = runCatching {
-            cryptoManager.decryptWithKey(padded, identityManager.myMessageKey)
+            cryptoManager.decryptWithKey(padded, receiveKey)
         }.getOrNull() ?: return false
 
         // Tarnpaket: still verwerfen.
         if (plaintext.contentEquals(DUMMY_SIGNAL)) return true
 
         // Rotierende Wire-ID → echten Kontakt auflösen.
-        val senderId = resolveSender(wireId) ?: return false
+        val senderId = earlySender ?: return false
 
         if (plaintext.contentEquals(REVOKE_SIGNAL)) {
             messageStore.zeroizeContact(senderId)
@@ -1241,7 +1276,7 @@ class P2PNetworkManager @Inject constructor(
         // Must be identityManager.pairSecret(...), NOT contact.publicKey decoded raw — the
         // latter is this device's copy of the CONTACT's key, not a value both sides agree on.
         // See RatchetSessionManager.deriveSharedSecret's doc comment for the full explanation.
-        val pairSecret = identityManager.pairSecret(contact.publicKey)
+        val pairSecret = identityManager.pairSecretFor(contact)
         val realPlaintext = runCatching {
             ratchetSessionManager.decrypt(senderId, header, ciphertext, pairSecret)
         }.getOrNull() ?: return false
@@ -1298,8 +1333,9 @@ class P2PNetworkManager @Inject constructor(
             // determines which epochs are still worth checking.
             if (c.nodeMesh) {
                 val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: continue
+                val mySeed = identityManager.myRoutingSeedFor(c)
                 for (epoch in identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)) {
-                    if (identityManager.nodeMeshRoutingTag(seed, epoch) == wireId) return c.id
+                    if (identityManager.nodeMeshRoutingTag(seed, epoch, mySeed) == wireId) return c.id
                 }
                 continue
             }
@@ -1405,7 +1441,7 @@ class P2PNetworkManager @Inject constructor(
         // using it directly here would silently break decryption on both ends. See
         // RatchetSessionManager.deriveSharedSecret's doc comment. contactKey itself stays as-is
         // below for the outer per-direction AES envelope, which is correctly asymmetric.
-        val pairSecret = identityManager.pairSecret(contact.publicKey)
+        val pairSecret = identityManager.pairSecretFor(contact)
         val encryptedMessage = runCatching {
             ratchetSessionManager.encrypt(toContactId, plaintext, pairSecret)
         }.getOrNull() ?: return
@@ -1433,6 +1469,7 @@ class P2PNetworkManager @Inject constructor(
         } else null
         val relayCandidates = contactTheirRelayList(contact)
         val nodeMeshRoutingTag = nodeMeshTagFor(contact)
+        val nodeMeshNodes = myNodesFor(contact)
 
         // Chunked (multi-frame) transfers are relay-eligible too, same as single-frame ones:
         // RatchetFrame.Frame.ChunkCont now carries an explicit index, so the receive side
@@ -1455,7 +1492,8 @@ class P2PNetworkManager @Inject constructor(
                     isChunk = toEnqueue.size > 1,
                     crossPlatformWireId = crossPlatformWireId,
                     relayCandidates = relayCandidates,
-                    nodeMeshRoutingTag = nodeMeshRoutingTag
+                    nodeMeshRoutingTag = nodeMeshRoutingTag,
+                    nodeMeshNodes = nodeMeshNodes
                 )
             )
         }
@@ -1481,7 +1519,8 @@ class P2PNetworkManager @Inject constructor(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
                     myIdentity = contact.myWireIdentity,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1735,7 +1774,8 @@ class P2PNetworkManager @Inject constructor(
             deliveryQueue.add(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1750,7 +1790,16 @@ class P2PNetworkManager @Inject constructor(
         scope.launch {
             val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
                 .filter { it.nodeMesh }
-            for (c in contacts) sendNodeMigrationSignal(c.id, oldAddress, newAddress)
+            for (c in contacts) {
+                // Only contacts that were given the moving node — everyone else never knew it.
+                if (myNodesFor(c)?.contains(oldAddress) != true) continue
+                c.myNodeAddresses?.let { raw ->
+                    val updated = NodeMeshManager.parseNodeConnectionStringList(raw)
+                        .map { if (NodeMeshManager.parseAddressConnectionString(it) == oldAddress) NodeMeshManager.buildAddressConnectionString(newAddress) else it }
+                    contactDao.updateMyNodeAddresses(c.id, updated.joinToString(";"))
+                }
+                sendNodeMigrationSignal(c.id, oldAddress, newAddress)
+            }
         }
     }
 
@@ -1785,7 +1834,8 @@ class P2PNetworkManager @Inject constructor(
             deliveryQueue.add(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1819,7 +1869,8 @@ class P2PNetworkManager @Inject constructor(
             deliveryQueue.add(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1957,7 +2008,8 @@ class P2PNetworkManager @Inject constructor(
                             myIdentity = contact.myWireIdentity, onionOverride = onion,
                             crossPlatformWireId = crossPlatformWireId,
                             relayCandidates = relayCandidates,
-                            nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                            nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                            nodeMeshNodes = myNodesFor(contact)
                         )
                     )
                     wakeSignal.trySend(Unit)
@@ -2101,7 +2153,7 @@ class P2PNetworkManager @Inject constructor(
             if (!torManager.isReady.value) return delivered
             val tag = train.first().nodeMeshRoutingTag!!
             while (delivered < train.size) {
-                if (!depositForNodeMesh(contactId, tag, train[delivered].padded)) break
+                if (!depositForNodeMesh(contactId, tag, train[delivered].padded, train[delivered].nodeMeshNodes)) break
                 delivered++
             }
             return delivered
@@ -2203,8 +2255,17 @@ class P2PNetworkManager @Inject constructor(
      */
     private fun nodeMeshTagFor(contact: com.nexonai.unpruuf.data.model.Contact): String? {
         if (!contact.nodeMesh) return null
-        val seed = contact.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: return null
-        return identityManager.nodeMeshRoutingTag(seed, identityManager.nodeMeshEpoch(NODE_MESH_ROTATION_INTERVAL_MS))
+        return identityManager.nodeMeshRoutingTagFor(contact, identityManager.nodeMeshEpoch(NODE_MESH_ROTATION_INTERVAL_MS))
+    }
+
+    /** The own nodes [contact] polls me at — its assigned ones, or (paired before per-contact
+     *  nodes) the first [NodeMeshManager.NODE_POOL_MAX_SIZE] of the pool, as it was told then. */
+    private fun myNodesFor(contact: com.nexonai.unpruuf.data.model.Contact): List<String>? {
+        if (!contact.nodeMesh) return null
+        val assigned = contact.myNodeAddresses?.let { raw ->
+            NodeMeshManager.parseNodeConnectionStringList(raw).mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+        }
+        return assigned ?: nodeMeshManager.getMyNodePool().take(NodeMeshManager.NODE_POOL_MAX_SIZE).map { it.address }
     }
 
     /**
@@ -2217,11 +2278,12 @@ class P2PNetworkManager @Inject constructor(
      * depends on the CONTACT's row existing, so there's no "deleted mid-flight" risk to guard
      * against here the way [nodeMeshTagFor] does.
      */
-    private suspend fun depositToOwnNodes(routingTag: String, padded: ByteArray): Boolean {
-        val pool = nodeMeshManager.getMyNodePool()
-        if (pool.isEmpty()) return false
+    private suspend fun depositToOwnNodes(addresses: List<String>, routingTag: String, padded: ByteArray): Boolean {
+        val pool = nodeMeshManager.getMyNodePool().associateBy { it.address }
+        val targets = addresses.mapNotNull { pool[it] }
+        if (targets.isEmpty()) return false
         var anySucceeded = false
-        for (node in pool) {
+        for (node in targets) {
             if (nodeMeshClient.deposit(node.address, node.ownerSecret, routingTag, padded)) anySucceeded = true
         }
         return anySucceeded
@@ -2237,12 +2299,14 @@ class P2PNetworkManager @Inject constructor(
      * standard pool when that lookup comes back null keeps this from ever being a hard failure
      * point the way the cross-platform/Node-Mesh branches above are careful to avoid.
      */
-    private suspend fun depositForNodeMesh(contactId: String, routingTag: String, padded: ByteArray): Boolean {
+    private suspend fun depositForNodeMesh(contactId: String, routingTag: String, padded: ByteArray, snapshotNodes: List<String>?): Boolean {
         val contact = contactDao.getContactById(contactId)
+        val nodes = contact?.let { myNodesFor(it) } ?: snapshotNodes
+            ?: nodeMeshManager.getMyNodePool().take(NodeMeshManager.NODE_POOL_MAX_SIZE).map { it.address }
         val tempAddress = contact?.tempNodeAddress
         val tempSecret = contact?.tempNodeOwnerSecret
         if (contact == null || tempAddress == null || tempSecret == null) {
-            return depositToOwnNodes(routingTag, padded)
+            return depositToOwnNodes(nodes, routingTag, padded)
         }
         val tempSucceeded = nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded)
         if (tempSucceeded && !contact.tempNodeActive) {
@@ -2259,11 +2323,11 @@ class P2PNetworkManager @Inject constructor(
             // for THIS one message if the deposit above failed, so a message isn't lost in the
             // gap before the heartbeat loop notices an outage and flips the state back — the
             // state itself is heartbeat-governed, not decided per-send.
-            return tempSucceeded || depositToOwnNodes(routingTag, padded)
+            return tempSucceeded || depositToOwnNodes(nodes, routingTag, padded)
         }
         // Registered but not yet confirmed: dual-deposit, standard nodes stay the reliable path
         // until the Temp Node has proven itself reachable at least once.
-        val standardSucceeded = depositToOwnNodes(routingTag, padded)
+        val standardSucceeded = depositToOwnNodes(nodes, routingTag, padded)
         return tempSucceeded || standardSucceeded
     }
 
@@ -2300,7 +2364,7 @@ class P2PNetworkManager @Inject constructor(
         // NODE_MESH_SPEC.md §0/§1, this is a fully separate, mandatory-node-only transport.
         if (item.nodeMeshRoutingTag != null) {
             if (!torManager.isReady.value) return false
-            return depositForNodeMesh(item.contactId, item.nodeMeshRoutingTag, item.padded)
+            return depositForNodeMesh(item.contactId, item.nodeMeshRoutingTag, item.padded, item.nodeMeshNodes)
         }
 
         val contact = contactDao.getContactById(item.contactId)

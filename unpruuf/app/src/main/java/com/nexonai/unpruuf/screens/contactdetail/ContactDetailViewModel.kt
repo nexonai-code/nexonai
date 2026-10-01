@@ -30,7 +30,7 @@ class ContactDetailViewModel @Inject constructor(
     // IdentityManager.safetyNumber's doc comment. Derived from `contact` so it recomputes
     // automatically once `load()` populates it.
     val mySafetyNumber: StateFlow<String?> = contact
-        .map { c -> c?.x25519RatchetPublicKey?.takeIf { it.isNotBlank() }?.let { identityManager.safetyNumber(it) } }
+        .map { c -> c?.takeIf { it.x25519RatchetPublicKey.isNotBlank() }?.let { identityManager.safetyNumberFor(it) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     // null = no attempt yet, true = last entered code matched, false = it didn't.

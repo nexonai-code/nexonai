@@ -188,7 +188,7 @@ Punțile obișnuite (IP:Port Amprentă) funcționează imediat. obfs4/Snowflake 
     <string name="settings_import">Importă</string>
     <string name="settings_section_node_mesh">Business Node-Mesh (opțional)</string>
     <string name="settings_your_own_nodes">Nodurile tale proprii</string>
-    <string name="settings_your_own_nodes_body">Adaugă propriul (propriile) tale server(e) unpruuf Node-Mesh — vezi node-mesh-server/README.md. Doar tu poți scrie pe propriul node; un contact Business/Node-Mesh poate citi de pe el odată împerecheat. Până la %1$d.</string>
+    <string name="settings_your_own_nodes_body">Adaugă propriul (propriile) tale server(e) unpruuf Node-Mesh — vezi node-mesh-server/README.md. Doar tu poți scrie pe propriul node. Scanează un singur node pe server, aplicația preia singură celelalte noduri ale serverului. Fiecare contact nou primește noduri proprii din acest grup, până la %1$d în total.</string>
     <string name="settings_migrate">Migrează</string>
     <string name="settings_remove">Elimină</string>
     <string name="settings_node_migrated_notice">Acest node s-a mutat la o adresă nouă — fiecare contact Business Node-Mesh împerecheat va fi notificat automat.</string>
@@ -265,4 +265,7 @@ Punțile obișnuite (IP:Port Amprentă) funcționează imediat. obfs4/Snowflake 
     <string name="notif_channel_messages_description">Mesaje criptate primite</string>
     <string name="notif_title">unpruuf</string>
     <string name="notif_new_message">Ai primit un mesaj nou</string>
+    <string name="settings_nodes_count">%1$d noduri proprii</string>
+    <string name="settings_show_all_nodes">Arată toate cele %1$d</string>
+    <string name="settings_show_fewer_nodes">Arată mai puține</string>
 </resources>

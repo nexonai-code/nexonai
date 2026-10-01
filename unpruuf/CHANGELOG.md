@@ -5,6 +5,46 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑01 (2) · Own keys and own nodes per contact; many nodes per server
+
+**What was done**
+
+- **Server (`node-mesh-server`):** `NODE_MESH_NODES=1..500` — one process, one Tor, that many
+  onion addresses, one persisted key each (`onionKeys` in the identity file; old single-key files
+  are migrated automatically). New owner-only `GET /pool` lists every address of the server. Setup
+  page shows the node count and the address list. `start.bat` asks for the node count on first
+  start (Enter = 10), `start.sh` takes it as third argument, `docker-compose.yml` sets 10.
+- **Tablet node (`relay-android`):** `GET /pool` answers with its own address (owner-only), so
+  the app treats every node type the same.
+- **App:** every Node-Mesh pairing now generates a fresh message key, X25519 ratchet key pair and
+  routing seed, and picks up to 3 own nodes from the pool (least used first, spread over
+  different servers). Stored on the contact (`Contact.myPair*`, `Contact.myNodeAddresses`, DB v10,
+  destructive migration as before). Deposits go only to that contact's nodes; routing tags,
+  decryption, ratchet setup and the safety number use the per-contact values. The QR shown stays
+  stored until a scan binds it; one pairing screen = one contact.
+- **Pool import:** scanning one owner QR also fetches the server's other nodes via `/pool`, and
+  the app re-checks every 6 h. Own pool limit 500. Settings show the node count and fold long
+  lists.
+- **Node migration** is announced only to contacts that were given the moving node.
+- **Measurement** (`node-mesh-server/tools/measure_nodes.py`): 500 nodes in one process about
+  85 MB RAM, 10 separate processes about 788 MB. Measured without the live Tor network.
+
+**Which bug appeared**
+
+None in the build. One script error while adding `/pool` to relay-android (Kotlin triple quotes
+inside a Python string) — caught before anything was written.
+
+**Verification**
+
+- node-mesh-server `npm test` 41/41; real Tor: 3 nodes in one process, 3 different addresses, all
+  3 unchanged after restart, `/pool` 401 without owner secret.
+- App: 59/59 unit tests × 4 editions (new: node distribution, pool parsing), all four editions
+  build. relay-android: 9/9.
+- Not verified: real devices, and the network load of hundreds of published onion services on a
+  real VPS.
+
+---
+
 ## 2026‑10‑01 · No own onion service on the phone unless a contact needs one; linkability claim corrected
 
 **What was done**

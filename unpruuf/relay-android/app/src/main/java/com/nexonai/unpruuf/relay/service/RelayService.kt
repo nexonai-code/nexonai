@@ -185,7 +185,8 @@ class RelayService : Service() {
                     RelayConstants.LOCAL_HTTP_PORT,
                     blobStore,
                     getOwnerSecret = { identity.nodeMeshOwnerSecret },
-                    getTtlMs = { identity.nodeMeshTtlHours * 3_600_000L }
+                    getTtlMs = { identity.nodeMeshTtlHours * 3_600_000L },
+                    getOnionAddress = { torManager.onionAddress.value }
                 )
             } else {
                 val bindHost = if (identity.lanAccessEnabled) "0.0.0.0" else "127.0.0.1"

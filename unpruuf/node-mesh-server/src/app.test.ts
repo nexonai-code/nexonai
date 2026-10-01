@@ -274,3 +274,24 @@ test("a rotated owner secret takes effect immediately — the old one stops work
     store.close();
   }
 });
+
+test("GET /pool lists every node address, but only for the owner", async () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-app-test-")), "node-mesh.sqlite");
+  const store = new NodeStore(file);
+  const addresses = ["aaaa.onion", "bbbb.onion", "cccc.onion"];
+  const server = createApp(store, OWNER_SECRET, () => addresses).listen(0);
+  const { port } = server.address() as AddressInfo;
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    const anonymous = await fetch(`${base}/pool`);
+    assert.equal(anonymous.status, 401);
+    const wrong = await fetch(`${base}/pool`, { headers: ownerHeaders("not-the-secret") });
+    assert.equal(wrong.status, 401);
+    const owner = await fetch(`${base}/pool`, { headers: ownerHeaders() });
+    assert.equal(owner.status, 200);
+    assert.deepEqual(await owner.json(), { addresses });
+  } finally {
+    server.close();
+    store.close();
+  }
+});

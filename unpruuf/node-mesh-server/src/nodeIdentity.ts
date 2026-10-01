@@ -14,9 +14,12 @@ export interface NodeIdentity {
   /** How long a deposited blob is kept before the TTL sweep removes it — the only deletion
    *  mechanism now that fetch no longer deletes (§4). */
   ttlHours: number;
-  /** The node's Tor onion-service key (`ED25519-V3:<base64>`), created on first start and reused
-   *  forever after, so the node's .onion address never changes (NODE_MESH_SPEC.md §5). Absent
-   *  until Tor has run once. Never set for a Temp Node — its key lives in memory only. */
+  /** One Tor onion-service key (`ED25519-V3:<base64>`) per node this process serves, index =
+   *  node number. Each is created on first start and reused forever after, so no node's .onion
+   *  address ever changes (NODE_MESH_SPEC.md §5). Never set for a Temp Node — its key lives in
+   *  memory only. */
+  onionKeys?: string[];
+  /** Pre-multi-node files stored a single key here; read once and moved into [onionKeys]. */
   onionKey?: string;
 }
 
@@ -38,12 +41,19 @@ export function loadOrCreateIdentity(identityPath: string, defaultTtlHours: numb
     const parsed = JSON.parse(fs.readFileSync(identityPath, "utf8"));
     if (typeof parsed.ownerSecret === "string" && typeof parsed.ttlHours === "number") {
       const identity = parsed as NodeIdentity;
+      let changed = false;
+      if (identity.onionKey && !identity.onionKeys) {
+        identity.onionKeys = [identity.onionKey];
+        delete identity.onionKey;
+        changed = true;
+      }
       // The deployment profile (config.ts) is authoritative for retention — switching profile
       // and restarting must take effect, not be shadowed by the value saved on first start.
       if (identity.ttlHours !== defaultTtlHours) {
         identity.ttlHours = defaultTtlHours;
-        saveIdentity(identityPath, identity);
+        changed = true;
       }
+      if (changed) saveIdentity(identityPath, identity);
       return { identity, wasCreated: false };
     }
   }

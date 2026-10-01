@@ -502,12 +502,20 @@ fun SettingsScreen(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_your_own_nodes)) },
                 supportingContent = {
-                    Text(stringResource(R.string.settings_your_own_nodes_body, NodeMeshManager.NODE_POOL_MAX_SIZE))
+                    Text(stringResource(R.string.settings_your_own_nodes_body, NodeMeshManager.OWN_NODES_MAX))
                 },
                 leadingContent = { Icon(Icons.Default.Send, null) }
             )
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                myNodeAddresses.forEach { address ->
+                var showAllNodes by remember { mutableStateOf(false) }
+                val collapsible = myNodeAddresses.size > 5
+                if (myNodeAddresses.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.settings_nodes_count, myNodeAddresses.size),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+                (if (collapsible && !showAllNodes) myNodeAddresses.take(3) else myNodeAddresses).forEach { address ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -541,6 +549,14 @@ fun SettingsScreen(
                                 OutlinedButton(onClick = { viewModel.cancelMigrateNode() }) { Text(stringResource(R.string.settings_cancel)) }
                             }
                         }
+                    }
+                }
+                if (collapsible) {
+                    TextButton(onClick = { showAllNodes = !showAllNodes }) {
+                        Text(
+                            if (showAllNodes) stringResource(R.string.settings_show_fewer_nodes)
+                            else stringResource(R.string.settings_show_all_nodes, myNodeAddresses.size)
+                        )
                     }
                 }
                 if (myNodeAddresses.isNotEmpty()) Spacer(Modifier.height(8.dp))

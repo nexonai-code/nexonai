@@ -188,7 +188,7 @@ Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow i
     <string name="settings_import">Import</string>
     <string name="settings_section_node_mesh">Business Node-Mesh (optional)</string>
     <string name="settings_your_own_nodes">Your own nodes</string>
-    <string name="settings_your_own_nodes_body">Add your own unpruuf Node-Mesh server(s) — see node-mesh-server/README.md. Only you can write to your own node; a Business/Node-Mesh contact can read from it once paired. Up to %1$d.</string>
+    <string name="settings_your_own_nodes_body">Add your own unpruuf Node-Mesh server(s) — see node-mesh-server/README.md. Only you can write to your own node. Scan one node per server, the app fetches the other nodes of that server itself. Every new contact gets its own nodes from this pool, up to %1$d in total.</string>
     <string name="settings_migrate">Migrate</string>
     <string name="settings_remove">Remove</string>
     <string name="settings_node_migrated_notice">This node moved to a new address — every paired Business Node-Mesh contact will be notified automatically.</string>
@@ -265,4 +265,7 @@ Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow i
     <string name="notif_channel_messages_description">Incoming encrypted messages</string>
     <string name="notif_title">unpruuf</string>
     <string name="notif_new_message">New message received</string>
+    <string name="settings_nodes_count">%1$d own nodes</string>
+    <string name="settings_show_all_nodes">Show all %1$d</string>
+    <string name="settings_show_fewer_nodes">Show fewer</string>
 </resources>

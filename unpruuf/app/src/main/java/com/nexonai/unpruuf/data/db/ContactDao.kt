@@ -62,6 +62,9 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE publicKey = :publicKey AND nodeMesh = 1 LIMIT 1")
     suspend fun getNodeMeshContactByPublicKey(publicKey: String): Contact?
 
+    @Query("UPDATE contacts SET myNodeAddresses = :addresses WHERE id = :id")
+    suspend fun updateMyNodeAddresses(id: String, addresses: String)
+
     /** Sets or clears (pass null) the manual relay-owner override — see
      *  P2PNetworkManager.switchRelayOwner()/IdentityManager.relayOwnerIsMine(). [owner] is
      *  "mine", "theirs", or null to fall back to the automatic rhythm. */

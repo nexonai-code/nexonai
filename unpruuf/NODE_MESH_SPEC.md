@@ -179,10 +179,21 @@ Edition (`e`). Die frühere `u`-User-ID wurde von Routing und Krypto nie gelesen
 beim erneuten Scannen läuft über den Nachrichtenschlüssel. v1-QR-Codes (mit `u`) werden weiterhin
 gelesen, das Feld wird ignoriert.
 
-**Grenze (offen):** Nachrichtenschlüssel, Ratchet-Schlüssel, Routing-Seed und Node-Adressen sind
-heute pro Gerät global — jeder Kontakt bekommt dieselben Werte. Zwei Kontakte können also durch
-Vergleich ihrer QR-Codes feststellen, dass sie mit derselben Person sprechen. Das Entfernen der
-User-ID ändert daran nichts. Abhilfe erst mit eigenen Schlüsseln und eigenen Nodes pro Kontakt.
+**Eigene Schlüssel und eigene Nodes pro Kontakt (2026-10-01).** Bis 2026-09-30 waren
+Nachrichtenschlüssel, Ratchet-Schlüssel, Routing-Seed und Node-Adressen pro Gerät global, zwei
+Kontakte konnten durch QR-Vergleich feststellen, dass sie mit derselben Person sprechen. Seitdem
+erzeugt jede Node-Mesh-Kopplung frisch: Nachrichtenschlüssel, X25519-Ratchet-Schlüsselpaar,
+Routing-Seed — und wählt bis zu 3 eigene Nodes aus dem Pool, zuerst die am wenigsten benutzten,
+verteilt über verschiedene Server. Gespeichert am Kontakt (`Contact.myPair*`,
+`Contact.myNodeAddresses`, verschlüsselte DB), abgelegt wird nur noch auf die Nodes dieses
+Kontakts. Solange der Pool genug Nodes hat (3 pro Kontakt), haben zwei Kontakte nichts
+Gemeinsames mehr. Der angezeigte QR bleibt bis zum Scan gespeichert ("pending"), ein Bildschirm =
+ein Kontakt.
+
+**Viele Nodes pro Server.** `node-mesh-server` betreibt mit `NODE_MESH_NODES=1..500` beliebig
+viele Onion-Adressen in einem Prozess mit einem Tor. Die App scannt einen Owner-QR pro Server und
+holt die übrigen Adressen über `GET /pool` (nur mit Owner-Secret), alle 6 h erneut. Pool-Grenze
+in der App: 500 eigene Nodes. Messung siehe `node-mesh-server/README.md`.
 
 **Keine eigene Onion-Adresse auf dem Telefon (2026-10-01).** Im Node-Mesh-Pfad ist das Telefon
 reiner Tor-Client: beim Ablegen weist es sich per Owner-Secret aus, beim Abholen per Routing-Tag.

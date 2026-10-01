@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
@@ -304,15 +305,41 @@ class QrPairViewModel @Inject constructor(
     /** Null until at least one own node is configured (Settings → Business Node-Mesh) — the
      *  Node-Mesh QR is meaningless without one, mirroring [myCrossPlatformQrPayload]'s same gate
      *  for the relay pool. */
-    fun myNodeMeshQrPayload(): NodeMeshPairingPayload? {
+    // The pairing values shown on THIS screen. Kept for the screen's lifetime, even after a scan
+    // has bound them to a contact, because the other side may still need to scan this QR.
+    private var shownNodeMeshPairing: IdentityManager.PendingNodeMeshPairing? = null
+    private var nodeMeshPairingBound = false
+
+    private fun currentNodeMeshPairing(): IdentityManager.PendingNodeMeshPairing? {
+        shownNodeMeshPairing?.let { return it }
         if (!nodeMeshManager.isUsable()) return null
+        val pending = identityManager.pendingNodeMeshPairing {
+            val usage = runBlocking { contactDao.getAllContactsOnce() }
+                .filter { it.nodeMesh }
+                .flatMap { c ->
+                    NodeMeshManager.parseNodeConnectionStringList(c.myNodeAddresses ?: "")
+                        .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+                }
+                .groupingBy { it }.eachCount()
+            nodeMeshManager.chooseNodesForNewContact(usage)
+        }
+        // A pending set whose nodes were all removed meanwhile is useless — start fresh.
+        val pool = nodeMeshManager.getMyNodePool().map { it.address }.toSet()
+        if (pending.nodeAddresses.none { it in pool }) {
+            identityManager.clearPendingNodeMeshPairing()
+            return currentNodeMeshPairing()
+        }
+        shownNodeMeshPairing = pending
+        return pending
+    }
+
+    fun myNodeMeshQrPayload(): NodeMeshPairingPayload? {
+        val pairing = currentNodeMeshPairing() ?: return null
         return NodeMeshPairingPayload(
-            messageKeyBase64 = android.util.Base64.encodeToString(
-                identityManager.myMessageKey, android.util.Base64.NO_WRAP
-            ),
-            x25519RatchetPublicKeyBase64 = identityManager.myX25519RatchetPublicKeyBase64,
-            nodeMeshRoutingSeedBase64 = identityManager.myNodeMeshRoutingSeedBase64,
-            nodeAddresses = nodeMeshManager.getMyAdvertisedAddresses(),
+            messageKeyBase64 = pairing.messageKey,
+            x25519RatchetPublicKeyBase64 = pairing.ratchetPublicKey,
+            nodeMeshRoutingSeedBase64 = pairing.routingSeed,
+            nodeAddresses = pairing.nodeAddresses,
             appEdition = AppEdition.current
         )
     }
@@ -350,6 +377,14 @@ class QrPairViewModel @Inject constructor(
                 return@launch
             }
 
+            if (nodeMeshPairingBound) {
+                _errorState.value = "This code was already used for one contact. Close and reopen this screen to pair the next one — every contact gets its own keys and nodes."
+                return@launch
+            }
+            val mine = currentNodeMeshPairing() ?: run {
+                _errorState.value = "Set up your own node first (Settings → Business Node-Mesh) — without it, this contact's messages would have nowhere to reach you."
+                return@launch
+            }
             val contact = Contact(
                 id = identityManager.newWireIdentity(),
                 onionAddress = "",
@@ -359,11 +394,18 @@ class QrPairViewModel @Inject constructor(
                 isClientSlot = payload.appEdition == AppEdition.CLIENT,
                 x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
                 nodeMesh = true,
+                myPairMessageKey = mine.messageKey,
+                myPairRatchetPrivateKey = mine.ratchetPrivateKey,
+                myPairRatchetPublicKey = mine.ratchetPublicKey,
+                myPairRoutingSeed = mine.routingSeed,
+                myNodeAddresses = mine.nodeAddresses.joinToString(";") { NodeMeshManager.buildAddressConnectionString(it) },
                 theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
                 theirNodeAddresses = NodeMeshManager.buildNodeConnectionStringList(payload.nodeAddresses)
             )
 
             contactDao.insert(contact)
+            identityManager.clearPendingNodeMeshPairing()
+            nodeMeshPairingBound = true
             ratchetSessionManager.createSession(contact)
             // No NEW_IDENTITY signal here, deliberately — Node-Mesh's routing tag has no
             // identity component to announce (see IdentityManager.nodeMeshRoutingTag's doc

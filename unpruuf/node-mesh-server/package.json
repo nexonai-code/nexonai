@@ -11,7 +11,7 @@
     "start:tempnode": "node dist/index.js --ephemeral",
     "dev": "ts-node src/index.ts",
     "build:exe": "node build-exe.js",
-    "test": "tsc -p tsconfig.json && node --test dist/app.test.js dist/store/nodeStore.test.js dist/middleware/rateLimit.test.js dist/sqliteNativeBinding.test.js dist/profiles.test.js dist/tor/tor.test.js dist/admin/adminApp.test.js"
+    "test": "tsc -p tsconfig.json && node --test dist/app.test.js dist/store/nodeStore.test.js dist/middleware/rateLimit.test.js dist/sqliteNativeBinding.test.js dist/profiles.test.js dist/tor/tor.test.js dist/admin/adminApp.test.js dist/nodeIdentity.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",

@@ -102,6 +102,19 @@ data class Contact(
     // P2PNetworkManager) is what updates one entry in place if one of their nodes moves.
     val theirNodeAddresses: String? = null,
 
+    // ─── Per-contact own pairing values (Node-Mesh) ─────────────────────────────────────────
+    // Generated fresh for THIS pairing only and shown only in the QR this contact scanned, so no
+    // two contacts ever see the same key, seed or node from me. Null means a contact paired
+    // before per-contact values existed; the device-global values in IdentityManager apply then.
+    // The DB itself is encrypted (see AppModule), same as tempNodeOwnerSecret below.
+    val myPairMessageKey: String? = null,
+    val myPairRatchetPrivateKey: String? = null,
+    val myPairRatchetPublicKey: String? = null,
+    val myPairRoutingSeed: String? = null,
+    // My own nodes assigned to this contact (NODE_ADDRESS_PREFIX entries, ';'-joined): the only
+    // ones I deposit to for them and the only ones they ever learn. Null = legacy, whole pool.
+    val myNodeAddresses: String? = null,
+
     // ─── Temp Node (NODE_MESH_SPEC.md §7, Node-Mesh only) ───────────────────────────────────
     // Exceptional, per-chat, one-off additional own node — e.g. a second device run just for
     // this one contact while traveling. Independent of the standard node pool in

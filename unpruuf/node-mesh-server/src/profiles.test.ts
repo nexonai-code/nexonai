@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MAX_FETCH_MANY_TAGS } from "./config";
 import {
-  clientToleranceEpochs, MAX_TTL_HOURS, PROFILES, resolveProfile, resolveSlot, slotPorts, slotResetOffsetMs,
+  clientToleranceEpochs, MAX_NODES_PER_SERVER, MAX_TTL_HOURS, PROFILES, resolveNodeCount, resolveProfile, resolveSlot, slotPorts, slotResetOffsetMs,
 } from "./profiles";
 
 test("every profile stays inside MAX_TTL_HOURS, so the fixed client window always covers it", () => {
@@ -30,4 +30,14 @@ test("slots stagger the reset 0/20/40 min and never share ports", () => {
   const ports = [1, 2, 3].flatMap((s) => Object.values(slotPorts(resolveSlot(String(s)))));
   assert.equal(new Set(ports).size, ports.length);
   assert.throws(() => resolveSlot("4"), /Invalid NODE_SLOT/);
+});
+
+test("node count defaults to 1 and accepts 1..MAX_NODES_PER_SERVER", () => {
+  assert.equal(resolveNodeCount(undefined), 1);
+  assert.equal(resolveNodeCount(""), 1);
+  assert.equal(resolveNodeCount("10"), 10);
+  assert.equal(resolveNodeCount(String(MAX_NODES_PER_SERVER)), MAX_NODES_PER_SERVER);
+  for (const bad of ["0", "-3", "2.5", "abc", String(MAX_NODES_PER_SERVER + 1)]) {
+    assert.throws(() => resolveNodeCount(bad), /NODE_MESH_NODES/);
+  }
 });

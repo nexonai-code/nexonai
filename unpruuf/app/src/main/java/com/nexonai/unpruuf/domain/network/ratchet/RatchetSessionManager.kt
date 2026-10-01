@@ -38,9 +38,9 @@ class RatchetSessionManager @Inject constructor(
 
     /** Creates (or re-creates, on re-pairing) this device's ratchet session for [contact]. */
     suspend fun createSession(contact: Contact) {
-        val my = identityManager.myX25519RatchetKeyPair
+        val my = identityManager.ratchetKeyPairFor(contact)
         val theirPub = android.util.Base64.decode(contact.x25519RatchetPublicKey, android.util.Base64.NO_WRAP)
-        val shared = deriveSharedSecret(my.privateKey, theirPub, contact.publicKey)
+        val shared = deriveSharedSecret(my.privateKey, theirPub, contact)
 
         val state = if (compareUnsigned(my.publicKey, theirPub) < 0) {
             DoubleRatchet.initSender(shared, DoubleRatchet.KeyPair(my.privateKey, my.publicKey), theirPub)
@@ -80,7 +80,7 @@ class RatchetSessionManager @Inject constructor(
 
     // ─── X3DH-lite ──────────────────────────────────────────────────────────
 
-    private fun deriveSharedSecret(myPrivateKey: ByteArray, theirPublicKey: ByteArray, contactMsgKeyB64: String): ByteArray {
+    private fun deriveSharedSecret(myPrivateKey: ByteArray, theirPublicKey: ByteArray, contact: Contact): ByteArray {
         val dh = X25519.computeSharedSecret(myPrivateKey, theirPublicKey)
         // Salted with IdentityManager.pairSecret() — the pair's actual shared secret, symmetric
         // because both devices compute it from the same two message keys sorted into a fixed
@@ -91,7 +91,7 @@ class RatchetSessionManager @Inject constructor(
         // directions despite pairing itself succeeding (pairing doesn't touch this code path).
         // Also NOT Contact.rotationFactor: despite the name, that field isn't a per-pair secret
         // at all — it's derived purely from the current hour and is identical for every device.
-        return Hkdf.computeHkdf("HmacSha256", dh, identityManager.pairSecret(contactMsgKeyB64), X3DH_INFO, 32)
+        return Hkdf.computeHkdf("HmacSha256", dh, identityManager.pairSecretFor(contact), X3DH_INFO, 32)
     }
 
     private fun compareUnsigned(a: ByteArray, b: ByteArray): Int {

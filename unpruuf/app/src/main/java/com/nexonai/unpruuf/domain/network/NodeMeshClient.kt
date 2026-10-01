@@ -40,6 +40,17 @@ class NodeMeshClient @Inject constructor(
         // real request to fail defeats the point of pinging on a short, frequent interval (see
         // P2PNetworkManager.startTempNodeHeartbeat()).
         private const val HEALTH_CHECK_TIMEOUT_MS = 15_000
+
+        private val ONION_ADDRESS = Regex("^[a-z2-7]{56}\\.onion$")
+
+        /** Parses `{"addresses":["x.onion",...]}`; anything that isn't a v3 onion is dropped. */
+        fun parsePoolAddresses(body: String): List<String> {
+            val match = Regex(""""addresses"\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL).find(body) ?: return emptyList()
+            return match.groupValues[1].split(",")
+                .map { it.trim().removeSurrounding("\"") }
+                .filter { ONION_ADDRESS.matches(it) }
+                .distinct()
+        }
     }
 
     /**
@@ -97,6 +108,16 @@ class NodeMeshClient @Inject constructor(
         return parseBlobsMapBody(response.body).mapValues { (_, blobsB64) ->
             blobsB64.mapNotNull { runCatching { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) }.getOrNull() }
         }
+    }
+
+    /** Every node address the server behind [nodeAddress] runs (owner-only `GET /pool`). Null if
+     *  the server can't be reached or predates multi-node servers. */
+    fun listPool(nodeAddress: String, ownerSecret: String): List<String>? {
+        val response = runCatching {
+            request(nodeAddress, "GET", "/pool", null, ownerSecret = ownerSecret)
+        }.getOrNull() ?: return null
+        if (response.status !in 200..299) return null
+        return parsePoolAddresses(response.body)
     }
 
     /**

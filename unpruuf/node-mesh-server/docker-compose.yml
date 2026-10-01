@@ -6,6 +6,7 @@ services:
     environment:
       NODE_SLOT: "1"
       NODE_PROFILE: standard   # standard | high-security | offline-tolerant
+      NODE_MESH_NODES: "10"    # onion addresses served by this one container (1-500)
       ADMIN_PORT: "8790"
     ports:
       - "127.0.0.1:8790:8790"  # setup page, host loopback only

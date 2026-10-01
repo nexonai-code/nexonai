@@ -47,7 +47,7 @@ class NodeMeshHttpServerTest {
     @Before
     fun start() {
         port = ServerSocket(0).use { it.localPort }
-        server = NodeMeshHttpServer(port, MemoryStore(), { owner }, { nodeTtlMs })
+        server = NodeMeshHttpServer(port, MemoryStore(), { owner }, { nodeTtlMs }, { "tablet.onion" })
         server.start()
     }
 
@@ -139,5 +139,14 @@ class NodeMeshHttpServerTest {
         assertTrue("sustained flood must hit 429", codes.contains(429))
         // Owner writes are never throttled by the read bucket.
         assertEquals(201, deposit("afterFlood").code)
+    }
+
+    @Test
+    fun `pool lists this node for the owner only`() {
+        assertEquals(401, call("GET", "/pool").code)
+        assertEquals(401, call("GET", "/pool", auth = "wrong").code)
+        val ok = call("GET", "/pool", auth = owner)
+        assertEquals(200, ok.code)
+        assertEquals("""{"addresses":["tablet.onion"]}""", ok.body)
     }
 }
