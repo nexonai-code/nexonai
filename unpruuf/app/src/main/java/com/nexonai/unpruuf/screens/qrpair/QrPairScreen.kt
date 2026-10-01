@@ -66,7 +66,7 @@ fun QrPairScreen(
     // mandatoryActive): a separate product line, not a third variant of the relay-mandatory
     // choice — see NODE_MESH_SPEC.md §0. Takes priority over crossPlatformMode/mandatoryActive
     // for what's actually shown/generated whenever it's on.
-    var nodeMeshMode by remember { mutableStateOf(false) }
+    var nodeMeshMode by remember { mutableStateOf(viewModel.isNodeMeshUsable()) }
 
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         val contents = result.contents
@@ -251,6 +251,7 @@ fun QrPairScreen(
                     }
                 }
             } else {
+            LaunchedEffect(Unit) { viewModel.requestOnionQr() }
             myPayload?.let { payload ->
                 val qrJson = viewModel.payloadToJson(payload)
                 val qrBitmap = remember(qrJson) { generateQrBitmap(qrJson) }

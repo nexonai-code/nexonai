@@ -175,12 +175,20 @@ Beim Pairing tauschen beide Kontakte aus:
 
 **Keine User-ID (QR-Format v2, 2026-09-30).** Der Node-Mesh-Pairing-QR enthält nur noch
 Nachrichtenschlüssel (`p`), Ratchet-Public-Key (`k`), Routing-Seed (`s`), Node-Adressen (`n`) und
-Edition (`e`). Die frühere `u`-User-ID wurde von Routing und Krypto nie gelesen und war eine
-kontaktübergreifend identische Kennung — genau das, womit zwei Kontakte dich ohne jede
-Kryptoanalyse verknüpfen könnten. Duplikaterkennung beim erneuten Scannen läuft über den
-Nachrichtenschlüssel. Das Telefon selbst hat im Node-Mesh-Pfad ohnehin keine eigene
-Onion-Adresse: es ist reiner Tor-Client; beim Ablegen weist es sich per Owner-Secret aus, beim
-Abholen per Routing-Tag. v1-QR-Codes (mit `u`) werden weiterhin gelesen, das Feld wird ignoriert.
+Edition (`e`). Die frühere `u`-User-ID wurde von Routing und Krypto nie gelesen. Duplikaterkennung
+beim erneuten Scannen läuft über den Nachrichtenschlüssel. v1-QR-Codes (mit `u`) werden weiterhin
+gelesen, das Feld wird ignoriert.
+
+**Grenze (offen):** Nachrichtenschlüssel, Ratchet-Schlüssel, Routing-Seed und Node-Adressen sind
+heute pro Gerät global — jeder Kontakt bekommt dieselben Werte. Zwei Kontakte können also durch
+Vergleich ihrer QR-Codes feststellen, dass sie mit derselben Person sprechen. Das Entfernen der
+User-ID ändert daran nichts. Abhilfe erst mit eigenen Schlüsseln und eigenen Nodes pro Kontakt.
+
+**Keine eigene Onion-Adresse auf dem Telefon (2026-10-01).** Im Node-Mesh-Pfad ist das Telefon
+reiner Tor-Client: beim Ablegen weist es sich per Owner-Secret aus, beim Abholen per Routing-Tag.
+Seit 2026-10-01 startet die App auch keinen eigenen Onion-Dienst mehr, solange kein Kontakt einen
+braucht (Whistleblower-Edition nie; sonst nur bei mindestens einem direkten P2P-Kontakt oder wenn
+der Nutzer ausdrücklich einen Onion-Pairing-QR öffnet).
 
 ---
 

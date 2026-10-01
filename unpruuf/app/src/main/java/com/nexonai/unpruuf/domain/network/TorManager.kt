@@ -12,6 +12,7 @@ import android.net.NetworkCapabilities
 import android.os.IBinder
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.nexonai.unpruuf.data.db.ContactDao
+import com.nexonai.unpruuf.domain.AppEdition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,12 @@ class TorManager @Inject constructor(
 
     private val _onionAddress = MutableStateFlow<String?>(null)
     val onionAddress: StateFlow<String?> = _onionAddress.asStateFlow()
+
+    // True only while this device publishes an onion service of its own. Whistleblower and
+    // Node-Mesh/relay-only users never need one (they only dial out), so it stays off for them
+    // until an onion-based pairing actually asks for it via ensureMainOnion().
+    private val _hostingOwnOnion = MutableStateFlow(false)
+    val hostingOwnOnion: StateFlow<Boolean> = _hostingOwnOnion.asStateFlow()
 
     // TorService populates its socks port only AFTER bootstrap (GETINFO net/listeners/socks),
     // so it must be read lazily at send time — never cached at bind time.
@@ -93,7 +100,7 @@ class TorManager @Inject constructor(
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 when (intent.getStringExtra(TorService.EXTRA_STATUS)) {
-                    TorService.STATUS_ON -> scope.launch { setupHiddenService() }
+                    TorService.STATUS_ON -> scope.launch { onTorUp() }
                     TorService.STATUS_OFF, TorService.STATUS_STOPPING -> _isReady.value = false
                 }
             }
@@ -282,6 +289,22 @@ class TorManager @Inject constructor(
         return ctrl
     }
 
+    private suspend fun ownOnionNeeded(): Boolean {
+        if (AppEdition.isWhistleblower) return false
+        val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrNull() ?: return true
+        return contacts.any { !it.nodeMesh && !it.crossPlatform }
+    }
+
+    private suspend fun onTorUp() {
+        if (_hostingOwnOnion.value || ownOnionNeeded()) {
+            setupHiddenService()
+            return
+        }
+        val ctrl = awaitControlConnection() ?: return
+        applyBridges(ctrl)
+        _isReady.value = true
+    }
+
     private suspend fun setupHiddenService() {
         val ctrl = awaitControlConnection() ?: return
 
@@ -298,6 +321,7 @@ class TorManager @Inject constructor(
             val serviceId = result[TorControlCommands.HS_ADDRESS] ?: return
             result[TorControlCommands.HS_PRIVKEY]?.let { identityManager.saveTorPrivKey(it) }
             _onionAddress.value = "$serviceId.onion"
+            _hostingOwnOnion.value = true
             _isReady.value = true
         }
         // Rückwärtskompatibel: auch früher gekoppelte per-Kontakt-Onions wieder
@@ -392,6 +416,7 @@ class TorManager @Inject constructor(
      * damit dort nie "pending.onion" landet, solange Tor erreichbar ist.
      */
     suspend fun ensureMainOnion(): String {
+        if (AppEdition.isWhistleblower) return "pending.onion"
         _onionAddress.value?.let { return it }
         val ctrl = awaitControlConnection() ?: return "pending.onion"
         val portMap = mapOf(P2PNetworkManager.ONION_PORT to "127.0.0.1:${P2PNetworkManager.LOCAL_PORT}")
@@ -402,6 +427,7 @@ class TorManager @Inject constructor(
             result[TorControlCommands.HS_PRIVKEY]?.let { identityManager.saveTorPrivKey(it) }
             val addr = "$serviceId.onion"
             _onionAddress.value = addr
+            _hostingOwnOnion.value = true
             _isReady.value = true
             addr
         }.getOrDefault(_onionAddress.value ?: "pending.onion")
@@ -426,6 +452,7 @@ class TorManager @Inject constructor(
      * changed or Tor wasn't reachable right now (harmless; the next periodic check retries).
      */
     suspend fun ensureVerifiedOnion(): String? {
+        if (!_hostingOwnOnion.value) return null
         val today = identityManager.currentDayBucket()
         if (identityManager.getLastVerifiedOnionDay() == today && _verifiedOnionAddress.value != null) {
             return null

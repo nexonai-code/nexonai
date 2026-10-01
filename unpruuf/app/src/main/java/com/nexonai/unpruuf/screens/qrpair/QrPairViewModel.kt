@@ -66,9 +66,17 @@ class QrPairViewModel @Inject constructor(
     private val _myQrPayload = MutableStateFlow<QrPairingPayload?>(null)
     val myQrPayload = _myQrPayload.asStateFlow()
 
-    init {
+    private var onionQrRequested = false
+
+    /** Starts the device's own onion service on demand — only the onion-format QR needs one,
+     *  so Node-Mesh and relay-only users never publish an onion just by opening this screen. */
+    fun requestOnionQr() {
+        if (onionQrRequested) return
+        onionQrRequested = true
         generateMyQrCode()
     }
+
+    fun isNodeMeshUsable(): Boolean = nodeMeshManager.isUsable()
 
     private fun generateMyQrCode() {
         viewModelScope.launch {

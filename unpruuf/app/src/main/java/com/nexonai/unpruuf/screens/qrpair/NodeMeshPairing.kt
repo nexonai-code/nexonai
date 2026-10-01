@@ -17,10 +17,10 @@ import com.nexonai.unpruuf.domain.network.NodeMeshManager
  * [NodeMeshManager.NODE_POOL_MAX_SIZE] `;`-joined node addresses (the `unpruuf-node:v1:` prefix
  * stripped, same space-saving trick the relay pool field uses).
  *
- * No userId (v1 carried one as `u`): nothing in Node-Mesh routing or crypto ever read it, and a
- * single identifier handed to every contact is exactly what lets two contacts link you without
- * any cryptanalysis. Its absence also makes this format unambiguous against
- * [jsonToCrossPlatformPayload], which requires `u`.
+ * No userId (v1 carried one as `u`): nothing in Node-Mesh routing or crypto ever read it. Its
+ * absence also makes this format unambiguous against [jsonToCrossPlatformPayload], which
+ * requires `u`. The remaining fields are still device-global, so two contacts comparing their
+ * QR codes can still tell they paired with the same device.
  */
 data class NodeMeshPairingPayload(
     val version: Int = 2,

@@ -5,6 +5,42 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑01 · No own onion service on the phone unless a contact needs one; linkability claim corrected
+
+**What was done**
+
+- `TorManager` no longer publishes the phone's own onion service at every Tor start. It does so
+  only if at least one contact is a direct (onion) P2P contact. Whistleblower edition: never.
+  Node-Mesh and relay-only users: not at all, until they open an onion-format pairing QR, which
+  starts it on demand via `ensureMainOnion()`. Without an own onion, `isReady` is set as soon as
+  Tor is up and bridges are applied.
+- Pairing screen: the onion QR is generated only when that QR is actually shown
+  (`QrPairViewModel.requestOnionQr()`), and the screen opens on the Node-Mesh QR when a node is
+  configured — opening the screen no longer publishes an onion as a side effect.
+- Self-reachability checks and the daily verified-onion rotation skip entirely while no own onion
+  is hosted, so a missing onion never triggers Tor bounces.
+
+**Which bug appeared**
+
+A wrong claim, not a crash: the 2026-09-30 entry said dropping the userId stops two contacts from
+linking a person. It does not. Message key, ratchet key, routing seed and node addresses are all
+device-global, so two contacts comparing QR codes can still link the same person. Corrected in
+`NODE_MESH_SPEC.md`, `NodeMeshPairing.kt`, `LOESUNGSUEBERSICHT.html`, and both solution
+documents (German and Romanian). Also: "the phone has no onion address" was only true for the
+Node-Mesh data path — the app still published one at startup in every edition. Fixed by the
+change above.
+
+**How it was fixed**
+
+Onion hosting is now a decision taken at Tor start from the contact list; the linkability gap is
+documented as open, with per-contact keys and per-contact nodes as the planned fix.
+
+**Verification**
+
+Unit tests and `assemble*Debug` for all four editions: green. Not yet run on a real device.
+
+---
+
 ## 2026‑09‑30 (3) · German solution document Business-first, plus web page
 
 **What was done**

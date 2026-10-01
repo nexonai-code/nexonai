@@ -801,6 +801,12 @@ class P2PNetworkManager @Inject constructor(
     // after a bounce the next check waits 45s so the republish plus a slow mobile self-connect
     // get a realistic chance before being judged again.
     private fun verifyReachabilityAfterNetworkChange() {
+        // Nothing of ours to reach without an own onion service — and a failed self-check
+        // would bounce Tor for no reason.
+        if (!torManager.hostingOwnOnion.value) {
+            _selfReachable.value = null
+            return
+        }
         if (reachabilityCheckJob?.isActive == true) return
         reachabilityCheckJob = scope.launch {
             val deadline = System.currentTimeMillis() + 240_000
@@ -841,6 +847,10 @@ class P2PNetworkManager @Inject constructor(
             while (isActive) {
                 delay(4 * 60_000L)
                 if (!torManager.isReady.value) continue
+                if (!torManager.hostingOwnOnion.value) {
+                    _selfReachable.value = null
+                    continue
+                }
                 runCatching { rotateVerifiedOnionIfDue() } // day-granularity; a cheap no-op most cycles
                 if (reachabilityCheckJob?.isActive == true) continue
                 if (isSelfReachableViaTor()) {

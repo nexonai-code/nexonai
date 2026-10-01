@@ -166,8 +166,8 @@ html { scroll-behavior: smooth; }
         <table>
           <thead><tr><th>Element</th><th>Gibt es?</th><th>Wozu</th></tr></thead>
           <tbody>
-            <tr><td>User-ID</td><td><span class="pill none">Nein, gestrichen</span></td><td>Wurde nie gebraucht und war das Einzige, was bei allen Kontakten gleich war</td></tr>
-            <tr><td>Onion-Adresse des Handys</td><td><span class="pill none">Nein</span></td><td>Das Handy verbindet sich nur nach außen, es empfängt nie direkt</td></tr>
+            <tr><td>User-ID</td><td><span class="pill none">Nein, gestrichen</span></td><td>Wurde für Routing und Verschlüsselung nie gebraucht</td></tr>
+            <tr><td>Onion-Adresse des Handys</td><td><span class="pill none">Nein</span></td><td>Das Handy verbindet sich nur nach außen und startet keinen eigenen Onion-Dienst</td></tr>
             <tr><td>Onion-Adresse des Nodes</td><td><span class="pill yes">Ja, fest</span></td><td>Damit der Kontakt weiß, wo er abholen muss</td></tr>
             <tr><td>Schreibschlüssel</td><td><span class="pill yes">Ja, nur der Besitzer</span></td><td>Damit niemand fremde Daten auf den Node legt</td></tr>
             <tr><td>Abhol-Code</td><td><span class="pill yes">Ja, stündlich neu</span></td><td>Findet die Nachricht, ohne einen Namen zu nennen</td></tr>
@@ -175,7 +175,7 @@ html { scroll-behavior: smooth; }
           </tbody>
         </table>
       </div>
-      <p>Der Node weiß nicht, wer ablegt oder abholt, und nicht, was drinsteht. Die App weiß nicht, mit wem sie spricht: Sie hat nur zwei Codes, einen zum Finden und einen zum Entschlüsseln. Zwei Kontakte derselben Person können nicht abgleichen, ob sie mit derselben Person sprechen.</p>
+      <p>Der Node weiß nicht, wer ablegt oder abholt, und nicht, was drinsteht. Die App weiß nicht, mit wem sie spricht: Sie hat nur zwei Codes, einen zum Finden und einen zum Entschlüsseln.</p>
     </div>
 
     <div class="block">
@@ -211,7 +211,7 @@ html { scroll-behavior: smooth; }
         <li>Kein Node sieht beide Richtungen eines Gesprächs, solange die Nodes beider Seiten von unabhängigen Stellen betrieben werden. Das ist eine Annahme über die Aufstellung, keine kryptographische Garantie.</li>
         <li>Tor macht „der Node sieht nie eine Absender-IP“ zur Eigenschaft der Technik, nicht nur zur Regel.</li>
         <li><strong>Keine User-ID</strong> (Pairing-QR v2, seit 30.09.2026). Der QR enthält nur Nachrichtenschlüssel, Ratchet-Schlüssel, Abhol-Seed, Node-Adressen und Edition.</li>
-        <li><strong>Das Handy hat keine eigene Onion-Adresse.</strong> Beim Ablegen weist es sich mit dem Schreibschlüssel aus, beim Abholen mit dem Abhol-Code. Auf dem Gerät gibt es nichts Festes, das eine Verbindung einer Person zuordnet.</li>
+        <li><strong>Das Handy hat keine eigene Onion-Adresse.</strong> Beim Ablegen weist es sich mit dem Schreibschlüssel aus, beim Abholen mit dem Abhol-Code. Die App startet keinen eigenen Onion-Dienst, solange kein direkter Kontakt ihn braucht.</li>
       </ul>
     </div>
 
@@ -236,6 +236,7 @@ html { scroll-behavior: smooth; }
         <li>Android-Nodes haben <strong>keinen</strong> Tor-Proof-of-Work-Schutz, weil die genutzte Tor-Bibliothek ihn nicht unterstützt. Wo Überflutungsschutz wichtig ist, einen PC- oder Server-Node nehmen.</li>
         <li>Kein unabhängiges Sicherheits-Audit bisher.</li>
         <li>Keine Nutzung auf mehreren Geräten. Bewusst so: keine Konten, jede Identität lebt auf genau einem Gerät.</li>
+        <li>Schlüssel und Node-Adressen sind heute für alle Kontakte gleich. Zwei Kontakte, die ihre QR-Codes vergleichen, sehen also, dass sie mit derselben Person sprechen. Abhilfe: eigene Schlüssel und eigene Nodes pro Kontakt (geplant).</li>
         <li>Folge der fehlenden User-ID: Setzt ein Kontakt sein Gerät zurück, erscheint er als neuer Kontakt. Eine Warnung „Schlüssel hat sich geändert“ gibt es dann nicht. Alte QR-Codes mit User-ID werden weiter gelesen.</li>
         <li>Vor dem echten Einsatz: Tor-Bootstrap auf normaler Leitung, Windows-Lauf und Docker-Build auf einer echten Maschine bestätigen.</li>
       </ul>
