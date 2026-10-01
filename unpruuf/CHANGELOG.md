@@ -5,6 +5,37 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑01 (3) · Two Romanian presentations: Business and Compliance
+
+**What was done**
+
+- **unpruuf Business** (main product, 14 slides): problem, the server as the tool, how the
+  connection to the node works, the two codes, what does not exist (no user ID, no phone number,
+  no account, no onion address on the phone, no provider, nothing shared between contacts),
+  hundreds of nodes with 3 per contact, what a node sees, the server in practice, security layers,
+  compliance by architecture, target groups, current status incl. limits, next steps.
+  https://claude.ai/artifact/4tH2sYnsmWgAkZELQGNkCd
+- **unpruuf Compliance** (13 slides): legal obligation with the 7-day / 3-month deadlines
+  (Art. 9(1)(b)/(f), Legea 361/2022), problem of classic solutions, the organisation's own relay,
+  architecture, what does not exist, who sees what, officer dashboard (illustrative example
+  rows), two ways to report, legal frame with disclaimer, installation, status, next steps.
+  https://claude.ai/artifact/61vsMG7dqfqqu3ZJhjVGoe
+- Slide files and generator scripts in `presentations/`.
+- Claims kept to what the code does today: the compliance deck does not claim "no ID" (the
+  whistleblower pairing still carries a random device ID); "subpoenas are pointless" is phrased
+  as "no provider that can be compelled to hand over data; a seized node holds nothing readable".
+
+**Which bug appeared**
+
+Two text colours on the teal slides were below 4.5:1 contrast — replaced before delivery. One
+unsupported table property removed.
+
+**Verification**
+
+Not rendered or proofread on a projector. Placeholder left: `[telefon]` on both last slides.
+
+---
+
 ## 2026‑10‑01 (2) · Own keys and own nodes per contact; many nodes per server
 
 **What was done**

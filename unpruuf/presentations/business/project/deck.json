@@ -1,0 +1,54 @@
+{
+ "v": 4,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-01T10:35:07Z"
+ },
+ "lists": "css",
+ "title": "unpruuf Business",
+ "order": [
+  "cover",
+  "problema",
+  "instrumentul",
+  "functionare",
+  "doua-coduri",
+  "nu-exista",
+  "sute-noduri",
+  "ce-vede",
+  "server",
+  "securitate",
+  "conformitate",
+  "pentru-cine",
+  "stadiu",
+  "pasi"
+ ],
+ "sections": {
+  "s1": {
+   "description": "Problema: fiecare mesager are un proprietar.",
+   "start": "cover"
+  },
+  "s2": {
+   "description": "Soluția: serverul propriu, nodurile proprii, două coduri.",
+   "start": "instrumentul"
+  },
+  "s3": {
+   "description": "Securitate și conformitate prin arhitectură.",
+   "start": "ce-vede"
+  },
+  "s4": {
+   "description": "Pentru cine, stadiu actual și pașii următori.",
+   "start": "pentru-cine"
+  }
+ },
+ "faces": {
+  "archivo": {
+   "family": "Archivo",
+   "href": "https://fonts.googleapis.com/css2?family=Archivo:wght@500..800&display=swap"
+  },
+  "ibm-plex-sans": {
+   "family": "IBM Plex Sans",
+   "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+  }
+ },
+ "designSystems": []
+}
