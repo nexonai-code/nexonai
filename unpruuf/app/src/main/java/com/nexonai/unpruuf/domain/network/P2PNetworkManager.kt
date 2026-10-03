@@ -533,7 +533,7 @@ class P2PNetworkManager @Inject constructor(
                 val tags = tagsByTarget.getOrPut(target) { linkedSetOf() }
                 for (identity in candidateIdentities(c)) {
                     for (b in buckets) {
-                        tags += identityManager.expectedWireId(c.publicKey, identity, b)
+                        tags += identityManager.expectedWireId(c.publicKey, identity, b, mine = identityManager.myMessageKeyFor(c))
                     }
                 }
             }
@@ -625,6 +625,14 @@ class P2PNetworkManager @Inject constructor(
         }
     }
 
+    /** Drops everything this manager still holds for a contact removed locally (queued packets,
+     *  half-received chunk trains). Sends nothing. */
+    fun forgetContactLocally(contactId: String) {
+        deliveryQueue.removeAll { it.contactId == contactId }
+        chunkReassembly.remove(contactId)
+        sendLocks.remove(contactId)
+    }
+
     // Re-sends the intake until the officer's receipt (case number) arrives — the officer may be
     // offline for hours, and its letterbox only looks 48 h back.
     private fun startOfficerIntakeLoop() {
@@ -660,11 +668,15 @@ class P2PNetworkManager @Inject constructor(
         val officerPub = runCatching { android.util.Base64.decode(contact.x25519RatchetPublicKey, android.util.Base64.DEFAULT) }
             .getOrNull()?.takeIf { it.size == 32 } ?: return false
         val myRelays = contactMyRelayList(contact).ifEmpty { return false }
+        // A case opened by WhistleblowerCases carries its own key, ratchet key and id — those
+        // are what the officer must see, never this device's global ones (unlinkable cases).
         val pairingJson = com.nexonai.unpruuf.screens.qrpair.crossPlatformPayloadToJson(
             com.nexonai.unpruuf.screens.qrpair.CrossPlatformPairingPayload(
-                userId = identityManager.userId,
-                messageKeyBase64 = android.util.Base64.encodeToString(identityManager.myMessageKey, android.util.Base64.NO_WRAP),
-                x25519RatchetPublicKeyBase64 = identityManager.myX25519RatchetPublicKeyBase64,
+                userId = if (contact.myPairMessageKey != null) contact.myWireIdentity ?: identityManager.userId else identityManager.userId,
+                messageKeyBase64 = android.util.Base64.encodeToString(identityManager.myMessageKeyFor(contact), android.util.Base64.NO_WRAP),
+                x25519RatchetPublicKeyBase64 = android.util.Base64.encodeToString(
+                    identityManager.ratchetKeyPairFor(contact).publicKey, android.util.Base64.NO_WRAP
+                ),
                 relayConnectionStrings = myRelays,
                 appEdition = AppEdition.current
             )
@@ -1186,7 +1198,7 @@ class P2PNetworkManager @Inject constructor(
         }.getOrNull() ?: return
         if (encrypted.size > NetworkObfuscation.PACKET_SIZE - 8) return
         val padded = NetworkObfuscation.padPacket(encrypted)
-        val wireId = identityManager.myWireId(contact.publicKey, identity = contact.myWireIdentity ?: identityManager.userId)
+        val wireId = identityManager.myWireId(contact.publicKey, identity = contact.myWireIdentity ?: identityManager.userId, mine = identityManager.myMessageKeyFor(contact))
 
         // See attemptChunkTrainDelivery's matching comment — LAN matching key is remoteUserId,
         // not the local-only contact.id.
@@ -1559,7 +1571,7 @@ class P2PNetworkManager @Inject constructor(
                 // a generation counter instead of a clock bucket (see CROSS_PLATFORM_PLAN.md).
                 for (identity in identities) {
                     for (g in c.theirGeneration - WECHSEL_GENERATION_TOLERANCE..c.theirGeneration + WECHSEL_GENERATION_TOLERANCE) {
-                        if (identityManager.expectedWireId(c.publicKey, identity, g) == wireId) return c.id
+                        if (identityManager.expectedWireId(c.publicKey, identity, g, mine = identityManager.myMessageKeyFor(c)) == wireId) return c.id
                     }
                 }
                 continue
@@ -1569,7 +1581,7 @@ class P2PNetworkManager @Inject constructor(
             val hour = identityManager.currentHourBucket(identityManager.pairRotationOffsetSeconds(c.publicKey))
             for (identity in identities) {
                 for (h in longArrayOf(hour, hour - 1, hour + 1, hour - 2, hour + 2)) {
-                    if (identityManager.expectedWireId(c.publicKey, identity, h) == wireId) return c.id
+                    if (identityManager.expectedWireId(c.publicKey, identity, h, mine = identityManager.myMessageKeyFor(c)) == wireId) return c.id
                 }
             }
             if (c.remoteUserId.isNotBlank() && c.remoteUserId == wireId) return c.id // Legacy (alte App-Version)
@@ -1677,6 +1689,7 @@ class P2PNetworkManager @Inject constructor(
         val crossPlatformWireId = if (contact.crossPlatform) {
             identityManager.myWireId(
                 contact.publicKey,
+                mine = identityManager.myMessageKeyFor(contact),
                 identity = contact.myWireIdentity ?: identityManager.userId,
                 hour = contact.myGeneration
             )
@@ -1892,6 +1905,7 @@ class P2PNetworkManager @Inject constructor(
             val crossPlatformWireId = if (contact.crossPlatform) {
                 identityManager.myWireId(
                     contact.publicKey,
+                    mine = identityManager.myMessageKeyFor(contact),
                     identity = identityManager.userId,
                     hour = contact.myGeneration
                 )
@@ -1939,6 +1953,7 @@ class P2PNetworkManager @Inject constructor(
             val crossPlatformWireId = if (contact.crossPlatform) {
                 identityManager.myWireId(
                     contact.publicKey,
+                    mine = identityManager.myMessageKeyFor(contact),
                     identity = contact.myWireIdentity ?: identityManager.userId,
                     hour = contact.myGeneration
                 )
@@ -2171,6 +2186,7 @@ class P2PNetworkManager @Inject constructor(
             val padded = NetworkObfuscation.padPacket(encrypted)
             val wireId = identityManager.myWireId(
                 contact.publicKey,
+                mine = identityManager.myMessageKeyFor(contact),
                 identity = contact.myWireIdentity ?: identityManager.userId,
                 hour = oldGeneration
             )
@@ -2211,6 +2227,7 @@ class P2PNetworkManager @Inject constructor(
                     val crossPlatformWireId = if (contact.crossPlatform) {
                         identityManager.myWireId(
                             contact.publicKey,
+                            mine = identityManager.myMessageKeyFor(contact),
                             identity = contact.myWireIdentity ?: identityManager.userId,
                             hour = contact.myGeneration
                         )

@@ -29,7 +29,8 @@ class LockViewModel @Inject constructor(
     private val contactDao: ContactDao,
     private val messageStore: InMemoryMessageStore,
     private val identityManager: IdentityManager,
-    private val ratchetSessionManager: RatchetSessionManager
+    private val ratchetSessionManager: RatchetSessionManager,
+    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
 ) : ViewModel() {
 
     val isPinSet: Boolean get() = pinManager.isPinSet()
@@ -87,7 +88,9 @@ class LockViewModel @Inject constructor(
             }
             identityManager.getAllContactOnionKeys().keys.forEach {
                 identityManager.removeContactOnionPrivKey(it)
-            }
+                // Whistleblower: the remembered organisation QR goes too — no trace of where to report.
+            whistleblowerCases.forgetOrganization()
+        }
         }
     }
 }

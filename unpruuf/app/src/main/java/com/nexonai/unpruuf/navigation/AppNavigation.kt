@@ -10,7 +10,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.nexonai.unpruuf.screens.caseview.CaseScreen
+import com.nexonai.unpruuf.domain.AppEdition
+import com.nexonai.unpruuf.screens.cases.CasesScreen
 import com.nexonai.unpruuf.screens.chat.ChatScreen
 import com.nexonai.unpruuf.screens.contactdetail.ContactDetailScreen
 import com.nexonai.unpruuf.screens.contacts.ContactsScreen
@@ -26,11 +27,11 @@ object Routes {
     const val QR_PAIR = "qr_pair"
     const val SETTINGS = "settings"
     const val CONTACT_DETAIL = "contact_detail/{contactId}"
-    const val CASE = "case/{contactId}"
+    const val CASES = "cases"
 
     fun chatRoute(contactId: String) = "chat/$contactId"
     fun contactDetailRoute(contactId: String) = "contact_detail/$contactId"
-    fun caseRoute(contactId: String) = "case/$contactId"
+
 }
 
 @Composable
@@ -52,7 +53,14 @@ fun AppNavigation(
 
     // Contacts is the start screen. The former home/status screen is now
     // reachable from Settings ("Network & security status").
-    NavHost(navController = navController, startDestination = Routes.CONTACTS) {
+    // Whistleblower: no contacts list at all — "My cases" (with the first-start scan) is home.
+    NavHost(navController = navController, startDestination = if (AppEdition.isWhistleblower) Routes.CASES else Routes.CONTACTS) {
+        composable(Routes.CASES) {
+            CasesScreen(
+                onOpenCase = { id -> navController.navigate(Routes.chatRoute(id)) },
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
+            )
+        }
         composable(Routes.CONTACTS) {
             ContactsScreen(
                 onContactClick = { contact ->
@@ -81,24 +89,7 @@ fun AppNavigation(
             ChatScreen(
                 contactId = contactId,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
-                onOpenCase = { navController.navigate(Routes.caseRoute(contactId)) }
-            )
-        }
-        composable(
-            route = Routes.CASE,
-            arguments = listOf(navArgument("contactId") { type = NavType.StringType })
-        ) { backStack ->
-            val contactId = backStack.arguments?.getString("contactId") ?: return@composable
-            CaseScreen(
-                contactId = contactId,
-                onNavigateBack = { navController.popBackStack() },
-                onOpenChat = {
-                    // Opened from the chat → just go back to it; otherwise open the chat.
-                    if (!navController.popBackStack(Routes.CHAT, inclusive = false)) {
-                        navController.navigate(Routes.chatRoute(contactId))
-                    }
-                }
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
             )
         }
         composable(Routes.QR_PAIR) {

@@ -296,14 +296,17 @@ class IdentityManager @Inject constructor(
     fun myWireId(
         contactMsgKeyB64: String,
         identity: String = userId,
-        hour: Long = currentHourBucket(pairRotationOffsetSeconds(contactMsgKeyB64))
+        hour: Long = currentHourBucket(pairRotationOffsetSeconds(contactMsgKeyB64)),
+        // A contact paired with its own per-contact message key (Node-Mesh, Whistleblower cases)
+        // must derive its tags from THAT key — the other side only knows that one.
+        mine: ByteArray = myMessageKey
     ): String =
-        hmac(pairSecret(contactMsgKeyB64), "$identity:$hour")
+        hmac(pairSecret(contactMsgKeyB64, mine), "$identity:$hour")
 
     /** Wire-ID, mit der sich der Kontakt ([contactIdentity] — their `myWireIdentity` once known,
      *  else their pairing-time `remoteUserId`) gegenüber mir ausweist. */
-    fun expectedWireId(contactMsgKeyB64: String, contactIdentity: String, hour: Long): String =
-        hmac(pairSecret(contactMsgKeyB64), "$contactIdentity:$hour")
+    fun expectedWireId(contactMsgKeyB64: String, contactIdentity: String, hour: Long, mine: ByteArray = myMessageKey): String =
+        hmac(pairSecret(contactMsgKeyB64, mine), "$contactIdentity:$hour")
 
     /** A fresh, random per-contact identity — generated locally at pairing time (see
      *  QrPairViewModel) and never reused across contacts, unlike [userId]. */

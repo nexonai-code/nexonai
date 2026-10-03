@@ -5,6 +5,41 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑03 (2) · Whistleblower app: scan on first start, then only "My cases", separate keys for every case
+
+**What was done**
+
+1. **New flow in the Whistleblower edition.**
+   - First start, or no organisation yet: the scan screen comes straight up ("Report safely", scan
+     the QR, or paste the code). There is no contact list and no messenger vocabulary.
+   - After that the home screen is **"My cases"**: one row per case with case number, status,
+     opening date and a dot for a new message.
+   - The **"+ New case"** button opens a new case with the remembered organisation QR. No new
+     scan is needed.
+2. **One case = one screen with two tabs, "Status" and "Messages".**
+   - A new case opens on "Messages", because the report still has to be written. An existing case
+     opens on "Status".
+   - The separate "My case" screen and the strip in the chat are gone.
+3. **Every case has its own keys and its own identity**: message key, ratchet key pair and ID are
+   created fresh per case and stored with that case.
+   - Two reports from the same phone look like two different people, to the relay and to the
+     reporting office.
+   - Before this, every case had the same device ID, and the officer-app would even have merged a
+     second report into the first case.
+   - For this to work, the rotating wire tags are now derived from the case's key and no longer
+     from the device key.
+4. **"Remove case from this phone"**: deletes messages, keys and case data on the device. The
+   reporting office keeps the case, and nothing is sent to it.
+5. **Menu**: settings and "Scan another organisation". Existing cases keep their organisation.
+6. **The panic PIN** now also deletes the remembered organisation QR.
+
+**Verification**
+
+- Android 70/70 tests in each of the 4 editions, Whistleblower APK built, officer-app 4/4.
+- The new screens are only compiled, not seen on a device.
+
+---
+
 ## 2026‑10‑03 · Whistleblower: one organisation-wide QR, automatic case number, "My case" screen
 
 **What was done**

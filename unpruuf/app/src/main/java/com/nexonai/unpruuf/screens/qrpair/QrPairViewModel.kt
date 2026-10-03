@@ -55,7 +55,8 @@ class QrPairViewModel @Inject constructor(
     private val ratchetSessionManager: RatchetSessionManager,
     private val relayManager: RelayManager,
     private val nodeMeshManager: NodeMeshManager,
-    private val p2pNetworkManager: P2PNetworkManager
+    private val p2pNetworkManager: P2PNetworkManager,
+    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
 ) : ViewModel() {
 
     private val _errorState = MutableStateFlow<String?>(null)
@@ -235,6 +236,15 @@ class QrPairViewModel @Inject constructor(
 
     fun handleScannedCrossPlatformQr(payload: CrossPlatformPairingPayload, displayName: String) {
         viewModelScope.launch {
+            // Whistleblower: an officer QR is the organisation — every case gets its own keys
+            // (WhistleblowerCases), never the global ones used below.
+            if (AppEdition.isWhistleblower && payload.appEdition == AppEdition.OFFICER) {
+                when (whistleblowerCases.connectOrganization(crossPlatformPayloadToJson(payload))) {
+                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Ok -> _successState.value = "$displayName added."
+                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Invalid -> _errorState.value = AppEdition.blockReason(payload.appEdition)
+                }
+                return@launch
+            }
             // Cross-platform-format pairing is a paid Pro feature for genuine iOS interop — but
             // the same wire format is now also what Mandatory relay mode uses for Android↔Android
             // pairing (see isRelayMandatory's doc comment), where gating behind Pro would block
@@ -300,10 +310,6 @@ class QrPairViewModel @Inject constructor(
             contactDao.insert(contact)
             ratchetSessionManager.createSession(contact)
             p2pNetworkManager.sendNewIdentitySignal(contact.id)
-            // Organisation-wide QR: the case is opened automatically — no code to copy back.
-            if (AppEdition.isWhistleblower && payload.appEdition == AppEdition.OFFICER) {
-                p2pNetworkManager.startOfficerCase(contact.id)
-            }
             _successState.value = "$displayName added."
         }
     }

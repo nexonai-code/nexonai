@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.DeleteForever
@@ -28,6 +27,7 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,10 +68,17 @@ fun ChatScreen(
     contactId: String,
     onNavigateBack: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
-    onOpenCase: () -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel()
 ) {
+    // Whistleblower: a chat IS a case — two tabs, "Status" and "Messages". A brand-new case
+    // opens on Messages (the report still has to be written), an existing one on Status.
+    val caseMode = AppEdition.isWhistleblower
+    var caseTab by rememberSaveable { mutableStateOf(-1) }
+    var showRemoveCaseDialog by remember { mutableStateOf(false) }
     val contact by viewModel.contact.collectAsState()
+    LaunchedEffect(contact != null) {
+        if (caseMode && caseTab == -1 && contact != null) caseTab = if (contact?.caseNumber == null) 1 else 0
+    }
     val messages by viewModel.messages.collectAsState()
     val sendError by viewModel.sendError.collectAsState()
     val revoked by viewModel.revoked.collectAsState()
@@ -277,7 +284,12 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column(
+                    if (caseMode) {
+                        Text(
+                            contact?.caseNumber ?: stringResource(R.string.case_new_title),
+                            fontFamily = if (contact?.caseNumber != null) androidx.compose.ui.text.font.FontFamily.Monospace else null
+                        )
+                    } else Column(
                         modifier = Modifier.clickable {
                             renameText = contact?.displayName ?: ""
                             showRenameDialog = true
@@ -297,15 +309,15 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    // Whistleblower: the reporter's case (number, status, deadlines).
-                    if (AppEdition.isWhistleblower) {
-                        IconButton(onClick = onOpenCase) {
+                    if (caseMode) {
+                        IconButton(onClick = { showRemoveCaseDialog = true }) {
                             Icon(
-                                Icons.Default.Assignment,
-                                contentDescription = stringResource(R.string.chat_cd_case),
-                                tint = MaterialTheme.colorScheme.primary
+                                Icons.Default.DeleteForever,
+                                contentDescription = stringResource(R.string.case_remove),
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
+                        return@TopAppBar
                     }
                     IconButton(onClick = {
                         renameText = contact?.displayName ?: ""
@@ -357,7 +369,7 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
+            if (!caseMode || caseTab == 1) Surface(shadowElevation = 8.dp) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -428,8 +440,15 @@ fun ChatScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (AppEdition.isWhistleblower) {
-                contact?.let { com.nexonai.unpruuf.screens.caseview.CaseBanner(it, onClick = onOpenCase) }
+            if (caseMode) {
+                TabRow(selectedTabIndex = caseTab.coerceAtLeast(0)) {
+                    Tab(selected = caseTab == 0, onClick = { caseTab = 0 }, text = { Text(stringResource(R.string.case_tab_status)) })
+                    Tab(selected = caseTab == 1, onClick = { caseTab = 1 }, text = { Text(stringResource(R.string.case_tab_messages)) })
+                }
+                if (caseTab != 1) {
+                    com.nexonai.unpruuf.screens.caseview.CaseStatusContent(contact, Modifier.weight(1f).fillMaxWidth())
+                    return@Column
+                }
             }
             if (oldestPendingAgeMs != null && oldestPendingAgeMs > STILL_CONNECTING_HINT_MS) {
                 StillConnectingHint(
@@ -504,6 +523,23 @@ fun ChatScreen(
 
     fullscreenImage?.let { message ->
         FullscreenImageDialog(message, onDismiss = { fullscreenImage = null })
+    }
+
+    if (showRemoveCaseDialog) {
+        AlertDialog(
+            onDismissRequest = { showRemoveCaseDialog = false },
+            title = { Text(stringResource(R.string.case_remove_title)) },
+            text = { Text(stringResource(R.string.case_remove_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRemoveCaseDialog = false
+                    viewModel.removeCaseFromDevice()
+                }) { Text(stringResource(R.string.case_remove_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveCaseDialog = false }) { Text(stringResource(R.string.settings_cancel)) }
+            }
+        )
     }
 }
 

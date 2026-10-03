@@ -37,7 +37,8 @@ class ChatViewModel @Inject constructor(
     private val contactDao: ContactDao,
     private val p2pNetworkManager: P2PNetworkManager,
     private val appLockManager: AppLockManager,
-    private val relayManager: RelayManager
+    private val relayManager: RelayManager,
+    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
 ) : ViewModel() {
 
     // Read fresh each time (cheap SharedPreferences check) rather than cached — the whole point
@@ -207,6 +208,16 @@ class ChatViewModel @Inject constructor(
 
     /** Camera capture: same as [sendFile] but the bytes never touched disk (see ChatScreen). */
     fun sendImage(bytes: ByteArray) = sendFile("Photo.jpg", bytes, isImage = true)
+
+    /** Whistleblower: wipe this case from the phone only (the reporting office keeps it). */
+    fun removeCaseFromDevice() {
+        val contact = _contact.value ?: return
+        viewModelScope.launch {
+            contactJob?.cancel()
+            whistleblowerCases.removeCaseFromDevice(contact.id)
+            _revoked.value = true
+        }
+    }
 
     // GRAL Säule 5: Revoke — löscht Chat auf beiden Seiten, Kontakt bleibt erhalten
     fun revokeContact() {

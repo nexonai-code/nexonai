@@ -1,13 +1,11 @@
 package com.nexonai.unpruuf.screens.caseview
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Schedule
@@ -22,7 +20,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.nexonai.unpruuf.R
 import com.nexonai.unpruuf.data.model.Contact
 import java.text.DateFormat
@@ -48,48 +45,21 @@ private fun fmtDate(ms: Long?): String =
 private fun fmtDateTime(ms: Long?): String =
     ms?.let { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it)) } ?: "—"
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** The "Status" tab of a case (Whistleblower edition) — number, status, steps, deadlines. */
 @Composable
-fun CaseScreen(
-    contactId: String,
-    onNavigateBack: () -> Unit,
-    onOpenChat: () -> Unit,
-    viewModel: CaseViewModel = hiltViewModel()
-) {
-    LaunchedEffect(contactId) { viewModel.load(contactId) }
-    val contact by viewModel.contact.collectAsState()
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.case_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, stringResource(R.string.chat_cd_back))
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            val c = contact
-            if (c?.caseNumber == null) PendingCard() else CaseCard(c)
-            Button(onClick = onOpenChat, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-                Text(stringResource(R.string.case_open_chat), fontWeight = FontWeight.Bold)
-            }
-            Text(
-                stringResource(R.string.case_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+fun CaseStatusContent(contact: Contact?, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (contact?.caseNumber == null) PendingCard() else CaseCard(contact)
+        Text(
+            stringResource(R.string.case_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -186,26 +156,3 @@ private fun CaseSteps(current: Int) {
         }
     }
 }
-
-/** Compact strip at the top of the chat with the officer — tap opens "My case". */
-@Composable
-fun CaseBanner(contact: Contact, onClick: () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                if (contact.caseNumber == null) stringResource(R.string.case_banner_pending)
-                else stringResource(R.string.case_banner, contact.caseNumber, caseStatusLabel(contact.caseStatus)),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.weight(1f)
-            )
-            Text("›", color = MaterialTheme.colorScheme.onSecondaryContainer, fontSize = 20.sp)
-        }
-    }
-}
-

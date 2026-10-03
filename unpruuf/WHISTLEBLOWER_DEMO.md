@@ -64,12 +64,13 @@ LAN address from another device) when you want to show that path.
 
 1. **Officer dashboard is already running**, `http://localhost:3000` open, showing the pairing
    QR.
-2. **Phone**: open the Whistleblower app, scan the officer's QR. **One QR for the whole
+2. **Phone**: open the Whistleblower app — it opens straight on "Report safely" → scan the officer's QR. **One QR for the whole
    organisation** — say this out loud: no per-employee codes, nothing that ties a code to a person.
 3. **Laptop**: a few seconds later the case appears on its own, with a case number (`HW-…`). No
    copying, no pasting.
-4. **Phone**: chat screen → top strip / "My case": the case number and "Received and confirmed"
-   arrive automatically — that is the Art. 9 acknowledgement, done by the system.
+4. **Phone**: the case opens on "Messages"; switch to the "Status" tab — the case number and
+   "Received and confirmed" arrive automatically (the Art. 9 acknowledgement). Back on "My cases",
+   tap "+ New case" to show that a second report is a completely separate case.
 5. **Phone**: send a message (this is your actual report text).
 6. **Laptop**: within ~8 seconds (the poll interval) the message appears in the case thread.
 7. **Laptop**: type a reply, send it. Then change the status to "În lucru" — the phone's "My case"
