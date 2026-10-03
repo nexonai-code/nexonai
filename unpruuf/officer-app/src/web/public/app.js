@@ -52,6 +52,7 @@ async function loadCases() {
     const tr = document.createElement("tr");
     tr.className = "case-row";
     tr.innerHTML = `
+      <td><code>${c.caseNumber ? escapeHtml(c.caseNumber) : "—"}</code>${c.signalPending ? ' <span title="Confirmarea/actualizarea așteaptă să poată fi trimisă">⏳</span>' : ""}</td>
       <td><span class="pill ${c.status}">${statusLabel(c.status)}</span></td>
       <td>${c.category ? escapeHtml(c.category) : "<i style=\"color:var(--text-dim)\">necategorizat</i>"}</td>
       <td>${fmtDate(c.openedAt)}</td>
@@ -67,7 +68,10 @@ async function loadCases() {
 async function openCase(id) {
   currentCaseId = id;
   const c = await api(`/api/cases/${id}`);
-  document.getElementById("caseIdLabel").textContent = id.slice(0, 8);
+  document.getElementById("caseIdLabel").textContent = c.caseNumber || id.slice(0, 8);
+  document.getElementById("statusDelivery").textContent = c.signalPending
+    ? "Actualizarea pentru raportor așteaptă: se trimite automat imediat ce canalul permite (de obicei după primul mesaj al raportorului)."
+    : "";
   document.getElementById("statusSelect").value = c.status;
   document.getElementById("categoryInput").value = c.category || "";
   renderThread(c.messages);
@@ -119,7 +123,14 @@ document.getElementById("addCaseBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("statusSelect").addEventListener("change", async (e) => {
-  await api(`/api/cases/${currentCaseId}/status`, { method: "POST", body: JSON.stringify({ status: e.target.value }) });
+  const info = document.getElementById("statusDelivery");
+  const r = await api(`/api/cases/${currentCaseId}/status`, { method: "POST", body: JSON.stringify({ status: e.target.value }) });
+  info.textContent = {
+    sent: "Starea a fost trimisă în aplicația raportorului.",
+    "no-chain": "Starea va fi trimisă automat imediat ce raportorul scrie primul mesaj.",
+    failed: "Releul nu a confirmat — se reîncearcă automat.",
+    "not-sent": "",
+  }[r.delivery] || "";
   loadCases();
 });
 
@@ -134,7 +145,8 @@ document.getElementById("sendReplyBtn").addEventListener("click", async () => {
   if (!input.value.trim()) return;
   try {
     const result = await api(`/api/cases/${currentCaseId}/reply`, { method: "POST", body: JSON.stringify({ text: input.value }) });
-    if (!result.sent) errorEl.textContent = "Pus în coadă local, dar releul nu a confirmat primirea — verifică dacă releul este accesibil.";
+    if (result.result === "no-chain") errorEl.textContent = "Nu se poate trimite încă: canalul se deschide după primul mesaj al raportorului.";
+    else if (!result.sent) errorEl.textContent = "Releul nu a confirmat primirea — verifică dacă releul este accesibil.";
     input.value = "";
     renderThread(result.messages);
   } catch (err) {

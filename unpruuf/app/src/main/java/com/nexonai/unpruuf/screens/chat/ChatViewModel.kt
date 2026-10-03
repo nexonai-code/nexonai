@@ -54,6 +54,7 @@ class ChatViewModel @Inject constructor(
      */
     fun beginExternalPickerGrace() = appLockManager.beginExternalIntentGrace()
 
+    private var contactJob: kotlinx.coroutines.Job? = null
     private val _contact = MutableStateFlow<Contact?>(null)
     val contact = _contact.asStateFlow()
 
@@ -76,8 +77,11 @@ class ChatViewModel @Inject constructor(
 
     fun loadContact(contactId: String) {
         _revoked.value = false
-        viewModelScope.launch {
-            _contact.value = contactDao.getContactById(contactId)
+        // Observed, not read once: the Whistleblower case banner must update live when the
+        // officer's receipt or a status change arrives while this chat is open.
+        contactJob?.cancel()
+        contactJob = viewModelScope.launch {
+            contactDao.observeContact(contactId).collect { _contact.value = it }
         }
         // Tor-Pfad zum Kontakt vorwärmen + aktiv warm halten, solange der Chat
         // offen ist → erste und folgende Nachrichten ohne Kaltstart (~10–20 s),

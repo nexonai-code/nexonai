@@ -64,15 +64,16 @@ LAN address from another device) when you want to show that path.
 
 1. **Officer dashboard is already running**, `http://localhost:3000` open, showing the pairing
    QR.
-2. **Phone**: open the Whistleblower app, scan the officer's QR.
-3. **Phone**: the app now shows *its own* code with a "Copy" button — tap it. This step exists
-   because the officer's laptop dashboard has no way to scan the phone back (no camera) — this
-   is the normal flow for this product, not a workaround (see officer-app/README.md).
-4. **Laptop**: paste that code into "Add a case" on the dashboard → a new case appears with a
-   7-day/3-month deadline already computed.
+2. **Phone**: open the Whistleblower app, scan the officer's QR. **One QR for the whole
+   organisation** — say this out loud: no per-employee codes, nothing that ties a code to a person.
+3. **Laptop**: a few seconds later the case appears on its own, with a case number (`HW-…`). No
+   copying, no pasting.
+4. **Phone**: chat screen → top strip / "My case": the case number and "Received and confirmed"
+   arrive automatically — that is the Art. 9 acknowledgement, done by the system.
 5. **Phone**: send a message (this is your actual report text).
 6. **Laptop**: within ~8 seconds (the poll interval) the message appears in the case thread.
-7. **Laptop**: type a reply, send it.
+7. **Laptop**: type a reply, send it. Then change the status to "În lucru" — the phone's "My case"
+   screen updates by itself.
 8. **Phone**: the reply arrives on the next poll — show the whole round trip working.
 9. **(Optional) Tablet**: open `relay-android`'s own screen and point out the "RECENT ACTIVITY"
    log — real STORED/FETCHED events for the messages that just moved, with no content visible

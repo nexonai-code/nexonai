@@ -275,4 +275,23 @@ Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow i
     <string name="settings_unlock_confirm_body">This sends your owner key to the server so it can bring its nodes back online under the same addresses.\n\nDo this only if you know why it restarted. If the server may have been taken or copied, do NOT unlock — set up a new server instead.</string>
     <string name="settings_unlock_done">Server unlocked. Its nodes are coming back online.</string>
     <string name="settings_unlock_failed">Unlock failed — server not reachable or the key was refused.</string>
+    <string name="case_title">My case</string>
+    <string name="case_number_label">Case number</string>
+    <string name="case_cd_copy">Copy case number</string>
+    <string name="case_pending_title">Report on its way</string>
+    <string name="case_pending_body">Your report has been handed over. As soon as the reporting office confirms receipt, your case number appears here. You don\'t need to do anything.</string>
+    <string name="case_status_acknowledged">Received and confirmed</string>
+    <string name="case_status_in_progress">Under review</string>
+    <string name="case_status_closed">Closed</string>
+    <string name="case_step_received">Received</string>
+    <string name="case_step_review">Review</string>
+    <string name="case_step_closed">Closed</string>
+    <string name="case_opened_at">Received on %1$s</string>
+    <string name="case_feedback_due">Feedback due by %1$s</string>
+    <string name="case_last_update">Last update: %1$s</string>
+    <string name="case_open_chat">Write to the reporting office</string>
+    <string name="case_hint">Changes from the reporting office appear here automatically. Your case number is only for you: it helps you refer to your report, it is not needed to log in.</string>
+    <string name="case_banner_pending">Report on its way · case number follows</string>
+    <string name="case_banner">Case %1$s · %2$s</string>
+    <string name="chat_cd_case">My case</string>
 </resources>

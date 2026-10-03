@@ -35,10 +35,23 @@ import com.nexonai.unpruuf.data.model.Contact
     // v10: per-contact own pairing values for Node-Mesh (Contact.myPairMessageKey/
     // myPairRatchetPrivateKey/myPairRatchetPublicKey/myPairRoutingSeed/myNodeAddresses), so no
     // two contacts share a key, seed or node. Same destructive-migration precedent again.
-    version = 10,
+    // v11: Whistleblower case fields (Contact.caseNumber/caseStatus/caseOpenedAt/caseAckDueAt/
+    // caseFeedbackDueAt/caseUpdatedAt/intakeStartedAt/intakeLastSentAt). The first version with a
+    // REAL migration (MIGRATION_10_11, plain ADD COLUMNs) — contacts survive this update.
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
     abstract fun ratchetStateDao(): RatchetStateDao
+}
+
+/** v10 → v11: only nullable columns added, so existing contacts are kept (no re-pairing). */
+val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        listOf(
+            "caseNumber TEXT", "caseStatus TEXT", "caseOpenedAt INTEGER", "caseAckDueAt INTEGER",
+            "caseFeedbackDueAt INTEGER", "caseUpdatedAt INTEGER", "intakeStartedAt INTEGER", "intakeLastSentAt INTEGER"
+        ).forEach { db.execSQL("ALTER TABLE contacts ADD COLUMN $it") }
+    }
 }

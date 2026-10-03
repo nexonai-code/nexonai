@@ -9,10 +9,15 @@ import { OfficerIdentity, pairSecret, wireTag } from "./officerIdentity";
 import { ratchetStateFromSecrets, ratchetStateToSecrets } from "./ratchetBootstrap";
 import {
   DELETE_CONTACT_SIGNAL_TEXT,
+  DUMMY_SIGNAL_TEXT,
   NEW_IDENTITY_PREFIX,
   REVOKE_SIGNAL_TEXT,
   WECHSEL_PREFIX,
 } from "./controlSignals";
+import { decodeCrossPlatformPayload } from "../pairing/crossPlatformPairing";
+import { currentIntakeTags, openIntake, parseIntakePlaintext } from "./caseIntake";
+import { CASE_HELLO_TEXT, sendCaseUpdate } from "./caseSignals";
+import { caseFromReporterPayload, InvalidPairingCodeError } from "./intake";
 
 /**
  * The officer-app's core loop: figure out every wire tag worth polling for right now, fetch
@@ -37,6 +42,9 @@ interface ChunkBuffer {
 
 export class PollAndIngestLoop {
   private chunkBuffers = new Map<string, ChunkBuffer>();
+  /** Cases that just got an inbound ratchet message or a fresh intake — a pending receipt or
+   *  status update may now be sendable (see caseSignals.ts). */
+  private signalCandidates = new Set<string>();
 
   constructor(
     private identity: OfficerIdentity,
@@ -48,7 +56,6 @@ export class PollAndIngestLoop {
   /** Runs one poll round. Call this on an interval (see officer-app/src/index.ts). */
   async pollOnce(waitMs = 0): Promise<void> {
     const candidates = this.store.allPollCandidates();
-    if (candidates.length === 0) return;
 
     // Group candidates by case so each case's secrets are decrypted at most once per round.
     const byCase = new Map<string, { caseId: string; identity: string; generation: number }[]>();
@@ -69,12 +76,24 @@ export class PollAndIngestLoop {
       }
     }
 
-    const tags = [...tagToCandidate.keys()];
-    if (tags.length === 0) return;
+    // The organisation-wide letterbox (caseIntake.ts) — polled on every round, also before the
+    // first case exists.
+    const intakeTags = new Set(currentIntakeTags(this.identity.messageKey));
+    const tags = [...tagToCandidate.keys(), ...intakeTags];
     const blobsByTag = await this.relay.fetchMany(tags, waitMs);
 
     for (const [tag, blobs] of Object.entries(blobsByTag)) {
       if (blobs.length === 0) continue;
+      if (intakeTags.has(tag)) {
+        for (const blobB64 of blobs) {
+          try {
+            this.ingestIntake(blobB64);
+          } catch (err) {
+            console.error("[intake] failed to process an intake packet:", err);
+          }
+        }
+        continue;
+      }
       const candidate = tagToCandidate.get(tag);
       if (!candidate) continue;
       for (const blobB64 of blobs) {
@@ -85,6 +104,87 @@ export class PollAndIngestLoop {
         }
       }
     }
+
+    await this.flushPendingSignals();
+  }
+
+  /** Sends every owed receipt/status update that has a chance to go out now. */
+  private async flushPendingSignals(): Promise<void> {
+    const ids = new Set([...this.signalCandidates].filter((id) => this.store.getCase(id)?.signalPending));
+    this.signalCandidates.clear();
+    // Also retry cases whose last attempt failed on the network (not on a missing chain) —
+    // cheap: a missing chain is detected before anything is sent.
+    for (const id of this.store.casesWithPendingSignal()) ids.add(id);
+    for (const caseId of ids) {
+      try {
+        const result = await sendCaseUpdate(this.identity, this.store, this.relay, caseId);
+        if (result === "sent") this.onCaseUpdated(caseId);
+      } catch (err) {
+        console.error(`[signal] case ${caseId}:`, err);
+      }
+    }
+  }
+
+  /** A reporter scanned the organisation QR: create (or find) their case and owe them a receipt. */
+  private ingestIntake(blobB64: string): void {
+    const sealed = unpadPacket(new Uint8Array(Buffer.from(blobB64, "base64")));
+    const plaintext = openIntake(this.identity, sealed);
+    if (!plaintext) return; // not addressed to this officer, or damaged — dropped silently
+    const content = parseIntakePlaintext(plaintext);
+    if (!content) return;
+    const payload = decodeCrossPlatformPayload(content.pairingJson);
+    if (!payload) return;
+    let result;
+    try {
+      result = caseFromReporterPayload(this.identity, this.store, payload, content.wireIdentity);
+    } catch (err) {
+      if (err instanceof InvalidPairingCodeError) return;
+      throw err;
+    }
+    if (result.created) {
+      console.log(`[intake] new case ${result.row.caseNumber} created from the organisation QR`);
+      this.store.appendMessage(result.row.id, "in", "[sistem] Caz deschis automat prin codul QR al organizației.");
+    }
+    // A repeated intake means the reporter hasn't seen a receipt yet — owe them one (again).
+    this.store.setSignalPending(result.row.id, true);
+    this.signalCandidates.add(result.row.id);
+    this.onCaseUpdated(result.row.id);
+  }
+
+  /** Control signals the Android app sends with the OUTER envelope only (no ratchet frame):
+   *  wire-identity announcement, generation switch, revoke/delete, cover traffic. They used to
+   *  be dropped here because only ratchet frames were decoded — which meant the officer never
+   *  learned the reporter's wire identity and couldn't find their messages. */
+  private handleOuterControl(caseId: string, framed: Uint8Array): boolean {
+    let text: string;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(framed);
+    } catch {
+      return false;
+    }
+    if (!text.startsWith("UNPRUUF_")) return false;
+    const secrets = this.store.getCaseSecrets(caseId);
+    if (!secrets) return true;
+    if (text === DUMMY_SIGNAL_TEXT) return true;
+    if (text === REVOKE_SIGNAL_TEXT || text === DELETE_CONTACT_SIGNAL_TEXT) {
+      this.store.appendMessage(caseId, "in", "[system] reporter's app sent a local revoke/delete signal — case record kept.");
+      this.onCaseUpdated(caseId);
+      return true;
+    }
+    if (text.startsWith(NEW_IDENTITY_PREFIX)) {
+      secrets.reporterWireIdentity = text.slice(NEW_IDENTITY_PREFIX.length);
+      this.store.updateCaseSecrets(caseId, secrets);
+      return true;
+    }
+    if (text.startsWith(WECHSEL_PREFIX)) {
+      const [genStr, relayString] = splitOnce(text.slice(WECHSEL_PREFIX.length), ":");
+      const gen = Number.parseInt(genStr, 10);
+      if (Number.isFinite(gen)) secrets.theirGeneration = Math.max(secrets.theirGeneration, gen);
+      if (relayString) secrets.reporterRelayConnectionStrings = [relayString];
+      this.store.updateCaseSecrets(caseId, secrets);
+      return true;
+    }
+    return true; // another UNPRUUF_ control text this product line doesn't use — ignored
   }
 
   private ingestOnePacket(caseId: string, blobB64: string): void {
@@ -93,6 +193,7 @@ export class PollAndIngestLoop {
 
     const packet = unpadPacket(new Uint8Array(Buffer.from(blobB64, "base64")));
     const framed = decryptWithKey(packet, this.identity.messageKey);
+    if (this.handleOuterControl(caseId, framed)) return;
     const frame = decodeFrame(framed);
     if (!frame) return;
 
@@ -122,6 +223,8 @@ export class PollAndIngestLoop {
     const secret = pairSecret(this.identity.messageKey, secrets.reporterMessageKeyB64);
     const plaintext = ratchetDecrypt(ratchetState, header, ciphertext, secret);
     secrets.ratchet = ratchetStateToSecrets(ratchetState);
+    // Receiving gives a fresh session its sending chain — an owed receipt can go out now.
+    this.signalCandidates.add(caseId);
 
     if (bytesEqualAscii(plaintext, REVOKE_SIGNAL_TEXT) || bytesEqualAscii(plaintext, DELETE_CONTACT_SIGNAL_TEXT)) {
       // Recorded, never acted on destructively — see this file's class doc comment.
@@ -133,6 +236,10 @@ export class PollAndIngestLoop {
 
     const content = decodeMessagePayload(plaintext);
     if (!content) {
+      this.store.updateCaseSecrets(caseId, secrets);
+      return;
+    }
+    if (content.kind === "text" && content.text === CASE_HELLO_TEXT) {
       this.store.updateCaseSecrets(caseId, secrets);
       return;
     }

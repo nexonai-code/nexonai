@@ -5,6 +5,7 @@ import { CaseStore, CaseStatus } from "../store/caseStore";
 import { OfficerIdentity } from "../officer/officerIdentity";
 import { addCaseFromPastedCode, InvalidPairingCodeError, myPairingPayloadJson } from "../officer/intake";
 import { sendReply } from "../officer/sendReply";
+import { sendCaseUpdate } from "../officer/caseSignals";
 import { RelayClient } from "../relay/relayClient";
 
 /**
@@ -36,14 +37,16 @@ export function createDashboardApp(
     res.json(store.listCases());
   });
 
-  app.post("/api/cases", (req, res) => {
+  app.post("/api/cases", async (req, res) => {
     const pastedCode = req.body?.pastedCode;
     if (typeof pastedCode !== "string" || pastedCode.trim().length === 0) {
       return res.status(400).json({ error: "pastedCode este obligatoriu" });
     }
     try {
       const row = addCaseFromPastedCode(identity, store, pastedCode);
-      return res.status(201).json(row);
+      // Owe the reporter a receipt with the case number, same as the automatic intake.
+      await sendCaseUpdate(identity, store, relay, row.id).catch((err) => console.error("[api] receipt failed:", err));
+      return res.status(201).json(store.getCase(row.id));
     } catch (err) {
       if (err instanceof InvalidPairingCodeError) return res.status(400).json({ error: err.message });
       console.error("[api] addCaseFromPastedCode failed:", err);
@@ -58,13 +61,21 @@ export function createDashboardApp(
   });
 
   const VALID_STATUSES: CaseStatus[] = ["new", "acknowledged", "in_progress", "closed"];
-  app.post("/api/cases/:id/status", (req, res) => {
+  app.post("/api/cases/:id/status", async (req, res) => {
     const status = req.body?.status;
     if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: `starea trebuie să fie una dintre: ${VALID_STATUSES.join(", ")}` });
     const row = store.getCase(req.params.id);
     if (!row) return res.status(404).json({ error: "nu a fost găsit" });
     store.setStatus(req.params.id, status);
-    return res.json(store.getCase(req.params.id));
+    // Every status change reaches the reporter's "My case" screen. "new" is internal only.
+    let delivery: string = "not-sent";
+    if (status !== "new") {
+      delivery = await sendCaseUpdate(identity, store, relay, req.params.id).catch((err) => {
+        console.error("[api] status update failed:", err);
+        return "failed";
+      });
+    }
+    return res.json({ ...store.getCase(req.params.id), delivery });
   });
 
   app.post("/api/cases/:id/category", (req, res) => {
@@ -82,8 +93,8 @@ export function createDashboardApp(
     const row = store.getCase(req.params.id);
     if (!row) return res.status(404).json({ error: "nu a fost găsit" });
     try {
-      const sent = await sendReply(identity, store, relay, req.params.id, text.trim());
-      return res.json({ sent, messages: store.listMessages(req.params.id) });
+      const result = await sendReply(identity, store, relay, req.params.id, text.trim());
+      return res.json({ sent: result === "sent", result, messages: store.listMessages(req.params.id) });
     } catch (err) {
       console.error("[api] sendReply failed:", err);
       return res.status(500).json({ error: "trimiterea a eșuat — releul este accesibil? verifică fereastra serverului." });

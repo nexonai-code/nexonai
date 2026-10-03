@@ -209,7 +209,7 @@ class QrPairViewModel @Inject constructor(
     /** Null until a relay is configured in Settings (Settings → Relay) — the cross-platform QR
      *  is meaningless without one, since its whole point is "the relay that reaches me". */
     fun myCrossPlatformQrPayload(): CrossPlatformPairingPayload? {
-        val pool = relayManager.getMyRelayPool()
+        val pool = relayManager.getMyRelayPool().ifEmpty { if (AppEdition.isWhistleblower) whistleblowerOfficerRelays() else emptyList() }
         if (pool.isEmpty()) return null
         return CrossPlatformPairingPayload(
             userId = identityManager.userId,
@@ -220,6 +220,11 @@ class QrPairViewModel @Inject constructor(
             relayConnectionStrings = pool,
             appEdition = AppEdition.current
         )
+    }
+
+    // The officer's relays, once paired — what a reporter without an own relay receives over.
+    private fun whistleblowerOfficerRelays(): List<String> = runBlocking {
+        contactDao.getAllContactsOnce().firstOrNull()?.let { RelayManager.parseConnectionStringList(it.myRelayConnectionString ?: "") } ?: emptyList()
     }
 
     /** True when Settings → Relay is set to Mandatory — the QR screen uses this to default to
@@ -271,6 +276,12 @@ class QrPairViewModel @Inject constructor(
                 return@launch
             }
 
+            // Whistleblower reporters normally have no relay of their own: they receive over the
+            // officer's relay from the QR. Without this fallback myRelayConnectionString stayed
+            // empty, so the app never polled anywhere and the officer's replies never arrived.
+            val myRelays = relayManager.getMyRelayPool().ifEmpty {
+                if (AppEdition.isWhistleblower) payload.relayConnectionStrings.take(RelayManager.RELAY_POOL_MAX_SIZE) else emptyList()
+            }
             val contact = Contact(
                 id = identityManager.newWireIdentity(),
                 onionAddress = "",
@@ -280,7 +291,7 @@ class QrPairViewModel @Inject constructor(
                 isClientSlot = payload.appEdition == AppEdition.CLIENT,
                 x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
                 crossPlatform = true,
-                myRelayConnectionString = RelayManager.buildConnectionStringList(relayManager.getMyRelayPool()),
+                myRelayConnectionString = RelayManager.buildConnectionStringList(myRelays),
                 theirRelayConnectionString = RelayManager.buildConnectionStringList(payload.relayConnectionStrings),
                 remoteUserId = payload.userId,
                 myWireIdentity = identityManager.newWireIdentity()
@@ -289,6 +300,10 @@ class QrPairViewModel @Inject constructor(
             contactDao.insert(contact)
             ratchetSessionManager.createSession(contact)
             p2pNetworkManager.sendNewIdentitySignal(contact.id)
+            // Organisation-wide QR: the case is opened automatically — no code to copy back.
+            if (AppEdition.isWhistleblower && payload.appEdition == AppEdition.OFFICER) {
+                p2pNetworkManager.startOfficerCase(contact.id)
+            }
             _successState.value = "$displayName added."
         }
     }

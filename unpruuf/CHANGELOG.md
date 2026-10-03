@@ -5,6 +5,74 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑03 · Whistleblower: one organisation-wide QR, automatic case number, "My case" screen
+
+**What was done**
+
+1. **One QR for the whole organisation.**
+   - Every employee scans the same code. Per-employee codes are deliberately not offered, because
+     an individual code could be tied to a person.
+   - After the scan, the app (or the web-reporter) automatically sends its own pairing code into
+     the organisation's letterbox on the relay.
+   - The letterbox is encrypted so that only the officer-app can open it: X25519 + HKDF +
+     AES-256-GCM, with a tag that changes every hour.
+   - Copying the code back to the officer and pasting it on the dashboard is no longer needed.
+     Manual paste stays only as a fallback.
+2. **Automatic case number and receipt.**
+   - The officer-app opens the case by itself and assigns a random case number (`HW-XXXX-XXXX`,
+     with no 0/1/I/L/O, never sequential).
+   - It sends the receipt straight back over the case's encrypted channel. That is the Art. 9
+     acknowledgement, and the case moves to "confirmed".
+3. **"My case" in the Android app.**
+   - A new screen shows the case number, the status, a three-step progress bar (received → review
+     → closed), the date received, the feedback deadline and the last update.
+   - A strip at the top of the chat and an icon in the toolbar open it.
+   - Every status change on the dashboard reaches the screen within seconds, with a neutral
+     notification.
+4. **Web-reporter:** the same intake, plus a "My case" panel. The reporter's own code is only
+   shown as a fallback.
+5. **The app retries the intake** every 6 h for up to 14 days until the receipt arrives. The officer
+   looks 48 h back.
+6. **Ratchet start fixed.**
+   - In a fresh session only one side may send first. A hidden start message and the officer's
+     automatic receipt now make sure both directions work immediately.
+   - Before this, a report could fail when the reporter happened to be on the receiving side.
+
+**Which bugs appeared (found while building, all fixed)**
+
+- **The officer-app dropped the Android app's identity signal.** That signal is outer envelope
+  only, not a ratchet frame, so the officer-app never learned the reporter's wire identity and
+  could not find real reports from the Android app. The demo round trip had only been tested with
+  the officer-app's own crypto modules. Now outer control signals (identity, generation switch,
+  revoke, cover packets) are handled before frames are decoded.
+- **The reporter app without its own relay never collected replies.** Its own relay list stayed
+  empty, so it polled nowhere. A whistleblower reporter now receives over the officer's relay from
+  the QR.
+- **The officer-app sent more than 64 tags in one request** once there were several cases, and the
+  relay rejects that. Requests are now split.
+- **Possible overwrite of the ratchet state on the officer side:** it was saved only after the
+  network call. It is now saved before.
+- **The dashboard was not served after `npm run build`:** tsc does not copy `src/web/public`. A
+  copy step was added.
+
+**Data model**
+
+- Android DB v11 with a real migration (no more destructive wipe): existing contacts stay.
+- Officer database: new columns added automatically on first start.
+
+**Verification**
+
+- officer-app: 4 new end-to-end tests (intake → case → receipt → report → status change →
+  duplicate intake, both ratchet roles over 6 runs; identity signal).
+- Android: 70/70 tests in each of the 4 editions (new: `OfficerCaseTest`). WB and Standard APKs
+  build.
+- **Cross-language checked:** an intake sealed by Kotlin is opened by the officer-app
+  (`officer-app/scripts/check-android-intake.js`); the browser intake and case signal are
+  compatible with the officer-app (`web-reporter/scripts/check-interop.js`).
+- Not tested on a real device or with a real relay over Tor.
+
+---
+
 ## 2026‑10‑01 (6) · Hardening against outside observers: LAN, poll rhythm, cover traffic, sealed node keys
 
 **What was done**

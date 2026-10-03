@@ -30,6 +30,7 @@ object AppModule {
             "unpruuf_contacts.db"
         )
             .openHelperFactory(factory)
+            .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11)
             .fallbackToDestructiveMigration()
             .build()
     }

@@ -36,14 +36,21 @@ relay's LAN address instead (needs the relay's own "Allow LAN access" setting tu
 
 ## How a case gets started
 
-1. A reporter scans your dashboard's QR in the unpruuf app (Whistleblower edition).
-2. Their app immediately shows **their own** code with a "copy" button — there's no way for
-   your laptop dashboard to scan their phone back, so this replaces the second half of
-   unpruuf's usual mutual-QR pairing ceremony.
-3. They share that code with you however they're comfortable (in person, a drop box, whatever
-   channel your organization sets up) — you paste it into "Add a case" on the dashboard.
-4. Their actual report arrives moments later (or is already queued if they sent it right after
-   scanning) — no separate action needed, the poll loop picks it up automatically.
+1. **One QR code for the whole organisation** — print it, put it in the intranet, on a card. Never
+   hand out one code per employee: an individual code could be tied to a person.
+2. A reporter scans it in the unpruuf app (Whistleblower edition) or pastes it into the web-reporter.
+3. Their app sends its own pairing code automatically, sealed so only this officer-app can open it,
+   into the organisation's letterbox on the relay (`src/officer/caseIntake.ts`). Nobody copies or
+   pastes anything any more.
+4. The case appears on the dashboard by itself, with a **random case number** (`HW-7Q4M-2X9D` —
+   never sequential, that would reveal how many reports exist).
+5. The reporter's app immediately receives the **receipt** with the case number (this is the Art. 9
+   acknowledgement) and shows it under "My case". Every status change on the dashboard
+   (in progress, closed) reaches that screen too (`src/officer/caseSignals.ts`).
+
+The reporter's app retries the intake every 6 h for up to 14 days until the receipt arrives, so an
+officer-app that is switched off for a while still gets every case. The old manual paste
+("Adăugare manuală") stays available for reporter apps from before this change.
 
 ## Architecture in one paragraph
 

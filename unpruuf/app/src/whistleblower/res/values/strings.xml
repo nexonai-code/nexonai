@@ -275,4 +275,23 @@ Punțile obișnuite (IP:Port Amprentă) funcționează imediat. obfs4/Snowflake 
     <string name="settings_unlock_confirm_body">Cheia ta de proprietar este trimisă serverului, ca nodurile să revină online la aceleași adrese.\n\nFă asta doar dacă știi de ce a repornit. Dacă serverul ar fi putut fi confiscat sau copiat, NU debloca — configurează un server nou.</string>
     <string name="settings_unlock_done">Server deblocat. Nodurile revin online.</string>
     <string name="settings_unlock_failed">Deblocare eșuată — serverul nu răspunde sau cheia a fost refuzată.</string>
+    <string name="case_title">Cazul meu</string>
+    <string name="case_number_label">Număr caz</string>
+    <string name="case_cd_copy">Copiază numărul cazului</string>
+    <string name="case_pending_title">Sesizarea este în curs de transmitere</string>
+    <string name="case_pending_body">Sesizarea ta a fost predată. Imediat ce oficiul de raportare confirmă primirea, numărul cazului apare aici. Nu trebuie să faci nimic.</string>
+    <string name="case_status_acknowledged">Primită și confirmată</string>
+    <string name="case_status_in_progress">În analiză</string>
+    <string name="case_status_closed">Închis</string>
+    <string name="case_step_received">Primită</string>
+    <string name="case_step_review">Analiză</string>
+    <string name="case_step_closed">Închis</string>
+    <string name="case_opened_at">Primită la %1$s</string>
+    <string name="case_feedback_due">Răspuns până la %1$s</string>
+    <string name="case_last_update">Ultima actualizare: %1$s</string>
+    <string name="case_open_chat">Scrie către oficiul de raportare</string>
+    <string name="case_hint">Modificările făcute de oficiul de raportare apar aici automat. Numărul cazului este doar pentru tine: te ajută să te referi la sesizare, nu este necesar pentru autentificare.</string>
+    <string name="case_banner_pending">Sesizare în curs de transmitere · numărul cazului urmează</string>
+    <string name="case_banner">Caz %1$s · %2$s</string>
+    <string name="chat_cd_case">Cazul meu</string>
 </resources>

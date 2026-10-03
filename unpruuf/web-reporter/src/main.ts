@@ -7,6 +7,9 @@ import { decodeFrame, encodeFrame, splitFrame } from "./ratchetFrame";
 import { decodeMessagePayload, encodeText } from "./messagePayload";
 import { RelayClient } from "./relayClient";
 import { base64ToBytes, bytesToBase64 } from "./base64";
+import {
+  CASE_HELLO_TEXT, CaseInfo, INTAKE_GIVE_UP_MS, INTAKE_RETRY_MS, intakeHour, intakeTag, parseCaseSignal, sealIntake,
+} from "./caseIntake";
 
 const LS_IDENTITY = "unpruuf_reporter_identity";
 const LS_CASE = "unpruuf_reporter_case";
@@ -15,6 +18,13 @@ const LS_RELAY_URL = "unpruuf_reporter_relay_url";
 const LS_RELAY_TOKEN = "unpruuf_reporter_relay_token";
 
 interface CaseState {
+  /** The officer's relay connection string from the QR (used for the intake). */
+  officerRelay?: string;
+  /** This browser's own pairing code — sent to the officer automatically (intake). */
+  myPairingJson?: string;
+  intakeStartedAt?: number | null;
+  intakeLastSentAt?: number | null;
+  caseInfo?: CaseInfo | null;
   officerUserId: string;
   officerMessageKeyB64: string;
   officerX25519PubB64: string;
@@ -85,12 +95,66 @@ const composeInput = document.getElementById("composeInput") as HTMLTextAreaElem
 const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
 const sendError = document.getElementById("sendError") as HTMLElement;
 const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement;
+const casePanel = document.getElementById("casePanel") as HTMLElement;
 
 let identity: Identity;
 let caseState: CaseState;
 let relay: RelayClient;
 
+const STATUS_RO: Record<string, string> = { acknowledged: "Primită și confirmată", in_progress: "În analiză", closed: "Închis" };
+const fmtDay = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString("ro-RO") : "—");
+
+function renderCase(): void {
+  const info = caseState?.caseInfo;
+  if (!info) {
+    casePanel.innerHTML = `<h2>Cazul meu</h2><p class="hint"><b>Sesizarea este în curs de transmitere.</b> Imediat ce oficiul de raportare confirmă primirea, numărul cazului apare aici. Nu trebuie să faci nimic.</p>`;
+    return;
+  }
+  const steps = ["Primită", "Analiză", "Închis"];
+  const current = info.status === "closed" ? 2 : info.status === "in_progress" ? 1 : 0;
+  casePanel.innerHTML = `
+    <h2>Cazul meu</h2>
+    <div class="case-number">${info.number}</div>
+    <div class="case-status">${STATUS_RO[info.status]}</div>
+    <ol class="case-steps">${steps.map((s, i) => `<li class="${i <= current ? "done" : ""}">${s}</li>`).join("")}</ol>
+    <p class="hint">Primită la ${fmtDay(info.openedAt)}${info.status !== "closed" ? ` · răspuns până la ${fmtDay(info.feedbackDueAt)}` : ""} · ultima actualizare ${new Date(info.updatedAt).toLocaleString("ro-RO")}</p>`;
+}
+
+/** Sends this browser's pairing code to the organisation's letterbox until the receipt arrives. */
+async function sendIntakeIfDue(): Promise<void> {
+  if (!caseState || caseState.caseInfo || !caseState.intakeStartedAt || !caseState.myPairingJson) return;
+  const now = Date.now();
+  if (now - caseState.intakeStartedAt > INTAKE_GIVE_UP_MS) return;
+  if (caseState.intakeLastSentAt && now - caseState.intakeLastSentAt < INTAKE_RETRY_MS) return;
+  const sealed = sealIntake(base64ToBytes(caseState.officerX25519PubB64), base64ToBytes(caseState.officerMessageKeyB64), caseState.myPairingJson);
+  const ok = await relay.push(intakeTag(base64ToBytes(caseState.officerMessageKeyB64), intakeHour(now)), bytesToBase64(padPacket(sealed)));
+  if (ok) {
+    caseState.intakeLastSentAt = now;
+    saveCase(caseState);
+  }
+}
+
+/** Hidden first ratchet message — lets the officer answer at once when it is the receiving side. */
+function trySendHello(): void {
+  const state: RatchetState = ratchetStateFromJson(caseState.ratchetStateJson);
+  const secret = pairSecret(identity.messageKey, caseState.officerMessageKeyB64);
+  let enc;
+  try {
+    enc = ratchetEncrypt(state, encodeText(CASE_HELLO_TEXT), secret);
+  } catch {
+    return; // we are the receiving side — the officer's receipt opens our chain
+  }
+  caseState.ratchetStateJson = ratchetStateToJson(state);
+  saveCase(caseState);
+  const tag = wireTag(secret, identity.userId, caseState.myGeneration);
+  const officerKeyBytes = base64ToBytes(caseState.officerMessageKeyB64);
+  for (const frame of splitFrame(enc.header, enc.ciphertext)) {
+    void relay.push(tag, bytesToBase64(padPacket(encryptForContact(encodeFrame(frame), officerKeyBytes))));
+  }
+}
+
 function render(): void {
+  renderCase();
   const msgs = loadMessages();
   thread.innerHTML = "";
   for (const m of msgs) {
@@ -111,7 +175,13 @@ function render(): void {
 async function sendReport(text: string): Promise<void> {
   const state: RatchetState = ratchetStateFromJson(caseState.ratchetStateJson);
   const secret = pairSecret(identity.messageKey, caseState.officerMessageKeyB64);
-  const { header, ciphertext } = ratchetEncrypt(state, encodeText(text), secret);
+  let encrypted;
+  try {
+    encrypted = ratchetEncrypt(state, encodeText(text), secret);
+  } catch {
+    throw new Error("Canalul se deschide imediat ce oficiul confirmă primirea (de obicei în câteva secunde) — încearcă din nou puțin mai târziu.");
+  }
+  const { header, ciphertext } = encrypted;
   caseState.ratchetStateJson = ratchetStateToJson(state);
 
   const officerKeyBytes = base64ToBytes(caseState.officerMessageKeyB64);
@@ -179,6 +249,13 @@ async function pollOnce(): Promise<void> {
         const plaintext = ratchetDecrypt(state, header, ciphertext, secret);
         changed = true;
         const content = decodeMessagePayload(plaintext);
+        if (content?.kind === "text" && content.text === CASE_HELLO_TEXT) continue;
+        const caseInfo = content?.kind === "text" ? parseCaseSignal(content.text) : null;
+        if (caseInfo) {
+          caseState.caseInfo = caseInfo;
+          caseState.intakeStartedAt = null;
+          continue;
+        }
         if (content?.kind === "text") {
           const msgs = loadMessages();
           msgs.push({ direction: "in", text: content.text, ts: Date.now() });
@@ -198,7 +275,10 @@ async function pollOnce(): Promise<void> {
 }
 
 function startPolling(): void {
-  const tick = () => pollOnce().catch((err) => console.error("[poll] round failed:", err));
+  const tick = () =>
+    pollOnce()
+      .then(() => sendIntakeIfDue())
+      .catch((err) => console.error("[poll] round failed:", err));
   tick();
   setInterval(tick, 6000);
 }
@@ -242,6 +322,10 @@ startBtn.addEventListener("click", () => {
 
   const ratchetState = createRatchetSession(identity, payload.x25519RatchetPublicKeyBase64, payload.messageKeyBase64);
   caseState = {
+    officerRelay: officerConn,
+    intakeStartedAt: Date.now(),
+    intakeLastSentAt: null,
+    caseInfo: null,
     officerUserId: payload.userId,
     officerMessageKeyB64: payload.messageKeyBase64,
     officerX25519PubB64: payload.x25519RatchetPublicKeyBase64,
@@ -260,6 +344,9 @@ startBtn.addEventListener("click", () => {
     appEdition: WHISTLEBLOWER_EDITION,
   });
   myCodeBox.value = myCodeJson;
+  caseState.myPairingJson = myCodeJson;
+  saveCase(caseState);
+  trySendHello();
 
   enterChat();
 });

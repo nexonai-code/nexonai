@@ -11,3 +11,6 @@ export const REVOKE_SIGNAL_TEXT = "UNPRUUF_REVOKE_V1";
 export const DELETE_CONTACT_SIGNAL_TEXT = "UNPRUUF_DELETE_CONTACT_V1";
 export const NEW_IDENTITY_PREFIX = "UNPRUUF_NEWID_V1:";
 export const WECHSEL_PREFIX = "UNPRUUF_WECHSEL_V1:";
+
+/** Android cover traffic (P2PNetworkManager.DUMMY_SIGNAL), outer envelope only. */
+export const DUMMY_SIGNAL_TEXT = "UNPRUUF_DUMMY_V1";

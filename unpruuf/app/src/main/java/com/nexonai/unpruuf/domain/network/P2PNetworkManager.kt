@@ -242,6 +242,8 @@ class P2PNetworkManager @Inject constructor(
         private const val NODE_MESH_COVER_MIN_MS = 20_000L
         private const val NODE_MESH_COVER_MAX_MS = 60 * 60 * 1000L
         private const val LOCKED_SERVER_CHECK_INTERVAL_MS = 15 * 60 * 1000L
+        // Whistleblower intake retry check (the actual resend interval is OfficerCase.INTAKE_RETRY_MS).
+        private const val OFFICER_INTAKE_CHECK_MS = 60_000L
         private const val NODE_MESH_MAX_TTL_MS = 24 * 60 * 60 * 1000L
 
         // Connect timeout for FRESH Tor connections to a CONTACT's onion (the pooled send
@@ -422,6 +424,7 @@ class P2PNetworkManager @Inject constructor(
         startActiveChatWarmup()
         startRelayPoll()
         startNodeMeshPoll()
+        startOfficerIntakeLoop()
         startNodeMeshCoverTraffic()
         startNodePoolRefresh()
         startLockedServerCheck()
@@ -604,6 +607,76 @@ class P2PNetworkManager @Inject constructor(
 
     private fun nodeMeshPollDelayMs(): Long =
         NODE_MESH_POLL_BASE_MS + kotlin.random.Random.nextLong(-NODE_MESH_POLL_JITTER_MS, NODE_MESH_POLL_JITTER_MS + 1)
+
+    // ─── Whistleblower: organisation-wide QR + case number (see OfficerCase.kt) ─────────────
+
+    /**
+     * Called once right after pairing with a compliance officer: a hidden first ratchet message
+     * (so the officer can answer at once even when it is the receiving side of the session) and
+     * the intake into the organisation's letterbox, which replaces copying our own code by hand.
+     */
+    fun startOfficerCase(contactId: String) {
+        scope.launch {
+            contactDao.startIntake(contactId, System.currentTimeMillis())
+            // Silently skipped by enqueueRatchetMessage when we are the receiving side — then
+            // the officer is the sending side and its receipt opens our sending chain instead.
+            sendMessage(contactId, MessagePayload.encodeText(OfficerCase.CASE_HELLO_TEXT))
+            contactDao.getContactById(contactId)?.let { runCatching { sendOfficerIntakeIfDue(it) } }
+        }
+    }
+
+    // Re-sends the intake until the officer's receipt (case number) arrives — the officer may be
+    // offline for hours, and its letterbox only looks 48 h back.
+    private fun startOfficerIntakeLoop() {
+        if (!AppEdition.isWhistleblower) return
+        scope.launch {
+            while (isActive) {
+                delay(OFFICER_INTAKE_CHECK_MS)
+                if (!torManager.isReady.value) continue
+                val pending = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+                    .filter { it.intakeStartedAt != null && it.caseNumber == null }
+                for (c in pending) runCatching { sendOfficerIntakeIfDue(c) }
+            }
+        }
+    }
+
+    private suspend fun sendOfficerIntakeIfDue(contact: com.nexonai.unpruuf.data.model.Contact) {
+        val started = contact.intakeStartedAt ?: return
+        if (contact.caseNumber != null) return
+        val now = System.currentTimeMillis()
+        if (now - started > OfficerCase.INTAKE_GIVE_UP_MS) {
+            contactDao.stopIntake(contact.id)
+            return
+        }
+        val last = contact.intakeLastSentAt
+        if (last != null && now - last < OfficerCase.INTAKE_RETRY_MS) return
+        if (!torManager.isReady.value) return
+        if (sendOfficerIntake(contact)) contactDao.markIntakeSent(contact.id, now)
+    }
+
+    private fun sendOfficerIntake(contact: com.nexonai.unpruuf.data.model.Contact): Boolean {
+        val officerKey = runCatching { android.util.Base64.decode(contact.publicKey, android.util.Base64.DEFAULT) }
+            .getOrNull()?.takeIf { it.size == 32 } ?: return false
+        val officerPub = runCatching { android.util.Base64.decode(contact.x25519RatchetPublicKey, android.util.Base64.DEFAULT) }
+            .getOrNull()?.takeIf { it.size == 32 } ?: return false
+        val myRelays = contactMyRelayList(contact).ifEmpty { return false }
+        val pairingJson = com.nexonai.unpruuf.screens.qrpair.crossPlatformPayloadToJson(
+            com.nexonai.unpruuf.screens.qrpair.CrossPlatformPairingPayload(
+                userId = identityManager.userId,
+                messageKeyBase64 = android.util.Base64.encodeToString(identityManager.myMessageKey, android.util.Base64.NO_WRAP),
+                x25519RatchetPublicKeyBase64 = identityManager.myX25519RatchetPublicKeyBase64,
+                relayConnectionStrings = myRelays,
+                appEdition = AppEdition.current
+            )
+        )
+        val sealed = OfficerCase.sealIntake(officerPub, officerKey, OfficerCase.encodeIntakePlaintext(contact.myWireIdentity, pairingJson))
+        if (sealed.size > NetworkObfuscation.PACKET_SIZE - 8) return false
+        val targets = contactTheirRelayList(contact).mapNotNull { RelayManager.parseConnectionString(it) }
+        if (targets.isEmpty()) return false
+        val tag = OfficerCase.intakeTag(officerKey, OfficerCase.hour())
+        val padded = NetworkObfuscation.padPacket(sealed)
+        return targets.any { relayClient.push(it.address, it.authToken, tag, padded) }
+    }
 
     // ─── Node-Mesh cover traffic ──────────────────────────────────────────────────────────────
     // Without it every deposit on a node was a real message, so a node operator (or whoever
@@ -1408,6 +1481,21 @@ class P2PNetworkManager @Inject constructor(
         }.getOrNull() ?: return false
 
         val content = MessagePayload.decode(realPlaintext) ?: return false
+        // Whistleblower: the officer's case receipt / status update — stored on the contact for
+        // the "My case" screen, never shown as a chat line. The hello is our own kind; a peer
+        // never sends it to us, but it must not surface as text if one ever arrives.
+        if (content is MessagePayload.Content.Text) {
+            if (content.text.startsWith(OfficerCase.CASE_SIGNAL_PREFIX)) {
+                OfficerCase.parseCaseSignal(content.text.removePrefix(OfficerCase.CASE_SIGNAL_PREFIX))?.let { info ->
+                    contactDao.updateCaseInfo(
+                        senderId, info.number, info.status, info.openedAt, info.ackDueAt, info.feedbackDueAt, info.updatedAt
+                    )
+                    showMessageNotification()
+                }
+                return true
+            }
+            if (content.text == OfficerCase.CASE_HELLO_TEXT) return true
+        }
         val msg = when (content) {
             is MessagePayload.Content.Text -> RamMessage(
                 id = UUID.randomUUID().toString(),

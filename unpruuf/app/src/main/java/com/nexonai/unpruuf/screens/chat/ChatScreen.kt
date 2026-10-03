@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.DeleteForever
@@ -47,6 +48,7 @@ import com.nexonai.unpruuf.data.repository.RamMessage
 import com.nexonai.unpruuf.screens.qrpair.PortraitCaptureActivity
 import androidx.compose.ui.res.stringResource
 import com.nexonai.unpruuf.R
+import com.nexonai.unpruuf.domain.AppEdition
 import kotlinx.coroutines.delay
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -66,6 +68,7 @@ fun ChatScreen(
     contactId: String,
     onNavigateBack: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    onOpenCase: () -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val contact by viewModel.contact.collectAsState()
@@ -294,6 +297,16 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    // Whistleblower: the reporter's case (number, status, deadlines).
+                    if (AppEdition.isWhistleblower) {
+                        IconButton(onClick = onOpenCase) {
+                            Icon(
+                                Icons.Default.Assignment,
+                                contentDescription = stringResource(R.string.chat_cd_case),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     IconButton(onClick = {
                         renameText = contact?.displayName ?: ""
                         showRenameDialog = true
@@ -415,6 +428,9 @@ fun ChatScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            if (AppEdition.isWhistleblower) {
+                contact?.let { com.nexonai.unpruuf.screens.caseview.CaseBanner(it, onClick = onOpenCase) }
+            }
             if (oldestPendingAgeMs != null && oldestPendingAgeMs > STILL_CONNECTING_HINT_MS) {
                 StillConnectingHint(
                     relayConfigured = viewModel.isRelayConfigured(),

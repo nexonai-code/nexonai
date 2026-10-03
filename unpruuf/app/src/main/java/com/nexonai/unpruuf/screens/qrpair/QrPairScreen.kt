@@ -302,14 +302,9 @@ fun QrPairScreen(
             // Not offered in ordinary release builds: an in-person scan is a real physical-
             // proximity check a copy/pasted code sent over another channel doesn't have.
             //
-            // ALSO enabled on Whistleblower release builds, deliberately — this is the NORMAL
-            // pairing completion step there, not a testing fallback: after scanning the
-            // compliance officer's QR (see below), this app has no way to be scanned back (the
-            // officer runs a laptop dashboard with no camera to scan a phone screen with), so
-            // the reporter's own resulting code has to reach the officer through the same
-            // manual channel the whistleblowing report itself will eventually go through —
-            // that's expected here, unlike the "skips physical proximity" caveat below, which is
-            // about a DIFFERENT contact's identity being spoofable, not about this.
+            // Whistleblower: no longer needed in normal use — after scanning the organisation's QR
+            // the app sends its own code to the officer automatically (OfficerCase.kt intake).
+            // Still offered as a manual fallback for officer dashboards older than that.
             if (BuildConfig.DEBUG || AppEdition.isWhistleblower) {
                 val debugCode = if (nodeMeshMode) {
                     viewModel.myNodeMeshQrPayload()?.let { nodeMeshPayloadToJson(it) }

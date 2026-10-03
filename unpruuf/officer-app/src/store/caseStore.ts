@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
-import { hkdfSha256 } from "../crypto/primitives";
+import { hkdfSha256, hmacSha256 } from "../crypto/primitives";
 import { OfficerIdentity } from "../officer/officerIdentity";
 
 /**
@@ -49,6 +49,11 @@ export type CaseStatus = "new" | "acknowledged" | "in_progress" | "closed";
 
 export interface CaseRow {
   id: string;
+  /** What the reporter sees in their app ("HW-7Q4M-2X9D"). Random, see caseIntake.ts. */
+  caseNumber: string | null;
+  /** A receipt/status update is owed to the reporter but couldn't be sent yet (the ratchet has
+   *  no sending chain until the reporter's first message arrives, or the relay was down). */
+  signalPending: boolean;
   status: CaseStatus;
   category: string | null;
   openedAt: number;
@@ -136,6 +141,36 @@ export class CaseStore {
         PRIMARY KEY (case_id, identity, generation)
       );
     `);
+    // Columns added with the organisation-wide QR / case numbers (2026-10-03). Older databases
+    // get them on first start; existing cases receive a case number the first time one is needed.
+    const columns = new Set((this.db.prepare(`PRAGMA table_info(cases)`).all() as { name: string }[]).map((c) => c.name));
+    if (!columns.has("case_number")) this.db.exec(`ALTER TABLE cases ADD COLUMN case_number TEXT`);
+    if (!columns.has("reporter_ref")) this.db.exec(`ALTER TABLE cases ADD COLUMN reporter_ref TEXT`);
+    if (!columns.has("signal_pending")) this.db.exec(`ALTER TABLE cases ADD COLUMN signal_pending INTEGER NOT NULL DEFAULT 0`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_reporter_ref ON cases(reporter_ref)`);
+  }
+
+  /** Keyed hash of the reporter's id — finds an existing case for a repeated intake without
+   *  storing the id itself in a searchable plaintext column. */
+  reporterRef(reporterUserId: string): string {
+    return Buffer.from(hmacSha256(this.dbKey, new TextEncoder().encode(`reporter:${reporterUserId}`))).toString("hex");
+  }
+
+  findCaseByReporter(reporterUserId: string): CaseRow | null {
+    const row = this.db.prepare(`SELECT * FROM cases WHERE reporter_ref = ?`).get(this.reporterRef(reporterUserId)) as any;
+    return row ? mapCaseRow(row) : null;
+  }
+
+  setCaseNumber(caseId: string, caseNumber: string): void {
+    this.db.prepare(`UPDATE cases SET case_number = ? WHERE id = ?`).run(caseNumber, caseId);
+  }
+
+  setSignalPending(caseId: string, pending: boolean): void {
+    this.db.prepare(`UPDATE cases SET signal_pending = ? WHERE id = ?`).run(pending ? 1 : 0, caseId);
+  }
+
+  casesWithPendingSignal(): string[] {
+    return (this.db.prepare(`SELECT id FROM cases WHERE signal_pending = 1`).all() as { id: string }[]).map((r) => r.id);
   }
 
   /**
@@ -145,10 +180,12 @@ export class CaseStore {
    * queued on the relay already) as a normal ratchet-encrypted message, ingested by the poll
    * loop exactly like every later message in the case (see officer/pollAndIngest.ts).
    */
-  createCase(secrets: CaseSecrets): CaseRow {
+  createCase(secrets: CaseSecrets, caseNumber: string | null = null): CaseRow {
     const now = Date.now();
     const row: CaseRow = {
       id: randomUUID(),
+      caseNumber,
+      signalPending: false,
       status: "new",
       category: null,
       openedAt: now,
@@ -161,10 +198,23 @@ export class CaseStore {
     const secretBlob = encryptJson(this.dbKey, secrets);
     this.db
       .prepare(
-        `INSERT INTO cases (id, status, category, opened_at, ack_due_at, feedback_due_at, acknowledged_at, closed_at, last_activity_at, secret_blob)
-         VALUES (@id, @status, @category, @openedAt, @ackDueAt, @feedbackDueAt, @acknowledgedAt, @closedAt, @lastActivityAt, @secretBlob)`,
+        `INSERT INTO cases (id, case_number, reporter_ref, signal_pending, status, category, opened_at, ack_due_at, feedback_due_at, acknowledged_at, closed_at, last_activity_at, secret_blob)
+         VALUES (@id, @caseNumber, @reporterRef, 0, @status, @category, @openedAt, @ackDueAt, @feedbackDueAt, @acknowledgedAt, @closedAt, @lastActivityAt, @secretBlob)`,
       )
-      .run({ ...row, secretBlob });
+      .run({
+        id: row.id,
+        caseNumber: row.caseNumber,
+        reporterRef: this.reporterRef(secrets.reporterUserId),
+        status: row.status,
+        category: row.category,
+        openedAt: row.openedAt,
+        ackDueAt: row.ackDueAt,
+        feedbackDueAt: row.feedbackDueAt,
+        acknowledgedAt: row.acknowledgedAt,
+        closedAt: row.closedAt,
+        lastActivityAt: row.lastActivityAt,
+        secretBlob,
+      });
     this.refreshPollCandidates(row.id, secrets);
     return row;
   }
@@ -256,6 +306,8 @@ export class CaseStore {
 function mapCaseRow(row: any): CaseRow {
   return {
     id: row.id,
+    caseNumber: row.case_number ?? null,
+    signalPending: row.signal_pending === 1,
     status: row.status,
     category: row.category,
     openedAt: row.opened_at,

@@ -103,4 +103,27 @@ interface ContactDao {
      *  clears it (the OFF signal). */
     @Query("UPDATE contacts SET theirTempNodeAddress = :address WHERE id = :id")
     suspend fun updateTheirTempNodeAddress(id: String, address: String?)
+
+    /** Whistleblower: the officer's case receipt / status update arrived (see P2PNetworkManager's
+     *  CASE_SIGNAL_PREFIX handling). Also ends the intake retries. */
+    @Query(
+        "UPDATE contacts SET caseNumber = :number, caseStatus = :status, caseOpenedAt = :openedAt, " +
+            "caseAckDueAt = :ackDueAt, caseFeedbackDueAt = :feedbackDueAt, caseUpdatedAt = :updatedAt, " +
+            "intakeStartedAt = NULL WHERE id = :id"
+    )
+    suspend fun updateCaseInfo(
+        id: String, number: String, status: String, openedAt: Long?, ackDueAt: Long?, feedbackDueAt: Long?, updatedAt: Long
+    )
+
+    @Query("UPDATE contacts SET intakeStartedAt = :startedAt, intakeLastSentAt = NULL WHERE id = :id")
+    suspend fun startIntake(id: String, startedAt: Long)
+
+    @Query("UPDATE contacts SET intakeLastSentAt = :sentAt WHERE id = :id")
+    suspend fun markIntakeSent(id: String, sentAt: Long)
+
+    @Query("UPDATE contacts SET intakeStartedAt = NULL WHERE id = :id")
+    suspend fun stopIntake(id: String)
+
+    @Query("SELECT * FROM contacts WHERE id = :id")
+    fun observeContact(id: String): Flow<Contact?>
 }

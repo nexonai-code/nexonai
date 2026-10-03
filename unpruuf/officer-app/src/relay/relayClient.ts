@@ -26,6 +26,8 @@ export interface RelayTarget {
   socksPort?: number;
 }
 
+export const MAX_TAGS_PER_CALL = 64;
+
 export class RelayClient {
   constructor(private target: RelayTarget) {}
 
@@ -34,12 +36,19 @@ export class RelayClient {
     return res.status === 201;
   }
 
+  /** The relay accepts at most 64 tags per call (server/src/config.ts MAX_FETCH_MANY_TAGS) —
+   *  larger lists (many cases + the 49 intake tags) are split into several calls. */
   async fetchMany(tags: string[], waitMs = 0): Promise<Record<string, string[]>> {
     if (tags.length === 0) return {};
-    const res = await this.request("POST", "/v1/fetchMany", { tags, waitMs });
-    if (res.status < 200 || res.status >= 300) throw new Error(`fetchMany failed: HTTP ${res.status}`);
-    const json = JSON.parse(res.body) as { blobs: Record<string, string[]> };
-    return json.blobs ?? {};
+    const out: Record<string, string[]> = {};
+    for (let i = 0; i < tags.length; i += MAX_TAGS_PER_CALL) {
+      const chunk = tags.slice(i, i + MAX_TAGS_PER_CALL);
+      const res = await this.request("POST", "/v1/fetchMany", { tags: chunk, waitMs: tags.length <= MAX_TAGS_PER_CALL ? waitMs : 0 });
+      if (res.status < 200 || res.status >= 300) throw new Error(`fetchMany failed: HTTP ${res.status}`);
+      const json = JSON.parse(res.body) as { blobs: Record<string, string[]> };
+      Object.assign(out, json.blobs ?? {});
+    }
+    return out;
   }
 
   private async request(method: "GET" | "POST", path: string, body: unknown): Promise<{ status: number; body: string }> {

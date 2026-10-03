@@ -141,5 +141,18 @@ data class Contact(
     // theirNodeAddresses in pollNodeMeshOnce() rather than switched to exclusively — fetch has
     // no delete-on-fetch side effect, so polling both costs an extra request but never risks
     // missing a message during the other side's own activation/fallback transitions.
-    val theirTempNodeAddress: String? = null
+    val theirTempNodeAddress: String? = null,
+    // ── Whistleblower edition: the reporter's case (see officer-app/src/officer/caseSignals.ts).
+    // Filled from the officer's UNPRUUF_CASE_V1 signal; null until the receipt arrived.
+    val caseNumber: String? = null,
+    /** "acknowledged" | "in_progress" | "closed" */
+    val caseStatus: String? = null,
+    val caseOpenedAt: Long? = null,
+    val caseAckDueAt: Long? = null,
+    val caseFeedbackDueAt: Long? = null,
+    val caseUpdatedAt: Long? = null,
+    /** When this device first sent its intake to the organisation's letterbox (null = no intake
+     *  needed, e.g. not an officer contact). Retried until [caseNumber] is known. */
+    val intakeStartedAt: Long? = null,
+    val intakeLastSentAt: Long? = null
 )

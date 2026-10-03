@@ -1,4 +1,5 @@
-import { decodeCrossPlatformPayload, encodeCrossPlatformPayload, OFFICER_EDITION } from "../pairing/crossPlatformPairing";
+import { CrossPlatformPairingPayload, decodeCrossPlatformPayload, encodeCrossPlatformPayload, OFFICER_EDITION } from "../pairing/crossPlatformPairing";
+import { generateCaseNumber } from "./caseIntake";
 import { CaseRow, CaseSecrets, CaseStore } from "../store/caseStore";
 import { OfficerIdentity } from "./officerIdentity";
 import { createRatchetSession, ratchetStateToSecrets } from "./ratchetBootstrap";
@@ -22,19 +23,31 @@ export function myPairingPayloadJson(identity: OfficerIdentity, advertisedRelayC
 }
 
 /**
- * Completes pairing from a reporter's pasted code (see QrPairScreen.kt's whistleblower-enabled
- * copy/paste flow — the reporter has no way to be scanned back by a laptop dashboard with no
- * camera, so this manual step replaces the second half of the app's normal mutual-QR ceremony).
- * Creates a new case with an empty thread — the actual report text arrives moments later via
- * the poll loop, exactly like every later message in the conversation.
+ * Creates (or finds) the case for a reporter's pairing payload — the one path behind both the
+ * automatic intake (caseIntake.ts) and the manual paste fallback for older reporter apps.
+ * A reporter who sends the same payload again (an intake retry) gets their existing case back.
  */
-export function addCaseFromPastedCode(identity: OfficerIdentity, store: CaseStore, pastedJson: string): CaseRow {
-  const payload = decodeCrossPlatformPayload(pastedJson.trim());
-  if (!payload) throw new InvalidPairingCodeError("Acest cod nu pare a fi un cod de împerechere unpruuf valid.");
+export function caseFromReporterPayload(
+  identity: OfficerIdentity,
+  store: CaseStore,
+  payload: CrossPlatformPairingPayload,
+  wireIdentity: string | null,
+): { row: CaseRow; created: boolean } {
   if (payload.appEdition !== "whistleblower") {
     throw new InvalidPairingCodeError(
       `Acest cod provine dintr-o aplicație "${payload.appEdition}", nu din ediția Whistleblower — refuz să amestec liniile de produse.`,
     );
+  }
+  const existing = store.findCaseByReporter(payload.userId);
+  if (existing) {
+    if (wireIdentity) {
+      const secrets = store.getCaseSecrets(existing.id);
+      if (secrets && !secrets.reporterWireIdentity) {
+        secrets.reporterWireIdentity = wireIdentity;
+        store.updateCaseSecrets(existing.id, secrets);
+      }
+    }
+    return { row: existing, created: false };
   }
 
   const ratchetState = createRatchetSession(identity, payload.x25519RatchetPublicKeyBase64, payload.messageKeyBase64);
@@ -43,10 +56,20 @@ export function addCaseFromPastedCode(identity: OfficerIdentity, store: CaseStor
     reporterMessageKeyB64: payload.messageKeyBase64,
     reporterX25519PublicKeyB64: payload.x25519RatchetPublicKeyBase64,
     reporterRelayConnectionStrings: payload.relayConnectionStrings,
-    reporterWireIdentity: null,
+    reporterWireIdentity: wireIdentity,
     myGeneration: 0,
     theirGeneration: 0,
     ratchet: ratchetStateToSecrets(ratchetState),
   };
-  return store.createCase(secrets);
+  return { row: store.createCase(secrets, generateCaseNumber()), created: true };
+}
+
+/**
+ * Manual fallback: a reporter app from before the organisation-wide QR shows its own code, the
+ * officer pastes it here. New apps send it automatically (see caseIntake.ts).
+ */
+export function addCaseFromPastedCode(identity: OfficerIdentity, store: CaseStore, pastedJson: string): CaseRow {
+  const payload = decodeCrossPlatformPayload(pastedJson.trim());
+  if (!payload) throw new InvalidPairingCodeError("Acest cod nu pare a fi un cod de împerechere unpruuf valid.");
+  return caseFromReporterPayload(identity, store, payload, null).row;
 }

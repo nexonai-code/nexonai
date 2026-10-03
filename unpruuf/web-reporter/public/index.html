@@ -41,14 +41,16 @@
   </div>
 
   <div id="chatView" class="hidden">
-    <div class="card">
-      <h2>Codul tău — trimite-l ofițerului ca să poți primi răspunsuri</h2>
+    <div class="card" id="casePanel"></div>
+
+    <details class="card">
+      <summary>Codul tău (doar pentru panouri de ofițer mai vechi)</summary>
       <textarea id="myCodeBox" readonly rows="4"></textarea>
       <p class="hint">
-        Nimeni nu îți poate răspunde până nu trimiți acest cod. Nu conține nicio informație despre cine
-        ești — doar chei aleatorii generate chiar acum în acest browser.
+        În mod normal nu ai nevoie de el: codul este trimis automat oficiului de raportare. Nu conține nicio
+        informație despre cine ești — doar chei aleatorii generate chiar acum în acest browser.
       </p>
-    </div>
+    </details>
 
     <div class="card">
       <h2>Conversație</h2>

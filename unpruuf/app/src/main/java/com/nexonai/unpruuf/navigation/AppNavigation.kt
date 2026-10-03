@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nexonai.unpruuf.screens.caseview.CaseScreen
 import com.nexonai.unpruuf.screens.chat.ChatScreen
 import com.nexonai.unpruuf.screens.contactdetail.ContactDetailScreen
 import com.nexonai.unpruuf.screens.contacts.ContactsScreen
@@ -25,9 +26,11 @@ object Routes {
     const val QR_PAIR = "qr_pair"
     const val SETTINGS = "settings"
     const val CONTACT_DETAIL = "contact_detail/{contactId}"
+    const val CASE = "case/{contactId}"
 
     fun chatRoute(contactId: String) = "chat/$contactId"
     fun contactDetailRoute(contactId: String) = "contact_detail/$contactId"
+    fun caseRoute(contactId: String) = "case/$contactId"
 }
 
 @Composable
@@ -78,7 +81,24 @@ fun AppNavigation(
             ChatScreen(
                 contactId = contactId,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenCase = { navController.navigate(Routes.caseRoute(contactId)) }
+            )
+        }
+        composable(
+            route = Routes.CASE,
+            arguments = listOf(navArgument("contactId") { type = NavType.StringType })
+        ) { backStack ->
+            val contactId = backStack.arguments?.getString("contactId") ?: return@composable
+            CaseScreen(
+                contactId = contactId,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenChat = {
+                    // Opened from the chat → just go back to it; otherwise open the chat.
+                    if (!navController.popBackStack(Routes.CHAT, inclusive = false)) {
+                        navController.navigate(Routes.chatRoute(contactId))
+                    }
+                }
             )
         }
         composable(Routes.QR_PAIR) {

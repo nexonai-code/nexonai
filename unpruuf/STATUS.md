@@ -22,7 +22,7 @@ sehen, ist jetzt Rumänisch (Details: CHANGELOG.md).
 
 | Baustein | Status |
 |---|---|
-| Android Whistleblower-App | ✅ eigene Flavor-Ressource (280+ Strings), 48/48 Tests, alle 4 Editionen bauen · 🟡 nicht auf echtem Gerät gesehen |
+| Android Whistleblower-App | ✅ eigene Flavor-Ressource (280+ Strings), ein Firmen-QR mit automatischem Fall-Eingang, Bildschirm „Mein Fall“ (Fallnummer, Status, Fristen), 70/70 Tests, alle 4 Editionen bauen · 🟡 nicht auf echtem Gerät gesehen |
 | relay-android (Tablet) | ✅ `values-ro` (Gerätesprache-abhängig, betrifft andere Kunden nicht), 8/8 Tests · 🟡 nicht auf Gerät gesehen |
 | officer-app (Dashboard) | ✅ Web-UI, Konsolentext, install/start.bat, `npm run build` sauber · 🟡 nicht im echten Browser/Windows gesehen |
 | web-reporter (Browser-Fallback) | ✅ Seite inkl. Sicherheitshinweis, install/start.bat, Bundle gebaut und geprüft · 🟡 nicht im echten Browser gesehen |
