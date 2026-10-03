@@ -12,7 +12,7 @@ rem Anzahl Nodes pro Slot (1 bis 500)
 set MESH_NODES=10
 
 echo Starte Relay-Server ...
-start "NexonAI Relay" /D "%CD%\server" cmd /k "start-windows.bat"
+call "%~dp0start-relay.bat"
 
 for %%S in (%MESH_SLOTS%) do (
   echo Starte Node-Mesh Slot %%S ...
