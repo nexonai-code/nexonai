@@ -9,10 +9,10 @@ if errorlevel 1 (
   exit /b 1
 )
 
-for %%D in (server node-mesh-server) do (
+for %%D in (server node-mesh-server officer-app web-reporter) do (
   echo.
-  echo === %%D: installiere und baue ===
-  pushd %%D
+  echo ===== %%D: installiere und baue =====
+  pushd "%%D"
   call npm install
   if errorlevel 1 ( echo npm install in %%D fehlgeschlagen & popd & pause & exit /b 1 )
   call npm run build
@@ -21,6 +21,5 @@ for %%D in (server node-mesh-server) do (
 )
 
 echo.
-echo Firewall: Die Server lauschen nur auf 127.0.0.1 (Tor). Keine Port-Freigabe noetig.
-echo Fertig. Jetzt start-all.bat starten.
+echo Alles installiert. Als Naechstes start-all.bat starten.
 pause

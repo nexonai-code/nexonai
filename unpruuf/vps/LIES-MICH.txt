@@ -1,0 +1,12 @@
+NexonAI VPS-Skripte (fuer unpruuf v16)
+
+Ordner "vps" in den entpackten unpruuf-Ordner kopieren, neben server, node-mesh-server, officer-app, web-reporter.
+
+1. install-all.bat      einmalig (Node.js LTS vorher installieren)
+2. start-all.bat        startet Relay, Node-Mesh (Slots/Profil oben in der Datei einstellbar), Web-Reporter
+3. start-officer.bat    Officer-App; Relay-Verbindungscode einfuegen, Passwort vergeben; Browser: http://localhost:3000
+4. stop-all.bat         stoppt alles
+5. autostart-einrichten.bat  optional, als Administrator
+
+Hinweis: Relay und Node-Mesh sind nur ueber Tor erreichbar. Der Web-Reporter (5173) ist im Netz offen.
+Die Officer-App (3000) nur lokal ueber die Remote-Sitzung oeffnen, keine Firewall-Freigabe.
