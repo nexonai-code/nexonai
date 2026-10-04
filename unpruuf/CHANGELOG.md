@@ -5,6 +5,24 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑04 · Fix: Whistleblower app closed when a case was opened
+
+**Bug (reported from a real phone):** The app closed when a new case was created and whenever an
+existing case was opened.
+
+**Cause:** The case screen (Status / Messages tabs) used two early `return@…` jumps inside the
+screen description (Compose). The Compose compiler version in this project (1.5.10) does not handle
+early returns out of `Column`/`TopAppBar` content reliably. The app crashed on the very first build
+of the screen, and a new case jumps straight to that screen.
+
+**Fix:** Rebuilt both places as plain if/else, with no early returns. Behaviour unchanged.
+
+**Verification:** Compiles, 70/70 tests, WB APK built. Not yet seen on the device again.
+If the app still closes: in Android Studio, open the **Logcat** tab, search for `FATAL` and copy
+the red block.
+
+---
+
 ## 2026‑10‑03 (2) · Whistleblower app: scan on first start, then only "My cases", separate keys for every case
 
 **What was done**

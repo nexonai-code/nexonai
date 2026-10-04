@@ -317,53 +317,53 @@ fun ChatScreen(
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
-                        return@TopAppBar
-                    }
-                    IconButton(onClick = {
-                        renameText = contact?.displayName ?: ""
-                        showRenameDialog = true
-                    }) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.chat_cd_rename),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = { viewModel.sendConnectionInfoUpdate() }) {
-                        Icon(
-                            Icons.Default.Sync,
-                            contentDescription = stringResource(R.string.chat_cd_send_connection_update),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    // Cross-platform (iOS-interop) contacts only — see CROSS_PLATFORM_PLAN.md.
-                    // Manual wire-tag rotation; these contacts have no automatic hourly clock.
-                    if (contact?.crossPlatform == true) {
-                        IconButton(onClick = { viewModel.wechsel() }) {
+                    } else {
+                        IconButton(onClick = {
+                            renameText = contact?.displayName ?: ""
+                            showRenameDialog = true
+                        }) {
                             Icon(
-                                Icons.Default.Autorenew,
-                                contentDescription = stringResource(R.string.chat_cd_wechsel),
+                                Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.chat_cd_rename),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                    }
-                    // Temp Node (NODE_MESH_SPEC.md §7) — Node-Mesh contacts only.
-                    if (contact?.nodeMesh == true) {
-                        IconButton(onClick = { showTempNodeDialog = true }) {
+                        IconButton(onClick = { viewModel.sendConnectionInfoUpdate() }) {
                             Icon(
-                                Icons.Default.Router,
-                                contentDescription = stringResource(R.string.chat_cd_temp_node),
-                                tint = if (contact?.tempNodeAddress != null) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                Icons.Default.Sync,
+                                contentDescription = stringResource(R.string.chat_cd_send_connection_update),
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                    }
-                    IconButton(onClick = { showRevokeDialog = true }) {
-                        Icon(
-                            Icons.Default.DeleteForever,
-                            contentDescription = stringResource(R.string.chat_delete_chat_button),
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                        // Cross-platform (iOS-interop) contacts only — see CROSS_PLATFORM_PLAN.md.
+                        // Manual wire-tag rotation; these contacts have no automatic hourly clock.
+                        if (contact?.crossPlatform == true) {
+                            IconButton(onClick = { viewModel.wechsel() }) {
+                                Icon(
+                                    Icons.Default.Autorenew,
+                                    contentDescription = stringResource(R.string.chat_cd_wechsel),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        // Temp Node (NODE_MESH_SPEC.md §7) — Node-Mesh contacts only.
+                        if (contact?.nodeMesh == true) {
+                            IconButton(onClick = { showTempNodeDialog = true }) {
+                                Icon(
+                                    Icons.Default.Router,
+                                    contentDescription = stringResource(R.string.chat_cd_temp_node),
+                                    tint = if (contact?.tempNodeAddress != null) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        IconButton(onClick = { showRevokeDialog = true }) {
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = stringResource(R.string.chat_delete_chat_button),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             )
@@ -445,76 +445,76 @@ fun ChatScreen(
                     Tab(selected = caseTab == 0, onClick = { caseTab = 0 }, text = { Text(stringResource(R.string.case_tab_status)) })
                     Tab(selected = caseTab == 1, onClick = { caseTab = 1 }, text = { Text(stringResource(R.string.case_tab_messages)) })
                 }
-                if (caseTab != 1) {
-                    com.nexonai.unpruuf.screens.caseview.CaseStatusContent(contact, Modifier.weight(1f).fillMaxWidth())
-                    return@Column
-                }
             }
-            if (oldestPendingAgeMs != null && oldestPendingAgeMs > STILL_CONNECTING_HINT_MS) {
-                StillConnectingHint(
-                    relayConfigured = viewModel.isRelayConfigured(),
-                    onSetUpRelay = onNavigateToSettings
-                )
-            }
-            if (messages.isEmpty()) {
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            stringResource(R.string.chat_no_messages),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.chat_no_messages_body),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+            if (caseMode && caseTab != 1) {
+                com.nexonai.unpruuf.screens.caseview.CaseStatusContent(contact, Modifier.weight(1f).fillMaxWidth())
             } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    // The RAM wipe made visible: a quiet marker where history ends. Everything
-                    // before this point is gone by design (5-min TTL, background/lock wipes) —
-                    // absence shown deliberately instead of pretending history starts here.
-                    item(key = "ram-ghost") {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = androidx.compose.ui.graphics.Color.Transparent,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                                )
-                            ) {
-                                Text(
-                                    stringResource(R.string.chat_older_messages_wiped),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                )
-                            }
+                if (oldestPendingAgeMs != null && oldestPendingAgeMs > STILL_CONNECTING_HINT_MS) {
+                    StillConnectingHint(
+                        relayConfigured = viewModel.isRelayConfigured(),
+                        onSetUpRelay = onNavigateToSettings
+                    )
+                }
+                if (messages.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                stringResource(R.string.chat_no_messages),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.chat_no_messages_body),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
-                    items(messages, key = { it.id }) { message ->
-                        MessageBubble(
-                            message = message,
-                            displayText = viewModel.getDisplayText(message),
-                            delivered = message.id in deliveredIds,
-                            onImageTap = { fullscreenImage = message }
-                        )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        // The RAM wipe made visible: a quiet marker where history ends. Everything
+                        // before this point is gone by design (5-min TTL, background/lock wipes) —
+                        // absence shown deliberately instead of pretending history starts here.
+                        item(key = "ram-ghost") {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = androidx.compose.ui.graphics.Color.Transparent,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                                    )
+                                ) {
+                                    Text(
+                                        stringResource(R.string.chat_older_messages_wiped),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+                        items(messages, key = { it.id }) { message ->
+                            MessageBubble(
+                                message = message,
+                                displayText = viewModel.getDisplayText(message),
+                                delivered = message.id in deliveredIds,
+                                onImageTap = { fullscreenImage = message }
+                            )
+                        }
                     }
                 }
             }
