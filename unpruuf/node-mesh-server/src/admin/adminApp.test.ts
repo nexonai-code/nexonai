@@ -134,3 +134,68 @@ test("a locked server hides the owner QR and refuses rotation", async () => {
     listener.close();
   }
 });
+
+test("overview reports nodes, stored packets and counters, and flags a locked or incomplete server", async () => {
+  const { Metrics } = await import("../metrics");
+  const metrics = new Metrics();
+  metrics.record("deposit"); metrics.record("deposit"); metrics.record("fetch"); metrics.record("rejected");
+  const base = {
+    getOwnerSecret: () => "s",
+    profile: PROFILES.standard,
+    slot: 1 as const,
+    ephemeral: false,
+    torEnabled: true,
+    publicAddress: () => "a.onion",
+    publicAddresses: () => ["a.onion", "b.onion", "c.onion"],
+    torStatus: () => ({ state: "ready" as const, bootstrapPercent: 100, onionAddress: "a.onion", onionAddresses: ["a.onion", "b.onion", "c.onion"], controlAddress: null, locked: false, restarts: 0, lastError: null, powEnabled: true }),
+    stats: () => ({ queued: 7, tags: 3, oldestAgeMs: 120000 }),
+    metrics,
+    configuredNodes: 3,
+  };
+  const { overviewPayload } = await import("./adminApp");
+  const ok = await overviewPayload({ ...base, registeredNodes: async () => 3 });
+  assert.equal(ok.level, "ok");
+  assert.deepEqual(ok.nodes, { configured: 3, listed: 3, registered: 3 });
+  assert.equal(ok.stored.queued, 7);
+  assert.equal(ok.last24h!.deposit, 2);
+  assert.equal(ok.last24h!.fetch, 1);
+  assert.equal(ok.last24h!.rejected, 1);
+  assert.equal(ok.hourly.length, 24);
+  assert.doesNotMatch(JSON.stringify(ok), /"s"|owner/i);
+
+  const missing = await overviewPayload({ ...base, registeredNodes: async () => 2 });
+  assert.equal(missing.level, "warn");
+  assert.ok(missing.problems.includes("nodes-missing"));
+
+  const locked = await overviewPayload({ ...base, sealed: true, isLocked: () => true, registeredNodes: async () => 0 });
+  assert.equal(locked.level, "locked");
+});
+
+test("the overview page is served on loopback only and embeds valid data", async () => {
+  const port = 19000 + Math.floor(Math.random() * 900);
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "s",
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      torEnabled: false,
+      publicAddress: () => "a</script>.onion",
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  try {
+    const page = await request(port, `localhost:${port}`, "/overview");
+    assert.equal(page.status, 200);
+    assert.match(page.body, /Node-Übersicht/);
+    assert.doesNotMatch(page.body, /a<\/script>/, "address must not be able to break out of the script");
+    const json = JSON.parse((await request(port, `localhost:${port}`, "/overview.json")).body);
+    assert.equal(json.level, "ok");
+    assert.equal((await request(port, `attacker.example:${port}`, "/overview")).status, 403);
+  } finally {
+    listener.close();
+  }
+});

@@ -5,6 +5,39 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑05 · Node server: overview page
+
+**What was done**
+
+- New page **`/overview`** next to the setup page, with a link from it. It shows the state of the
+  whole server at a glance:
+  - Traffic-light banner: all fine, Tor not ready, nodes missing, or locked.
+  - **Nodes online**: how many of the configured node addresses Tor really has registered. A node
+    that silently dropped shows up here.
+  - Packets stored, new messages and fetches of the last 24 h as a bar chart, and refused requests.
+  - Tor state, key storage (sealed / locked), profile and storage time, slot, uptime.
+  - All node addresses with a copy button.
+- Refreshes itself every 5 s. It is only reachable on the server itself (loopback and a host check,
+  like the setup page).
+- Counters are numbers only (`src/metrics.ts`, memory only, gone after a restart). The server
+  still stores nothing about who deposits or fetches.
+
+**Which bug appeared**
+
+The first version embedded the page data in the script as HTML-escaped text. Inside a `<script>`
+tag the browser does not decode such entities, so the data would have been unreadable. An address
+containing `</script>` could also have broken out of the script. Now only `<` is escaped as a unicode
+escape, and a test feeds exactly that case.
+
+**Verification**
+
+- Server: 54/54 tests (new: payload, warnings for locked / missing nodes, counters, loopback and
+  script-safe embedding).
+- Page started with real traffic and looked at in a browser: no horizontal overflow at phone width.
+- Not yet seen with a real Tor and 100 nodes.
+
+---
+
 ## 2026‑10‑04 · Fix: Whistleblower app closed when a case was opened
 
 **Bug (reported from a real phone):** The app closed when a new case was created and whenever an

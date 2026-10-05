@@ -14,6 +14,7 @@ import {
   createEphemeralIdentity, isLocked, loadOrCreateIdentity, NodeIdentity, regenerateSecret, saveIdentity, unlockIdentity,
 } from "./nodeIdentity";
 import { NodeOnionService } from "./tor/onionService";
+import { Metrics } from "./metrics";
 
 // Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
 // Tor's own working files go to a throwaway temp folder that is deleted on exit.
@@ -88,7 +89,8 @@ const operatorAddress = process.env.NODE_MESH_PUBLIC_ADDRESS?.trim() || null;
 const publicAddress = (): string | null => (onion ? onion.getStatus().onionAddress : operatorAddress);
 const publicAddresses = (): string[] =>
   onion ? onion.getStatus().onionAddresses : operatorAddress ? [operatorAddress] : [];
-const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl);
+const metrics = new Metrics();
+const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics);
 
 const adminApp = createAdminApp(
   {
@@ -111,6 +113,9 @@ const adminApp = createAdminApp(
     publicAddresses,
     torStatus: () => onion?.getStatus() ?? null,
     stats: () => store.stats(),
+    metrics,
+    configuredNodes: nodeCount,
+    registeredNodes: () => (onion ? onion.registeredNodeCount() : Promise.resolve(null)),
   },
   ADMIN_PORT,
 );

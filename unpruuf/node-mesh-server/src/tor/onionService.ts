@@ -252,6 +252,19 @@ export class NodeOnionService {
       : `${readded} of ${total} onion service(s) were missing — re-added with the same key`;
   }
 
+  /** How many of this server's node onions Tor currently has registered (null if Tor isn't
+   *  connected). Compared with the configured count this shows a node that silently dropped. */
+  async registeredNodeCount(): Promise<number | null> {
+    const control = this.control;
+    if (!control || control.isClosed) return null;
+    try {
+      const current = new Set((await control.getInfo("onions/current")).split(/\s+/).filter(Boolean));
+      return this.serviceIds.filter((id) => current.has(id)).length;
+    } catch {
+      return null;
+    }
+  }
+
   stop(): void {
     this.stopping = true;
     this.status.state = "stopped";

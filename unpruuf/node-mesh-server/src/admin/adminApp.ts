@@ -2,6 +2,7 @@ import express, { Express, NextFunction, Request, Response } from "express";
 import QRCode from "qrcode";
 import { OnionStatus } from "../tor/onionService";
 import { Profile, NodeSlot } from "../profiles";
+import { Metrics } from "../metrics";
 
 /**
  * Local setup page — the operator scans the owner QR from here with their own unpruuf app
@@ -31,6 +32,10 @@ export interface AdminState {
   unlock?: (ownerSecret: string) => Promise<string[] | null>;
   controlAddress?: () => string | null;
   stats: () => { queued: number; tags: number; oldestAgeMs: number | null };
+  /** Overview page: counters (see metrics.ts), configured node count, live registered count. */
+  metrics?: Metrics;
+  configuredNodes?: number;
+  registeredNodes?: () => Promise<number | null>;
 }
 
 export const OWNER_PREFIX = "unpruuf-node-owner:v1:";
@@ -93,6 +98,39 @@ export async function statusPayload(state: AdminState) {
   };
 }
 
+/** Everything the overview page shows. Numbers and addresses only — never a tag or a blob. */
+export async function overviewPayload(state: AdminState) {
+  const status = await statusPayload(state);
+  const stats = state.stats();
+  const addresses = status.addresses;
+  const configured = state.configuredNodes ?? addresses.length;
+  const registered = state.registeredNodes ? await state.registeredNodes() : null;
+  const m = state.metrics?.summary() ?? null;
+  const problems: string[] = [];
+  if (status.locked) problems.push("locked");
+  else if (state.torEnabled && (!status.tor || status.tor.state !== "ready")) problems.push("tor-not-ready");
+  if (!status.locked && registered !== null && registered < addresses.length) problems.push("nodes-missing");
+  const level = status.locked ? "locked" : problems.length ? "warn" : "ok";
+  return {
+    level,
+    problems,
+    profile: status.profile,
+    slot: status.slot,
+    ephemeral: status.ephemeral,
+    sealed: status.sealed,
+    locked: status.locked,
+    tor: status.tor,
+    torEnabled: status.torEnabled,
+    nodes: { configured, listed: addresses.length, registered },
+    addresses,
+    stored: stats,
+    uptimeMs: m?.uptimeMs ?? null,
+    totals: m?.totals ?? null,
+    last24h: m?.last24h ?? null,
+    hourly: state.metrics?.hourly() ?? [],
+  };
+}
+
 export function createAdminApp(state: AdminState, adminPort: number): Express {
   const app = express();
   app.disable("x-powered-by");
@@ -122,6 +160,14 @@ export function createAdminApp(state: AdminState, adminPort: number): Express {
     const result = secret ? await state.unlock(secret).catch(() => null) : null;
     if (!result) return res.status(401).json({ error: "wrong owner code" });
     return res.json({ unlocked: true });
+  });
+
+  app.get("/overview.json", async (_req, res) => {
+    res.json(await overviewPayload(state));
+  });
+
+  app.get("/overview", async (_req, res) => {
+    res.type("html").send(renderOverview(await overviewPayload(state)));
   });
 
   app.get("/", async (_req, res) => {
@@ -173,7 +219,7 @@ img{display:block;max-width:100%;height:auto;background:#fff;border-radius:8px}
 dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}dt{color:var(--dim)}dd{margin:0}
 </style></head><body><main>
 <h1>${escapeHtml(title)}</h1>
-<p class="sub">Einrichtungsseite — nur auf diesem Rechner erreichbar, nie über Tor.</p>
+<p class="sub">Einrichtungsseite — nur auf diesem Rechner erreichbar, nie über Tor. <a href="/overview">Zur Übersicht &rarr;</a></p>
 ${tempBanner}
 ${lockBlock}
 <div class="card"><h2>1. Diesen Node mit deiner App verbinden</h2>
@@ -220,4 +266,92 @@ function renderStatus(s: Awaited<ReturnType<typeof statusPayload>>): string {
     `<dt>Profil</dt><dd>${escapeHtml(s.profile.name)} — ${escapeHtml(s.profile.description)}</dd>` +
     `<dt>Slot</dt><dd>${s.slot} von 3</dd><dt>Nodes</dt><dd>${s.addresses.length || 1}</dd>` +
     `<dt>Schlüssel</dt><dd>${s.ephemeral ? "nur im Arbeitsspeicher" : !s.sealed ? `<span class="warn">auf der Platte (unverschlüsselt)</span>` : s.locked ? `<span class="bad">versiegelt — gesperrt</span>` : `<span class="ok">versiegelt — entsperrt</span>`}</dd><dt>Gespeichert</dt><dd>${s.stats.queued} verschlüsselte Pakete</dd>`;
+}
+
+function renderOverview(o: Awaited<ReturnType<typeof overviewPayload>>): string {
+  // Inside <script>: HTML entities are NOT decoded, so only break out of the script tag.
+  const initial = JSON.stringify(o).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>unpruuf Node-Übersicht</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d1b18;--dim:#6b665d;--ok:#1f7a4d;--warn:#a15c00;--bad:#b3261e;--line:#e2ddd2;--bar:#2a6f6a;--bar2:#b9a46a}
+@media (prefers-color-scheme:dark){:root{--bg:#171512;--card:#211e1a;--ink:#ece7de;--dim:#a39c90;--ok:#5cc28f;--warn:#e0a24a;--bad:#f2867d;--line:#36312a;--bar:#58b3ab;--bar2:#cdb56f}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 56px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:15px;margin:0 0 10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.sub{color:var(--dim);margin:0 0 18px}a{color:inherit}
+.banner{padding:14px 16px;border-radius:10px;font-weight:600;margin-bottom:16px;border:1px solid var(--line);background:var(--card)}
+.banner.ok{border-left:6px solid var(--ok)}.banner.warn{border-left:6px solid var(--warn)}.banner.locked{border-left:6px solid var(--bad)}
+.banner small{display:block;font-weight:400;color:var(--dim);margin-top:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.tile b{display:block;font-size:28px;font-variant-numeric:tabular-nums;line-height:1.1}.tile span{color:var(--dim);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}dt{color:var(--dim)}dd{margin:0}
+.addr{font:12px/1.5 ui-monospace,Consolas,monospace;word-break:break-all;display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--line)}
+.addr:last-child{border-bottom:0}.addr span{flex:1}.addr button{flex:none}
+button{font:inherit;font-size:13px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+svg{width:100%;height:auto;display:block}.legend{display:flex;gap:16px;color:var(--dim);font-size:13px;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.hint{color:var(--dim);font-size:13px}
+</style></head><body><main>
+<h1>Node-Übersicht</h1>
+<p class="sub"><a href="/">&larr; Einrichtungsseite</a> · nur auf diesem Rechner erreichbar · aktualisiert sich selbst</p>
+<div id="app"></div>
+</main>
+<script>
+var DATA=${initial};
+function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function dur(ms){if(ms==null)return '—';var m=Math.floor(ms/60000);if(m<60)return m+' Min.';var h=Math.floor(m/60);if(h<48)return h+' Std. '+(m%60)+' Min.';return Math.floor(h/24)+' Tage '+(h%24)+' Std.';}
+function chart(h){
+  if(!h||!h.length)return '<p class="hint">Noch keine Daten.</p>';
+  var W=720,H=150,pl=34,pb=22,pt=8,w=W-pl-4,hh=H-pb-pt;
+  var max=1;h.forEach(function(x){max=Math.max(max,x.deposit,x.fetch);});
+  var step=Math.pow(10,Math.floor(Math.log10(max)));var top=Math.ceil(max/step)*step;
+  var bw=w/h.length,out='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Ablagen und Abholungen der letzten 24 Stunden">';
+  [0,.5,1].forEach(function(f){var y=pt+hh-hh*f;out+='<line x1="'+pl+'" x2="'+(W-4)+'" y1="'+y+'" y2="'+y+'" stroke="currentColor" opacity=".12"/><text x="'+(pl-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="currentColor" opacity=".6">'+Math.round(top*f)+'</text>';});
+  h.forEach(function(x,i){
+    var x0=pl+i*bw,d=hh*x.deposit/top,f=hh*x.fetch/top;
+    out+='<rect x="'+(x0+bw*.1)+'" y="'+(pt+hh-f)+'" width="'+(bw*.38)+'" height="'+f+'" fill="var(--bar2)"/>';
+    out+='<rect x="'+(x0+bw*.5)+'" y="'+(pt+hh-d)+'" width="'+(bw*.38)+'" height="'+d+'" fill="var(--bar)"/>';
+    if(i%6===0){var t=new Date(x.hourStart);out+='<text x="'+(x0+bw/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" fill="currentColor" opacity=".6">'+('0'+t.getHours()).slice(-2)+':00</text>';}
+  });
+  return out+'</svg><div class="legend"><span><i style="background:var(--bar)"></i>Ablagen (neue Nachrichten)</span><span><i style="background:var(--bar2)"></i>Abholungen</span></div>';
+}
+function render(o){
+  var t=o.totals||{deposit:0,fetch:0,rejected:0},d=o.last24h||{deposit:0,fetch:0,rejected:0};
+  var tor=!o.torEnabled?'Aus (eigener Hidden Service)':(!o.tor?'startet …':({starting:'startet',bootstrapping:'verbindet ('+o.tor.bootstrapPercent+' %)',ready:'online',restarting:'Neustart läuft',failed:'Fehler',stopped:'gestoppt'}[o.tor.state]||o.tor.state));
+  var head={ok:['Alles in Ordnung','Server läuft, alle Nodes sind online.'],locked:['Gesperrt nach Neustart','Alle Nodes sind offline, bis du in der App auf „Entsperren“ tippst.'],warn:['Achtung','']}[o.level];
+  if(o.level==='warn'){var msgs=[];if(o.problems.indexOf('tor-not-ready')>=0)msgs.push('Tor ist noch nicht online.');if(o.problems.indexOf('nodes-missing')>=0)msgs.push('Nur '+o.nodes.registered+' von '+o.nodes.listed+' Nodes sind bei Tor angemeldet. Der Server holt fehlende Nodes beim nächsten täglichen Abgleich selbst nach.');head[1]=msgs.join(' ');}
+  var nodesVal=o.locked?'0 / '+o.nodes.configured:(o.nodes.registered==null?o.nodes.listed:o.nodes.registered+' / '+o.nodes.listed);
+  var h='<div class="banner '+o.level+'">'+head[0]+'<small>'+esc(head[1])+'</small></div>';
+  h+='<div class="grid">'
+   +'<div class="tile"><b>'+nodesVal+'</b><span>Nodes online</span></div>'
+   +'<div class="tile"><b>'+o.stored.queued+'</b><span>Pakete gespeichert</span></div>'
+   +'<div class="tile"><b>'+d.deposit+'</b><span>neue Nachrichten, 24 Std.</span></div>'
+   +'<div class="tile"><b>'+d.fetch+'</b><span>Abholungen, 24 Std.</span></div></div>';
+  h+='<div class="card"><h2>Letzte 24 Stunden</h2>'+chart(o.hourly)+'</div>';
+  h+='<div class="card"><h2>Server</h2><dl>'
+   +'<dt>Tor</dt><dd>'+esc(tor)+(o.tor&&o.tor.restarts?' · '+o.tor.restarts+' Neustart(s)':'')+'</dd>'
+   +'<dt>Schlüssel</dt><dd>'+(o.ephemeral?'nur im Arbeitsspeicher':!o.sealed?'auf der Platte (unverschlüsselt)':o.locked?'versiegelt — gesperrt':'versiegelt — entsperrt')+'</dd>'
+   +'<dt>Profil</dt><dd>'+esc(o.profile.name)+' — Pakete bleiben höchstens '+o.profile.ttlHours+' Std.</dd>'
+   +'<dt>Slot</dt><dd>'+o.slot+' von 3</dd>'
+   +'<dt>Läuft seit</dt><dd>'+dur(o.uptimeMs)+'</dd>'
+   +'<dt>Adressen (Mailboxen)</dt><dd>'+o.stored.tags+' in Benutzung</dd>'
+   +'<dt>Ältestes Paket</dt><dd>'+(o.stored.oldestAgeMs==null?'—':dur(o.stored.oldestAgeMs))+'</dd>'
+   +'<dt>Abgelehnt, 24 Std.</dt><dd>'+d.rejected+(d.rejected>50?' <span style="color:var(--warn)">(ungewöhnlich viele)</span>':'')+'</dd>'
+   +'<dt>Seit Start gesamt</dt><dd>'+t.deposit+' Ablagen · '+t.fetch+' Abholungen</dd></dl>'
+   +'<p class="hint" style="margin-top:10px">Der Server zählt nur Mengen. Er speichert nicht, wer abholt oder von wem eine Nachricht kommt, und er kann den Inhalt nicht lesen.</p></div>';
+  if(!o.locked&&o.addresses.length){h+='<div class="card"><h2>Node-Adressen ('+o.addresses.length+')</h2>'+o.addresses.map(function(a,i){return '<div class="addr"><span>'+esc(a)+'</span><button data-i="'+i+'">Kopieren</button></div>';}).join('')+'</div>';}
+  return h;
+}
+function paint(o){DATA=o;document.getElementById('app').innerHTML=render(o);}
+document.getElementById('app').addEventListener('click',function(e){var b=e.target.closest('button[data-i]');if(!b)return;var a=DATA.addresses[+b.getAttribute('data-i')];
+  function done(){b.textContent='Kopiert';setTimeout(function(){b.textContent='Kopieren';},1500);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(a).then(done,function(){});}
+  else{var t=document.createElement('textarea');t.value=a;document.body.appendChild(t);t.select();try{document.execCommand('copy');done();}catch(x){}document.body.removeChild(t);}});
+paint(DATA);
+setInterval(function(){fetch('/overview.json',{cache:'no-store'}).then(function(r){return r.json();}).then(paint).catch(function(){});},5000);
+</script></body></html>`;
 }

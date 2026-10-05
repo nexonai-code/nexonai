@@ -383,3 +383,28 @@ test("a locked server refuses owner routes, reports its lock, and unlocks only w
     store.close();
   }
 });
+
+test("metrics count deposits, fetches and rejections without storing anything about them", async () => {
+  const { Metrics } = await import("./metrics");
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-app-test-")), "node-mesh.sqlite");
+  const store = new NodeStore(file);
+  const metrics = new Metrics();
+  const server = createApp(store, OWNER_SECRET, () => [], undefined, metrics).listen(0);
+  const { port } = server.address() as AddressInfo;
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    const body = JSON.stringify({ routing_tag: "tagM", ciphertext: "aGk=" });
+    await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body });
+    await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders("wrong"), body });
+    await fetch(`${base}/fetch?tag=tagM`);
+    await fetch(`${base}/health`);
+    await new Promise((r) => setTimeout(r, 30));
+    const s = metrics.summary();
+    assert.equal(s.totals.deposit, 1);
+    assert.equal(s.totals.fetch, 1);
+    assert.equal(s.totals.rejected, 1);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
