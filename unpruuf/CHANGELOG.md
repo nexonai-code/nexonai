@@ -5,6 +5,43 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑06 · iOS: unpruuf Compliance (whistleblower edition) — NOT compiled
+
+**What was done**
+
+The iPhone version of Compliance, built from the existing iOS app plus new files. It does what the
+Android flavour does:
+
+- **First start:** straight to scanning the organisation's QR ("Raportează în siguranță"), or paste
+  the code. After that only **My cases** and **+ New case**, no contacts.
+- **One case = one screen, two tabs, "Status" and "Messages".** Status shows the case number, the
+  progress (received → review → closed), the date received, the feedback deadline and the last update.
+- **Automatic hand-over:** the app seals its pairing code so only the reporting office can open it,
+  puts it in the office's letterbox and repeats this every 6 h (up to 14 days) until the case number
+  comes back. A hidden first ratchet message lets the office answer at once.
+- **Own keys and own id for every case:** two reports from one phone look like two unrelated people.
+- **Remove case from this phone**, panic PIN deletes the cases and the remembered organisation QR,
+  optional Face ID, settings with the Tor state.
+- New in the core: `OfficerCase.swift` (intake seal / tag, case signal) with tests; `PairingPayload`
+  got an optional edition tag `e`, which the office needs to accept a reporter's code.
+- A second Xcode target with its own Info.plist (`Info-Compliance.plist`) makes it a separate app
+  that installs next to the consumer app. Steps are in `ios/README.md`.
+
+**Which bug appeared**
+
+None found, because nothing could be run. While reading the Android and officer-app code for the
+port, one thing the iOS port had to get right stood out: the office refuses a reporter code without
+the edition tag `e = whistleblower`, and the iOS pairing code had no such field. That is why
+`PairingPayload` was extended.
+
+**Verification**
+
+**Nothing compiled or run: there is no Swift toolchain here.** The wire format follows the Kotlin and
+TypeScript versions line by line, but the Swift side has not been cross-checked against them.
+Expect a few compile errors in the SwiftUI files on the first build.
+
+---
+
 ## 2026‑10‑05 · Node server: overview page
 
 **What was done**

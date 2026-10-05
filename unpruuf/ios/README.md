@@ -39,6 +39,55 @@ obfs4/Snowflake-on-iOS, and jailbreak detection + a build-expiry gate (Android
 has both; porting them is flagged as needing a product decision first, not
 just build work — see the iOS plan's Phase iOS-8).
 
+## unpruuf Compliance (iOS) — the whistleblower edition
+
+Same app, second product: a reporter scans **one** QR code that the organisation hangs up for
+everybody, and from then on the app only shows **My cases** with a **+ New case** button. The
+reporting office's `officer-app` opens each case by itself, assigns a random case number and sends
+the receipt and every status change back; the case screen has two tabs, *Status* and *Messages*.
+This mirrors the Android `whistleblower` flavour (see `../CHANGELOG.md`, 2026‑10‑03) and is
+wire-compatible with the officer-app and the web reporter.
+
+What it does that the consumer app does not:
+- **Every case has its own keys and its own id** (`Compliance/PrefixedKeyValueStore.swift`): two
+  reports from one phone look like two unrelated people to the relay and to the office.
+- **Automatic hand-over** (`UnpruufCore/OfficerCase.swift`, `Compliance/ComplianceService.swift`):
+  after the scan the app seals its own pairing code so only the office can open it, drops it into the
+  office's letterbox and repeats this every 6 h (up to 14 days) until the case number comes back.
+- **Remove case from this phone**: deletes messages and keys locally; the office keeps its record.
+- The panic PIN also forgets the remembered organisation QR.
+
+New files: `UnpruufCore/Sources/UnpruufCore/OfficerCase.swift` (+ tests) and everything in
+`UnpruufApp/Sources/Compliance/`. Changed: `PairingPayload` (optional edition tag `e`),
+`AppEnvironment` (case store and service), `RootView` (picks the Compliance home).
+
+### Building the Compliance app in Xcode (two minutes, no command line)
+
+The consumer target stays as it is. Add a second target from it:
+
+1. In Xcode: right-click the **UnpruufApp** target → **Duplicate**. Name it **UnpruufCompliance**
+   (let Xcode create the extra scheme; decline the separate Info.plist it offers).
+2. Select the new target → **General**: *Display Name* `unpruuf`, *Bundle Identifier*
+   `com.nexonai.unpruuf.compliance` (or your own).
+3. **Build Settings** → search `Info.plist File` → set it to
+   `UnpruufApp/Info-Compliance.plist`.
+4. **Signing & Capabilities**: pick your team (an own app id means it installs next to the consumer
+   app without touching it).
+5. Choose the **UnpruufCompliance** scheme and run. If the scan screen appears on first start, the
+   edition switch works; the home screen of the consumer app means the plist is still the old one.
+
+Run the core tests first: `cd UnpruufCore && swift test` (new: `OfficerCaseTests`,
+`PairingPayloadEditionTests`).
+
+### Honest status
+
+**Written without a Mac, Xcode or Swift toolchain — nothing in this section has been compiled or
+run.** The crypto in `OfficerCase.swift` uses the same layout as the Kotlin and TypeScript versions,
+which *are* cross-checked against each other (`officer-app/scripts/check-android-intake.js`,
+`web-reporter/scripts/check-interop.js`); the Swift side has not been cross-checked yet. Expect a
+few compile errors in the SwiftUI files on the first build — paste them back and they are quick to
+fix. Texts are Romanian when the phone is set to Romanian, otherwise English.
+
 ## Setup — turning this into a buildable Xcode project
 
 No `.xcodeproj` is included on purpose: hand-authoring one from a Linux
