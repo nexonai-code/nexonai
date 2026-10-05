@@ -1,0 +1,41 @@
+EMAIL 1 - FIRST CONTACT
+
+Subject: Introduction and request for your advice - regulatory questions for a cross-border payment messaging service (Jordan / Yemen)
+
+Dear [Mr./Ms. Surname],
+
+I am looking forward to meeting you on [date]. Ahead of our meeting, I would like to ask whether you would be interested in supporting us on a project in your area of expertise.
+
+I am co-CEO of NexonAI Consulting SRL, a software company based in Romania. We build secure systems for professions that handle sensitive information. Our new product, TrustLine, is a closed messaging and evidence layer for money transfer operators and their agents in the MENA region and Africa. It carries signed payout instructions between independent agent networks and records them in tamper-evident logs, so that operators can prove every transaction to their banks and supervisors. TrustLine does not hold or move funds.
+
+We need advice on how such a service is characterised and what it requires in Jordan and Yemen: licensing, anti-money-laundering and data protection duties, sanctions and US-dollar settlement, and dealings with central banks.
+
+If you are interested, I would send you (1) a short overview of the concept (six pages) and (2) a separate, complete list of our questions. I am happy to sign a non-disclosure agreement first. I would also be grateful if you could let me know whether you see any conflict of interest and how you usually structure your fees.
+
+Could you please let me know whether this is something you could support?
+
+Kind regards,
+Norbert [Surname]
+Co-CEO, NexonAI Consulting SRL
+[Phone] | [E-mail]
+
+
+EMAIL 2 - TO SEND AFTER HE AGREES (attach the two PDFs)
+
+Subject: TrustLine - solution overview and legal question catalogue
+
+Dear [Mr./Ms. Surname],
+
+Thank you for your positive reply. As promised, I attach:
+
+1. TrustLine Solution Overview (6 pages)
+2. TrustLine Legal Question Catalogue (all our questions, in full)
+
+Both documents are confidential. I am happy to sign a mutual non-disclosure agreement if you prefer. Please do not approach any authority or third party about TrustLine without our prior agreement.
+
+Questions marked with a star are the ones we need answered first. We would be grateful for your view on which questions are missing, on scope, timing and fees, and on whether we need separate counsel for Yemen.
+
+Kind regards,
+Norbert [Surname]
+Co-CEO, NexonAI Consulting SRL
+[Phone] | [E-mail]
