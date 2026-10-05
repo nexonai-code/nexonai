@@ -1,0 +1,8 @@
+server/data/
+runtime/
+runtime-tmp/
+android-agent/.gradle/
+android-agent/build/
+android-agent/app/build/
+android-agent/local.properties
+*.zip

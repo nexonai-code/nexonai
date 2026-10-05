@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustLine Relay</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header class="top"><div class="logo">Trust<span>Line</span></div><div class="who" id="relay">Relay</div></header>
+<main>
+  <h1>TrustLine relay</h1>
+  <p class="muted">Signed messaging and evidence layer for money transfer agent networks. This is a prototype for legal review: it moves no money.</p>
+  <div class="grid g2">
+    <div class="card"><h2>Operator portal</h2><p class="small muted">For network operators: enrol agents, approve devices, connect to partner networks, read Channel B data, seal and export logs.</p><a class="btn" href="/operator.html">Open operator portal</a></div>
+    <div class="card"><h2>Agent (web)</h2><p class="small muted">Agent app for a Windows PC browser: send instructions, receive and pay out. The Android app does the same on a phone.</p><a class="btn" href="/agent.html">Open web agent</a></div>
+    <div class="card"><h2>TrustLine admin console</h2><p class="small muted">Due diligence with four-eyes approval, suspensions, block lists, limits, instruction monitor and relay log.</p><a class="btn secondary" href="/admin.html">Open admin console</a></div>
+    <div class="card"><h2>Offline Auditor Tool</h2><p class="small muted">Verifies exported logs without any connection to TrustLine. Works as a single local file.</p><a class="btn secondary" href="/auditor.html">Open auditor</a> <a class="btn secondary" href="/auditor.html" download="TrustLine-Auditor.html">Download file</a></div>
+  </div>
+  <div class="card"><h2>Relay identity</h2><dl class="kv" id="ident"></dl><p class="small muted">Operators and auditors can compare this fingerprint with the one printed in their onboarding letter.</p></div>
+  <div class="card"><h2>Android agent app</h2><p class="small muted">Install the APK on an Android phone, enter this relay's address and the activation code from the operator portal.</p><p>Relay address for the app: <strong class="mono" id="addr"></strong></p></div>
+</main>
+<script src="/common.js"></script>
+<script>
+(async () => {
+  const { h, $ } = TLUI;
+  document.getElementById('addr').textContent = location.origin;
+  try {
+    const i = await fetch('/api/info').then((r) => r.json());
+    $('#relay').textContent = i.name + ' · v' + i.version;
+    $('#ident').append(h('dt', {}, 'Relay key fingerprint'), h('dd', { class: 'mono' }, i.relayKid), h('dt', {}, 'Relay public key'), h('dd', { class: 'mono' }, i.relayPub), h('dt', {}, 'Server time'), h('dd', {}, i.time));
+  } catch (e) { $('#ident').textContent = 'Relay not reachable.'; }
+})();
+</script>
+</body></html>

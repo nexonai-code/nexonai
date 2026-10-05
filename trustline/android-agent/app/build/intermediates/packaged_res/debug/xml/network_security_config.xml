@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Demo build: plain HTTP to the relay is allowed so that the prototype works on a bare VPS without a certificate.
+  Instructions are signed and Channel B is end-to-end encrypted either way, but production must use HTTPS:
+  remove cleartextTrafficPermitted and set "tls" in the relay's data/config.json.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

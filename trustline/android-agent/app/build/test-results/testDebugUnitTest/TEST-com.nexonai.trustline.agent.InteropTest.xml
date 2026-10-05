@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.nexonai.trustline.agent.InteropTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-05T15:58:55" hostname="vm" time="0.464">
+  <properties/>
+  <testcase name="verifiesCertificateChainOfIncomingItem" classname="com.nexonai.trustline.agent.InteropTest" time="0.136"/>
+  <testcase name="verifiesSignaturesMadeByTheReference" classname="com.nexonai.trustline.agent.InteropTest" time="0.004"/>
+  <testcase name="keyIdMatchesReference" classname="com.nexonai.trustline.agent.InteropTest" time="0.002"/>
+  <testcase name="writesOutputForTheReferenceToVerify" classname="com.nexonai.trustline.agent.InteropTest" time="0.045"/>
+  <testcase name="decryptsPackageEncryptedByTheReference" classname="com.nexonai.trustline.agent.InteropTest" time="0.004"/>
+  <testcase name="derRawConversionRoundTrips" classname="com.nexonai.trustline.agent.InteropTest" time="0.267"/>
+  <testcase name="canonicalJsonMatchesReference" classname="com.nexonai.trustline.agent.InteropTest" time="0.001"/>
+  <testcase name="payoutCodeHashMatchesReference" classname="com.nexonai.trustline.agent.InteropTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+{
+  "name": "trustline-relay",
+  "version": "0.1.0",
+  "description": "TrustLine relay, operator portal, admin console and offline auditor (prototype for legal review)",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node index.js",
+    "seed-demo": "node tools/seed-demo.js",
+    "test": "node --test test/e2e.test.js"
+  }
+}

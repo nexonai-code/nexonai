@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustLine Offline Auditor Tool</title>
+<style>/*INLINE_CSS*/</style></head>
+<body>
+<header class="top"><div class="logo">Trust<span>Line</span> Offline Auditor</div><div class="who">Works without any connection to TrustLine. Nothing is uploaded.</div></header>
+<main>
+  <div class="card noprint">
+    <h1>Verify exported logs</h1>
+    <p class="muted">Load the log export of one or both network operators (<span class="mono">trustline-log-OP-….json</span>) and, if available, the relay log (<span class="mono">trustline-relay-log.json</span>). The tool recomputes every hash, checks every signature and compares the logs with each other. The verification method is published, so you do not have to trust TrustLine.</p>
+    <input type="file" id="files" accept=".json,application/json" multiple>
+    <p><button class="btn" id="run">Verify</button></p>
+  </div>
+  <div id="report"></div>
+</main>
+<script>
+/*INLINE_TLCRYPTO*/
+</script>
+<script>
+(function () {
+  'use strict';
+  const ZERO = '0'.repeat(64);
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const short = (s, n) => (s && s.length > n ? s.slice(0, n) + '…' : s || '');
+
+  async function readFiles(list) {
+    const out = [];
+    for (const f of list) {
+      try { const j = JSON.parse(await f.text()); j.__name = f.name; out.push(j); } catch (e) { out.push({ __name: f.name, format: 'invalid' }); }
+    }
+    return out;
+  }
+
+  async function analyse(files) {
+    const F = []; // findings {sev, area, text}
+    const add = (sev, area, text) => F.push({ sev, area, text });
+    const relay = files.find((f) => f.format === 'trustline-relay-log/1');
+    const ops = files.filter((f) => f.format === 'trustline-operator-log/1');
+    for (const f of files) if (!['trustline-relay-log/1', 'trustline-operator-log/1'].includes(f.format)) add('error', 'Input', `File ${f.__name} is not a TrustLine log export.`);
+    if (!relay && !ops.length) { add('error', 'Input', 'No log files loaded.'); return { F, stats: {}, ins: [] }; }
+    if (!relay) add('warn', 'Input', 'No relay log loaded: operator logs cannot be compared with the relay\'s own record.');
+
+    const relayPub = (relay && relay.relay.pub) || (ops[0] && ops[0].relay.pub);
+    const relayBySeq = new Map();
+    // ---- relay chain
+    if (relay) {
+      let prev = ZERO, ok = true;
+      for (const e of relay.entries) {
+        const core = { seq: e.seq, ts: e.ts, type: e.type, ref: e.ref, ops: e.ops, data: e.data, prev: e.prev };
+        const hash = await TL.sha256Hex(TL.canon(core));
+        if (e.prev !== prev) { add('error', 'Relay log', `Entry #${e.seq}: chain link does not match the previous entry.`); ok = false; break; }
+        if (hash !== e.hash) { add('error', 'Relay log', `Entry #${e.seq}: content does not match its hash (entry was altered).`); ok = false; break; }
+        if (!(await TL.verifyBytes(relayPub, e.hash, e.sig))) { add('error', 'Relay log', `Entry #${e.seq}: relay signature invalid.`); ok = false; break; }
+        relayBySeq.set(e.seq, e); prev = e.hash;
+      }
+      if (ok) add('ok', 'Relay log', `Hash chain and relay signatures verified for all ${relay.entries.length} entries.`);
+    }
+    // ---- operator chains, seals, cross-check
+    for (const o of ops) {
+      const name = `${o.operator.name} (${o.operator.id})`;
+      let prev = ZERO, ok = true;
+      for (const e of o.entries) {
+        const core = { seq: e.seq, ts: e.ts, type: e.type, ref: e.ref, relaySeq: e.relaySeq, relayHash: e.relayHash, data: e.data, prev: e.prev };
+        if (e.prev !== prev) { add('error', name, `Entry #${e.seq}: chain link broken (an entry may have been removed or inserted).`); ok = false; break; }
+        if ((await TL.sha256Hex(TL.canon(core))) !== e.hash) { add('error', name, `Entry #${e.seq}: content does not match its hash.`); ok = false; break; }
+        if (relay) {
+          const r = relayBySeq.get(e.relaySeq);
+          if (!r || r.hash !== e.relayHash) { add('error', name, `Entry #${e.seq}: not found in the relay log (relay entry #${e.relaySeq}).`); ok = false; }
+          else if (TL.canon(r.data) !== TL.canon(e.data) || !r.ops.includes(o.operator.id)) { add('error', name, `Entry #${e.seq}: differs from the relay's record.`); ok = false; }
+        }
+        prev = e.hash;
+      }
+      if (ok) add('ok', name, `Operator log verified: ${o.entries.length} entries${relay ? ', all consistent with the relay log' : ''}.`);
+      // completeness against relay
+      if (relay) {
+        const have = new Set(o.entries.map((e) => e.relaySeq));
+        const missing = relay.entries.filter((r) => r.ops.includes(o.operator.id) && !have.has(r.seq));
+        if (missing.length) add('error', name, `${missing.length} relay entries concerning this operator are missing from its log (first: relay #${missing[0].seq}).`);
+      }
+      let sealOk = 0, sealBad = 0, lastSeq = 0;
+      for (const s of o.seals) {
+        const at = o.entries.find((e) => e.seq === s.seal.seq);
+        if (at && at.hash === s.seal.hash && (await TL.verifyObject(o.operator.signPub, s.seal, s.sig))) { sealOk++; lastSeq = Math.max(lastSeq, s.seal.seq); } else sealBad++;
+      }
+      if (sealBad) add('error', name, `${sealBad} seal(s) invalid: the log head was not signed with the operator's master key.`);
+      if (sealOk) add('ok', name, `${sealOk} seal(s) valid. Sealed up to entry #${lastSeq} of ${o.entries.length}.`);
+      else add('warn', name, 'The operator has never sealed this log with its master key.');
+      if (lastSeq < o.entries.length && sealOk) add('info', name, `${o.entries.length - lastSeq} entries after the last seal are not covered by the operator's signature yet.`);
+    }
+
+    // ---- evidence: signatures, certificates, mandatory fields, payouts
+    const entries = relay ? relay.entries : mergeOperatorEntries(ops);
+    const opKeys = new Map();
+    if (relay) for (const o of relay.operators) opKeys.set(o.id, o.signPub);
+    for (const o of ops) opKeys.set(o.operator.id, o.operator.signPub);
+    for (const e of entries) if (e.type === 'OPERATOR_KEYS_REGISTERED' && !opKeys.has(e.data.operator)) opKeys.set(e.data.operator, e.data.signPub);
+    const timeline = new Map(); // agent -> [{ts,type,cert?}]
+    const push = (agent, o) => { if (!timeline.has(agent)) timeline.set(agent, []); timeline.get(agent).push(o); };
+    const opState = new Map();
+    for (const e of entries) {
+      if (e.type === 'DEVICE_CERTIFIED') push(e.data.agent, { ts: e.ts, type: 'cert', cert: e.data.cert, sig: e.data.sig, operator: e.data.operator });
+      if (e.type === 'DEVICE_REVOKED' || e.type === 'AGENT_REVOKED') push(e.data.agent, { ts: e.ts, type: 'revoked' });
+      if (e.type === 'OPERATOR_SUSPENDED') { if (!opState.has(e.data.operator)) opState.set(e.data.operator, []); opState.get(e.data.operator).push({ ts: e.ts, suspended: true }); }
+      if (e.type === 'OPERATOR_REINSTATED') { if (!opState.has(e.data.operator)) opState.set(e.data.operator, []); opState.get(e.data.operator).push({ ts: e.ts, suspended: false }); }
+    }
+    const suspendedAt = (op, ts) => { const l = (opState.get(op) || []).filter((x) => x.ts <= ts); return l.length && l[l.length - 1].suspended; };
+    async function certAt(agent, ts) {
+      const l = (timeline.get(agent) || []).filter((x) => x.ts <= ts);
+      if (!l.length || l[l.length - 1].type !== 'cert') return null;
+      const c = l[l.length - 1];
+      const pub = opKeys.get(c.operator);
+      if (!pub || !(await TL.verifyObject(pub, c.cert, c.sig))) return { bad: 'certificate signature does not verify with the operator master key' };
+      if (c.cert.notAfter < ts) return { bad: 'certificate had expired' };
+      return c.cert;
+    }
+    const insMap = new Map();
+    let rejected = 0;
+    for (const e of entries) {
+      if (e.type === 'INSTRUCTION_REJECTED') rejected++;
+      if (e.type !== 'INSTRUCTION_ACCEPTED') continue;
+      const ins = e.data.instruction, rec = { id: ins.id, ins, seq: e.seq, ts: e.ts, issues: [], status: 'INSTRUCTED', paid: 0, events: [] };
+      insMap.set(ins.id, rec);
+      const c = await certAt(ins.sender.agent, e.ts);
+      if (!c) rec.issues.push('no valid agent certificate (or key revoked) at the time of the instruction');
+      else if (c.bad) rec.issues.push(c.bad);
+      else if (!(await TL.verifyObject(c.signPub, ins, e.data.sig))) rec.issues.push('instruction signature does not verify with the certified agent key');
+      if (suspendedAt(ins.sender.operator, e.ts)) rec.issues.push('sending operator was suspended at that time');
+      if (!ins.screening || ins.screening.done !== true || !ins.screening.ref) rec.issues.push('sanctions screening confirmation missing');
+      if (!/^[0-9a-f]{64}$/.test(ins.codeHash || '') || !/^[0-9a-f]{64}$/.test(ins.pkgHash || '')) rec.issues.push('payout code / package fingerprint missing');
+      if (!ins.purpose) rec.issues.push('purpose code missing');
+      if (e.data.pkgHash !== ins.pkgHash) rec.issues.push('package fingerprint differs from the log record');
+    }
+    for (const e of entries) {
+      const id = e.ref;
+      if (!['CONFIRMED', 'CONFIRM', 'PAID_OUT', 'PAID_OUT_DISPUTED', 'CANCELLED', 'EXPIRED', 'FROZEN', 'UNFROZEN'].includes(e.type)) continue;
+      const rec = insMap.get(id);
+      if (!rec) { add('error', 'Evidence', `Event ${e.type} (log #${e.seq}) refers to an instruction that has no accepted record.`); continue; }
+      rec.events.push(e.type);
+      if (e.data.event) {
+        const ev = e.data.event;
+        const c = await certAt(ev.agent, e.ts);
+        if (!c || c.bad || !(await TL.verifyObject(c.signPub, ev, e.data.sig))) rec.issues.push(`${e.type} event (log #${e.seq}) is not signed by a valid agent key`);
+        const wantAgent = ev.t === 'CANCEL' ? rec.ins.sender.agent : rec.ins.recipient.agent;
+        if (ev.agent !== wantAgent) rec.issues.push(`${e.type} event was signed by the wrong agent`);
+        if (ev.t === 'PAID_OUT' && ev.codeHash !== rec.ins.codeHash) rec.issues.push('payout event carries a wrong code fingerprint');
+      }
+      if (e.type === 'PAID_OUT') rec.paid++;
+      if (e.type === 'PAID_OUT_DISPUTED') rec.issues.push('payout was reported after cancellation, expiry or freezing: disputed');
+      rec.status = e.data.status || (e.type === 'EXPIRED' ? 'EXPIRED' : rec.status);
+    }
+    const insList = [...insMap.values()];
+    for (const r of insList) if (r.paid > 1) r.issues.push('DOUBLE PAYOUT: paid out more than once');
+    const bad = insList.filter((r) => r.issues.length).length;
+    add(bad ? 'error' : 'ok', 'Evidence', bad ? `${bad} of ${insList.length} instructions have findings (see table).` : `All ${insList.length} accepted instructions: signatures, certificates, mandatory fields and payouts are consistent.`);
+    return { F, ins: insList, stats: { entries: entries.length, instructions: insList.length, paid: insList.filter((r) => r.paid).length, rejected, withFindings: bad,
+      operators: ops.map((o) => o.operator.name), relay: !!relay } };
+  }
+
+  function mergeOperatorEntries(ops) {
+    const by = new Map();
+    for (const o of ops) for (const e of o.entries) if (!by.has(e.relaySeq)) by.set(e.relaySeq, { seq: e.relaySeq, ts: e.ts, type: e.type, ref: e.ref, ops: [o.operator.id], data: e.data, hash: e.relayHash });
+    return [...by.values()].sort((a, b) => a.seq - b.seq);
+  }
+
+  function reportHtml(res) {
+    const sev = { ok: 'OK', info: 'Note', warn: 'Warning', error: 'FINDING' };
+    const cls = { ok: 'ok', info: '', warn: 'warn', error: 'bad' };
+    const worst = res.F.some((f) => f.sev === 'error') ? 'bad' : res.F.some((f) => f.sev === 'warn') ? 'warn' : 'ok';
+    return `<div class="card"><h1>Audit report</h1>
+      <div class="notice ${worst}">${worst === 'ok' ? 'No integrity findings.' : worst === 'warn' ? 'Verification completed with warnings.' : 'Verification found problems. See the findings below.'}</div>
+      <p class="small muted">Generated ${esc(new Date().toLocaleString())} · ${res.stats.entries || 0} log entries · ${res.stats.instructions || 0} accepted instructions · ${res.stats.paid || 0} paid out · ${res.stats.rejected || 0} rejected by the mandatory checks</p>
+      <h2>Results</h2><div class="tablewrap"><table><thead><tr><th>Result</th><th>Area</th><th>Detail</th></tr></thead><tbody>${
+        res.F.map((f) => `<tr><td><span class="chip ${cls[f.sev]}">${sev[f.sev]}</span></td><td>${esc(f.area)}</td><td>${esc(f.text)}</td></tr>`).join('')}</tbody></table></div>
+      <h2>Instructions</h2><div class="tablewrap"><table><thead><tr><th>Time</th><th>Instruction</th><th>Corridor</th><th>Amount</th><th>Status</th><th>Findings</th></tr></thead><tbody>${
+        res.ins.map((r) => `<tr><td>${esc(r.ts)}</td><td class="mono">${esc(short(r.id, 13))}</td><td>${esc(r.ins.corridor.from + '>' + r.ins.corridor.to)}</td><td>${esc(r.ins.amount.value + ' ' + r.ins.amount.currency)}</td><td>${esc(r.status)}</td><td>${
+          r.issues.length ? r.issues.map((i) => `<span class="chip bad">${esc(i)}</span>`).join('<br>') : '<span class="chip ok">none</span>'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No instructions in the loaded logs.</td></tr>'}</tbody></table></div>
+      <p class="noprint"><button class="btn" onclick="window.print()">Print / save as PDF</button> <button class="btn secondary" id="dl">Download report (HTML)</button></p></div>`;
+  }
+
+  $('#run').addEventListener('click', async () => {
+    const list = $('#files').files;
+    if (!list.length) { alert('Choose at least one log file.'); return; }
+    $('#report').innerHTML = '<div class="card">Verifying…</div>';
+    try {
+      const res = await analyse(await readFiles(list));
+      $('#report').innerHTML = reportHtml(res);
+      const dl = $('#dl');
+      if (dl) dl.addEventListener('click', () => {
+        const html = '<!doctype html><meta charset="utf-8"><title>TrustLine audit report</title><style>' + document.querySelector('style').textContent + '</style><body><main>' + $('#report').innerHTML.replace(/<p class="noprint">[\s\S]*?<\/p>/, '') + '</main>';
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' })); a.download = 'trustline-audit-report.html'; document.body.append(a); a.click(); a.remove();
+      });
+    } catch (e) { $('#report').innerHTML = '<div class="card"><div class="notice bad">' + esc(e.message) + '</div></div>'; }
+  });
+})();
+</script>
+</body></html>

@@ -1,0 +1,125 @@
+{
+ "canon": [
+  {
+   "json": "{\"a\":1,\"b\":[true,null,\"x\"],\"c\":{\"z\":\"ü€\\\"\\\\\\n\\t\\u0001\",\"a\":\"😀\"}}",
+   "canon": "{\"a\":1,\"b\":[true,null,\"x\"],\"c\":{\"a\":\"😀\",\"z\":\"ü€\\\"\\\\\\n\\t\\u0001\"}}"
+  },
+  {
+   "json": "{\"amount\":{\"value\":\"500.00\",\"currency\":\"USD\"},\"flag\":false,\"n\":-7,\"list\":[]}",
+   "canon": "{\"amount\":{\"currency\":\"USD\",\"value\":\"500.00\"},\"flag\":false,\"list\":[],\"n\":-7}"
+  },
+  {
+   "json": "{\"k ey\":\"v\",\"B\":1,\"a\":2}",
+   "canon": "{\"B\":1,\"a\":2,\"k ey\":\"v\"}"
+  }
+ ],
+ "node": {
+  "code": "FQ7J1VGMCKS6",
+  "formattedCode": "FQ7J-1VGM-CKS6",
+  "codeHash": "e10043cba97cfef5bdc272f411f2618789ed24a0d6c4ee5cbca6c480f5a489d5",
+  "instruction": {
+   "v": "1",
+   "id": "32840295-b5e7-41bc-ac6f-aedda472e26f",
+   "createdAt": "2026-10-05T10:00:00.000Z",
+   "expiresAt": "2026-10-12T10:00:00.000Z",
+   "amount": {
+    "value": "250.00",
+    "currency": "USD"
+   },
+   "payout": {
+    "value": "250.00",
+    "currency": "USD"
+   },
+   "corridor": {
+    "from": "JO",
+    "to": "YE"
+   },
+   "reference": "REF-ü",
+   "purpose": "OTHR",
+   "codeHash": "e10043cba97cfef5bdc272f411f2618789ed24a0d6c4ee5cbca6c480f5a489d5",
+   "pkgHash": "b421304e4e345297b5fd8720329c550f7ec3dd61b364180aa7f4e02f6fa98f33",
+   "screening": {
+    "done": true,
+    "ref": "SCR-1",
+    "at": "2026-10-05T10:00:00.000Z"
+   },
+   "sender": {
+    "agent": "AG-TEST0001",
+    "operator": "OP-TEST0001"
+   },
+   "recipient": {
+    "agent": "AG-TEST0002",
+    "operator": "OP-TEST0002"
+   }
+  },
+  "instructionSig": "hjV8yvIZo+VG06ALw4UT2U9AD/4jdK1orKuOMikYYoXvfq9qWos44c8zu/JPZmqKcKtMk/ikXbDqSxranfc0ag==",
+  "agentSignPub": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECdq0cVOAoX0QZudgLBfPzNVmdTxOTb7AGKPc0tNuOChPgaXTiEToQFLRVc2PX1mQT8y7Nq3x1t+/gJO/485s1Q==",
+  "agentSignKid": "5086bfb9d087fbc4",
+  "operatorSignPub": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/3JTRd6AYwyme4JQB6SCD2wgQqcFD1M/Ds7G7HOLoiHHr6MIK5xJP5IijgcYYlvT42Vzs/VoxwpW7mnSi0nONw==",
+  "cert": {
+   "t": "agent-cert",
+   "v": 1,
+   "agent": "AG-TEST0001",
+   "operator": "OP-TEST0001",
+   "name": "Test",
+   "country": "JO",
+   "city": "Amman",
+   "signPub": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECdq0cVOAoX0QZudgLBfPzNVmdTxOTb7AGKPc0tNuOChPgaXTiEToQFLRVc2PX1mQT8y7Nq3x1t+/gJO/485s1Q==",
+   "encPub": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEd+g+ugPvveYzdaF6qkKK7fBcYHfgntbZs5iNq/F8szsanx1kC/BdZkTaPO7PjYoR3NjP1HnxKQWRI4W2DzAMFg==",
+   "signKid": "5086bfb9d087fbc4",
+   "encKid": "43f888a0270956ad",
+   "issuedAt": "2026-10-01T00:00:00.000Z",
+   "notAfter": "2027-10-01T00:00:00.000Z"
+  },
+  "certSig": "npLQsdNbP+gvwYjGesNJTgdAS3jXE17/MPd9iE/QUakc/E1bJRwI0ZpuhROi4bk20JeUqNxkwrocupQXJYbRyw==",
+  "package": {
+   "v": 1,
+   "aad": "32840295-b5e7-41bc-ac6f-aedda472e26f",
+   "iv": "Rsj4pJ5I1IyHtmee",
+   "ct": "gW1gbf7oj4tlJdOKZQq4bcppBn92vYyiQMTKMuMNR4OvU3BKOAWky4mv57jvowLTJBh+eQO+fPCmA8CQq8DpbXfB+yGQYgnt6ff4dBfttUtTfaXOaE6tsz7W235iNwyzGPLv6L50L0bLu4SbYs9qTpQiDXSPSnhJha/QP8UN/iGS70Dets9k96gsQLHUlQO2pCY7LK7rxMCwiKSIXqQQqerUevEqyb1EyyjTZeu/6MVrFZLvAtWvagwDVxv3KQ9XQl1rGPsQ0dcTTsFsMq3vmvVS7wLyW9fs7T4wsXT0e9UNjf7nrVCAX4sv6Lo/oR8ThuumuEtudv6tHdIXdfCzoA==",
+   "rcpts": [
+    {
+     "k": "6e2343b374774df8",
+     "epk": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfAMDE4IpscAmv4CI3NtdfUBdK5esS8zFlHPkD6Xw1yypqXYTG0XMnLT6kqO79HsRaBEZEUYtk1GNzEyK/ykrfg==",
+     "iv": "NWyIpWc9K3B8VNdH",
+     "wk": "Xnd6OjPylJe/A7VUtG0Uz6SnA9fmzZd95yePu9QRnpYMo5ChmYDnHQ4PqXLi3qm7"
+    },
+    {
+     "k": "b4e554ea933184bb",
+     "epk": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMDAXtbD09rF/c1hvLh7e6kmbkSKJB30ybjyNhek9QPMKFhsHmTlB5TeJaSUtOp27OV0mvGNkC1W39YsHY2rHQg==",
+     "iv": "NgDZFhKFfV/0tkKp",
+     "wk": "VXH5CTPpeqXnsRKaliHbodMunuMIv+cJyiKWZswfMdN4lzHM2fUnB4YJOXC2xe0u"
+    }
+   ]
+  },
+  "payload": {
+   "instruction": "32840295-b5e7-41bc-ac6f-aedda472e26f",
+   "originator": {
+    "name": "Omar Ünïcode",
+    "address": "Amman",
+    "idType": "passport",
+    "idNumber": "P1",
+    "dob": "1985-05-05",
+    "customerRef": "K1"
+   },
+   "beneficiary": {
+    "name": "Salma",
+    "payoutLocation": "Aden"
+   }
+  },
+  "recipient": {
+   "encKid": "6e2343b374774df8",
+   "encPriv": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmUxNxaYJzaKOMOlKm14IZnLsiq5L0VXpE0vQe7WSVEChRANCAAR8O53U8552g9JSNAdrmR5il3/NXL28b3odiJOtypYZFGLX566pKbvDwo4jG+qwOBscG58QwxecYNbyITXR65wd"
+  },
+  "operatorEncKid": "b4e554ea933184bb",
+  "keyIdSample": {
+   "spki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECdq0cVOAoX0QZudgLBfPzNVmdTxOTb7AGKPc0tNuOChPgaXTiEToQFLRVc2PX1mQT8y7Nq3x1t+/gJO/485s1Q==",
+   "kid": "5086bfb9d087fbc4"
+  }
+ },
+ "receiver": {
+  "encPub": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvKJDClmynG7I3I0HNZWs/7bxXh7KHuQj7xEJ0FgOjKhnN9PZsT9wa71V40gcEhGU7w1eIjGkLOtQ7zJ+wti9oA==",
+  "encKid": "4f9daae7bbba3221",
+  "encPriv": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg7t+9BKNupW7uiAMmhAGeE8ClkaqIoCDKmpbwoKf9wCahRANCAAS8okMKWbKcbsjcjQc1laz/tvFeHsoe5CPvEQnQWA6MqGc309mxP3BrvVXjSBwSEZTvDV4iMaQs61DvMn7C2L2g"
+ }
+}

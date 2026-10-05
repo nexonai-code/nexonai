@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustLine Offline Auditor Tool</title>
+<style>:root {
+  --bg: #f4f6f9; --panel: #ffffff; --ink: #14202e; --muted: #5f6c7b; --line: #dde3ea;
+  --brand: #0b5cad; --brand-ink: #ffffff; --ok: #137a3f; --warn: #a15c00; --bad: #b3261e; --chip: #eaf1fa;
+  --radius: 10px; --shadow: 0 1px 2px rgba(20,32,46,.06), 0 4px 14px rgba(20,32,46,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0f1620; --panel: #17212d; --ink: #e8eef5; --muted: #98a6b6; --line: #2a3745; --brand: #5aa2ee; --brand-ink: #0b1420; --chip: #1f2e3f; --ok: #4ec27f; --warn: #e0a24a; --bad: #ff7a70; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+a { color: var(--brand); }
+header.top { background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
+header.top .logo { font-weight: 700; letter-spacing: .2px; font-size: 17px; }
+header.top .logo span { color: var(--brand); }
+header.top .who { margin-left: auto; color: var(--muted); font-size: 13px; display: flex; gap: 12px; align-items: center; }
+nav.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+nav.tabs button { background: transparent; border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); font: inherit; }
+nav.tabs button.active { background: var(--chip); color: var(--brand); font-weight: 600; }
+main { max-width: 1180px; margin: 20px auto; padding: 0 16px 60px; }
+h1 { font-size: 22px; margin: 6px 0 14px; } h2 { font-size: 17px; margin: 0 0 10px; } h3 { font-size: 15px; margin: 14px 0 6px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px; }
+.grid { display: grid; gap: 14px; } .g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); } .g3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.stat { font-size: 26px; font-weight: 700; } .stat small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+.muted { color: var(--muted); } .small { font-size: 13px; } .mono { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; word-break: break-all; }
+table { border-collapse: collapse; width: 100%; } th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; }
+tr.click { cursor: pointer; } tr.click:hover { background: var(--chip); }
+.tablewrap { overflow-x: auto; }
+label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+input, select, textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+input[type=checkbox] { width: auto; margin-right: 6px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; } .row > * { flex: 1 1 160px; }
+button.btn, a.btn { display: inline-block; background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; font: inherit; font-weight: 600; text-decoration: none; }
+button.btn.secondary { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+button.btn.danger { background: var(--bad); color: #fff; } button.btn.small { padding: 5px 9px; font-size: 13px; }
+button:disabled { opacity: .5; cursor: default; }
+.chip { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--chip); color: var(--brand); }
+.chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); }
+.notice { border-left: 4px solid var(--brand); background: var(--chip); padding: 10px 12px; border-radius: 6px; margin: 10px 0; font-size: 14px; }
+.notice.bad { border-color: var(--bad); } .notice.warn { border-color: var(--warn); } .notice.ok { border-color: var(--ok); }
+#toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; max-width: 360px; box-shadow: var(--shadow); }
+.toast.bad { background: var(--bad); color: #fff; }
+.center { max-width: 460px; margin: 60px auto; }
+.qrbox { background: #fff; padding: 10px; display: inline-block; border-radius: 8px; } .qrbox svg { display: block; }
+.codebig { font: 700 28px/1.2 ui-monospace, Consolas, monospace; letter-spacing: 2px; }
+dl.kv { display: grid; grid-template-columns: 170px 1fr; gap: 4px 12px; margin: 0; } dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; word-break: break-word; }
+details summary { cursor: pointer; color: var(--brand); }
+.split { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.spacer { flex: 1; }
+@media print { header.top, nav.tabs, .noprint { display: none !important; } body { background: #fff; color: #000; } .card { box-shadow: none; } }
+</style></head>
+<body>
+<header class="top"><div class="logo">Trust<span>Line</span> Offline Auditor</div><div class="who">Works without any connection to TrustLine. Nothing is uploaded.</div></header>
+<main>
+  <div class="card noprint">
+    <h1>Verify exported logs</h1>
+    <p class="muted">Load the log export of one or both network operators (<span class="mono">trustline-log-OP-….json</span>) and, if available, the relay log (<span class="mono">trustline-relay-log.json</span>). The tool recomputes every hash, checks every signature and compares the logs with each other. The verification method is published, so you do not have to trust TrustLine.</p>
+    <input type="file" id="files" accept=".json,application/json" multiple>
+    <p><button class="btn" id="run">Verify</button></p>
+  </div>
+  <div id="report"></div>
+</main>
+<script>
+/*
+ * TrustLine shared crypto + protocol helpers.
+ * Runs unchanged in the browser (operator portal, offline auditor) and in Node (relay, tests).
+ * All primitives come from WebCrypto: ECDSA P-256 / SHA-256 (raw r||s signatures),
+ * ECDH P-256 + HKDF-SHA256 + AES-256-GCM for the Channel B packages.
+ * The Android app implements the exact same formats (see docs/PROTOCOL.md).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(globalThis.crypto);
+  else root.TL = factory(root.crypto);
+})(typeof self !== 'undefined' ? self : this, function (webcrypto) {
+  'use strict';
+  const subtle = webcrypto.subtle;
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const EC_SIGN = { name: 'ECDSA', namedCurve: 'P-256' };
+  const EC_DH = { name: 'ECDH', namedCurve: 'P-256' };
+  const CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+  function b64e(u8) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(u8).toString('base64');
+    let s = '';
+    for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+    return btoa(s);
+  }
+  function b64d(str) {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(str, 'base64'));
+    const bin = atob(str);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+  function toBytes(x) { return typeof x === 'string' ? enc.encode(x) : x; }
+  function rand(n) { return webcrypto.getRandomValues(new Uint8Array(n)); }
+  function hex(u8) { return Array.from(u8, (b) => b.toString(16).padStart(2, '0')).join(''); }
+
+  async function sha256Bytes(data) { return new Uint8Array(await subtle.digest('SHA-256', toBytes(data))); }
+  async function sha256Hex(data) { return hex(await sha256Bytes(data)); }
+
+  /** Canonical JSON: sorted keys, no whitespace, strings via JSON.stringify, integers only. */
+  function canon(v) {
+    if (v === null) return 'null';
+    const t = typeof v;
+    if (t === 'string') return JSON.stringify(v);
+    if (t === 'boolean') return v ? 'true' : 'false';
+    if (t === 'number') {
+      if (!Number.isSafeInteger(v)) throw new Error('canon: only integers are allowed');
+      return String(v);
+    }
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (t === 'object') {
+      const keys = Object.keys(v).filter((k) => v[k] !== undefined).sort();
+      return '{' + keys.map((k) => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';
+    }
+    throw new Error('canon: unsupported type ' + t);
+  }
+
+  async function genSignKeyPair() { return subtle.generateKey(EC_SIGN, true, ['sign', 'verify']); }
+  async function genEncKeyPair() { return subtle.generateKey(EC_DH, true, ['deriveBits']); }
+  async function exportPub(key) { return b64e(new Uint8Array(await subtle.exportKey('spki', key))); }
+  async function exportPriv(key) { return b64e(new Uint8Array(await subtle.exportKey('pkcs8', key))); }
+  const importSignPub = (b) => subtle.importKey('spki', b64d(b), EC_SIGN, true, ['verify']);
+  const importEncPub = (b) => subtle.importKey('spki', b64d(b), EC_DH, true, []);
+  const importSignPriv = (b) => subtle.importKey('pkcs8', b64d(b), EC_SIGN, true, ['sign']);
+  const importEncPriv = (b) => subtle.importKey('pkcs8', b64d(b), EC_DH, true, ['deriveBits']);
+
+  /** Short key identifier: first 16 hex chars of SHA-256 over the SPKI DER bytes. */
+  async function keyId(spkiB64) { return (await sha256Hex(b64d(spkiB64))).slice(0, 16); }
+
+  async function signBytes(privKey, bytes) {
+    return b64e(new Uint8Array(await subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privKey, toBytes(bytes))));
+  }
+  async function verifyBytes(pubB64, bytes, sigB64) {
+    try {
+      const pub = await importSignPub(pubB64);
+      return await subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pub, b64d(sigB64), toBytes(bytes));
+    } catch (e) { return false; }
+  }
+  const signObject = (privKey, obj) => signBytes(privKey, canon(obj));
+  const verifyObject = (pubB64, obj, sig) => verifyBytes(pubB64, canon(obj), sig);
+
+  /** Generates a complete key bundle (used by the operator portal and by tests). */
+  async function genBundle() {
+    const s = await genSignKeyPair();
+    const e = await genEncKeyPair();
+    const signPub = await exportPub(s.publicKey);
+    const encPub = await exportPub(e.publicKey);
+    return {
+      signPub, encPub,
+      signPriv: await exportPriv(s.privateKey), encPriv: await exportPriv(e.privateKey),
+      signKid: await keyId(signPub), encKid: await keyId(encPub),
+    };
+  }
+
+  async function kekFor(secretBits, info) {
+    const k = await subtle.importKey('raw', secretBits, 'HKDF', false, ['deriveKey']);
+    return subtle.deriveKey(
+      { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: enc.encode(info) },
+      k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+
+  /** recipients: [{ keyId, encPub }]. Returns the Channel B package object. */
+  async function encryptPackage(payload, aad, recipients) {
+    const contentRaw = rand(32);
+    const ck = await subtle.importKey('raw', contentRaw, 'AES-GCM', false, ['encrypt']);
+    const iv = rand(12);
+    const ct = new Uint8Array(await subtle.encrypt(
+      { name: 'AES-GCM', iv, additionalData: enc.encode(aad) }, ck, enc.encode(canon(payload))));
+    const rcpts = [];
+    for (const r of recipients) {
+      const eph = await genEncKeyPair();
+      const pub = await importEncPub(r.encPub);
+      const secret = await subtle.deriveBits({ name: 'ECDH', public: pub }, eph.privateKey, 256);
+      const kek = await kekFor(secret, 'TrustLine-B-v1|' + r.keyId);
+      const iv2 = rand(12);
+      const wk = new Uint8Array(await subtle.encrypt(
+        { name: 'AES-GCM', iv: iv2, additionalData: enc.encode(aad + '|' + r.keyId) }, kek, contentRaw));
+      rcpts.push({ k: r.keyId, epk: await exportPub(eph.publicKey), iv: b64e(iv2), wk: b64e(wk) });
+    }
+    return { v: 1, aad, iv: b64e(iv), ct: b64e(ct), rcpts };
+  }
+
+  /** Decrypts a package for one recipient. encPrivB64 is the PKCS#8 private key (base64). */
+  async function decryptPackage(pkg, myKeyId, encPrivB64) {
+    const r = pkg.rcpts.find((x) => x.k === myKeyId);
+    if (!r) throw new Error('not a recipient of this package');
+    const priv = await importEncPriv(encPrivB64);
+    const epk = await importEncPub(r.epk);
+    const secret = await subtle.deriveBits({ name: 'ECDH', public: epk }, priv, 256);
+    const kek = await kekFor(secret, 'TrustLine-B-v1|' + myKeyId);
+    const contentRaw = new Uint8Array(await subtle.decrypt(
+      { name: 'AES-GCM', iv: b64d(r.iv), additionalData: enc.encode(pkg.aad + '|' + myKeyId) }, kek, b64d(r.wk)));
+    const ck = await subtle.importKey('raw', contentRaw, 'AES-GCM', false, ['decrypt']);
+    const pt = await subtle.decrypt(
+      { name: 'AES-GCM', iv: b64d(pkg.iv), additionalData: enc.encode(pkg.aad) }, ck, b64d(pkg.ct));
+    return JSON.parse(dec.decode(pt));
+  }
+
+  const pkgHash = (pkg) => sha256Hex(canon(pkg));
+  const normalizeCode = (c) => String(c || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  const codeHash = (instructionId, code) => sha256Hex(instructionId + ':' + normalizeCode(code));
+  function generateCode() {
+    let out = '';
+    while (out.length < 12) {
+      const b = rand(1)[0];
+      if (b < 224) out += CODE_ALPHABET[b % 32];
+    }
+    return out;
+  }
+  const formatCode = (c) => normalizeCode(c).replace(/(.{4})(?=.)/g, '$1-');
+  function uuid() {
+    const b = rand(16);
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    const h = hex(b);
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+  function randomId(prefix) {
+    const alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    const b = rand(8);
+    for (let i = 0; i < 8; i++) s += alpha[b[i] % alpha.length];
+    return prefix + '-' + s;
+  }
+
+  /** Passphrase-protected key backup (PBKDF2-SHA256 + AES-256-GCM). */
+  async function backupEncrypt(obj, passphrase) {
+    const salt = rand(16), iv = rand(12), iterations = 210000;
+    const km = await subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+    const key = await subtle.deriveKey({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+    const ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj))));
+    return { format: 'trustline-key-backup/1', kdf: 'PBKDF2-SHA256', iterations, salt: b64e(salt), iv: b64e(iv), ct: b64e(ct) };
+  }
+  async function backupDecrypt(file, passphrase) {
+    if (!file || file.format !== 'trustline-key-backup/1') throw new Error('This is not a TrustLine key backup file.');
+    const km = await subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+    const key = await subtle.deriveKey({ name: 'PBKDF2', salt: b64d(file.salt), iterations: file.iterations, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    let pt;
+    try { pt = await subtle.decrypt({ name: 'AES-GCM', iv: b64d(file.iv) }, key, b64d(file.ct)); } catch (e) { throw new Error('Wrong passphrase or damaged file.'); }
+    return JSON.parse(dec.decode(pt));
+  }
+
+  return {
+    backupEncrypt, backupDecrypt,
+    b64e, b64d, hex, rand, canon, sha256Hex, sha256Bytes,
+    genSignKeyPair, genEncKeyPair, genBundle, exportPub, exportPriv,
+    importSignPub, importEncPub, importSignPriv, importEncPriv, keyId,
+    signBytes, verifyBytes, signObject, verifyObject,
+    encryptPackage, decryptPackage, pkgHash, codeHash, normalizeCode, generateCode, formatCode,
+    uuid, randomId,
+  };
+});
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const ZERO = '0'.repeat(64);
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const short = (s, n) => (s && s.length > n ? s.slice(0, n) + '…' : s || '');
+
+  async function readFiles(list) {
+    const out = [];
+    for (const f of list) {
+      try { const j = JSON.parse(await f.text()); j.__name = f.name; out.push(j); } catch (e) { out.push({ __name: f.name, format: 'invalid' }); }
+    }
+    return out;
+  }
+
+  async function analyse(files) {
+    const F = []; // findings {sev, area, text}
+    const add = (sev, area, text) => F.push({ sev, area, text });
+    const relay = files.find((f) => f.format === 'trustline-relay-log/1');
+    const ops = files.filter((f) => f.format === 'trustline-operator-log/1');
+    for (const f of files) if (!['trustline-relay-log/1', 'trustline-operator-log/1'].includes(f.format)) add('error', 'Input', `File ${f.__name} is not a TrustLine log export.`);
+    if (!relay && !ops.length) { add('error', 'Input', 'No log files loaded.'); return { F, stats: {}, ins: [] }; }
+    if (!relay) add('warn', 'Input', 'No relay log loaded: operator logs cannot be compared with the relay\'s own record.');
+
+    const relayPub = (relay && relay.relay.pub) || (ops[0] && ops[0].relay.pub);
+    const relayBySeq = new Map();
+    // ---- relay chain
+    if (relay) {
+      let prev = ZERO, ok = true;
+      for (const e of relay.entries) {
+        const core = { seq: e.seq, ts: e.ts, type: e.type, ref: e.ref, ops: e.ops, data: e.data, prev: e.prev };
+        const hash = await TL.sha256Hex(TL.canon(core));
+        if (e.prev !== prev) { add('error', 'Relay log', `Entry #${e.seq}: chain link does not match the previous entry.`); ok = false; break; }
+        if (hash !== e.hash) { add('error', 'Relay log', `Entry #${e.seq}: content does not match its hash (entry was altered).`); ok = false; break; }
+        if (!(await TL.verifyBytes(relayPub, e.hash, e.sig))) { add('error', 'Relay log', `Entry #${e.seq}: relay signature invalid.`); ok = false; break; }
+        relayBySeq.set(e.seq, e); prev = e.hash;
+      }
+      if (ok) add('ok', 'Relay log', `Hash chain and relay signatures verified for all ${relay.entries.length} entries.`);
+    }
+    // ---- operator chains, seals, cross-check
+    for (const o of ops) {
+      const name = `${o.operator.name} (${o.operator.id})`;
+      let prev = ZERO, ok = true;
+      for (const e of o.entries) {
+        const core = { seq: e.seq, ts: e.ts, type: e.type, ref: e.ref, relaySeq: e.relaySeq, relayHash: e.relayHash, data: e.data, prev: e.prev };
+        if (e.prev !== prev) { add('error', name, `Entry #${e.seq}: chain link broken (an entry may have been removed or inserted).`); ok = false; break; }
+        if ((await TL.sha256Hex(TL.canon(core))) !== e.hash) { add('error', name, `Entry #${e.seq}: content does not match its hash.`); ok = false; break; }
+        if (relay) {
+          const r = relayBySeq.get(e.relaySeq);
+          if (!r || r.hash !== e.relayHash) { add('error', name, `Entry #${e.seq}: not found in the relay log (relay entry #${e.relaySeq}).`); ok = false; }
+          else if (TL.canon(r.data) !== TL.canon(e.data) || !r.ops.includes(o.operator.id)) { add('error', name, `Entry #${e.seq}: differs from the relay's record.`); ok = false; }
+        }
+        prev = e.hash;
+      }
+      if (ok) add('ok', name, `Operator log verified: ${o.entries.length} entries${relay ? ', all consistent with the relay log' : ''}.`);
+      // completeness against relay
+      if (relay) {
+        const have = new Set(o.entries.map((e) => e.relaySeq));
+        const missing = relay.entries.filter((r) => r.ops.includes(o.operator.id) && !have.has(r.seq));
+        if (missing.length) add('error', name, `${missing.length} relay entries concerning this operator are missing from its log (first: relay #${missing[0].seq}).`);
+      }
+      let sealOk = 0, sealBad = 0, lastSeq = 0;
+      for (const s of o.seals) {
+        const at = o.entries.find((e) => e.seq === s.seal.seq);
+        if (at && at.hash === s.seal.hash && (await TL.verifyObject(o.operator.signPub, s.seal, s.sig))) { sealOk++; lastSeq = Math.max(lastSeq, s.seal.seq); } else sealBad++;
+      }
+      if (sealBad) add('error', name, `${sealBad} seal(s) invalid: the log head was not signed with the operator's master key.`);
+      if (sealOk) add('ok', name, `${sealOk} seal(s) valid. Sealed up to entry #${lastSeq} of ${o.entries.length}.`);
+      else add('warn', name, 'The operator has never sealed this log with its master key.');
+      if (lastSeq < o.entries.length && sealOk) add('info', name, `${o.entries.length - lastSeq} entries after the last seal are not covered by the operator's signature yet.`);
+    }
+
+    // ---- evidence: signatures, certificates, mandatory fields, payouts
+    const entries = relay ? relay.entries : mergeOperatorEntries(ops);
+    const opKeys = new Map();
+    if (relay) for (const o of relay.operators) opKeys.set(o.id, o.signPub);
+    for (const o of ops) opKeys.set(o.operator.id, o.operator.signPub);
+    for (const e of entries) if (e.type === 'OPERATOR_KEYS_REGISTERED' && !opKeys.has(e.data.operator)) opKeys.set(e.data.operator, e.data.signPub);
+    const timeline = new Map(); // agent -> [{ts,type,cert?}]
+    const push = (agent, o) => { if (!timeline.has(agent)) timeline.set(agent, []); timeline.get(agent).push(o); };
+    const opState = new Map();
+    for (const e of entries) {
+      if (e.type === 'DEVICE_CERTIFIED') push(e.data.agent, { ts: e.ts, type: 'cert', cert: e.data.cert, sig: e.data.sig, operator: e.data.operator });
+      if (e.type === 'DEVICE_REVOKED' || e.type === 'AGENT_REVOKED') push(e.data.agent, { ts: e.ts, type: 'revoked' });
+      if (e.type === 'OPERATOR_SUSPENDED') { if (!opState.has(e.data.operator)) opState.set(e.data.operator, []); opState.get(e.data.operator).push({ ts: e.ts, suspended: true }); }
+      if (e.type === 'OPERATOR_REINSTATED') { if (!opState.has(e.data.operator)) opState.set(e.data.operator, []); opState.get(e.data.operator).push({ ts: e.ts, suspended: false }); }
+    }
+    const suspendedAt = (op, ts) => { const l = (opState.get(op) || []).filter((x) => x.ts <= ts); return l.length && l[l.length - 1].suspended; };
+    async function certAt(agent, ts) {
+      const l = (timeline.get(agent) || []).filter((x) => x.ts <= ts);
+      if (!l.length || l[l.length - 1].type !== 'cert') return null;
+      const c = l[l.length - 1];
+      const pub = opKeys.get(c.operator);
+      if (!pub || !(await TL.verifyObject(pub, c.cert, c.sig))) return { bad: 'certificate signature does not verify with the operator master key' };
+      if (c.cert.notAfter < ts) return { bad: 'certificate had expired' };
+      return c.cert;
+    }
+    const insMap = new Map();
+    let rejected = 0;
+    for (const e of entries) {
+      if (e.type === 'INSTRUCTION_REJECTED') rejected++;
+      if (e.type !== 'INSTRUCTION_ACCEPTED') continue;
+      const ins = e.data.instruction, rec = { id: ins.id, ins, seq: e.seq, ts: e.ts, issues: [], status: 'INSTRUCTED', paid: 0, events: [] };
+      insMap.set(ins.id, rec);
+      const c = await certAt(ins.sender.agent, e.ts);
+      if (!c) rec.issues.push('no valid agent certificate (or key revoked) at the time of the instruction');
+      else if (c.bad) rec.issues.push(c.bad);
+      else if (!(await TL.verifyObject(c.signPub, ins, e.data.sig))) rec.issues.push('instruction signature does not verify with the certified agent key');
+      if (suspendedAt(ins.sender.operator, e.ts)) rec.issues.push('sending operator was suspended at that time');
+      if (!ins.screening || ins.screening.done !== true || !ins.screening.ref) rec.issues.push('sanctions screening confirmation missing');
+      if (!/^[0-9a-f]{64}$/.test(ins.codeHash || '') || !/^[0-9a-f]{64}$/.test(ins.pkgHash || '')) rec.issues.push('payout code / package fingerprint missing');
+      if (!ins.purpose) rec.issues.push('purpose code missing');
+      if (e.data.pkgHash !== ins.pkgHash) rec.issues.push('package fingerprint differs from the log record');
+    }
+    for (const e of entries) {
+      const id = e.ref;
+      if (!['CONFIRMED', 'CONFIRM', 'PAID_OUT', 'PAID_OUT_DISPUTED', 'CANCELLED', 'EXPIRED', 'FROZEN', 'UNFROZEN'].includes(e.type)) continue;
+      const rec = insMap.get(id);
+      if (!rec) { add('error', 'Evidence', `Event ${e.type} (log #${e.seq}) refers to an instruction that has no accepted record.`); continue; }
+      rec.events.push(e.type);
+      if (e.data.event) {
+        const ev = e.data.event;
+        const c = await certAt(ev.agent, e.ts);
+        if (!c || c.bad || !(await TL.verifyObject(c.signPub, ev, e.data.sig))) rec.issues.push(`${e.type} event (log #${e.seq}) is not signed by a valid agent key`);
+        const wantAgent = ev.t === 'CANCEL' ? rec.ins.sender.agent : rec.ins.recipient.agent;
+        if (ev.agent !== wantAgent) rec.issues.push(`${e.type} event was signed by the wrong agent`);
+        if (ev.t === 'PAID_OUT' && ev.codeHash !== rec.ins.codeHash) rec.issues.push('payout event carries a wrong code fingerprint');
+      }
+      if (e.type === 'PAID_OUT') rec.paid++;
+      if (e.type === 'PAID_OUT_DISPUTED') rec.issues.push('payout was reported after cancellation, expiry or freezing: disputed');
+      rec.status = e.data.status || (e.type === 'EXPIRED' ? 'EXPIRED' : rec.status);
+    }
+    const insList = [...insMap.values()];
+    for (const r of insList) if (r.paid > 1) r.issues.push('DOUBLE PAYOUT: paid out more than once');
+    const bad = insList.filter((r) => r.issues.length).length;
+    add(bad ? 'error' : 'ok', 'Evidence', bad ? `${bad} of ${insList.length} instructions have findings (see table).` : `All ${insList.length} accepted instructions: signatures, certificates, mandatory fields and payouts are consistent.`);
+    return { F, ins: insList, stats: { entries: entries.length, instructions: insList.length, paid: insList.filter((r) => r.paid).length, rejected, withFindings: bad,
+      operators: ops.map((o) => o.operator.name), relay: !!relay } };
+  }
+
+  function mergeOperatorEntries(ops) {
+    const by = new Map();
+    for (const o of ops) for (const e of o.entries) if (!by.has(e.relaySeq)) by.set(e.relaySeq, { seq: e.relaySeq, ts: e.ts, type: e.type, ref: e.ref, ops: [o.operator.id], data: e.data, hash: e.relayHash });
+    return [...by.values()].sort((a, b) => a.seq - b.seq);
+  }
+
+  function reportHtml(res) {
+    const sev = { ok: 'OK', info: 'Note', warn: 'Warning', error: 'FINDING' };
+    const cls = { ok: 'ok', info: '', warn: 'warn', error: 'bad' };
+    const worst = res.F.some((f) => f.sev === 'error') ? 'bad' : res.F.some((f) => f.sev === 'warn') ? 'warn' : 'ok';
+    return `<div class="card"><h1>Audit report</h1>
+      <div class="notice ${worst}">${worst === 'ok' ? 'No integrity findings.' : worst === 'warn' ? 'Verification completed with warnings.' : 'Verification found problems. See the findings below.'}</div>
+      <p class="small muted">Generated ${esc(new Date().toLocaleString())} · ${res.stats.entries || 0} log entries · ${res.stats.instructions || 0} accepted instructions · ${res.stats.paid || 0} paid out · ${res.stats.rejected || 0} rejected by the mandatory checks</p>
+      <h2>Results</h2><div class="tablewrap"><table><thead><tr><th>Result</th><th>Area</th><th>Detail</th></tr></thead><tbody>${
+        res.F.map((f) => `<tr><td><span class="chip ${cls[f.sev]}">${sev[f.sev]}</span></td><td>${esc(f.area)}</td><td>${esc(f.text)}</td></tr>`).join('')}</tbody></table></div>
+      <h2>Instructions</h2><div class="tablewrap"><table><thead><tr><th>Time</th><th>Instruction</th><th>Corridor</th><th>Amount</th><th>Status</th><th>Findings</th></tr></thead><tbody>${
+        res.ins.map((r) => `<tr><td>${esc(r.ts)}</td><td class="mono">${esc(short(r.id, 13))}</td><td>${esc(r.ins.corridor.from + '>' + r.ins.corridor.to)}</td><td>${esc(r.ins.amount.value + ' ' + r.ins.amount.currency)}</td><td>${esc(r.status)}</td><td>${
+          r.issues.length ? r.issues.map((i) => `<span class="chip bad">${esc(i)}</span>`).join('<br>') : '<span class="chip ok">none</span>'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No instructions in the loaded logs.</td></tr>'}</tbody></table></div>
+      <p class="noprint"><button class="btn" onclick="window.print()">Print / save as PDF</button> <button class="btn secondary" id="dl">Download report (HTML)</button></p></div>`;
+  }
+
+  $('#run').addEventListener('click', async () => {
+    const list = $('#files').files;
+    if (!list.length) { alert('Choose at least one log file.'); return; }
+    $('#report').innerHTML = '<div class="card">Verifying…</div>';
+    try {
+      const res = await analyse(await readFiles(list));
+      $('#report').innerHTML = reportHtml(res);
+      const dl = $('#dl');
+      if (dl) dl.addEventListener('click', () => {
+        const html = '<!doctype html><meta charset="utf-8"><title>TrustLine audit report</title><style>' + document.querySelector('style').textContent + '</style><body><main>' + $('#report').innerHTML.replace(/<p class="noprint">[\s\S]*?<\/p>/, '') + '</main>';
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' })); a.download = 'trustline-audit-report.html'; document.body.append(a); a.click(); a.remove();
+      });
+    } catch (e) { $('#report').innerHTML = '<div class="card"><div class="notice bad">' + esc(e.message) + '</div></div>'; }
+  });
+})();
+</script>
+</body></html>
