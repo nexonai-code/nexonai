@@ -61,7 +61,7 @@ final class ComplianceService: ObservableObject {
 
     // MARK: Per-case identity
 
-    func identity(for reportCase: ReportCase) -> Identity {
+    func caseIdentity(for reportCase: ReportCase) -> Identity {
         if let existing = identities[reportCase.id] { return existing }
         let created = Identity(store: PrefixedKeyValueStore(base: keychain, prefix: reportCase.keyPrefix))
         identities[reportCase.id] = created
@@ -126,7 +126,7 @@ final class ComplianceService: ObservableObject {
     // MARK: Ratchet session
 
     private func createSession(for reportCase: ReportCase) throws -> DoubleRatchet.RatchetState {
-        let identity = identity(for: reportCase)
+        let identity = caseIdentity(for: reportCase)
         let mine = identity.myX25519RatchetKeyPair
         let theirPub = reportCase.officerX25519PublicKey
         let pairSecret = identity.pairSecret(contactMsgKey: reportCase.officerMessageKey)
@@ -172,7 +172,7 @@ final class ComplianceService: ObservableObject {
         guard let reportCase = caseStore.get(id: caseId) else { return }
         do {
             let state = try loadOrCreateSession(for: reportCase)
-            let identity = identity(for: reportCase)
+            let identity = caseIdentity(for: reportCase)
             let pairSecret = identity.pairSecret(contactMsgKey: reportCase.officerMessageKey)
             let encrypted = try DoubleRatchet.encrypt(state: state, plaintext: plaintext, associatedData: pairSecret)
             keychain.saveRatchetState(contactId: caseId, state: state)
@@ -275,7 +275,7 @@ final class ComplianceService: ObservableObject {
         }
         if let last = reportCase.intakeLastSentAt, now.timeIntervalSince(last) < OfficerCase.intakeRetryInterval { return }
 
-        let identity = identity(for: reportCase)
+        let identity = caseIdentity(for: reportCase)
         let pairing = PairingPayload(
             userId: identity.userId,
             messageKeyBase64: identity.myMessageKey.base64EncodedString(),
@@ -322,7 +322,7 @@ final class ComplianceService: ObservableObject {
     }
 
     private func fetch(_ reportCase: ReportCase) async {
-        let identity = identity(for: reportCase)
+        let identity = caseIdentity(for: reportCase)
         // The office answers with generation 0; a little tolerance costs nothing.
         for generation in 0...2 {
             let tag = identity.expectedWireTag(
@@ -353,7 +353,7 @@ final class ComplianceService: ObservableObject {
 
     private func ingest(packet: Data, into caseId: String) -> Bool {
         guard let reportCase = caseStore.get(id: caseId) else { return false }
-        let identity = identity(for: reportCase)
+        let identity = caseIdentity(for: reportCase)
         guard let padded = try? NetworkObfuscation.unpadPacket(packet),
               let plaintext = try? OuterEnvelope.decrypt(data: padded, myKey32: identity.myMessageKey) else { return false }
         if plaintext == ControlSignals.dummy { return true }
