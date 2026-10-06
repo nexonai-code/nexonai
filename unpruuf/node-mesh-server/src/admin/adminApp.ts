@@ -64,7 +64,7 @@ export function isLoopbackHost(hostHeader: string | undefined, port: number): bo
   return allowed.includes(hostHeader.toLowerCase());
 }
 
-function loopbackOnly(port: number) {
+export function loopbackOnly(port: number) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!isLoopbackHost(req.headers.host, port)) {
       return res.status(403).send("forbidden");

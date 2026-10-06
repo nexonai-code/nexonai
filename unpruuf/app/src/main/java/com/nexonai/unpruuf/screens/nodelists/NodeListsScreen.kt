@@ -32,6 +32,10 @@ fun NodeListsScreen(
     val pending by viewModel.pending.collectAsState()
     val status by viewModel.status.collectAsState()
     val freeSlots by viewModel.freeSlots.collectAsState()
+    val feeds by viewModel.feeds.collectAsState()
+    val feedUpdating by viewModel.feedUpdating.collectAsState()
+    var feedCode by remember { mutableStateOf("") }
+    var removingFeed by remember { mutableStateOf<com.nexonai.unpruuf.domain.network.FeedSource?>(null) }
     val context = LocalContext.current
 
     var pastedText by remember { mutableStateOf("") }
@@ -136,6 +140,58 @@ fun NodeListsScreen(
                 color = MaterialTheme.colorScheme.error
             )
 
+            HorizontalDivider()
+            Text(stringResource(R.string.node_feeds_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                stringResource(R.string.node_feeds_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            feeds.forEach { f ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(f.name, style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (f.lastUpdatedMs == 0L) stringResource(R.string.node_feeds_never)
+                            else stringResource(R.string.node_feeds_last, java.text.DateFormat.getDateTimeInstance().format(java.util.Date(f.lastUpdatedMs))),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (f.lastResult.isNotEmpty()) {
+                            Text(f.lastResult, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { removingFeed = f }) {
+                            Text(stringResource(R.string.node_lists_delete), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+            if (feeds.isNotEmpty()) {
+                Button(onClick = { viewModel.updateFeedsNow() }, enabled = !feedUpdating, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(if (feedUpdating) R.string.node_feeds_updating else R.string.node_feeds_update_now))
+                }
+            }
+            OutlinedTextField(
+                value = feedCode,
+                onValueChange = { feedCode = it },
+                label = { Text(stringResource(R.string.node_feeds_code_field)) },
+                placeholder = { Text("unpruuf-feed:v1:...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedButton(
+                onClick = { viewModel.addFeed(feedCode); feedCode = "" },
+                enabled = feedCode.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(stringResource(R.string.node_feeds_add)) }
+            Text(
+                stringResource(R.string.node_feeds_secret_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+
             status?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                 LaunchedEffect(it) {
@@ -204,6 +260,20 @@ fun NodeListsScreen(
                 }
             },
             dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.settings_cancel)) } }
+        )
+    }
+
+    removingFeed?.let { f ->
+        AlertDialog(
+            onDismissRequest = { removingFeed = null },
+            title = { Text(stringResource(R.string.node_feeds_remove_title, f.name)) },
+            text = { Text(stringResource(R.string.node_feeds_remove_body)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.removeFeed(f.id); removingFeed = null }) {
+                    Text(stringResource(R.string.node_lists_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { removingFeed = null }) { Text(stringResource(R.string.settings_cancel)) } }
         )
     }
 

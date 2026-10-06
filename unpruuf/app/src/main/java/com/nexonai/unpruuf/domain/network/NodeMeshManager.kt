@@ -170,6 +170,77 @@ class NodeMeshManager @Inject constructor(
         return NodeLists.capacity(sizes)
     }
 
+    // ─── Company list feeds (FeedCrypto.kt, FeedSources.kt) ──────────────────────────────────────
+    // A feed keeps lists up to date: each list in the feed becomes a managed list on this device.
+
+    fun getFeedSources(): List<FeedSource> = FeedSource.parse(prefs.getString("feed_sources", "") ?: "")
+
+    private fun saveFeedSources(list: List<FeedSource>) {
+        prefs.edit().putString("feed_sources", FeedSource.serialize(list)).apply()
+    }
+
+    /** Adds the feed a pasted feed code describes. Null if the code is not valid or already added. */
+    fun addFeedSource(code: String): FeedSource? {
+        val source = FeedSource.fromCode(code, newListId()) ?: return null
+        val existing = getFeedSources()
+        if (existing.any { it.addressSeed == source.addressSeed }) return null
+        saveFeedSources(existing + source)
+        return source
+    }
+
+    fun updateFeedSource(updated: FeedSource) {
+        saveFeedSources(getFeedSources().map { if (it.id == updated.id) updated else it })
+    }
+
+    /** Forgets the feed; the lists it filled stay (as ordinary lists) until you delete them. */
+    fun removeFeedSource(id: String) {
+        saveFeedSources(getFeedSources().filter { it.id != id })
+        saveManaged(getManaged().filter { it.sourceId != id })
+    }
+
+    private fun getManaged(): List<FeedApply.Managed> =
+        (prefs.getString("feed_lists", "") ?: "").split("\n").mapNotNull { line ->
+            val p = line.split("\t")
+            if (p.size == 3) FeedApply.Managed(p[0], p[1], p[2]) else null
+        }
+
+    private fun saveManaged(list: List<FeedApply.Managed>) {
+        prefs.edit().putString("feed_lists", list.joinToString("\n") { "${it.listId}\t${it.sourceId}\t${it.feedName}" }).apply()
+    }
+
+    sealed class FeedApplyResult {
+        data class Ok(val lists: Int, val newNodes: Int, val removedNodes: Int) : FeedApplyResult()
+        data class NoRoom(val needed: Int, val free: Int) : FeedApplyResult()
+    }
+
+    /**
+     * Makes this device's lists match what the company published (all or nothing). Each feed list
+     * updates the managed list of the same name, new addresses come in with the list's write key,
+     * addresses the company dropped leave the pool, and a managed list the company dropped is
+     * removed with its nodes. Contacts that were given a removed node keep their other nodes.
+     */
+    fun applyFeedLists(sourceId: String, files: List<NodeListFile.Parsed>): FeedApplyResult {
+        val plan = FeedApply.plan(sourceId, files, getManaged(), getNodeLists(), getMyNodePool().map { it.address }.toSet(), ::newListId)
+        val free = OWN_NODES_MAX - getMyNodePool().size + plan.removedNodes
+        if (plan.newNodes > free) return FeedApplyResult.NoRoom(plan.newNodes, free)
+
+        val managed = getManaged().filter { it.sourceId != sourceId || plan.changes.any { c -> c.listId == it.listId } }.toMutableList()
+        plan.removeLists.forEach { l -> l.addresses.forEach { removeMyNode(it) } }
+        for (c in plan.changes) {
+            c.removeAddresses.forEach { removeMyNode(it) }
+            addMyNodes(c.file.addresses, c.file.ownerSecret)
+            saveNodeLists(NodeLists.assign(getNodeLists(), c.file.addresses, c.listId, c.feedName))
+            val first = c.file.addresses.first()
+            val sources = getPoolSources().filter { it.address !in c.file.addresses } + ParsedNodeConnection(first, c.file.ownerSecret)
+            prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+            c.file.control?.let { setControlAddress(first, it) }
+            if (managed.none { it.listId == c.listId }) managed += FeedApply.Managed(c.listId, sourceId, c.feedName)
+        }
+        saveManaged(managed)
+        saveNodeLists(getNodeLists())
+        return FeedApplyResult.Ok(plan.changes.size, plan.newNodes, plan.removedNodes)
+    }
+
     sealed class ImportResult {
         /** [added] = nodes that were new on this device, [total] = nodes now in the list. */
         data class Ok(val listId: String, val listName: String, val added: Int, val total: Int) : ImportResult()

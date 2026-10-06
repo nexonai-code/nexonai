@@ -345,4 +345,15 @@ Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow i
     <string name="qr_choose_list_first_body">The QR you show carries three nodes from the list you pick above.</string>
     <string name="node_lists_row_capacity">Room for %1$d contacts with nodes of their own · %2$d in use</string>
     <string name="node_lists_row_over">More contacts than free nodes: some contacts now share nodes. Import another server into this list.</string>
+    <string name="node_feeds_title">Company feeds</string>
+    <string name="node_feeds_hint">A company can keep your node lists up to date. Paste the feed code you got from them. The app finds the feed itself (its address changes every few hours) and only accepts lists that really come from the company.</string>
+    <string name="node_feeds_never">Not updated yet</string>
+    <string name="node_feeds_last">Last attempt: %1$s</string>
+    <string name="node_feeds_update_now">Update now</string>
+    <string name="node_feeds_updating">Updating…</string>
+    <string name="node_feeds_code_field">Feed code</string>
+    <string name="node_feeds_add">Add feed</string>
+    <string name="node_feeds_secret_warning">The feed code is a secret from your company. Do not pass it on.</string>
+    <string name="node_feeds_remove_title">Remove \"%1$s\"?</string>
+    <string name="node_feeds_remove_body">The app stops following this feed. The lists it filled stay on this device until you delete them.</string>
 </resources>

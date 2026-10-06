@@ -5,6 +5,41 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑06 · Rotating list feed: a company keeps its employees' node lists up to date
+
+**What was done**
+
+- **The service** (`start-feed.bat`, `src/feed/`): a company runs a small service on its own server. Its onion address changes every
+  few hours (1 to 24 h, default 6). The address is derived from a shared secret and the time period, so the app computes it and
+  nobody else can find it. The server publishes the next address 15 minutes before the switch, keeps the old one 30 minutes after
+  it, and takes the rest offline.
+- **What it serves:** one file, the company's current node lists, **encrypted** (content key) and **signed** (company signing key).
+  A stolen server cannot read or forge a list: those two keys are sealed under the admin's passphrase and only needed to publish.
+- **Setup page** (`http://localhost:8841`): create the feed (name, period, passphrase) and get the **feed code** as QR and text;
+  publish by choosing the list files the node servers export; show the code again with the passphrase.
+- **App** (Settings → Node lists → Company feeds): paste the feed code; the app finds the address itself (tries the neighbouring
+  period near a boundary), fetches about hourly and on "Update now", checks the signature first, never takes an older version, and
+  turns each list in the feed into a managed list. Dropped addresses leave the pool; all or nothing if the device limit is hit.
+- The app's Kotlin code (SHA3-256, base32, address derivation, signature check, AES-GCM) is a port of the server's TypeScript.
+
+**Which bug appeared**
+
+None found by the tests. Two checks mattered: the address maths reproduces a real, published onion address (checksum, version,
+base32), and the Kotlin code opens a list produced by the TypeScript code on the first try. Not checked: a real Tor. The sandbox
+cannot run one, so the key format Tor expects for `ADD_ONION` rests on the Tor specification, not on a run. The service therefore
+stops with an error if Tor reports a different address than the derived one, instead of running unreachable.
+
+**Verification**
+
+Server `npm test` 84/84 (new: 13 for the feed: derivation, epochs, feed code, signing and tampering, store and sealed keys, public
+endpoint, rolling addresses with a fake Tor, setup page over HTTP). A real run of the service with the setup page: set up, publish,
+fetch `/list`, open it with the feed code. App: `FeedCryptoTest` 11 (vectors from the server, NIST SHA3, a real onion address,
+refusals, update plans). All four editions below.
+
+**Not built:** Tor client authorization (the service invisible to anyone without a key). Explained to Gabriel, offered as the next step.
+
+---
+
 ## 2026‑10‑06 · Capacity display: how many contacts a node count carries
 
 **What was done**

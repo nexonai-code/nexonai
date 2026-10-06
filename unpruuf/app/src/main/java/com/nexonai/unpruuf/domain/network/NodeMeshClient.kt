@@ -41,6 +41,8 @@ class NodeMeshClient @Inject constructor(
         // P2PNetworkManager.startTempNodeHeartbeat()).
         private const val HEALTH_CHECK_TIMEOUT_MS = 15_000
 
+        private const val FEED_TIMEOUT_MS = 60_000
+
         private val ONION_ADDRESS = Regex("^[a-z2-7]{56}\\.onion$")
 
         /** Parses `{"addresses":["x.onion",...]}`; anything that isn't a v3 onion is dropped. */
@@ -86,6 +88,16 @@ class NodeMeshClient @Inject constructor(
             blobsB64.mapNotNull { runCatching { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) }.getOrNull() }
         }
         return FetchResult(blobs, parseCursor(response.body))
+    }
+
+    /** The company list feed's current file at [address] (a rotating onion address, see FeedCrypto).
+     *  Null if it is not reachable, answers with an error, or the answer is implausibly large. */
+    fun fetchFeedList(address: String): String? {
+        val response = runCatching {
+            request(address, "GET", "/list", null, socketTimeoutMs = FEED_TIMEOUT_MS)
+        }.getOrNull() ?: return null
+        if (response.status !in 200..299 || response.body.length > 600_000) return null
+        return response.body
     }
 
     data class PoolInfo(val addresses: List<String>, val controlAddress: String?)

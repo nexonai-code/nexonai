@@ -91,6 +91,26 @@ Server-Einrichtungsseite, Node-Listen und die Listenauswahl beim Hinzufügen ein
 Platz noch frei ist. Ist eine Liste voll, teilen sich weitere Kontakte Nodes: es funktioniert weiter, aber die
 Kontakte sind dann über gemeinsame Adressen verbunden. Dann einen weiteren Server in die Liste importieren.
 
+## Listen-Dienst für Mitarbeiter (aktuelle Node-Listen automatisch)
+
+Für Firmen: Ihre Mitarbeiter sollen immer die aktuellen Node-Listen haben, ohne dass Sie Dateien verteilen.
+
+1. Auf einem Ihrer Server `start-feed.bat` starten. Die Einrichtungsseite öffnet sich (`http://localhost:8841`).
+2. **Einrichten:** Firmenname, Wechselzeit (z. B. alle 6 Stunden) und ein Passwort wählen. Es erscheint der **Feed-Code**
+   (QR und Text). Den Code nur an Mitarbeiter geben, er ist ein Geheimnis.
+3. **Veröffentlichen:** die Dateien wählen, die Ihre Node-Server mit „Liste als Datei speichern“ ausgeben, Passwort
+   eingeben, fertig. Jede Veröffentlichung ersetzt die vorherige.
+4. **Mitarbeiter:** in der App unter Einstellungen → Node-Listen → Firmen-Feeds den Feed-Code einfügen. Die App holt die
+   Listen selbst (etwa stündlich) und legt sie als eigene Listen an.
+
+Wie es geschützt ist: Die Onion-Adresse des Dienstes ändert sich alle paar Stunden. Nur Apps mit dem Feed-Code rechnen sie
+aus. Die Liste ist verschlüsselt und von Ihnen signiert: Eine App nimmt nur Listen an, die wirklich von Ihrer Firma kommen,
+und nie eine ältere als die, die sie schon hat. Der Server hält die Schlüssel zum Lesen und Signieren nur unter Ihrem
+Passwort.
+
+Wichtig zu wissen: Entfernt die Firma einen Node aus der Liste, verschwindet er bei den Mitarbeitern. Bei einem
+ausgeschiedenen Mitarbeiter tauschen Sie den Schreibschlüssel des Servers (Einrichtungsseite) und veröffentlichen die neue Liste.
+
 ## Der QR-Code ist Ihr Schreibschlüssel
 
 - Nur in **Ihre eigene** unpruuf-App scannen.

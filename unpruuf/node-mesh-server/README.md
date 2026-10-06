@@ -56,6 +56,13 @@ Schreibschlüssel und bei versiegelten Servern die Control-Adresse. In der App: 
 Node-Listen → Datei auswählen**. Die Datei ist so sensibel wie der Owner-QR: nur aufs eigene Handy,
 danach löschen. Gesperrte Server exportieren nicht.
 
+## Listen-Dienst (Firmen-Feed)
+
+`start-feed.bat` (oder `npm run start:feed`): ein kleiner Dienst, der Mitarbeitern die aktuellen Node-Listen gibt, unter einer
+Onion-Adresse, die sich alle paar Stunden ändert (nur die App rechnet sie aus). Einrichtungsseite `http://localhost:8841`,
+Ports 8840 (Dienst, nur Onion) und 8841. Aufbau und Format: `../NODE_MESH_SPEC.md` §16, Anleitung: `../NODE_MESH_BETRIEB.md`.
+Code in `src/feed/`. Nicht gegen ein echtes Tor getestet; Tor-Client-Autorisierung ist nicht enthalten.
+
 ## Linux / Docker
 
 ```bash
@@ -116,7 +123,7 @@ so there is no client IP to key on.
 
 ## Verified
 
-- `npm test` — 65/65 (incl. the licence check; HTTP contract incl. owner-only `/pool`, node-count bounds, migration of a
+- `npm test` — 84/84 (incl. the licence check and the list feed; HTTP contract incl. owner-only `/pool`, node-count bounds, migration of a
   single-key identity file, store, rate limiter, profiles/slots, Tor control protocol
   against a fake control port, torrc, setup page incl. DNS-rebinding refusal and CSRF-guarded owner-secret rotation).
 - Real Tor 0.4.9.11 in the dev sandbox: onion created with PoW via `ADD_ONION`; same address after

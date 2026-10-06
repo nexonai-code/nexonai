@@ -57,7 +57,8 @@ class P2PNetworkManager @Inject constructor(
     private val relayManager: RelayManager,
     private val relayClient: RelayClient,
     private val nodeMeshManager: NodeMeshManager,
-    private val nodeMeshClient: NodeMeshClient
+    private val nodeMeshClient: NodeMeshClient,
+    private val feedUpdater: FeedUpdater
 ) {
     companion object {
         // LAN discovery on/off + hourly name rotation is re-checked this often.
@@ -233,6 +234,8 @@ class P2PNetworkManager @Inject constructor(
         // profiles.test.ts pins the same window server-side.
         private const val NODE_MESH_ROTATION_INTERVAL_MS = 60 * 60 * 1000L
         private const val NODE_POOL_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000L
+        // Company list feeds: look for a new list about once an hour, with a little jitter.
+        private const val FEED_REFRESH_INTERVAL_MS = 60 * 60 * 1000L
         // Node-Mesh polling: one rhythm for every state (see startNodeMeshPoll).
         private const val NODE_MESH_POLL_BASE_MS = 20_000L
         private const val NODE_MESH_POLL_JITTER_MS = 5_000L
@@ -427,6 +430,7 @@ class P2PNetworkManager @Inject constructor(
         startOfficerIntakeLoop()
         startNodeMeshCoverTraffic()
         startNodePoolRefresh()
+        startFeedRefresh()
         startLockedServerCheck()
         startTempNodeHeartbeat()
         startPeriodicReachabilityCheck()
@@ -589,6 +593,28 @@ class P2PNetworkManager @Inject constructor(
                 }
                 delay(NODE_POOL_REFRESH_INTERVAL_MS)
             }
+        }
+    }
+
+    // Company list feeds (FeedCrypto.kt): fetches the current lists from the rotating onion address.
+    private fun startFeedRefresh() {
+        scope.launch {
+            while (isActive) {
+                torManager.isReady.filter { it }.first()
+                if (nodeMeshManager.getFeedSources().isNotEmpty()) {
+                    runCatching { feedUpdater.updateAll() }
+                }
+                delay(FEED_REFRESH_INTERVAL_MS + kotlin.random.Random.nextLong(0, 5 * 60_000L))
+            }
+        }
+    }
+
+    /** "Update now" in the list screen: runs the update once Tor is up. [onDone] gets the sources as they are afterwards. */
+    fun updateFeedsNow(onDone: (List<FeedSource>) -> Unit) {
+        scope.launch {
+            val ready = withTimeoutOrNull(120_000) { torManager.isReady.filter { it }.first() }
+            val result = if (ready == null) nodeMeshManager.getFeedSources() else runCatching { feedUpdater.updateAll() }.getOrDefault(nodeMeshManager.getFeedSources())
+            onDone(result)
         }
     }
 

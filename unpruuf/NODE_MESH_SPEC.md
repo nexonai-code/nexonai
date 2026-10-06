@@ -766,3 +766,38 @@ list starts a fresh pairing (new keys), so a half-used QR is never mixed with no
 contacts keep the nodes they were given. Design note: a list of ONE server puts all three nodes of a contact on one
 machine — put several servers in one list to keep the contact's nodes spread over different hosts.
 
+## 16. Rotating list feed (2026‑10‑06)
+
+**Purpose.** A company keeps its employees' node lists up to date without handing out files again. The company runs
+a small service (`node-mesh-server/src/feedIndex.ts`, `start-feed.bat`) on its own server. Its onion address changes
+every *period* (1 to 24 hours, default 6). The apps compute the current address; nobody else can find it.
+
+**Address.** `epoch = floor(unixMs / (period h))`. `seed_e = HKDF-SHA256(ikm = addressSeed, salt = "unpruuf-feed-v1",
+info = "onion-epoch:" + epoch, 32)`. The Ed25519 key of `seed_e` is the onion service key; address = Tor v3 encoding
+(public key, 2-byte SHA3-256 checksum, version 3). The server hands Tor the expanded key (`ED25519-V3:` + 64 bytes:
+clamped SHA-512 of the seed) with `ADD_ONION`. It publishes the next period's address 15 minutes before the switch and
+keeps the previous one 30 minutes after it (at most two alive); each minute it reconciles. If Tor returns a different
+service id than the derived address, the service stops with an error instead of running unreachable. The app tries the
+current period first and, within 45 minutes of a boundary, the neighbouring one (phone clock tolerance).
+
+**Three secrets, three places.** *Address seed*: server and apps. *Content key* (AES-256-GCM) and *signing key*
+(Ed25519): created at setup, sealed on the server under the admin's passphrase (scrypt + AES-GCM), only needed to
+publish. A stolen server reveals where the feed lives; it can neither read nor forge a list.
+
+**Feed code** `unpruuf-feed:v1:1|<name>|<period h>|<address seed>|<content key>|<signing public key>` (base64url): what
+the employees' apps get (QR or text). It is a secret of the company.
+
+**List file** (`GET /list`, plain text, no login, the endpoint holds nothing readable):
+`unpruuf-feed-list:v1`, `seq`, `issued`, `iv`, `data` (AES-GCM over the node-list files joined by `\n=====\n`, AAD
+`unpruuf-feed-v1:<seq>`), `sig` (Ed25519 over `"unpruuf-feed-list-v1\n" seq "\n" issued "\n" iv "\n" data`). The app
+checks the signature first, then decrypts, and never accepts a `seq` lower than the one it holds (no rollback).
+
+**In the app** (Settings → Node lists → Company feeds): paste the feed code; the app fetches about hourly (and on
+"Update now"). Each list in the feed becomes or updates one managed list of the same name; addresses the company
+dropped leave the pool; a managed list the company dropped is removed with its nodes. All or nothing: if the new nodes
+do not fit under the device limit, nothing changes. Contacts that were given a removed node keep their other nodes.
+
+**Not built / limits.** Tor client authorization (the service invisible to anyone without a key) is not in; the rotating
+address plus an encrypted, signed payload is. Not run against a real Tor in this sandbox: the first test on a real server
+is that the setup page reaches "ready" and the app finds the feed. The feed is not covered by the node licence.
+

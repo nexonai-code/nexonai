@@ -158,6 +158,12 @@ export class TorControl {
     return { serviceId, privateKey };
   }
 
+  /** Takes an onion service offline (its key stays with the caller). Used by the rotating list feed. */
+  async delOnion(serviceId: string): Promise<void> {
+    if (!/^[a-z2-7]{56}$/.test(serviceId)) throw new TorControlError("DEL_ONION: not a v3 service id");
+    await this.ok(`DEL_ONION ${serviceId}`, "DEL_ONION");
+  }
+
   async getInfo(key: string): Promise<string> {
     const reply = await this.ok(`GETINFO ${key}`, `GETINFO ${key}`);
     const prefix = `${key}=`;

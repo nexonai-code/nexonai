@@ -3,8 +3,10 @@ package com.nexonai.unpruuf.screens.nodelists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexonai.unpruuf.data.db.ContactDao
+import com.nexonai.unpruuf.domain.network.FeedSource
 import com.nexonai.unpruuf.domain.network.NodeListFile
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
+import com.nexonai.unpruuf.domain.network.P2PNetworkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,7 +31,8 @@ data class PendingListImport(val file: NodeListFile.Parsed, val newCount: Int)
 @HiltViewModel
 class NodeListsViewModel @Inject constructor(
     private val nodeMeshManager: NodeMeshManager,
-    private val contactDao: ContactDao
+    private val contactDao: ContactDao,
+    private val p2pNetworkManager: P2PNetworkManager
 ) : ViewModel() {
 
     private val _lists = MutableStateFlow<List<NodeListRow>>(emptyList())
@@ -44,6 +47,39 @@ class NodeListsViewModel @Inject constructor(
     /** Nodes still free under the device limit — shown so a too-big import is no surprise. */
     private val _freeSlots = MutableStateFlow(NodeMeshManager.OWN_NODES_MAX)
     val freeSlots = _freeSlots.asStateFlow()
+
+    // ─── Company feeds: lists kept up to date by the company (rotating onion address) ───
+    private val _feeds = MutableStateFlow(nodeMeshManager.getFeedSources())
+    val feeds = _feeds.asStateFlow()
+
+    private val _feedUpdating = MutableStateFlow(false)
+    val feedUpdating = _feedUpdating.asStateFlow()
+
+    fun addFeed(code: String) {
+        if (nodeMeshManager.addFeedSource(code) == null) {
+            _status.value = "That is not a valid feed code, or this feed is already added."
+            return
+        }
+        _feeds.value = nodeMeshManager.getFeedSources()
+        _status.value = "Feed added. Fetching the current lists…"
+        updateFeedsNow()
+    }
+
+    fun removeFeed(id: String) {
+        nodeMeshManager.removeFeedSource(id)
+        _feeds.value = nodeMeshManager.getFeedSources()
+        refresh()
+        _status.value = "Feed removed. The lists it filled stay until you delete them."
+    }
+
+    fun updateFeedsNow() {
+        _feedUpdating.value = true
+        p2pNetworkManager.updateFeedsNow { updated ->
+            _feeds.value = updated
+            _feedUpdating.value = false
+            refresh()
+        }
+    }
 
     init { refresh() }
 
