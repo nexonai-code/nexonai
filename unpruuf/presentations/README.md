@@ -11,6 +11,8 @@ Fertige Dateien: `export/` (PDF und PowerPoint, Folien als Bilder, nicht editier
 Editierbares PowerPoint: Präsentation online öffnen → Share → Export.
 Beide sind privat, bis sie über Share freigegeben werden.
 
-Neu erzeugen: `python3 business.py` bzw. `python3 compliance.py`; Bilder, PDF und PowerPoint: `node render.js business png-business` (Playwright), dann Python mit python-pptx und Pillow.
+Stand 2026-10-06: alle vier Präsentationen kommen aus **einer** Datei, `decks2.py` (Deutsch und Rumänisch nebeneinander). `python3 decks2.py` schreibt die Folien neu, `NODE_PATH=/opt/node22/lib/node_modules node render.js <ordner> <png-ordner>` rendert sie (Playwright), `python3 export2.py <png-wurzel> export` erzeugt PDF und PowerPoint mit Sprechernotizen. Die älteren Skripte (`business.py`, `business_de.py`, `tr_*.py` …) sind der Stand vom 2026‑10‑01 und werden nicht mehr gebraucht.
+
+Alt: `python3 business.py` bzw. `python3 compliance.py`; Bilder, PDF und PowerPoint: `node render.js business png-business` (Playwright), dann Python mit python-pptx und Pillow.
 
 Deutsche Fassungen: `python3 tr_business.py && python3 business_de.py` bzw. `tr_compliance.py` / `compliance_de.py` (übersetzen aus der rumänischen Vorlage).

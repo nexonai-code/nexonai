@@ -2,7 +2,7 @@
  "v": 4,
  "createdOnFiles": {
   "v": 1,
-  "at": "2026-10-01T12:15:36Z"
+  "at": "2026-10-06T17:32:01Z"
  },
  "lists": "css",
  "title": "unpruuf Compliance (DE)",
@@ -12,6 +12,8 @@
   "problema",
   "instrumentul",
   "functionare",
+  "qr-unic",
+  "caz",
   "nu-exista",
   "cine-vede",
   "panou",
@@ -27,12 +29,12 @@
    "start": "cover"
   },
   "s2": {
-   "description": "Die Lösung: das Relay der Organisation, nichts, was identifiziert.",
+   "description": "Die Lösung: der Node der Organisation, ein QR-Code für alle, nichts, was identifiziert.",
    "start": "instrumentul"
   },
   "s3": {
-   "description": "Dashboard, Meldewege und Rechtsrahmen.",
-   "start": "panou"
+   "description": "Sicherheitsmodell, Dashboard, Meldewege und Rechtsrahmen.",
+   "start": "cine-vede"
   },
   "s4": {
    "description": "Installation, Stand und nächste Schritte.",

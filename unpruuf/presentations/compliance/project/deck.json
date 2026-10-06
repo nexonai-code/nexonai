@@ -2,7 +2,7 @@
  "v": 4,
  "createdOnFiles": {
   "v": 1,
-  "at": "2026-10-01T10:36:37Z"
+  "at": "2026-10-06T17:32:01Z"
  },
  "lists": "css",
  "title": "unpruuf Compliance",
@@ -12,6 +12,8 @@
   "problema",
   "instrumentul",
   "functionare",
+  "qr-unic",
+  "caz",
   "nu-exista",
   "cine-vede",
   "panou",
@@ -27,12 +29,12 @@
    "start": "cover"
   },
   "s2": {
-   "description": "Soluția: releul organizației, fără nimic de identificat.",
+   "description": "Soluția: nodul organizației, un cod QR pentru toți, nimic care identifică.",
    "start": "instrumentul"
   },
   "s3": {
-   "description": "Panou, căi de raportare și cadrul legal.",
-   "start": "panou"
+   "description": "Model de securitate, panou, căi de raportare și cadru legal.",
+   "start": "cine-vede"
   },
   "s4": {
    "description": "Instalare, stadiu și pașii următori.",

@@ -2,7 +2,7 @@
  "v": 4,
  "createdOnFiles": {
   "v": 1,
-  "at": "2026-10-01T12:13:53Z"
+  "at": "2026-10-06T17:32:01Z"
  },
  "lists": "css",
  "title": "unpruuf Business (DE)",
@@ -14,10 +14,13 @@
   "doua-coduri",
   "nu-exista",
   "sute-noduri",
+  "rezilienta",
+  "liste",
   "ce-vede",
   "server",
   "securitate",
   "conformitate",
+  "licenta",
   "pentru-cine",
   "stadiu",
   "pasi"
@@ -28,16 +31,16 @@
    "start": "cover"
   },
   "s2": {
-   "description": "Die Lösung: eigener Server, eigene Nodes, zwei Codes.",
+   "description": "Die Lösung: eigene Server, drei Nodes je Kontakt, zwei Dinge zur Identifikation.",
    "start": "instrumentul"
   },
   "s3": {
-   "description": "Sicherheit und Compliance durch Architektur.",
-   "start": "ce-vede"
+   "description": "Ausfallsicherheit, Listen, Sicherheit und Compliance durch Architektur.",
+   "start": "rezilienta"
   },
   "s4": {
-   "description": "Für wen, aktueller Stand und nächste Schritte.",
-   "start": "pentru-cine"
+   "description": "Lizenz, für wen, Stand und nächste Schritte.",
+   "start": "licenta"
   }
  },
  "faces": {

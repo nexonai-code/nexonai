@@ -5,6 +5,27 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑06 · Presentations brought up to date (Business and Compliance, German and Romanian)
+
+**What was done**
+
+All four decks now match the product as of today and come from one source file (`presentations/decks2.py`, both languages side by side).
+
+- **Business (17 slides, was 14):** new slides for failure safety (3 servers, 3 providers, 750 addresses, up to 250 contacts with their own addresses), server lists (which servers carry which contacts) and the licence (tiers 5 / 25 / 100 / 250 nodes, checked offline). Changed: 250 nodes per server instead of 500, "Paketnummer" instead of "Abhol-Code", the node never sees an IP, sealed server keys, even rhythm with cover traffic, server in practice (licence, list file, overview page), status with today's test numbers (server 70, tablet node 15, app 80).
+- **Compliance (15 slides, was 13):** the relay story is replaced by the organisation's node; new slides "one QR code for the whole organisation" and "case number and status on the device"; the dashboard slide shows case numbers; installation includes the licence; status updated.
+- Speaker notes carry the caveats (no claim that searches are pointless, the three-providers advice is the customer's job, tiers are planned and prices open).
+- All four online decks were updated in place (same links); PDF and PowerPoint in `presentations/export/` were regenerated.
+
+**Which bug appeared**
+
+A copy mistake in my first publish call (a slide name from the Business deck in the Compliance list) was caught by the tool and fixed before anything was changed. Before overwriting the online decks I compared them with my last version: nobody had edited them by hand.
+
+**Verification**
+
+All slides rendered and checked by eye in German and Romanian (no overflow). The Romanian text is mine and has not been read by a native speaker. The PowerPoint files hold the slides as images, so they are not editable (editable PowerPoint: open the online deck, Share, Export).
+
+---
+
 ## 2026‑10‑06 · Fixed 250 nodes per server, node lists in the app, licence for the Android node
 
 **What was done**

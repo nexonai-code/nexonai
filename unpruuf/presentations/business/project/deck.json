@@ -2,7 +2,7 @@
  "v": 4,
  "createdOnFiles": {
   "v": 1,
-  "at": "2026-10-01T10:35:07Z"
+  "at": "2026-10-06T17:32:01Z"
  },
  "lists": "css",
  "title": "unpruuf Business",
@@ -14,10 +14,13 @@
   "doua-coduri",
   "nu-exista",
   "sute-noduri",
+  "rezilienta",
+  "liste",
   "ce-vede",
   "server",
   "securitate",
   "conformitate",
+  "licenta",
   "pentru-cine",
   "stadiu",
   "pasi"
@@ -28,16 +31,16 @@
    "start": "cover"
   },
   "s2": {
-   "description": "Soluția: serverul propriu, nodurile proprii, două coduri.",
+   "description": "Soluția: servere proprii, trei noduri pe contact, două lucruri pentru identificare.",
    "start": "instrumentul"
   },
   "s3": {
-   "description": "Securitate și conformitate prin arhitectură.",
-   "start": "ce-vede"
+   "description": "Reziliență, liste, securitate și conformitate prin arhitectură.",
+   "start": "rezilienta"
   },
   "s4": {
-   "description": "Pentru cine, stadiu actual și pașii următori.",
-   "start": "pentru-cine"
+   "description": "Licență, pentru cine, stadiu și pașii următori.",
+   "start": "licenta"
   }
  },
  "faces": {
