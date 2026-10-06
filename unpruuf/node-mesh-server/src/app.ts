@@ -10,11 +10,22 @@ export function createApp(
   addresses: () => string[] = () => [],
   lock?: LockControl,
   metrics?: Metrics,
+  /** Server license: a reason code refuses new deposits (HTTP 402). Reading is never blocked. */
+  depositBlocked?: () => string | null,
 ): Express {
   const app = express();
   // 16kb comfortably covers a base64'd 4096-byte ciphertext (~5.5kb) plus JSON/tag overhead,
   // same reasoning as the consumer relay's own app.ts.
   app.use(express.json({ limit: "16kb" }));
+  if (depositBlocked) {
+    app.use((req, res, next) => {
+      if (req.method === "PUT" && req.path === "/deposit") {
+        const reason = depositBlocked();
+        if (reason) return res.status(402).json({ error: reason });
+      }
+      next();
+    });
+  }
   // Counts only (see metrics.ts): a finished deposit / fetch, or a refused request.
   if (metrics) {
     app.use((req, res, next) => {

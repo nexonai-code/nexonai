@@ -12,9 +12,12 @@ A separate product from `../server/` (the consumer app's optional relay); that o
      offline-tolerant 24 h).
    - **Anzahl Nodes** (1–500, Enter = 10) — so viele eigene `.onion`-Adressen betreibt dieser
      eine Server, alle in einem Prozess mit einem Tor.
-3. Der Server lädt Tor einmalig herunter, erstellt die `.onion`-Adressen und öffnet im Browser
+3. **Lizenz:** Ohne Lizenz zeigt der Server nur die Einrichtungsseite. Den Lizenzcode von NexonAI
+   dort einfügen („Lizenz erforderlich“), dann startet alles ohne Neustart. Der Code wird nur auf
+   diesem Rechner geprüft. Die Lizenz begrenzt die Anzahl Nodes und die Laufzeit (Details unten).
+4. Der Server lädt Tor einmalig herunter, erstellt die `.onion`-Adressen und öffnet im Browser
    die **Einrichtungsseite** mit dem Owner-QR.
-4. In der unpruuf-App: **Einstellungen → Business Node-Mesh → QR scannen**. Ein Scan reicht:
+5. In der unpruuf-App: **Einstellungen → Business Node-Mesh → QR scannen**. Ein Scan reicht:
    Die App holt sich alle anderen Nodes dieses Servers selbst (`GET /pool`) und gibt jedem neuen
    Kontakt eigene Nodes daraus.
 
@@ -30,6 +33,21 @@ App im Chat **Temp Node** wählen und den QR von der Einrichtungsseite scannen.
 
 Ohne Node.js auf dem Zielrechner: siehe `EXE_BUILD.md` (fertiger Ordner mit `.exe` + denselben
 `start.bat`/`start-tempnode.bat`).
+
+## Lizenz
+
+- Ein Code je Server (`unpruuf-server-license:v1:…`): Kunde, Seriennummer, **max. Nodes**, **Ablaufdatum**.
+  Wird offline geprüft, nichts wird gesendet, kein Gerät wird erfasst.
+- Eintragen: Einrichtungsseite, oder Datei `license.txt` im Datenordner, oder `NODE_MESH_LICENSE`
+  (Container). Sind mehrere da, gilt die mit der längsten Laufzeit — eine Verlängerung wirkt also sofort.
+- `NODE_MESH_NODES` über der Lizenz wird auf die lizenzierte Zahl gekürzt (steht im Log).
+- 30 Tage vor Ablauf warnen Einrichtungsseite, Übersicht und Log. **Nach Ablauf** werden neue
+  Nachrichten abgelehnt (HTTP 402), das Abholen vorhandener Pakete geht weiter. Verlängerungscode
+  einfügen, fertig, kein Neustart.
+- Temp Node braucht keine Lizenz.
+- Ausgestellt wird mit `../license-tool/` (`issue-server.js` oder die GUI).
+- Ehrlich: Der Server ist lesbarer Code auf dem Rechner des Kunden. Die Prüfung hält ehrliche Kunden
+  ehrlich und macht den Vertrag im Produkt sichtbar. Sie ist kein Kopierschutz.
 
 ## Linux / Docker
 
@@ -91,7 +109,7 @@ so there is no client IP to key on.
 
 ## Verified
 
-- `npm test` — 41/41 (HTTP contract incl. owner-only `/pool`, node-count bounds, migration of a
+- `npm test` — 65/65 (incl. the licence check; HTTP contract incl. owner-only `/pool`, node-count bounds, migration of a
   single-key identity file, store, rate limiter, profiles/slots, Tor control protocol
   against a fake control port, torrc, setup page incl. DNS-rebinding refusal and CSRF-guarded owner-secret rotation).
 - Real Tor 0.4.9.11 in the dev sandbox: onion created with PoW via `ADD_ONION`; same address after

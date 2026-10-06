@@ -199,3 +199,92 @@ test("the overview page is served on loopback only and embeds valid data", async
     listener.close();
   }
 });
+
+test("the setup page takes a server license: refuses bad codes, activates a good one, shows the state", async () => {
+  const crypto = await import("crypto");
+  const fs = await import("fs");
+  const os = await import("os");
+  const path = await import("path");
+  const { LicenseGuard } = await import("../license");
+  const keys = crypto.generateKeyPairSync("ed25519");
+  const pub = keys.publicKey.export({ format: "jwk" }).x as string;
+  const now = Date.UTC(2027, 0, 15);
+  const day = 24 * 60 * 60 * 1000;
+  const code = (expires: number) => {
+    const payload = `1|SRV-7|Acme GmbH|40|${now}|${expires}`;
+    const sig = crypto.sign(null, Buffer.from("unpruuf-server-license-v1\n" + payload), keys.privateKey);
+    return `unpruuf-server-license:v1:${Buffer.from(payload).toString("base64url")}:${sig.toString("base64url")}`;
+  };
+  const guard = new LicenseGuard({
+    filePath: path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-admin-license-")), "license.txt"),
+    publicKeyB64: pub,
+    now: () => now,
+  });
+  const port = 19000 + Math.floor(Math.random() * 1000);
+  let started = 0;
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "secret",
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      torEnabled: true,
+      publicAddress: () => null,
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      license: () => guard.summary(),
+      applyLicense: async (c) => {
+        const r = guard.apply(c);
+        if (!r.ok) return r;
+        started++;
+        return { ok: true, summary: guard.summary() };
+      },
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  const sendLicense = (c: string, headers: Record<string, string>) =>
+    new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const req = http.request(
+        { host: "127.0.0.1", port, path: "/license", method: "POST", headers: { host: `localhost:${port}`, "content-type": "application/json", ...headers } },
+        (res) => {
+          let body = "";
+          res.on("data", (d) => (body += d));
+          res.on("end", () => resolve({ status: res.statusCode!, body }));
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify({ code: c }));
+    });
+  try {
+    // no license yet: the page asks for one, the owner QR waits, the overview says so
+    const before = await request(port, `localhost:${port}`, "/");
+    assert.match(before.body, /Lizenz erforderlich/);
+    assert.match(before.body, /Zuerst die Lizenz/);
+    const ov = JSON.parse((await request(port, `localhost:${port}`, "/overview.json")).body);
+    assert.deepEqual(ov.problems, ["license-missing"]);
+    assert.equal(ov.level, "warn");
+
+    // CSRF guard, bad code, an app license pasted by mistake
+    assert.equal((await sendLicense(code(now + day), {})).status, 403);
+    assert.equal((await sendLicense("nonsense", { "x-unpruuf-admin": "1" })).status, 400);
+    const wrongType = await sendLicense("unpruuf-license:v1:abc:def", { "x-unpruuf-admin": "1" });
+    assert.equal(wrongType.status, 400);
+    assert.equal(JSON.parse(wrongType.body).error, "wrong-type");
+    assert.equal(started, 0);
+
+    // a good code activates (and would start the service exactly once)
+    const ok = await sendLicense(code(now + 200 * day), { "x-unpruuf-admin": "1" });
+    assert.equal(ok.status, 200);
+    assert.equal(started, 1);
+    const status = JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body);
+    assert.equal(status.license.status, "valid");
+    assert.equal(status.license.customer, "Acme GmbH");
+    assert.equal(status.license.maxNodes, 40);
+    const after = await request(port, `localhost:${port}`, "/");
+    assert.match(after.body, /Acme GmbH/);
+    assert.doesNotMatch(after.body, /Lizenz erforderlich/);
+  } finally {
+    listener.close();
+  }
+});

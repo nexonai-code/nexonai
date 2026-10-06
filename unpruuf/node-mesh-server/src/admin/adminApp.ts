@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { OnionStatus } from "../tor/onionService";
 import { Profile, NodeSlot } from "../profiles";
 import { Metrics } from "../metrics";
+import type { LicenseError, LicenseSummary } from "../license";
 
 /**
  * Local setup page — the operator scans the owner QR from here with their own unpruuf app
@@ -36,6 +37,9 @@ export interface AdminState {
   metrics?: Metrics;
   configuredNodes?: number;
   registeredNodes?: () => Promise<number | null>;
+  /** Server license (license.ts). Absent = no license handling (older tests); a Temp Node reports "free". */
+  license?: () => LicenseSummary;
+  applyLicense?: (code: string) => Promise<{ ok: true; summary: LicenseSummary } | { ok: false; error: LicenseError }>;
 }
 
 export const OWNER_PREFIX = "unpruuf-node-owner:v1:";
@@ -95,6 +99,7 @@ export async function statusPayload(state: AdminState) {
     ownerString,
     ownerQr: ownerString ? await QRCode.toDataURL(ownerString, { margin: 1, width: 320 }) : null,
     stats: state.stats(),
+    license: state.license ? state.license() : null,
   };
 }
 
@@ -106,11 +111,15 @@ export async function overviewPayload(state: AdminState) {
   const configured = state.configuredNodes ?? addresses.length;
   const registered = state.registeredNodes ? await state.registeredNodes() : null;
   const m = state.metrics?.summary() ?? null;
+  const license = status.license;
+  const unlicensed = license?.status === "missing" || license?.status === "invalid";
   const problems: string[] = [];
-  if (status.locked) problems.push("locked");
+  if (unlicensed) problems.push("license-missing");
+  else if (status.locked) problems.push("locked");
   else if (state.torEnabled && (!status.tor || status.tor.state !== "ready")) problems.push("tor-not-ready");
-  if (!status.locked && registered !== null && registered < addresses.length) problems.push("nodes-missing");
-  const level = status.locked ? "locked" : problems.length ? "warn" : "ok";
+  if (!unlicensed && !status.locked && registered !== null && registered < addresses.length) problems.push("nodes-missing");
+  if (license?.status === "expired") problems.push("license-expired");
+  const level = !unlicensed && status.locked ? "locked" : problems.length ? "warn" : "ok";
   return {
     level,
     problems,
@@ -122,6 +131,7 @@ export async function overviewPayload(state: AdminState) {
     tor: status.tor,
     torEnabled: status.torEnabled,
     nodes: { configured, listed: addresses.length, registered },
+    license,
     addresses,
     stored: stats,
     uptimeMs: m?.uptimeMs ?? null,
@@ -162,6 +172,16 @@ export function createAdminApp(state: AdminState, adminPort: number): Express {
     return res.json({ unlocked: true });
   });
 
+  // Paste a server license (or a renewal). Same custom-header CSRF guard as rotation/unlock.
+  app.post("/license", express.json({ limit: "4kb" }), async (req, res) => {
+    if (req.header("x-unpruuf-admin") !== "1") return res.status(403).json({ error: "forbidden" });
+    if (!state.applyLicense) return res.status(409).json({ error: "no license handling" });
+    const code = typeof req.body?.code === "string" ? req.body.code : "";
+    const result = await state.applyLicense(code).catch(() => ({ ok: false as const, error: "invalid" as LicenseError }));
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    return res.json({ ok: true, license: result.summary });
+  });
+
   app.get("/overview.json", async (_req, res) => {
     res.json(await overviewPayload(state));
   });
@@ -187,10 +207,15 @@ function renderPage(s: Awaited<ReturnType<typeof statusPayload>>): string {
 <p><input id="code" type="password" autocomplete="off" placeholder="unpruuf-node-owner:v1:…" style="width:100%;font:inherit;padding:8px;box-sizing:border-box"></p>
 <button id="unlock" class="go">Entsperren</button></div>`
     : "";
+  const lic = s.license;
+  const licenseBlock = lic && lic.status !== "free" ? renderLicenseCard(lic) : "";
+  const unlicensed = lic?.status === "missing" || lic?.status === "invalid";
   const tempBanner = s.ephemeral
     ? `<div class="banner">TEMP NODE — nur für EINEN Chat. Alles liegt nur im Arbeitsspeicher; Fenster schließen = Node und Adresse sind weg.</div>`
     : "";
-  const qrBlock = s.locked
+  const qrBlock = unlicensed
+    ? `<p class="warn">Zuerst die Lizenz oben eingeben. Danach erscheint hier der Owner-QR.</p>`
+    : s.locked
     ? `<p class="warn">Gesperrt — der Owner-QR erscheint nach dem Entsperren.</p>`
     : s.ownerQr
     ? `<img src="${s.ownerQr}" alt="Owner-QR" width="320" height="320">
@@ -221,6 +246,7 @@ dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}dt{c
 <h1>${escapeHtml(title)}</h1>
 <p class="sub">Einrichtungsseite — nur auf diesem Rechner erreichbar, nie über Tor. <a href="/overview">Zur Übersicht &rarr;</a></p>
 ${tempBanner}
+${licenseBlock}
 ${lockBlock}
 <div class="card"><h2>1. Diesen Node mit deiner App verbinden</h2>
 <p>${howTo}</p>
@@ -240,6 +266,11 @@ const ub=document.getElementById('unlock');
 if(ub)ub.onclick=async()=>{const code=document.getElementById('code').value;
 const r=await fetch('/unlock',{method:'POST',headers:{'X-Unpruuf-Admin':'1','Content-Type':'application/json'},body:JSON.stringify({code})});
 if(r.ok)location.reload();else alert('Falscher Owner-Code');};
+const lb=document.getElementById('lic-go');
+if(lb)lb.onclick=async()=>{const code=document.getElementById('lic-code').value;
+const r=await fetch('/license',{method:'POST',headers:{'X-Unpruuf-Admin':'1','Content-Type':'application/json'},body:JSON.stringify({code})});
+const d=await r.json().catch(()=>({}));
+if(r.ok)location.reload();else alert(d.error==='wrong-type'?'Das ist eine App-Lizenz. Hier wird die Server-Lizenz gebraucht (beginnt mit unpruuf-server-license:).':'Dieser Lizenzcode ist ungültig.');};
 const rb=document.getElementById('rotate');
 if(rb)rb.onclick=async()=>{if(!confirm('Neuen Schreibschlüssel erzeugen? Deine App kann erst wieder senden, wenn du den neuen QR scannst.'))return;
 const r=await fetch('/rotate-owner-secret',{method:'POST',headers:{'X-Unpruuf-Admin':'1'}});if(r.ok)location.reload();else alert('Fehlgeschlagen');};
@@ -247,10 +278,13 @@ setInterval(async()=>{try{const r=await fetch('/status.json',{cache:'no-store'})
 if((s.ownerQr&&!document.querySelector('img'))||(!s.locked&&ub)){location.reload();return;}
 document.getElementById('status').innerHTML=renderStatus(s);}catch(e){}},3000);
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function torLine(s){if(!s.torEnabled)return '<span class="warn">Aus (eigener Hidden Service des Betreibers)</span>';const t=s.tor;if(!t)return 'startet …';
+function torLine(s){if(s.license&&(s.license.status==='missing'||s.license.status==='invalid'))return '<span class="warn">wartet auf Lizenz</span>';if(!s.torEnabled)return '<span class="warn">Aus (eigener Hidden Service des Betreibers)</span>';const t=s.tor;if(!t)return 'startet …';
 const cls=t.state==='ready'?'ok':(t.state==='failed'?'bad':'warn');const label={starting:'startet',bootstrapping:'verbindet ('+t.bootstrapPercent+'%)',ready:'online',restarting:'Neustart läuft',failed:'Fehler',stopped:'gestoppt'}[t.state]||t.state;
 return '<span class="'+cls+'">'+esc(label)+'</span>'+(t.restarts?' · '+t.restarts+' Neustart(s)':'')+(t.lastError&&t.state!=='ready'?'<br><small>'+esc(t.lastError)+'</small>':'');}
-function renderStatus(s){return '<dt>Tor</dt><dd>'+torLine(s)+'</dd><dt>PoW-Schutz</dt><dd>'+(s.torEnabled?'aktiv':'—')+'</dd><dt>Adresse</dt><dd class="code">'+esc(s.address||'…')+'</dd><dt>Profil</dt><dd>'+esc(s.profile.name)+' — '+esc(s.profile.description)+'</dd><dt>Slot</dt><dd>'+s.slot+' von 3</dd><dt>Schlüssel</dt><dd>'+keyLine(s)+'</dd><dt>Gespeichert</dt><dd>'+s.stats.queued+' verschlüsselte Pakete</dd>';}
+function renderStatus(s){return '<dt>Tor</dt><dd>'+torLine(s)+'</dd><dt>PoW-Schutz</dt><dd>'+(s.torEnabled?'aktiv':'—')+'</dd><dt>Adresse</dt><dd class="code">'+esc(s.address||'…')+'</dd><dt>Profil</dt><dd>'+esc(s.profile.name)+' — '+esc(s.profile.description)+'</dd><dt>Slot</dt><dd>'+s.slot+' von 3</dd><dt>Lizenz</dt><dd>'+licLine(s)+'</dd><dt>Schlüssel</dt><dd>'+keyLine(s)+'</dd><dt>Gespeichert</dt><dd>'+s.stats.queued+' verschlüsselte Pakete</dd>';}
+function licLine(s){var l=s.license;if(!l||l.status==='free')return '—';var d=l.expiresAtMs?new Date(l.expiresAtMs).toISOString().slice(0,10):'';
+if(l.status==='missing')return '<span class="bad">fehlt</span>';if(l.status==='invalid')return '<span class="bad">ungültig</span>';if(l.status==='expired')return '<span class="bad">abgelaufen am '+d+'</span>';
+return '<span class="'+(l.status==='expiring'?'warn':'ok')+'">bis '+d+(l.status==='expiring'?' ('+l.daysLeft+' Tage)':'')+'</span>';}
 function keyLine(s){if(s.ephemeral)return 'nur im Arbeitsspeicher';if(!s.sealed)return '<span class="warn">auf der Platte (unverschlüsselt)</span>';return s.locked?'<span class="bad">versiegelt — gesperrt</span>':'<span class="ok">versiegelt — entsperrt</span>';}
 </script></body></html>`;
 }
@@ -258,14 +292,51 @@ function keyLine(s){if(s.ephemeral)return 'nur im Arbeitsspeicher';if(!s.sealed)
 function renderStatus(s: Awaited<ReturnType<typeof statusPayload>>): string {
   const t = s.tor;
   let tor: string;
-  if (!s.torEnabled) tor = `<span class="warn">Aus (eigener Hidden Service des Betreibers)</span>`;
+  if (s.license?.status === "missing" || s.license?.status === "invalid") tor = `<span class="warn">wartet auf Lizenz</span>`;
+  else if (!s.torEnabled) tor = `<span class="warn">Aus (eigener Hidden Service des Betreibers)</span>`;
   else if (!t) tor = "startet …";
   else tor = `${escapeHtml(t.state)} (${t.bootstrapPercent}%)`;
   return `<dt>Tor</dt><dd>${tor}</dd><dt>PoW-Schutz</dt><dd>${s.torEnabled ? "aktiv" : "—"}</dd>` +
     `<dt>Adresse</dt><dd class="code">${escapeHtml(s.address ?? "…")}</dd>` +
     `<dt>Profil</dt><dd>${escapeHtml(s.profile.name)} — ${escapeHtml(s.profile.description)}</dd>` +
     `<dt>Slot</dt><dd>${s.slot} von 3</dd><dt>Nodes</dt><dd>${s.addresses.length || 1}</dd>` +
+    `<dt>Lizenz</dt><dd>${licenseLine(s.license)}</dd>` +
     `<dt>Schlüssel</dt><dd>${s.ephemeral ? "nur im Arbeitsspeicher" : !s.sealed ? `<span class="warn">auf der Platte (unverschlüsselt)</span>` : s.locked ? `<span class="bad">versiegelt — gesperrt</span>` : `<span class="ok">versiegelt — entsperrt</span>`}</dd><dt>Gespeichert</dt><dd>${s.stats.queued} verschlüsselte Pakete</dd>`;
+}
+
+function dateOnly(ms: number | null): string {
+  return ms === null ? "" : new Date(ms).toISOString().slice(0, 10);
+}
+
+function licenseLine(l: LicenseSummary | null): string {
+  if (!l || l.status === "free") return "—";
+  if (l.status === "missing") return `<span class="bad">fehlt</span>`;
+  if (l.status === "invalid") return `<span class="bad">ungültig</span>`;
+  if (l.status === "expired") return `<span class="bad">abgelaufen am ${dateOnly(l.expiresAtMs)}</span>`;
+  const warn = l.status === "expiring";
+  return `<span class="${warn ? "warn" : "ok"}">bis ${dateOnly(l.expiresAtMs)}${warn ? ` (${l.daysLeft} Tage)` : ""}</span>`;
+}
+
+function renderLicenseCard(l: LicenseSummary): string {
+  const form = `<p><input id="lic-code" type="text" autocomplete="off" placeholder="unpruuf-server-license:v1:…" style="width:100%;font:inherit;padding:8px;box-sizing:border-box"></p>
+<button id="lic-go" class="go">Lizenz aktivieren</button>`;
+  if (l.status === "missing" || l.status === "invalid") {
+    return `<div class="card"><h2>Lizenz erforderlich</h2>
+<p>${l.status === "invalid" ? `<span class="bad">Der gespeicherte Lizenzcode ist ungültig.</span> ` : ""}Dieser Server läuft erst mit einer Server-Lizenz von NexonAI. Bitte den Lizenzcode einfügen. Er wird nur hier auf diesem Rechner geprüft und nirgends hin gesendet.</p>
+${form}</div>`;
+  }
+  const rows = `<dl><dt>Kunde</dt><dd>${escapeHtml(l.customer ?? "")}</dd><dt>Seriennummer</dt><dd>${escapeHtml(l.serial ?? "")}</dd>` +
+    `<dt>Nodes erlaubt</dt><dd>${l.maxNodes}</dd><dt>Gültig bis</dt><dd>${licenseLine(l)}</dd></dl>`;
+  if (l.status === "expired") {
+    return `<div class="card"><h2>Lizenz abgelaufen</h2>${rows}
+<p class="bad">Neue Nachrichten werden abgelehnt. Das Abholen bereits abgelegter Pakete funktioniert weiter. Neuen Lizenzcode von NexonAI hier einfügen:</p>${form}</div>`;
+  }
+  if (l.status === "expiring") {
+    return `<div class="card"><h2>Lizenz läuft bald ab</h2>${rows}
+<p class="warn">Noch ${l.daysLeft} Tage. Den Verlängerungscode von NexonAI einfach hier einfügen, der Server läuft dabei weiter.</p>${form}</div>`;
+  }
+  return `<div class="card"><h2>Lizenz</h2>${rows}
+<details><summary>Verlängerungscode einfügen</summary>${form}</details></div>`;
 }
 
 function renderOverview(o: Awaited<ReturnType<typeof overviewPayload>>): string {
@@ -304,6 +375,9 @@ svg{width:100%;height:auto;display:block}.legend{display:flex;gap:16px;color:var
 var DATA=${initial};
 function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function dur(ms){if(ms==null)return '—';var m=Math.floor(ms/60000);if(m<60)return m+' Min.';var h=Math.floor(m/60);if(h<48)return h+' Std. '+(m%60)+' Min.';return Math.floor(h/24)+' Tage '+(h%24)+' Std.';}
+function licRow(l){if(!l||l.status==='free')return '';var d=l.expiresAtMs?new Date(l.expiresAtMs).toISOString().slice(0,10):'';
+var txt=l.status==='missing'?'fehlt':l.status==='invalid'?'ungültig':l.status==='expired'?'abgelaufen am '+d:'bis '+d+' · '+l.maxNodes+' Nodes'+(l.status==='expiring'?' — läuft in '+l.daysLeft+' Tagen ab':'');
+var cls=(l.status==='valid')?'':(l.status==='expiring'?' style="color:var(--warn)"':' style="color:var(--bad)"');return '<dt>Lizenz</dt><dd'+cls+'>'+esc(txt)+'</dd>';}
 function chart(h){
   if(!h||!h.length)return '<p class="hint">Noch keine Daten.</p>';
   var W=720,H=150,pl=34,pb=22,pt=8,w=W-pl-4,hh=H-pb-pt;
@@ -323,7 +397,7 @@ function render(o){
   var t=o.totals||{deposit:0,fetch:0,rejected:0},d=o.last24h||{deposit:0,fetch:0,rejected:0};
   var tor=!o.torEnabled?'Aus (eigener Hidden Service)':(!o.tor?'startet …':({starting:'startet',bootstrapping:'verbindet ('+o.tor.bootstrapPercent+' %)',ready:'online',restarting:'Neustart läuft',failed:'Fehler',stopped:'gestoppt'}[o.tor.state]||o.tor.state));
   var head={ok:['Alles in Ordnung','Server läuft, alle Nodes sind online.'],locked:['Gesperrt nach Neustart','Alle Nodes sind offline, bis du in der App auf „Entsperren“ tippst.'],warn:['Achtung','']}[o.level];
-  if(o.level==='warn'){var msgs=[];if(o.problems.indexOf('tor-not-ready')>=0)msgs.push('Tor ist noch nicht online.');if(o.problems.indexOf('nodes-missing')>=0)msgs.push('Nur '+o.nodes.registered+' von '+o.nodes.listed+' Nodes sind bei Tor angemeldet. Der Server holt fehlende Nodes beim nächsten täglichen Abgleich selbst nach.');head[1]=msgs.join(' ');}
+  if(o.level==='warn'){var msgs=[];if(o.problems.indexOf('license-missing')>=0)msgs.push('Es fehlt eine gültige Server-Lizenz. Bitte auf der Einrichtungsseite eintragen.');if(o.problems.indexOf('license-expired')>=0)msgs.push('Die Lizenz ist abgelaufen: neue Nachrichten werden abgelehnt.');if(o.problems.indexOf('tor-not-ready')>=0)msgs.push('Tor ist noch nicht online.');if(o.problems.indexOf('nodes-missing')>=0)msgs.push('Nur '+o.nodes.registered+' von '+o.nodes.listed+' Nodes sind bei Tor angemeldet. Der Server holt fehlende Nodes beim nächsten täglichen Abgleich selbst nach.');head[1]=msgs.join(' ');}
   var nodesVal=o.locked?'0 / '+o.nodes.configured:(o.nodes.registered==null?o.nodes.listed:o.nodes.registered+' / '+o.nodes.listed);
   var h='<div class="banner '+o.level+'">'+head[0]+'<small>'+esc(head[1])+'</small></div>';
   h+='<div class="grid">'
@@ -337,6 +411,7 @@ function render(o){
    +'<dt>Schlüssel</dt><dd>'+(o.ephemeral?'nur im Arbeitsspeicher':!o.sealed?'auf der Platte (unverschlüsselt)':o.locked?'versiegelt — gesperrt':'versiegelt — entsperrt')+'</dd>'
    +'<dt>Profil</dt><dd>'+esc(o.profile.name)+' — Pakete bleiben höchstens '+o.profile.ttlHours+' Std.</dd>'
    +'<dt>Slot</dt><dd>'+o.slot+' von 3</dd>'
+   +licRow(o.license)
    +'<dt>Läuft seit</dt><dd>'+dur(o.uptimeMs)+'</dd>'
    +'<dt>Adressen (Mailboxen)</dt><dd>'+o.stored.tags+' in Benutzung</dd>'
    +'<dt>Ältestes Paket</dt><dd>'+(o.stored.oldestAgeMs==null?'—':dur(o.stored.oldestAgeMs))+'</dd>'

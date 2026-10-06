@@ -10,8 +10,8 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const {
-  EDITIONS, MS_PER_YEAR,
-  privateKeyFromRecord, buildPayload, signLicense,
+  EDITIONS, MS_PER_YEAR, MAX_SERVER_NODES,
+  privateKeyFromRecord, buildPayload, signLicense, buildServerPayload, signServerLicense,
 } = require('../lib');
 
 const KEY_FILE = path.join(__dirname, '..', 'private-key.json');
@@ -90,6 +90,36 @@ app.post('/api/issue', (req, res) => {
   saveCustomers(customers);
 
   res.json({ issued });
+});
+
+// One license for one Business Node server (see ../lib.js "Server licenses").
+app.post('/api/issue-server', (req, res) => {
+  const body = req.body || {};
+  const customer = typeof body.customer === 'string' ? body.customer.trim() : '';
+  const maxNodes = parseInt(body.maxNodes, 10);
+  const years = parseFloat(body.years);
+  const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  const serial = (typeof body.serial === 'string' && body.serial.trim()) || `SRV-${stamp.slice(0, 8)}-${stamp.slice(8)}`;
+
+  if (!customer) return res.status(400).json({ error: 'Customer name is required.' });
+  if (customer.includes('|') || serial.includes('|')) {
+    return res.status(400).json({ error: "Customer and serial must not contain '|'." });
+  }
+  if (!Number.isInteger(maxNodes) || maxNodes < 1 || maxNodes > MAX_SERVER_NODES) {
+    return res.status(400).json({ error: `Nodes must be a whole number from 1 to ${MAX_SERVER_NODES}.` });
+  }
+  if (!Number.isFinite(years) || years <= 0) {
+    return res.status(400).json({ error: 'Years must be a positive number.' });
+  }
+
+  const issuedAtMs = Date.now();
+  const expiresAtMs = issuedAtMs + Math.round(years * MS_PER_YEAR);
+  const code = signServerLicense(privateKey, buildServerPayload({ serial, customer, maxNodes, issuedAtMs, expiresAtMs }));
+  const record = { serial, customer, edition: 'server', maxNodes, issuedAtMs, expiresAtMs, code };
+  const customers = loadCustomers();
+  customers.push(record);
+  saveCustomers(customers);
+  res.json({ issued: [record] });
 });
 
 app.listen(PORT, '127.0.0.1', () => {

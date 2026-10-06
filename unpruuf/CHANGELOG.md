@@ -5,6 +5,51 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑06 · Node server: licence check (offline, no phone-home)
+
+**What was done**
+
+The Business Node server now needs a licence, checked on the machine itself:
+
+- **One code per server.** `unpruuf-server-license:v1:…`, signed offline with the same Ed25519 key as
+  the app licences (same public key as `LicenseManager.PUBLIC_KEY_B64`). It carries customer, serial,
+  **how many node addresses** this server may publish (1–500) and the **expiry date**.
+- **Nothing is sent anywhere, no device is identified.** The vendor knows how many licences were sold,
+  not where they run.
+- **Without a licence** the server starts only its setup page. API and Tor stay off. Pasting the code on
+  the setup page ("Lizenz erforderlich") starts everything at once, no restart. Also accepted: a
+  `license.txt` in the data folder, or `NODE_MESH_LICENSE` in the environment (containers).
+- **Node cap:** `NODE_MESH_NODES` above the licence is cut down to the licensed number, with a log line.
+- **Warning 30 days before expiry** on the setup page, the overview page and in the log.
+- **After expiry** new deposits are refused (HTTP 402); fetching what is still stored keeps working, so
+  nobody loses messages. A renewal pasted on the setup page takes effect immediately.
+- **Temp Node** needs no licence (one node, memory only).
+- A signature made for an app licence can never be replayed as a server licence: server codes are signed
+  over a domain prefix, and the code prefix differs.
+- **Issuing:** `license-tool/issue-server.js` (CLI), a new "Issue a server license" card in the licence
+  tool GUI, and `verify.js` now recognises server codes.
+
+**Which bug appeared**
+
+None in the check itself. One thing found while testing: an end-to-end run needs the real private key to
+sign a code the real public key accepts. This sandbox does not have it, so the end-to-end run used a copy of
+the built server with a throw-away key pair swapped in; the code under test was otherwise identical.
+
+**Verification**
+
+`npm test` 65/65 (was 54): signature, tamper, wrong key, app-licence replay, expiry states, file vs
+environment, deposit refusal with fetch still working, the setup page's licence form (CSRF guard, wrong
+code, app code pasted by mistake, activation). A tool-signed code verifies in the server and the other way
+round. Real run: no licence → API not listening; pasted via the setup page → API up, 10 nodes asked for,
+3 licensed → 3 run; expired licence → deposit 402, fetch 200; renewal → deposit 201 again.
+Not run against the real private key and not with real Tor in this pass.
+
+**Limit, said plainly:** the server is readable JavaScript on the customer's own machine. The check keeps
+honest customers honest and shows the contract in the product; it does not stop someone who edits the
+code. "How many servers" stays a contractual limit, as for app seats.
+
+---
+
 ## 2026‑10‑06 · iOS: unpruuf Compliance (whistleblower edition) — NOT compiled
 
 **What was done**

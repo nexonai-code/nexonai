@@ -86,7 +86,78 @@ function verifyLicense(publicKey, code) {
   return parsePayload(payloadBuf.toString('utf8'));
 }
 
+// ---------------------------------------------------------------------------------------------
+// Server licenses (unpruuf Business Node server). Same Ed25519 key pair as the app licenses,
+// but a different prefix, a different payload and a signature DOMAIN: the signed bytes start
+// with SERVER_SIGN_DOMAIN, so a signature made for an app license can never be replayed as a
+// server license (or the other way round) even though one key signs both.
+//   unpruuf-server-license:v1:<base64url(payload)>:<base64url(signature)>
+//   payload = 1|<serial>|<customer>|<maxNodes>|<issuedAtMs>|<expiresAtMs>
+// There is no device binding: a server has no stable device identity (containers, VPS moves),
+// and nothing here phones home — "how many servers run" stays a contractual limit, exactly as
+// for app seats. What the code DOES bound: how many node addresses one server may publish
+// (maxNodes) and until when.
+// ---------------------------------------------------------------------------------------------
+const SERVER_LICENSE_PREFIX = 'unpruuf-server-license:v1:';
+const SERVER_SIGN_DOMAIN = 'unpruuf-server-license-v1\n';
+const MAX_SERVER_NODES = 500;
+
+function buildServerPayload({ serial, customer, maxNodes, issuedAtMs, expiresAtMs }) {
+  return `1|${serial}|${customer}|${maxNodes}|${issuedAtMs}|${expiresAtMs}`;
+}
+
+function parseServerPayload(payload) {
+  const parts = payload.split('|');
+  if (parts.length !== 6 || parts[0] !== '1') return null;
+  const [, serial, customer, maxNodesStr, issuedAtMs, expiresAtMs] = parts;
+  const maxNodes = Number(maxNodesStr);
+  const issued = Number(issuedAtMs);
+  const expires = Number(expiresAtMs);
+  if (!Number.isInteger(maxNodes) || maxNodes < 1 || maxNodes > MAX_SERVER_NODES) return null;
+  if (!Number.isFinite(issued) || !Number.isFinite(expires)) return null;
+  return { serial, customer, maxNodes, issuedAtMs: issued, expiresAtMs: expires };
+}
+
+function serverSignedBytes(payload) {
+  return Buffer.from(SERVER_SIGN_DOMAIN + payload, 'utf8');
+}
+
+function signServerLicense(privateKey, payload) {
+  const signature = crypto.sign(null, serverSignedBytes(payload), privateKey);
+  return `${SERVER_LICENSE_PREFIX}${Buffer.from(payload, 'utf8').toString('base64url')}:${signature.toString('base64url')}`;
+}
+
+function verifyServerLicense(publicKey, code) {
+  const trimmed = code.trim();
+  if (!trimmed.startsWith(SERVER_LICENSE_PREFIX)) return null;
+  const rest = trimmed.substring(SERVER_LICENSE_PREFIX.length);
+  const sepIndex = rest.lastIndexOf(':');
+  if (sepIndex <= 0) return null;
+  let payload, sigBuf;
+  try {
+    payload = Buffer.from(rest.substring(0, sepIndex), 'base64url').toString('utf8');
+    sigBuf = Buffer.from(rest.substring(sepIndex + 1), 'base64url');
+  } catch {
+    return null;
+  }
+  if (sigBuf.length !== 64) return null;
+  let ok;
+  try {
+    ok = crypto.verify(null, serverSignedBytes(payload), publicKey, sigBuf);
+  } catch {
+    return null;
+  }
+  return ok ? parseServerPayload(payload) : null;
+}
+
 module.exports = {
+  SERVER_LICENSE_PREFIX,
+  SERVER_SIGN_DOMAIN,
+  MAX_SERVER_NODES,
+  buildServerPayload,
+  parseServerPayload,
+  signServerLicense,
+  verifyServerLicense,
   LICENSE_PREFIX,
   EDITIONS,
   MS_PER_DAY,

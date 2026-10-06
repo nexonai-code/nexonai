@@ -100,6 +100,28 @@
   </div>
 
   <div class="card">
+    <h2>Issue a server license</h2>
+    <div class="row">
+      <div>
+        <label>Nodes (1-500)</label>
+        <input id="srvNodes" type="number" value="10" min="1" max="500">
+      </div>
+      <div>
+        <label>Years</label>
+        <input id="srvYears" type="number" value="1" min="0.1" step="0.1">
+      </div>
+    </div>
+    <label>Customer</label>
+    <input id="srvCustomer" type="text" placeholder="e.g. Acme GmbH">
+    <label>Serial (optional)</label>
+    <input id="srvSerial" type="text" placeholder="e.g. ACME-SRV-01 — empty = automatic">
+    <button id="srvBtn">Generate server license</button>
+    <div id="srvErr" class="err"></div>
+    <div id="srvResult"></div>
+    <div class="note">One code per Business Node server. The customer pastes it on the server's setup page (or puts it in license.txt). It limits how many node addresses that server can publish and until when. Renewal: issue a new code, same serial, and paste it over the old one.</div>
+  </div>
+
+  <div class="card">
     <h2>Previously issued</h2>
     <div id="tableWrap"><div class="empty">Loading…</div></div>
   </div>
@@ -126,7 +148,7 @@ async function loadCustomers() {
     return `<tr>
       <td>${escapeHtml(c.serial)}</td>
       <td>${escapeHtml(c.customer)}</td>
-      <td>${escapeHtml(c.edition)}</td>
+      <td>${c.edition === 'server' ? 'server · ' + escapeHtml(c.maxNodes) + ' nodes' : escapeHtml(c.edition)}</td>
       <td>${fmtDate(c.issuedAtMs)}</td>
       <td class="${expired ? 'expired' : ''}">${fmtDate(c.expiresAtMs)}</td>
       <td><button class="copy" data-code="${escapeHtml(c.code)}">copy</button></td>
@@ -181,6 +203,41 @@ document.getElementById('issueBtn').addEventListener('click', async () => {
     await loadCustomers();
   } catch (err) {
     document.getElementById('err').textContent = 'Could not reach the local server — is it still running?';
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById('srvBtn').addEventListener('click', async () => {
+  const button = document.getElementById('srvBtn');
+  const body = {
+    customer: document.getElementById('srvCustomer').value,
+    maxNodes: document.getElementById('srvNodes').value,
+    years: document.getElementById('srvYears').value,
+    serial: document.getElementById('srvSerial').value,
+  };
+  document.getElementById('srvErr').textContent = '';
+  document.getElementById('srvResult').innerHTML = '';
+  button.disabled = true;
+  try {
+    const res = await fetch('/api/issue-server', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('srvErr').textContent = data.error || 'Failed.';
+      return;
+    }
+    const rec = data.issued[0];
+    const div = document.createElement('div');
+    div.className = 'code-box';
+    div.innerHTML = `<button class="copy" data-code="${escapeHtml(rec.code)}">copy</button><b>${escapeHtml(rec.serial)} · ${escapeHtml(rec.maxNodes)} nodes</b><br>${escapeHtml(rec.code)}`;
+    document.getElementById('srvResult').appendChild(div);
+    await loadCustomers();
+  } catch (err) {
+    document.getElementById('srvErr').textContent = 'Could not reach the local server — is it still running?';
   } finally {
     button.disabled = false;
   }

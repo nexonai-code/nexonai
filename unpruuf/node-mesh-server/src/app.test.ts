@@ -408,3 +408,30 @@ test("metrics count deposits, fetches and rejections without storing anything ab
     store.close();
   }
 });
+
+test("an expired or missing server license refuses new deposits (402) but never blocks reading", async () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-app-test-")), "node-mesh.sqlite");
+  const store = new NodeStore(file);
+  let blocked: string | null = null;
+  const server = createApp(store, OWNER_SECRET, () => [], undefined, undefined, () => blocked).listen(0);
+  const { port } = server.address() as AddressInfo;
+  const base = `http://127.0.0.1:${port}`;
+  const body = JSON.stringify({ routing_tag: "tagL", ciphertext: "aGk=" });
+  try {
+    assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body })).status, 201);
+    blocked = "license_expired";
+    const refused = await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body });
+    assert.equal(refused.status, 402);
+    assert.deepEqual(await refused.json(), { error: "license_expired" });
+    // what was deposited before is still readable, and so is the health check
+    const fetched = await fetch(`${base}/fetch?tag=tagL`);
+    assert.equal(fetched.status, 200);
+    assert.equal(((await fetched.json()) as { blobs: string[] }).blobs.length, 1);
+    assert.equal((await fetch(`${base}/health`)).status, 200);
+    blocked = null; // a renewal takes effect without a restart
+    assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body })).status, 201);
+  } finally {
+    server.close();
+    store.close();
+  }
+});

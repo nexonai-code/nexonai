@@ -7,7 +7,7 @@ import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
 import {
-  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, NODE_COUNT, NODE_PROFILE, NODE_SLOT, PORT, POW,
+  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_COUNT, NODE_PROFILE, NODE_SLOT, PORT, POW,
   RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
 } from "./config";
 import {
@@ -15,6 +15,7 @@ import {
 } from "./nodeIdentity";
 import { NodeOnionService } from "./tor/onionService";
 import { Metrics } from "./metrics";
+import { LicenseGuard } from "./license";
 
 // Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
 // Tor's own working files go to a throwaway temp folder that is deleted on exit.
@@ -36,14 +37,22 @@ if (ephemeral) {
 }
 const sealed = !ephemeral && identity.keyStorage === "sealed";
 
-// A Temp Node is one address for one chat by definition.
-const nodeCount = ephemeral ? 1 : NODE_COUNT;
+// Server license (license.ts): checked offline. A Temp Node is one address for one chat and needs
+// none. Every other server starts its API and its onion services only once a genuine license is
+// present — until then only the setup page runs, where the license is pasted in.
+const license = new LicenseGuard({ filePath: ephemeral ? null : LICENSE_PATH, envCode: process.env.NODE_MESH_LICENSE, free: ephemeral });
+
+// A Temp Node is one address for one chat by definition. Otherwise the license caps the node count.
+let nodeCount = ephemeral ? 1 : Math.min(NODE_COUNT, Math.max(1, license.maxNodes()));
 const store = new NodeStore(ephemeral ? ":memory:" : DB_PATH, identity.ttlHours);
 
 let onion: NodeOnionService | null = null;
-if (TOR_ENABLED) {
+let apiServer: Server | null = null;
+let serviceStarted = false;
+
+function createOnionService(): NodeOnionService {
   const saved = ephemeral ? [] : identity.onionKeys ?? [];
-  onion = new NodeOnionService({
+  return new NodeOnionService({
     workDir: torWorkDir,
     torBinDir: TOR_BIN_DIR,
     localPort: PORT,
@@ -90,7 +99,7 @@ const publicAddress = (): string | null => (onion ? onion.getStatus().onionAddre
 const publicAddresses = (): string[] =>
   onion ? onion.getStatus().onionAddresses : operatorAddress ? [operatorAddress] : [];
 const metrics = new Metrics();
-const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics);
+const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics, () => license.depositBlocked());
 
 const adminApp = createAdminApp(
   {
@@ -114,15 +123,25 @@ const adminApp = createAdminApp(
     torStatus: () => onion?.getStatus() ?? null,
     stats: () => store.stats(),
     metrics,
-    configuredNodes: nodeCount,
+    get configuredNodes() {
+      return nodeCount;
+    },
     registeredNodes: () => (onion ? onion.registeredNodeCount() : Promise.resolve(null)),
+    license: () => license.summary(),
+    applyLicense: async (code: string) => {
+      const result = license.apply(code);
+      if (!result.ok) return result;
+      console.log(`[license] applied — ${result.license.customer}, serial ${result.license.serial}, ${result.license.maxNodes} node(s), until ${new Date(result.license.expiresAtMs).toISOString().slice(0, 10)}`);
+      if (!serviceStarted) startService();
+      return { ok: true, summary: license.summary() };
+    },
   },
   ADMIN_PORT,
 );
 
 const kind = ephemeral
   ? "Temp Node"
-  : `Business Node server (slot ${NODE_SLOT}/3, ${nodeCount} node${nodeCount === 1 ? "" : "s"})`;
+  : `Business Node server (slot ${NODE_SLOT}/3)`;
 console.log(`unpruuf ${kind} — profile "${NODE_PROFILE.name}" (TTL ${NODE_PROFILE.ttlHours}h)`);
 if (ephemeral) console.log("[identity] Temp Node — identity, onion key and messages exist in memory only");
 else console.log(wasCreated ? "[identity] new node identity created" : "[identity] existing node identity loaded");
@@ -132,11 +151,6 @@ if (sealed && isLocked(identity)) {
 } else if (sealed) {
   console.log("[keys] sealed storage — after a restart this server stays locked until your app unlocks it");
 }
-
-const apiServer: Server = app.listen(PORT, "127.0.0.1", () => {
-  console.log(`[api] listening on 127.0.0.1:${PORT} — reachable from outside only through the onion service`);
-});
-apiServer.keepAliveTimeout = 5_000;
 
 const adminServer: Server = adminApp.listen(ADMIN_PORT, adminBind, () => {
   console.log(`[setup] open http://localhost:${ADMIN_PORT} on THIS computer to connect your app (owner QR)`);
@@ -151,29 +165,69 @@ async function printOwnerCode(address: string): Promise<void> {
   console.log("========================================================================================\n");
 }
 
-if (onion) {
-  onion
-    .start()
-    .then(async (address) => {
-      const st = onion!.getStatus();
-      const all = st.onionAddresses;
-      if (st.locked) {
-        console.log(`[tor] locked — only the control onion is online: ${st.controlAddress}`);
-        return;
-      }
-      if (all.length > 1) console.log(`[tor] ${all.length} onion addresses registered, first: ${address} (Tor proof-of-work defense on)`);
-      else console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
-      if (ephemeral || wasCreated) await printOwnerCode(address);
-    })
-    .catch((err) => {
-      console.error(`[tor] could not start yet: ${(err as Error).message}`);
-      console.error("[tor] keeps retrying automatically — the setup page shows the current state");
-    });
-} else {
-  console.warn("[tor] NODE_MESH_TOR=0 — this process publishes NO onion service itself.");
-  console.warn(`[tor] Only valid if you run your own Tor hidden service mapping port 80 to 127.0.0.1:${PORT}.`);
-  if (operatorAddress && (ephemeral || wasCreated)) void printOwnerCode(operatorAddress);
+// API + onion services. Runs once: at start when a license is already present, otherwise the
+// moment the license is pasted on the setup page.
+function startService(): void {
+  if (serviceStarted) return;
+  serviceStarted = true;
+  nodeCount = ephemeral ? 1 : Math.min(NODE_COUNT, Math.max(1, license.maxNodes()));
+  if (!ephemeral && NODE_COUNT > nodeCount) {
+    console.warn(`[license] NODE_MESH_NODES=${NODE_COUNT}, but this license allows ${nodeCount} — running ${nodeCount} node(s)`);
+  }
+  console.log(`[node] ${nodeCount} node${nodeCount === 1 ? "" : "s"}`);
+
+  apiServer = app.listen(PORT, "127.0.0.1", () => {
+    console.log(`[api] listening on 127.0.0.1:${PORT} — reachable from outside only through the onion service`);
+  });
+  apiServer.keepAliveTimeout = 5_000;
+
+  if (TOR_ENABLED) {
+    onion = createOnionService();
+    onion
+      .start()
+      .then(async (address) => {
+        const st = onion!.getStatus();
+        const all = st.onionAddresses;
+        if (st.locked) {
+          console.log(`[tor] locked — only the control onion is online: ${st.controlAddress}`);
+          return;
+        }
+        if (all.length > 1) console.log(`[tor] ${all.length} onion addresses registered, first: ${address} (Tor proof-of-work defense on)`);
+        else console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
+        if (ephemeral || wasCreated) await printOwnerCode(address);
+      })
+      .catch((err) => {
+        console.error(`[tor] could not start yet: ${(err as Error).message}`);
+        console.error("[tor] keeps retrying automatically — the setup page shows the current state");
+      });
+  } else {
+    console.warn("[tor] NODE_MESH_TOR=0 — this process publishes NO onion service itself.");
+    console.warn(`[tor] Only valid if you run your own Tor hidden service mapping port 80 to 127.0.0.1:${PORT}.`);
+    if (operatorAddress && (ephemeral || wasCreated)) void printOwnerCode(operatorAddress);
+  }
 }
+
+if (license.activated()) {
+  startService();
+} else {
+  console.log("[license] LICENSE REQUIRED — this server runs once it has a server license from NexonAI.");
+  console.log(`[license] Paste it on the setup page (http://localhost:${ADMIN_PORT}) or put it in ${LICENSE_PATH}.`);
+}
+
+// Logs the license state when it changes (valid → expiring → expired), and once at start.
+let lastLicenseStatus = "";
+function logLicense(): void {
+  const l = license.summary();
+  if (l.status === lastLicenseStatus || l.status === "free") return;
+  lastLicenseStatus = l.status;
+  const until = l.expiresAtMs ? new Date(l.expiresAtMs).toISOString().slice(0, 10) : "";
+  if (l.status === "valid") console.log(`[license] valid until ${until} (${l.customer}, up to ${l.maxNodes} nodes)`);
+  else if (l.status === "expiring") console.warn(`[license] expires in ${l.daysLeft} day(s), on ${until} — paste the renewal on the setup page`);
+  else if (l.status === "expired") console.error(`[license] EXPIRED on ${until} — new deposits are refused, fetching still works. Paste a new license on the setup page.`);
+  else if (l.status === "invalid") console.error("[license] the stored license code is not valid");
+}
+logLicense();
+setInterval(logLicense, 60 * 60 * 1000).unref();
 
 // The only deletion path (NODE_MESH_SPEC.md §4) — Reset below never touches message data.
 setInterval(() => {
@@ -185,7 +239,7 @@ setInterval(() => {
 // keep-alive sockets, confirm the onion service is still registered (re-add with the same key if
 // not), fold the SQLite WAL back. Never messages, never rate-limit counters, never the address.
 async function resetHygiene(label: string): Promise<void> {
-  apiServer.closeIdleConnections();
+  apiServer?.closeIdleConnections();
   adminServer.closeIdleConnections();
   store.checkpointWal();
   let torNote = "tor disabled";
@@ -203,7 +257,7 @@ setTimeout(() => {
 
 function shutdown(): void {
   onion?.stop();
-  apiServer.close();
+  apiServer?.close();
   adminServer.close();
   store.close();
   if (ephemeral) fs.rmSync(torWorkDir, { recursive: true, force: true });

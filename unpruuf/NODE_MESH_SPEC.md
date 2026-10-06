@@ -731,3 +731,14 @@ geöffnet wird.
    warten — darum Bestätigung mit Warnung („im Zweifel neuen Server aufsetzen“). Ein RAM-Abbild eines
    laufenden VPS (durch den Hoster) enthält die Schlüssel weiterhin. `NODE_MESH_KEY_STORAGE=disk`
    behält das alte Verhalten (unbeaufsichtigte Neustarts).
+
+## 14. Server licence (2026‑10‑06)
+
+A Business Node server runs with an offline-checked licence (`node-mesh-server/src/license.ts`):
+`unpruuf-server-license:v1:<b64url payload>:<b64url Ed25519 signature>`, payload
+`1|serial|customer|maxNodes|issuedAtMs|expiresAtMs`, signature over `"unpruuf-server-license-v1\n" + payload`
+with the same key pair as the app licences. No network, no device identification, no telemetry. The licence
+bounds the node count (1–500) and the expiry. Without a licence only the setup page runs; after expiry
+deposits are refused with 402 while fetching keeps working. A Temp Node needs none. The server stays
+structurally blind: the check reads one local file and learns nothing about users or contacts.
+

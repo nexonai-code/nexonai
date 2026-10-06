@@ -49,6 +49,21 @@ unter `http://localhost:8790`.
 Profil und Slot setzen, den angezeigten QR mit der unpruuf-App scannen. Gerät am Strom lassen und
 die Akku-Optimierung für die App ausschalten (die App fragt danach).
 
+## Die Server-Lizenz
+
+Jeder Node-Server läuft mit einer Lizenz. Sie bekommen von uns **einen Lizenzcode je Server**.
+
+1. Beim ersten Start zeigt die Einrichtungsseite „Lizenz erforderlich“. Code einfügen, **Lizenz
+   aktivieren**. Der Server startet sofort.
+2. Der Code legt fest, **wie viele Nodes** dieser Server betreiben darf und **bis wann**.
+3. 30 Tage vor Ablauf weist die Einrichtungsseite darauf hin. Den Verlängerungscode einfach dort
+   einfügen — der Server läuft dabei weiter.
+4. Läuft die Lizenz ab, nimmt der Server **keine neuen Nachrichten** mehr an. Bereits abgelegte
+   Pakete können weiter abgeholt werden, es geht nichts verloren.
+
+Der Code wird nur auf Ihrem Rechner geprüft. Er sendet nichts an uns, und wir sehen nicht, wo er läuft.
+Der Betrieb liegt vollständig bei Ihnen: Ihr Server, Ihre Schlüssel, Ihre Daten.
+
 ## Der QR-Code ist Ihr Schreibschlüssel
 
 - Nur in **Ihre eigene** unpruuf-App scannen.

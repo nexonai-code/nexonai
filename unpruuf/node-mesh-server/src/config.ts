@@ -44,6 +44,8 @@ export const PACKAGE_ROOT = path.join(__dirname, "..");
 export const DATA_DIR = process.env.NODE_MESH_DATA_DIR ?? path.join(PACKAGE_ROOT, "data", `node-${NODE_SLOT}`);
 export const DB_PATH = process.env.NODE_MESH_DB_PATH ?? path.join(DATA_DIR, "node-mesh.sqlite");
 export const IDENTITY_PATH = path.join(DATA_DIR, "node-mesh-identity.json");
+// The server license (license.ts): written by the setup page, or NODE_MESH_LICENSE in the environment.
+export const LICENSE_PATH = path.join(DATA_DIR, "license.txt");
 export const TOR_BIN_DIR = process.env.NODE_MESH_TOR_BIN_DIR ?? path.join(PACKAGE_ROOT, "tor-bin");
 
 // Tor is mandatory for a real node. NODE_MESH_TOR=0 exists only for automated tests and for an
