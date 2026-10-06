@@ -7,7 +7,7 @@ import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
 import {
-  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_COUNT, NODE_PROFILE, NODE_SLOT, PORT, POW,
+  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW,
   RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
 } from "./config";
 import {
@@ -43,7 +43,8 @@ const sealed = !ephemeral && identity.keyStorage === "sealed";
 const license = new LicenseGuard({ filePath: ephemeral ? null : LICENSE_PATH, envCode: process.env.NODE_MESH_LICENSE, free: ephemeral });
 
 // A Temp Node is one address for one chat by definition. Otherwise the license caps the node count.
-let nodeCount = ephemeral ? 1 : Math.min(NODE_COUNT, Math.max(1, license.maxNodes()));
+// Not a setting: a licensed server runs every node its licence allows (never more than 250).
+let nodeCount = ephemeral ? 1 : Math.max(1, license.maxNodes());
 const store = new NodeStore(ephemeral ? ":memory:" : DB_PATH, identity.ttlHours);
 
 let onion: NodeOnionService | null = null;
@@ -170,9 +171,9 @@ async function printOwnerCode(address: string): Promise<void> {
 function startService(): void {
   if (serviceStarted) return;
   serviceStarted = true;
-  nodeCount = ephemeral ? 1 : Math.min(NODE_COUNT, Math.max(1, license.maxNodes()));
-  if (!ephemeral && NODE_COUNT > nodeCount) {
-    console.warn(`[license] NODE_MESH_NODES=${NODE_COUNT}, but this license allows ${nodeCount} — running ${nodeCount} node(s)`);
+  nodeCount = ephemeral ? 1 : Math.max(1, license.maxNodes());
+  if (process.env.NODE_MESH_NODES) {
+    console.warn("[node] NODE_MESH_NODES is no longer a setting and is ignored — a server always runs the full licensed number of nodes.");
   }
   console.log(`[node] ${nodeCount} node${nodeCount === 1 ? "" : "s"}`);
 

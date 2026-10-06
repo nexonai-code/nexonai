@@ -70,4 +70,16 @@
     <string name="queued_for">în așteptare de %s</string>
     <string name="relay_active">RELEU ACTIV</string>
     <string name="connecting">SE CONECTEAZĂ</string>
+    <string name="license_title">LICENȚĂ</string>
+    <string name="license_required_body">Acest node pornește după ce introduci codul de licență primit de la NexonAI. Se verifică doar pe acest dispozitiv și nu este trimis nicăieri.</string>
+    <string name="license_field">Cod de licență</string>
+    <string name="license_activate">Activează licența</string>
+    <string name="license_customer">Client: %1$s</string>
+    <string name="license_valid_until">Licență valabilă până la %1$s</string>
+    <string name="license_expiring">Licența expiră în %1$d zile. Lipește aici codul de prelungire — node-ul continuă să funcționeze.</string>
+    <string name="license_expired">Licența a expirat la %1$s. Mesajele noi sunt refuzate; ce este deja stocat poate fi citit în continuare. Lipește aici un cod nou.</string>
+    <string name="license_invalid_stored">Codul de licență salvat nu este valid. Lipește-l din nou.</string>
+    <string name="license_wrong_type">Aceasta este o licență de aplicație. Acest node are nevoie de licența de server (începe cu unpruuf-server-license:).</string>
+    <string name="license_invalid">Acest cod de licență nu este valid.</string>
+    <string name="license_needed_for_qr">Introdu mai întâi licența — apoi apare aici QR-ul de proprietar.</string>
 </resources>

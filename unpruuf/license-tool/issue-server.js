@@ -12,11 +12,12 @@ const { MAX_SERVER_NODES, MS_PER_YEAR, privateKeyFromRecord, buildServerPayload,
 function usage(msg) {
   if (msg) console.error(msg + '\n');
   console.error(`Usage:
-  node issue-server.js --customer "<name>" --nodes <1-${MAX_SERVER_NODES}> [--years <N=1>]
+  node issue-server.js --customer "<name>" [--nodes <1-${MAX_SERVER_NODES}, default ${MAX_SERVER_NODES}>] [--years <N=1>]
                         [--serial <SRV-0001>] [--out <manifest.csv>]
 
   --customer   Free text, shown on the server's setup page. Must not contain '|'.
-  --nodes      How many node addresses (onion services) this server may publish.
+  --nodes      How many node addresses (onion services) this server runs. The server always runs
+               exactly this many (no setting). Default and maximum: ${MAX_SERVER_NODES}.
   --years      License lifetime from now. Default 1. Fractional values are fine.
   --serial     Your own bookkeeping number for this server license (default SRV-<yyyymmdd-hhmmss>).
   --out        Append a line to a CSV manifest for your own records.`);
@@ -32,7 +33,7 @@ function arg(name, def) {
 }
 
 const customer = arg('customer');
-const nodes = parseInt(arg('nodes', ''), 10);
+const nodes = parseInt(arg('nodes', String(MAX_SERVER_NODES)), 10);
 const years = parseFloat(arg('years', '1'));
 const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
 const serial = arg('serial', `SRV-${stamp.slice(0, 8)}-${stamp.slice(8)}`);

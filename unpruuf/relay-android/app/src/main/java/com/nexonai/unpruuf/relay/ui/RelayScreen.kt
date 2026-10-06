@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
+import com.nexonai.unpruuf.relay.core.NodeLicense
 import com.nexonai.unpruuf.relay.core.RelayConstants
 import com.nexonai.unpruuf.relay.core.RelayEventLog
 import com.nexonai.unpruuf.relay.service.RelayService
@@ -61,6 +62,7 @@ fun RelayScreen(service: RelayService?) {
     val nodeMeshProfile by service.nodeMeshProfile.collectAsState()
     val nodeMeshSlot by service.nodeMeshSlot.collectAsState()
     val ownerConnectionString by service.ownerConnectionString.collectAsState()
+    val licenseSummary by service.licenseSummary.collectAsState()
     val lastHygiene by service.lastHygiene.collectAsState()
     var pendingModeSwitch by remember { mutableStateOf<Boolean?>(null) }
     var showOwnerRotateConfirm by remember { mutableStateOf(false) }
@@ -108,8 +110,10 @@ fun RelayScreen(service: RelayService?) {
             )
 
             if (nodeMeshMode) {
+                NodeMeshLicenseCard(summary = licenseSummary, onApply = { service.applyLicense(it) })
                 NodeMeshOwnerCard(
                     ownerConnectionString = ownerConnectionString,
+                    licensed = licenseSummary?.let { it.status != NodeLicense.Status.MISSING && it.status != NodeLicense.Status.INVALID } ?: false,
                     onCopy = { clipboard.setText(AnnotatedString(it)) }
                 )
                 NodeMeshSettingsCard(
@@ -551,8 +555,64 @@ private fun ModeCard(nodeMeshMode: Boolean, onRequestSwitch: (Boolean) -> Unit) 
     }
 }
 
+private val licenseDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+/** The node's server licence: shows its state and takes a pasted code (first activation or renewal). */
 @Composable
-private fun NodeMeshOwnerCard(ownerConnectionString: String?, onCopy: (String) -> Unit) {
+private fun NodeMeshLicenseCard(summary: NodeLicense.Summary?, onApply: (String) -> NodeLicense.ApplyResult) {
+    var code by remember { mutableStateOf("") }
+    var failure by remember { mutableStateOf<NodeLicense.ApplyResult?>(null) }
+    val status = summary?.status ?: NodeLicense.Status.MISSING
+    val until = summary?.expiresAtMs?.let { licenseDateFormat.format(it) } ?: ""
+    val needsCode = status != NodeLicense.Status.VALID
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(stringResource(R.string.license_title), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            when (status) {
+                NodeLicense.Status.MISSING -> Text(stringResource(R.string.license_required_body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                NodeLicense.Status.INVALID -> Text(stringResource(R.string.license_invalid_stored), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                NodeLicense.Status.EXPIRED -> Text(stringResource(R.string.license_expired, until), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                NodeLicense.Status.EXPIRING -> Text(stringResource(R.string.license_expiring, summary?.daysLeft ?: 0L), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                NodeLicense.Status.VALID -> Text(stringResource(R.string.license_valid_until, until), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            }
+            summary?.customer?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.license_customer, it), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (needsCode) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { code = it; failure = null },
+                    label = { Text(stringResource(R.string.license_field)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                when (failure) {
+                    NodeLicense.ApplyResult.WrongType -> Text(stringResource(R.string.license_wrong_type), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                    NodeLicense.ApplyResult.Invalid -> Text(stringResource(R.string.license_invalid), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                    else -> {}
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    enabled = code.isNotBlank(),
+                    onClick = {
+                        val result = onApply(code)
+                        if (result is NodeLicense.ApplyResult.Ok) { code = ""; failure = null } else failure = result
+                    }
+                ) { Text(stringResource(R.string.license_activate)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NodeMeshOwnerCard(ownerConnectionString: String?, licensed: Boolean, onCopy: (String) -> Unit) {
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -588,6 +648,13 @@ private fun NodeMeshOwnerCard(ownerConnectionString: String?, onCopy: (String) -
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.copy_owner_code))
                 }
+            } else if (!licensed) {
+                Text(
+                    stringResource(R.string.license_needed_for_qr),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             } else {
                 Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

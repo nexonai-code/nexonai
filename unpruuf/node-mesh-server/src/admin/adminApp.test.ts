@@ -288,3 +288,46 @@ test("the setup page takes a server license: refuses bad codes, activates a good
     listener.close();
   }
 });
+
+test("the setup page exports a node list file for the app, but never while locked and never without the CSRF header", async () => {
+  const { parseNodeListFile } = await import("../nodeList");
+  const port = 20000 + Math.floor(Math.random() * 1000);
+  let locked = false;
+  const addresses = Array.from({ length: 5 }, (_, i) => `node${i}${"a".repeat(50)}.onion`);
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "Owner_secret_0123456789",
+      profile: PROFILES.standard,
+      slot: 2,
+      ephemeral: false,
+      torEnabled: true,
+      publicAddress: () => addresses[0],
+      publicAddresses: () => addresses,
+      controlAddress: () => "ctrl.onion",
+      isLocked: () => locked,
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      license: () => ({ status: "valid", customer: "Acme GmbH", serial: "S", maxNodes: 5, expiresAtMs: Date.now() + 1e9, daysLeft: 100 }),
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  try {
+    assert.equal((await post(port, `localhost:${port}`, "/export-list", {})).status, 403);
+    const ok = await post(port, `localhost:${port}`, "/export-list", { "x-unpruuf-admin": "1" });
+    assert.equal(ok.status, 200);
+    const parsed = parseNodeListFile(ok.body)!;
+    assert.equal(parsed.name, "Acme GmbH · Server 2");
+    assert.equal(parsed.ownerSecret, "Owner_secret_0123456789");
+    assert.equal(parsed.control, "ctrl.onion");
+    assert.deepEqual(parsed.addresses, addresses);
+    const page = await request(port, `localhost:${port}`, "/");
+    assert.match(page.body, /Liste als Datei speichern/);
+    locked = true;
+    assert.equal((await post(port, `localhost:${port}`, "/export-list", { "x-unpruuf-admin": "1" })).status, 423);
+    const lockedPage = await request(port, `localhost:${port}`, "/");
+    assert.doesNotMatch(lockedPage.body, /Liste als Datei speichern/);
+  } finally {
+    listener.close();
+  }
+});

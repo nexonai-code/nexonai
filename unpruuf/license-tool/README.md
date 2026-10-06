@@ -79,10 +79,10 @@ one is entered in the app's Settings → License, replacing it.
 One code per Business Node server, signed with the SAME key pair:
 
 ```bash
-node issue-server.js --customer "Acme GmbH" --nodes 40 --years 1 --serial ACME-SRV-01 --out servers.csv
+node issue-server.js --customer "Acme GmbH" --years 1 --serial ACME-SRV-01 --out servers.csv   # 250 nodes
 ```
 
-The code (`unpruuf-server-license:v1:…`) carries the node limit (1–500) and the expiry. The customer
+The code (`unpruuf-server-license:v1:…`) carries the number of nodes (default and maximum 250) and the expiry. The server runs exactly that many; nobody can choose a different number. The customer
 pastes it on the server's setup page. Renewal: issue again with the same `--serial` and paste the new
 code over the old one; nothing is revoked, the old one just expires. The GUI has the same thing as
 "Issue a server license". The public key is compiled into `node-mesh-server/src/license.ts`

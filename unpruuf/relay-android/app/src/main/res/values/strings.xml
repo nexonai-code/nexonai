@@ -71,4 +71,16 @@
     <string name="queued_for">queued %s</string>
     <string name="relay_active">RELAY ACTIVE</string>
     <string name="connecting">CONNECTING</string>
+    <string name="license_title">LICENSE</string>
+    <string name="license_required_body">This node runs once you enter the licence code you received from NexonAI. It is checked on this device only and never sent anywhere.</string>
+    <string name="license_field">Licence code</string>
+    <string name="license_activate">Activate licence</string>
+    <string name="license_customer">Customer: %1$s</string>
+    <string name="license_valid_until">Licence valid until %1$s</string>
+    <string name="license_expiring">Licence expires in %1$d days. Paste the renewal code here — the node keeps running.</string>
+    <string name="license_expired">Licence expired on %1$s. New messages are refused; what is already stored can still be read. Paste a new code here.</string>
+    <string name="license_invalid_stored">The saved licence code is not valid. Paste it again.</string>
+    <string name="license_wrong_type">That is an app licence. This node needs the server licence (starts with unpruuf-server-license:).</string>
+    <string name="license_invalid">This licence code is not valid.</string>
+    <string name="license_needed_for_qr">Enter the licence first — then the owner QR appears here.</string>
 </resources>

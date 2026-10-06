@@ -54,7 +54,7 @@ test("tampering, a foreign key, an app license and a missing signature domain ar
   // raise the node limit inside the payload, keep the old signature
   const [, rest] = [good.slice(0, SERVER_LICENSE_PREFIX.length), good.slice(SERVER_LICENSE_PREFIX.length)];
   const sig = rest.slice(rest.lastIndexOf(":") + 1);
-  const forged = `${SERVER_LICENSE_PREFIX}${Buffer.from(payload({ maxNodes: 500 }), "utf8").toString("base64url")}:${sig}`;
+  const forged = `${SERVER_LICENSE_PREFIX}${Buffer.from(payload({ maxNodes: 250 }), "utf8").toString("base64url")}:${sig}`;
   assert.equal(verifyServerLicense(forged, PUB), null);
 
   const other = crypto.generateKeyPairSync("ed25519");
@@ -66,7 +66,7 @@ test("tampering, a foreign key, an app license and a missing signature domain ar
   assert.equal(verifyServerLicense(good.slice(0, -4), PUB), null);
   assert.equal(verifyServerLicense("", PUB), null);
   // node limit outside 1..500
-  assert.equal(verifyServerLicense(sign(payload({ maxNodes: 501 })), PUB), null);
+  assert.equal(verifyServerLicense(sign(payload({ maxNodes: 251 })), PUB), null);
   assert.equal(verifyServerLicense(sign(payload({ maxNodes: 0 })), PUB), null);
 });
 

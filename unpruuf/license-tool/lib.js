@@ -100,7 +100,7 @@ function verifyLicense(publicKey, code) {
 // ---------------------------------------------------------------------------------------------
 const SERVER_LICENSE_PREFIX = 'unpruuf-server-license:v1:';
 const SERVER_SIGN_DOMAIN = 'unpruuf-server-license-v1\n';
-const MAX_SERVER_NODES = 500;
+const MAX_SERVER_NODES = 250; // fixed ceiling: a server never runs more than 250 nodes
 
 function buildServerPayload({ serial, customer, maxNodes, issuedAtMs, expiresAtMs }) {
   return `1|${serial}|${customer}|${maxNodes}|${issuedAtMs}|${expiresAtMs}`;

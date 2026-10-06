@@ -4,6 +4,7 @@ import { OnionStatus } from "../tor/onionService";
 import { Profile, NodeSlot } from "../profiles";
 import { Metrics } from "../metrics";
 import type { LicenseError, LicenseSummary } from "../license";
+import { buildNodeListFile } from "../nodeList";
 
 /**
  * Local setup page — the operator scans the owner QR from here with their own unpruuf app
@@ -172,6 +173,21 @@ export function createAdminApp(state: AdminState, adminPort: number): Express {
     return res.json({ unlocked: true });
   });
 
+  // The node list for the owner's own app (nodeList.ts). Contains the owner secret, so: loopback
+  // only (see above), custom-header CSRF guard, and never for a locked server.
+  app.post("/export-list", (req, res) => {
+    if (req.header("x-unpruuf-admin") !== "1") return res.status(403).json({ error: "forbidden" });
+    if (state.isLocked?.()) return res.status(423).json({ error: "locked" });
+    const addresses = state.publicAddresses ? state.publicAddresses() : [];
+    if (state.ephemeral || addresses.length === 0) return res.status(409).json({ error: "no nodes to export yet" });
+    const customer = state.license?.().customer;
+    const name = `${customer ? customer + " · " : ""}Server ${state.slot}`;
+    res.setHeader("Content-Disposition", `attachment; filename="unpruuf-nodes-server-${state.slot}.txt"`);
+    res.type("text/plain").send(
+      buildNodeListFile({ name, ownerSecret: state.getOwnerSecret(), control: state.controlAddress?.() ?? null, addresses }),
+    );
+  });
+
   // Paste a server license (or a renewal). Same custom-header CSRF guard as rotation/unlock.
   app.post("/license", express.json({ limit: "4kb" }), async (req, res) => {
     if (req.header("x-unpruuf-admin") !== "1") return res.status(403).json({ error: "forbidden" });
@@ -257,6 +273,10 @@ ${qrBlock}
 ${s.addresses.length > 1 ? `<div class="card"><h2>Nodes auf diesem Server: ${s.addresses.length}</h2>
 <p>Ein Scan reicht: Die App holt sich alle ${s.addresses.length} Adressen selbst und gibt jedem Kontakt eigene Nodes. Kein Kontakt sieht diese Liste.</p>
 <details><summary>Adressen anzeigen</summary><p class="code">${s.addresses.map(escapeHtml).join("<br>")}</p></details></div>` : ""}
+${!s.ephemeral && !s.locked && s.addresses.length > 0 ? `<div class="card"><h2>Node-Liste für deine App</h2>
+<p>Eine Datei mit allen ${s.addresses.length} Node${s.addresses.length === 1 ? "" : "s"} dieses Servers. In der unpruuf-App: <b>Einstellungen → Node-Listen → Liste importieren</b>.</p>
+<p class="warn"><b>Die Datei enthält deinen Schreibschlüssel.</b> Nur auf dein eigenes Handy übertragen (Kabel oder vertrauter Weg) und danach löschen. Niemals an einen Kontakt geben.</p>
+<button id="export-list" class="go">Liste als Datei speichern</button></div>` : ""}
 ${s.canRotate ? `<div class="card"><h2>3. Schreibschlüssel erneuern</h2>
 <p>Nur nötig, wenn der Owner-QR in falsche Hände geraten sein könnte. Danach den neuen QR in deine eigene App scannen. Kontakte sind nicht betroffen.</p>
 <button id="rotate">Schreibschlüssel erneuern</button></div>` : ""}
@@ -266,6 +286,12 @@ const ub=document.getElementById('unlock');
 if(ub)ub.onclick=async()=>{const code=document.getElementById('code').value;
 const r=await fetch('/unlock',{method:'POST',headers:{'X-Unpruuf-Admin':'1','Content-Type':'application/json'},body:JSON.stringify({code})});
 if(r.ok)location.reload();else alert('Falscher Owner-Code');};
+const eb=document.getElementById('export-list');
+if(eb)eb.onclick=async()=>{const r=await fetch('/export-list',{method:'POST',headers:{'X-Unpruuf-Admin':'1'}});
+if(!r.ok){alert('Export nicht möglich (Server gesperrt oder noch keine Adressen).');return;}
+const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+const m=/filename="([^"]+)"/.exec(r.headers.get('Content-Disposition')||'');a.download=m?m[1]:'unpruuf-nodes.txt';
+document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);};
 const lb=document.getElementById('lic-go');
 if(lb)lb.onclick=async()=>{const code=document.getElementById('lic-code').value;
 const r=await fetch('/license',{method:'POST',headers:{'X-Unpruuf-Admin':'1','Content-Type':'application/json'},body:JSON.stringify({code})});

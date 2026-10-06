@@ -91,6 +91,9 @@ dependencies {
     // dependency instead of an unverifiable-here hand-rolled parser).
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 
+    // Server licence check (core/NodeLicense.kt) — same Ed25519 verifier the main app uses.
+    implementation("com.google.crypto.tink:tink-android:1.11.0")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     debugImplementation("androidx.compose.ui:ui-tooling")

@@ -12,6 +12,7 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.nexonai.unpruuf.relay.MainActivity
 import com.nexonai.unpruuf.relay.core.BlobStore
+import com.nexonai.unpruuf.relay.core.NodeLicense
 import com.nexonai.unpruuf.relay.core.RelayBridgeManager
 import com.nexonai.unpruuf.relay.core.RelayConstants
 import com.nexonai.unpruuf.relay.core.RelayEventLog
@@ -114,6 +115,19 @@ class RelayService : Service() {
     private val _ownerConnectionString = MutableStateFlow<String?>(null)
     val ownerConnectionString: StateFlow<String?> = _ownerConnectionString.asStateFlow()
 
+    // Server licence (core/NodeLicense.kt): without one the owner QR stays hidden and deposits are
+    // refused; after expiry deposits are refused, reading keeps working.
+    private lateinit var license: NodeLicense.Guard
+    private val _license = MutableStateFlow<NodeLicense.Summary?>(null)
+    val licenseSummary: StateFlow<NodeLicense.Summary?> = _license.asStateFlow()
+
+    /** Verifies and stores a pasted licence code. A code that does not verify changes nothing. */
+    fun applyLicense(code: String): NodeLicense.ApplyResult {
+        val result = license.apply(code)
+        _license.value = license.summary()
+        return result
+    }
+
     private val _lastHygiene = MutableStateFlow<String?>(null)
     val lastHygiene: StateFlow<String?> = _lastHygiene.asStateFlow()
 
@@ -131,6 +145,12 @@ class RelayService : Service() {
         _nodeMeshProfile.value = identity.nodeMeshProfile
         _nodeMeshSlot.value = identity.nodeMeshSlot
         _nodeMeshOwnerSecret.value = identity.nodeMeshOwnerSecret
+        val licensePrefs = applicationContext.getSharedPreferences("relay_license", MODE_PRIVATE)
+        license = NodeLicense.Guard(object : NodeLicense.CodeStore {
+            override fun read(): String? = licensePrefs.getString("code", null)
+            override fun write(code: String) { licensePrefs.edit().putString("code", code).apply() }
+        })
+        _license.value = license.summary()
         torManager = RelayTorManager(
             context = applicationContext,
             // Separate onion keys per mode — see RelayIdentity.nodeMeshTorPrivKey.
@@ -148,8 +168,9 @@ class RelayService : Service() {
             }.collect { _connectionString.value = it }
         }
         scope.launch {
-            combine(torManager.onionAddress, _nodeMeshOwnerSecret, _nodeMeshMode) { onion, secret, nodeMode ->
-                if (nodeMode && onion != null) "${RelayConstants.NODE_OWNER_PREFIX}$onion:$secret" else null
+            combine(torManager.onionAddress, _nodeMeshOwnerSecret, _nodeMeshMode, _license) { onion, secret, nodeMode, lic ->
+                val licensed = lic != null && lic.status != NodeLicense.Status.MISSING && lic.status != NodeLicense.Status.INVALID
+                if (nodeMode && onion != null && licensed) "${RelayConstants.NODE_OWNER_PREFIX}$onion:$secret" else null
             }.collect { _ownerConnectionString.value = it }
         }
     }
@@ -186,7 +207,8 @@ class RelayService : Service() {
                     blobStore,
                     getOwnerSecret = { identity.nodeMeshOwnerSecret },
                     getTtlMs = { identity.nodeMeshTtlHours * 3_600_000L },
-                    getOnionAddress = { torManager.onionAddress.value }
+                    getOnionAddress = { torManager.onionAddress.value },
+                    depositBlocked = { license.depositBlocked() }
                 )
             } else {
                 val bindHost = if (identity.lanAccessEnabled) "0.0.0.0" else "127.0.0.1"
@@ -242,6 +264,13 @@ class RelayService : Service() {
             while (isActive) {
                 refreshQueuedCount()
                 delay(5_000)
+            }
+        }
+        scope.launch {
+            // valid → expiring → expired follows the clock without anyone opening the screen
+            while (isActive) {
+                _license.value = license.summary()
+                delay(60_000)
             }
         }
     }

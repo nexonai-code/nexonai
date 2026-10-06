@@ -1,5 +1,5 @@
 import * as path from "path";
-import { MAX_TTL_HOURS, resolveNodeCount, resolveProfile, resolveSlot, slotPorts, slotResetOffsetMs } from "./profiles";
+import { MAX_TTL_HOURS, resolveProfile, resolveSlot, slotPorts, slotResetOffsetMs } from "./profiles";
 
 /**
  * A single deposited blob is the same padded-outer-packet size every other unpruuf transport
@@ -16,7 +16,6 @@ export const MAX_BLOBS_PER_TAG = 1500;
 
 export const NODE_PROFILE = resolveProfile(process.env.NODE_PROFILE);
 export const NODE_SLOT = resolveSlot(process.env.NODE_SLOT);
-export const NODE_COUNT = resolveNodeCount(process.env.NODE_MESH_NODES);
 export const DEFAULT_TTL_HOURS = NODE_PROFILE.ttlHours;
 export { MAX_TTL_HOURS };
 

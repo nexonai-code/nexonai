@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import { MAX_NODES_PER_SERVER } from "./profiles";
 
 /**
  * Server license — see license-tool/lib.js ("Server licenses") for the issuing side.
@@ -23,7 +24,7 @@ export const LICENSE_PUBLIC_KEY_B64 = "67A_r4YeFkvYoXDF30gar2gRBcufokgvYQd5dVeEw
 export const SERVER_LICENSE_PREFIX = "unpruuf-server-license:v1:";
 export const APP_LICENSE_PREFIX = "unpruuf-license:v1:";
 const SIGN_DOMAIN = "unpruuf-server-license-v1\n";
-export const MAX_LICENSED_NODES = 500;
+export const MAX_LICENSED_NODES = MAX_NODES_PER_SERVER;
 /** From this many days before expiry the setup page and the log start warning. */
 export const EXPIRY_WARNING_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -29,7 +29,9 @@ class NodeMeshHttpServer(
     private val blobStore: NodeMeshStore,
     private val getOwnerSecret: () -> String,
     private val getTtlMs: () -> Long,
-    private val getOnionAddress: () -> String? = { null }
+    private val getOnionAddress: () -> String? = { null },
+    /** Server licence (NodeLicense): a reason code refuses new deposits with HTTP 402. Reading is never blocked. */
+    private val depositBlocked: () -> String? = { null }
 ) : NanoHTTPD("127.0.0.1", port) {
 
     private val readLimit = TokenBucket(RelayConstants.NODE_MESH_READ_BURST, RelayConstants.NODE_MESH_READ_REFILL_PER_SEC)
@@ -67,6 +69,7 @@ class NodeMeshHttpServer(
         if (!timingSafeEquals(auth, "Bearer ${getOwnerSecret()}")) {
             return json(Response.Status.UNAUTHORIZED, """{"error":"unauthorized"}""")
         }
+        depositBlocked()?.let { reason -> return json(HttpStatus(402, "Payment Required"), """{"error":"$reason"}""") }
         val body = readBody(session, RelayConstants.MAX_RELAY_REQUEST_BYTES)
             ?: return json(HttpStatus(413, "Payload Too Large"), """{"error":"request body must be 1..${RelayConstants.MAX_RELAY_REQUEST_BYTES} bytes"}""")
 

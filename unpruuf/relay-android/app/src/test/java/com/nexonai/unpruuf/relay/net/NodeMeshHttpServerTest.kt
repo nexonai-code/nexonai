@@ -149,4 +149,26 @@ class NodeMeshHttpServerTest {
         assertEquals(200, ok.code)
         assertEquals("""{"addresses":["tablet.onion"]}""", ok.body)
     }
+
+    @Test
+    fun `an expired or missing licence refuses new deposits with 402 but never blocks reading`() {
+        server.stop()
+        var blocked: String? = null
+        port = ServerSocket(0).use { it.localPort }
+        server = NodeMeshHttpServer(port, MemoryStore(), { owner }, { nodeTtlMs }, { "tablet.onion" }, { blocked })
+        server.start()
+        val blob = Base64.getEncoder().encodeToString(ByteArray(64) { 7 })
+        val body = """{"routing_tag":"licTag","ciphertext":"$blob"}"""
+        assertEquals(201, call("PUT", "/deposit", body, owner).code)
+        blocked = "license_expired"
+        val refused = call("PUT", "/deposit", body, owner)
+        assertEquals(402, refused.code)
+        assertEquals("""{"error":"license_expired"}""", refused.body)
+        // a stranger still just gets 401, and learns nothing about the licence
+        assertEquals(401, call("PUT", "/deposit", body, "wrong").code)
+        assertEquals(200, call("GET", "/fetch?tag=licTag").code)
+        assertTrue(call("GET", "/fetch?tag=licTag").body.contains(blob))
+        blocked = null
+        assertEquals(201, call("PUT", "/deposit", body, owner).code)
+    }
 }
