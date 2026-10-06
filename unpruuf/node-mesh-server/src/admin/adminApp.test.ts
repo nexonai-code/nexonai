@@ -284,6 +284,11 @@ test("the setup page takes a server license: refuses bad codes, activates a good
     const after = await request(port, `localhost:${port}`, "/");
     assert.match(after.body, /Acme GmbH/);
     assert.doesNotMatch(after.body, /Lizenz erforderlich/);
+    // what the node count means for the customer (licence says 40 nodes)
+    assert.match(after.body, /40 Nodes = Platz für <b>13<\/b> Kontakte/);
+    assert.match(after.body, /bis zu <b>40<\/b> Kontakte/);
+    const ovAfter = JSON.parse((await request(port, `localhost:${port}`, "/overview.json")).body);
+    assert.deepEqual(ovAfter.capacity, { alone: 13, threeServers: 40 });
   } finally {
     listener.close();
   }

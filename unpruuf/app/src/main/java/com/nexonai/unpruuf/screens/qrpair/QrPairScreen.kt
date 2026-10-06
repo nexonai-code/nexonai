@@ -186,7 +186,7 @@ fun QrPairScreen(
 
             if (nodeMeshMode) {
                 // Mandatory choice: the QR carries three nodes taken from the chosen list.
-                val listChoices = remember(selectedNodeListId) { viewModel.nodeListChoices() }
+                val listChoices = remember(selectedNodeListId, successState) { viewModel.nodeListChoices() }
                 if (listChoices.isNotEmpty()) {
                     Text(
                         stringResource(R.string.qr_node_list_title),
@@ -204,7 +204,13 @@ fun QrPairScreen(
                             FilterChip(
                                 selected = choice.id == selectedNodeListId,
                                 onClick = { viewModel.selectNodeList(choice.id) },
-                                label = { Text(stringResource(R.string.qr_node_list_chip, choice.name, choice.nodeCount, choice.serverCount)) }
+                                label = {
+                                    Text(
+                                        if (choice.freeSlots > 0)
+                                            stringResource(R.string.qr_node_list_chip, choice.name, choice.nodeCount, choice.serverCount, choice.freeSlots)
+                                        else stringResource(R.string.qr_node_list_chip_full, choice.name, choice.nodeCount, choice.serverCount)
+                                    )
+                                }
                             )
                         }
                     }

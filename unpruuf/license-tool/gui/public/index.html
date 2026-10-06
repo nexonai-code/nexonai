@@ -118,6 +118,7 @@
     <button id="srvBtn">Generate server license</button>
     <div id="srvErr" class="err"></div>
     <div id="srvResult"></div>
+    <div class="note" id="srvCapacity"></div>
     <div class="note">One code per Business Node server. The customer pastes it on the server's setup page (or puts it in license.txt). It limits how many node addresses that server can publish and until when. Renewal: issue a new code, same serial, and paste it over the old one.</div>
   </div>
 
@@ -207,6 +208,15 @@ document.getElementById('issueBtn').addEventListener('click', async () => {
     button.disabled = false;
   }
 });
+
+function showCapacity() {
+  const n = parseInt(document.getElementById('srvNodes').value, 10);
+  document.getElementById('srvCapacity').textContent = Number.isInteger(n) && n >= 1
+    ? `${n} nodes = room for ${Math.floor(n / 3)} contacts with nodes of their own on one server, up to ${n} with three servers of this size.`
+    : '';
+}
+document.getElementById('srvNodes').addEventListener('input', showCapacity);
+showCapacity();
 
 document.getElementById('srvBtn').addEventListener('click', async () => {
   const button = document.getElementById('srvBtn');

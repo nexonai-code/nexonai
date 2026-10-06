@@ -5,6 +5,7 @@ import { Profile, NodeSlot } from "../profiles";
 import { Metrics } from "../metrics";
 import type { LicenseError, LicenseSummary } from "../license";
 import { buildNodeListFile } from "../nodeList";
+import { contactCapacity } from "../profiles";
 
 /**
  * Local setup page — the operator scans the owner QR from here with their own unpruuf app
@@ -101,6 +102,7 @@ export async function statusPayload(state: AdminState) {
     ownerQr: ownerString ? await QRCode.toDataURL(ownerString, { margin: 1, width: 320 }) : null,
     stats: state.stats(),
     license: state.license ? state.license() : null,
+    capacity: contactCapacity(state.configuredNodes ?? state.license?.().maxNodes ?? (state.publicAddresses ? state.publicAddresses().length : 0)),
   };
 }
 
@@ -133,6 +135,8 @@ export async function overviewPayload(state: AdminState) {
     torEnabled: status.torEnabled,
     nodes: { configured, listed: addresses.length, registered },
     license,
+    capacity: status.capacity,
+    nodesLicensed: state.configuredNodes ?? state.license?.().maxNodes ?? addresses.length,
     addresses,
     stored: stats,
     uptimeMs: m?.uptimeMs ?? null,
@@ -343,6 +347,13 @@ function licenseLine(l: LicenseSummary | null): string {
   return `<span class="${warn ? "warn" : "ok"}">bis ${dateOnly(l.expiresAtMs)}${warn ? ` (${l.daysLeft} Tage)` : ""}</span>`;
 }
 
+function capacityText(nodes: number): string {
+  const c = contactCapacity(nodes);
+  if (c.alone < 1) return "";
+  return `<p class="note">${nodes} Nodes = Platz für <b>${c.alone}</b> Kontakte mit komplett eigenen Nodes auf diesem Server allein. ` +
+    `Zusammen mit zwei weiteren Servern dieser Größe (bei drei verschiedenen Anbietern): bis zu <b>${c.threeServers}</b> Kontakte.</p>`;
+}
+
 function renderLicenseCard(l: LicenseSummary): string {
   const form = `<p><input id="lic-code" type="text" autocomplete="off" placeholder="unpruuf-server-license:v1:…" style="width:100%;font:inherit;padding:8px;box-sizing:border-box"></p>
 <button id="lic-go" class="go">Lizenz aktivieren</button>`;
@@ -352,7 +363,7 @@ function renderLicenseCard(l: LicenseSummary): string {
 ${form}</div>`;
   }
   const rows = `<dl><dt>Kunde</dt><dd>${escapeHtml(l.customer ?? "")}</dd><dt>Seriennummer</dt><dd>${escapeHtml(l.serial ?? "")}</dd>` +
-    `<dt>Nodes erlaubt</dt><dd>${l.maxNodes}</dd><dt>Gültig bis</dt><dd>${licenseLine(l)}</dd></dl>`;
+    `<dt>Nodes</dt><dd>${l.maxNodes}</dd><dt>Gültig bis</dt><dd>${licenseLine(l)}</dd></dl>${capacityText(l.maxNodes)}`;
   if (l.status === "expired") {
     return `<div class="card"><h2>Lizenz abgelaufen</h2>${rows}
 <p class="bad">Neue Nachrichten werden abgelehnt. Das Abholen bereits abgelegter Pakete funktioniert weiter. Neuen Lizenzcode von NexonAI hier einfügen:</p>${form}</div>`;
@@ -401,6 +412,7 @@ svg{width:100%;height:auto;display:block}.legend{display:flex;gap:16px;color:var
 var DATA=${initial};
 function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function dur(ms){if(ms==null)return '—';var m=Math.floor(ms/60000);if(m<60)return m+' Min.';var h=Math.floor(m/60);if(h<48)return h+' Std. '+(m%60)+' Min.';return Math.floor(h/24)+' Tage '+(h%24)+' Std.';}
+function capRow(o){var c=o.capacity;if(!c||c.alone<1||o.ephemeral)return '';return '<dt>Kapazität</dt><dd>'+o.nodesLicensed+' Nodes = Platz für '+c.alone+' Kontakte mit eigenen Nodes. Mit drei Servern dieser Größe: bis zu '+c.threeServers+'.</dd>';}
 function licRow(l){if(!l||l.status==='free')return '';var d=l.expiresAtMs?new Date(l.expiresAtMs).toISOString().slice(0,10):'';
 var txt=l.status==='missing'?'fehlt':l.status==='invalid'?'ungültig':l.status==='expired'?'abgelaufen am '+d:'bis '+d+' · '+l.maxNodes+' Nodes'+(l.status==='expiring'?' — läuft in '+l.daysLeft+' Tagen ab':'');
 var cls=(l.status==='valid')?'':(l.status==='expiring'?' style="color:var(--warn)"':' style="color:var(--bad)"');return '<dt>Lizenz</dt><dd'+cls+'>'+esc(txt)+'</dd>';}
@@ -438,6 +450,7 @@ function render(o){
    +'<dt>Profil</dt><dd>'+esc(o.profile.name)+' — Pakete bleiben höchstens '+o.profile.ttlHours+' Std.</dd>'
    +'<dt>Slot</dt><dd>'+o.slot+' von 3</dd>'
    +licRow(o.license)
+   +capRow(o)
    +'<dt>Läuft seit</dt><dd>'+dur(o.uptimeMs)+'</dd>'
    +'<dt>Adressen (Mailboxen)</dt><dd>'+o.stored.tags+' in Benutzung</dd>'
    +'<dt>Ältestes Paket</dt><dd>'+(o.stored.oldestAgeMs==null?'—':dur(o.stored.oldestAgeMs))+'</dd>'

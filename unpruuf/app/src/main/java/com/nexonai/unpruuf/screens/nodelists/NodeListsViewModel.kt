@@ -18,7 +18,9 @@ data class NodeListRow(
     val nodeCount: Int,
     val serverCount: Int,
     /** How many contacts were given nodes from this list. */
-    val contactCount: Int
+    val contactCount: Int,
+    /** How many contacts the list can carry with nodes of their own (NodeLists.capacity). */
+    val capacity: Int
 )
 
 /** A parsed file waiting for the user to confirm name and target. */
@@ -56,7 +58,7 @@ class NodeListsViewModel @Inject constructor(
             val lists = nodeMeshManager.getNodeLists()
             _lists.value = lists.map { l ->
                 val members = l.addresses.toSet()
-                NodeListRow(l.id, l.name, l.addresses.size, nodeMeshManager.serverCount(l), used.count { u -> u.any { it in members } })
+                NodeListRow(l.id, l.name, l.addresses.size, nodeMeshManager.serverCount(l), used.count { u -> u.any { it in members } }, nodeMeshManager.listCapacity(l))
             }
             _freeSlots.value = NodeMeshManager.OWN_NODES_MAX - nodeMeshManager.getMyNodePool().size
         }

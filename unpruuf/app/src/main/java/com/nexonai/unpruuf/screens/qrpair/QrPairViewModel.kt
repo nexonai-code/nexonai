@@ -332,10 +332,29 @@ class QrPairViewModel @Inject constructor(
     private var nodeMeshPairingBound = false
 
     /** A list a new contact can be given nodes from, with what the picker shows about it. */
-    data class NodeListChoice(val id: String, val name: String, val nodeCount: Int, val serverCount: Int)
+    data class NodeListChoice(
+        val id: String,
+        val name: String,
+        val nodeCount: Int,
+        val serverCount: Int,
+        /** How many more contacts fit on this list with nodes of their own (0 = full, nodes get shared). */
+        val freeSlots: Int
+    )
 
-    fun nodeListChoices(): List<NodeListChoice> =
-        nodeMeshManager.getNodeLists().map { NodeListChoice(it.id, it.name, it.addresses.size, nodeMeshManager.serverCount(it)) }
+    fun nodeListChoices(): List<NodeListChoice> {
+        val used = runBlocking { contactDao.getAllContactsOnce() }
+            .filter { it.nodeMesh }
+            .map { c ->
+                NodeMeshManager.parseNodeConnectionStringList(c.myNodeAddresses ?: "")
+                    .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }.toSet()
+            }
+        return nodeMeshManager.getNodeLists().map { l ->
+            val members = l.addresses.toSet()
+            val inUse = used.count { u -> u.any { it in members } }
+            NodeListChoice(l.id, l.name, l.addresses.size, nodeMeshManager.serverCount(l),
+                (nodeMeshManager.listCapacity(l) - inUse).coerceAtLeast(0))
+        }
+    }
 
     // Which list the contact being added gets its nodes from. Must be chosen before a QR is shown:
     // the QR carries the three nodes picked from it. With exactly one list it is chosen for you.

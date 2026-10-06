@@ -72,6 +72,17 @@ export function clientToleranceEpochs(): number {
 export const MAX_NODES_PER_SERVER = 250;
 
 /**
+ * What the licensed node count means for the customer: how many contacts get nodes of their own.
+ * Each contact is given 3 nodes; no node is shared with another contact. A single server of n nodes
+ * carries floor(n / 3) contacts. Three servers of n nodes each carry n contacts, because every contact
+ * takes one node on each server. Mirrors NodeLists.capacity in the Android app.
+ */
+export function contactCapacity(nodes: number): { alone: number; threeServers: number } {
+  const n = Math.max(0, Math.floor(nodes));
+  return { alone: Math.floor(n / 3), threeServers: n };
+}
+
+/**
  * Up to three own nodes (NODE_MESH_SPEC.md §5). The slot decides where in the 24h Reset cycle
  * this node's hygiene pass falls (0 / 20 / 40 minutes) and gives each slot its own default ports
  * and data folder, so all three can even run side by side on one machine for testing.

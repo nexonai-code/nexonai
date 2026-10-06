@@ -5,6 +5,36 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑06 · Capacity display: how many contacts a node count carries
+
+**What was done**
+
+The number of nodes now says what it means for the customer: how many contacts get nodes of their own.
+Each contact takes 3 nodes; no node is shared with another contact.
+
+- **Rule:** one server of n nodes carries n / 3 contacts (5 → 1, 25 → 8, 100 → 33, 250 → 83). Three servers
+  of n nodes carry n contacts, because every contact takes one node on each server (3 × 250 → 250). Unbalanced
+  lists are limited by their smaller servers (250 + 25 + 25 → 25).
+- **Server setup page and overview:** "250 Nodes = Platz für 83 Kontakte … Zusammen mit zwei weiteren Servern
+  dieser Größe: bis zu 250". Shown on the licence card and as a "Kapazität" row on the overview page.
+- **App, Settings → Node lists:** each list shows "Room for N contacts with nodes of their own · M in use" and a
+  red warning once more contacts use the list than it has free nodes.
+- **App, adding a contact:** each list chip shows how many more contacts fit ("room for 41 more"), or "full,
+  nodes will be shared" when the list is used up.
+- **Licence tool:** `issue-server.js` and the GUI print the capacity for the node count you are about to issue.
+
+**Which bug appeared**
+
+One test failed on the first run: the setup page computed the capacity from the running node count, which
+is 0 in the test setup. It now falls back to the licence's node count. A real server was never affected.
+
+**Verification**
+
+Server `npm test` 71/71. App 82/82 in each of the 4 editions (new: capacity cases incl. 3 × 250 and an
+unbalanced list). Not seen on a device.
+
+---
+
 ## 2026‑10‑06 · Presentations brought up to date (Business and Compliance, German and Romanian)
 
 **What was done**

@@ -163,6 +163,13 @@ class NodeMeshManager @Inject constructor(
         return getMyNodePool().filter { it.address in members }.map { it.ownerSecret }.distinct().size
     }
 
+    /** Contacts the list can carry with nodes of their own — see [NodeLists.capacity]. */
+    fun listCapacity(list: NodeList): Int {
+        val members = list.addresses.toSet()
+        val sizes = getMyNodePool().filter { it.address in members }.groupingBy { it.ownerSecret }.eachCount().values.toList()
+        return NodeLists.capacity(sizes)
+    }
+
     sealed class ImportResult {
         /** [added] = nodes that were new on this device, [total] = nodes now in the list. */
         data class Ok(val listId: String, val listName: String, val added: Int, val total: Int) : ImportResult()

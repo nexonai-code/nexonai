@@ -124,4 +124,24 @@ class NodeListsTest {
         assertEquals(setOf("a2", "b2"), NodeMeshManager.chooseNodes(pool.filter { it.address in members }, usage, 2).toSet())
         assertNotNull(picked.firstOrNull())
     }
+
+    @Test
+    fun capacityIsHowManyContactsGetNodesOfTheirOwn() {
+        assertEquals(0, NodeLists.capacity(emptyList()))
+        assertEquals(1, NodeLists.capacity(listOf(5)))          // 5 nodes: one contact, the next shares
+        assertEquals(8, NodeLists.capacity(listOf(25)))         // one server of 25
+        assertEquals(33, NodeLists.capacity(listOf(100)))
+        assertEquals(83, NodeLists.capacity(listOf(250)))       // one full server
+        assertEquals(166, NodeLists.capacity(listOf(250, 250))) // two servers: triples may share a server
+        assertEquals(250, NodeLists.capacity(listOf(250, 250, 250))) // the 3 x 250 case: one node per server per contact
+        assertEquals(25, NodeLists.capacity(listOf(25, 25, 25)))
+    }
+
+    @Test
+    fun anUnbalancedListIsLimitedByItsSmallServers() {
+        // 250 + 25 + 25: each contact needs a node on three different servers, the two small ones run out at 25
+        assertEquals(25, NodeLists.capacity(listOf(250, 25, 25)))
+        assertEquals(100, NodeLists.capacity(listOf(100, 100, 100, 5)))
+        assertEquals(0, NodeLists.capacity(listOf(0, 0, 0)))
+    }
 }

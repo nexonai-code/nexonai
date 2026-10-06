@@ -64,6 +64,25 @@ object NodeLists {
         return updated.filter { it.addresses.isNotEmpty() }
     }
 
+    /**
+     * How many contacts a list can carry with nodes of their own (no node shared with another
+     * contact). [serverSizes] = how many of the list's nodes sit on each server. A contact gets three
+     * nodes, one per server when the list has three or more servers (that is how the app picks them).
+     * Then c contacts fit exactly when the servers can supply them: sum over servers of min(size, c)
+     * must reach 3c. With fewer than three servers the three nodes may share a server, so it is
+     * simply total / 3. One server of 250: 83. Three servers of 250 each: 250.
+     */
+    fun capacity(serverSizes: List<Int>): Int {
+        val sizes = serverSizes.filter { it > 0 }
+        val total = sizes.sum()
+        if (sizes.size < 3) return total / 3
+        var best = 0
+        for (c in 1..(sizes.maxOrNull() ?: 0)) {
+            if (sizes.sumOf { minOf(it, c) } >= 3 * c) best = c else break
+        }
+        return best
+    }
+
     fun listOf(lists: List<NodeList>, address: String): NodeList? = lists.find { address in it.addresses }
 
     fun rename(lists: List<NodeList>, listId: String, name: String): List<NodeList> {

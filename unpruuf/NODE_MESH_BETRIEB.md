@@ -76,6 +76,21 @@ Der Betrieb liegt vollständig bei Ihnen: Ihr Server, Ihre Schlüssel, Ihre Date
 5. Tipp: Legen Sie mehrere Server in eine Liste. Dann liegen die drei Nodes eines Kontakts bei
    verschiedenen Betreibern, und niemand sieht alle drei.
 
+## Wie viele Kontakte tragen Ihre Nodes?
+
+Jeder Kontakt bekommt 3 eigene Nodes, kein Node gehört zwei Kontakten. Daraus folgt:
+
+| Ein Server mit … Nodes | trägt allein | drei Server dieser Größe tragen |
+|---|---|---|
+| 5 | 1 Kontakt | 5 Kontakte |
+| 25 | 8 Kontakte | 25 Kontakte |
+| 100 | 33 Kontakte | 100 Kontakte |
+| 250 | 83 Kontakte | 250 Kontakte |
+
+Server-Einrichtungsseite, Node-Listen und die Listenauswahl beim Hinzufügen eines Kontakts zeigen, wie viel
+Platz noch frei ist. Ist eine Liste voll, teilen sich weitere Kontakte Nodes: es funktioniert weiter, aber die
+Kontakte sind dann über gemeinsame Adressen verbunden. Dann einen weiteren Server in die Liste importieren.
+
 ## Der QR-Code ist Ihr Schreibschlüssel
 
 - Nur in **Ihre eigene** unpruuf-App scannen.

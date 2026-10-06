@@ -56,6 +56,7 @@ const expiresAtMs = issuedAtMs + Math.round(years * MS_PER_YEAR);
 const code = signServerLicense(privateKey, buildServerPayload({ serial, customer, maxNodes: nodes, issuedAtMs, expiresAtMs }));
 
 console.log(`${serial}\t${nodes} nodes\texpires ${new Date(expiresAtMs).toISOString().slice(0, 10)}`);
+console.log(`Capacity: ${Math.floor(nodes / 3)} contacts with nodes of their own on this server alone, up to ${nodes} with three servers of this size.`);
 console.log(code);
 
 if (outFile) {
