@@ -10,11 +10,10 @@ A separate product from `../server/` (the consumer app's optional relay); that o
    - **Slot 1, 2 oder 3** — welcher deiner bis zu 3 eigenen Nodes das ist.
    - **Profil** — wie lange Nachrichten auf dem Node liegen (standard 6 h / high-security 1 h /
      offline-tolerant 24 h).
-   - **Anzahl Nodes** (1–500, Enter = 10) — so viele eigene `.onion`-Adressen betreibt dieser
-     eine Server, alle in einem Prozess mit einem Tor.
 3. **Lizenz:** Ohne Lizenz zeigt der Server nur die Einrichtungsseite. Den Lizenzcode von NexonAI
    dort einfügen („Lizenz erforderlich“), dann startet alles ohne Neustart. Der Code wird nur auf
-   diesem Rechner geprüft. Die Lizenz begrenzt die Anzahl Nodes und die Laufzeit (Details unten).
+   diesem Rechner geprüft. Die Lizenz legt die Zahl der Nodes (höchstens 250) und die Laufzeit fest;
+   der Server startet immer alle lizenzierten Nodes — es gibt keine Einstellung dafür.
 4. Der Server lädt Tor einmalig herunter, erstellt die `.onion`-Adressen und öffnet im Browser
    die **Einrichtungsseite** mit dem Owner-QR.
 5. In der unpruuf-App: **Einstellungen → Business Node-Mesh → QR scannen**. Ein Scan reicht:
@@ -40,7 +39,7 @@ Ohne Node.js auf dem Zielrechner: siehe `EXE_BUILD.md` (fertiger Ordner mit `.ex
   Wird offline geprüft, nichts wird gesendet, kein Gerät wird erfasst.
 - Eintragen: Einrichtungsseite, oder Datei `license.txt` im Datenordner, oder `NODE_MESH_LICENSE`
   (Container). Sind mehrere da, gilt die mit der längsten Laufzeit — eine Verlängerung wirkt also sofort.
-- `NODE_MESH_NODES` über der Lizenz wird auf die lizenzierte Zahl gekürzt (steht im Log).
+- **Die Zahl der Nodes ist keine Einstellung.** Der Server startet immer genau so viele, wie die Lizenz erlaubt (normal und höchstens 250). `NODE_MESH_NODES` wird ignoriert.
 - 30 Tage vor Ablauf warnen Einrichtungsseite, Übersicht und Log. **Nach Ablauf** werden neue
   Nachrichten abgelehnt (HTTP 402), das Abholen vorhandener Pakete geht weiter. Verlängerungscode
   einfügen, fertig, kein Neustart.
@@ -49,10 +48,18 @@ Ohne Node.js auf dem Zielrechner: siehe `EXE_BUILD.md` (fertiger Ordner mit `.ex
 - Ehrlich: Der Server ist lesbarer Code auf dem Rechner des Kunden. Die Prüfung hält ehrliche Kunden
   ehrlich und macht den Vertrag im Produkt sichtbar. Sie ist kein Kopierschutz.
 
+## Node-Liste für die App
+
+Auf der Einrichtungsseite: **„Liste als Datei speichern“**. Die Datei (`unpruuf-nodes-server-N.txt`,
+Format `unpruuf-node-list:v1`, siehe `src/nodeList.ts`) enthält alle Adressen dieses Servers, den
+Schreibschlüssel und bei versiegelten Servern die Control-Adresse. In der App: **Einstellungen →
+Node-Listen → Datei auswählen**. Die Datei ist so sensibel wie der Owner-QR: nur aufs eigene Handy,
+danach löschen. Gesperrte Server exportieren nicht.
+
 ## Linux / Docker
 
 ```bash
-./start.sh 1 standard 10       # slot, profile, nodes — setup page on http://localhost:8790
+./start.sh 1 standard          # slot, profile — setup page on http://localhost:8790
 ./start-tempnode.sh            # Temp Node — setup page on http://localhost:8810
 docker compose up -d           # container, setup page on the host's http://localhost:8790
 ```
@@ -62,8 +69,8 @@ docker compose up -d           # container, setup page on the host's http://loca
 | | |
 |---|---|
 | **Tor onion service** | Mandatory and fully managed: downloads the pinned Tor Expert Bundle once, runs its own Tor, publishes the node via the control port (`ADD_ONION`). The public API only listens on `127.0.0.1` — "the node never learns a sender IP" is structural, not a logging policy. |
-| **Many nodes, one process** | `NODE_MESH_NODES=1..500` (default 1; `start.bat`/`start.sh` default 10): one Tor process publishes that many onion services, all mapped to the same local API and store. Each is a separate address to the outside; the owner's app hands different ones to different contacts. |
-| **Stable addresses** | One onion key per node, kept in `data/node-<slot>/node-mesh-identity.json` (file mode 600) and reused on every start; restarts and the daily Reset never change any address. Raising `NODE_MESH_NODES` later adds new addresses and keeps the existing ones. |
+| **Many nodes, one process** | Always the full licensed number (normally 250, never more; not a setting): one Tor process publishes that many onion services, all mapped to the same local API and store. Each is a separate address to the outside; the owner's app hands different ones to different contacts. |
+| **Stable addresses** | One onion key per node, kept in `data/node-<slot>/node-mesh-identity.json` (file mode 600) and reused on every start; restarts and the daily Reset never change any address. A licence for more nodes later adds new addresses and keeps the existing ones. |
 | **Sealed keys (default)** | `NODE_MESH_KEY_STORAGE=sealed`: owner secret and node keys are stored **only encrypted** (AES-256-GCM under the owner secret, which is never written down). After a restart the server is **locked** — only a control onion is online, nodes stay offline. Unlock in the app (Settings → Your own nodes → **Unlock**) or paste the owner code on the setup page; the nodes come back under the same addresses. A seized, powered-off server can't be run on under your addresses. `NODE_MESH_KEY_STORAGE=disk` = old behaviour (plain file, unattended restarts). Old plain files are sealed in place on first start. |
 | **Proof-of-work DoS defense** | Tor's onion-service PoW (`PoWDefensesEnabled=1`) is always on — flooding the node with connections costs the attacker CPU per attempt. The pinned bundle's Tor 0.4.9 ships the `pow` module (verified with `tor --list-modules`). |
 | **Self-healing** | If Tor crashes or the control connection drops, Tor restarts with backoff and re-adds the same key → same address. Tor also exits on its own if this process dies (`__OwningControllerProcess`), so no orphaned Tor keeps running. |
@@ -122,6 +129,8 @@ so there is no client IP to key on.
   all 3 came back unchanged; `/pool` answered only with the owner secret (401 without).
 
 ## Measured: nodes per server (2026-10-01, `tools/measure_nodes.py`)
+
+> Measured before the node count became fixed at the licensed number (max 250). The tool sets `NODE_MESH_NODES`, which the server now ignores, so re-measuring needs a build with a test key. The numbers up to 250 nodes still hold.
 
 RAM after start, one process vs. separate processes, dev sandbox (4 vCPU, 16 GB):
 

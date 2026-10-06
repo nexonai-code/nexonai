@@ -6,7 +6,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -44,6 +46,8 @@ fun QrPairScreen(
     val errorState by viewModel.errorState.collectAsState()
     val successState by viewModel.successState.collectAsState()
     val myPayload by viewModel.myQrPayload.collectAsState()
+    // Business Node-Mesh: which list the contact being added gets its three nodes from.
+    val selectedNodeListId by viewModel.selectedNodeListId.collectAsState()
     var pendingPayload by remember { mutableStateOf<QrPairingPayload?>(null) }
     var pendingCrossPlatformPayload by remember { mutableStateOf<CrossPlatformPairingPayload?>(null) }
     var pendingNodeMeshPayload by remember { mutableStateOf<NodeMeshPairingPayload?>(null) }
@@ -181,6 +185,31 @@ fun QrPairScreen(
             Spacer(Modifier.height(16.dp))
 
             if (nodeMeshMode) {
+                // Mandatory choice: the QR carries three nodes taken from the chosen list.
+                val listChoices = remember(selectedNodeListId) { viewModel.nodeListChoices() }
+                if (listChoices.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.qr_node_list_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
+                    ) {
+                        listChoices.forEach { choice ->
+                            FilterChip(
+                                selected = choice.id == selectedNodeListId,
+                                onClick = { viewModel.selectNodeList(choice.id) },
+                                label = { Text(stringResource(R.string.qr_node_list_chip, choice.name, choice.nodeCount, choice.serverCount)) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
                 val nodeMeshPayload = viewModel.myNodeMeshQrPayload()
                 if (nodeMeshPayload != null) {
                     val qrJson = remember(nodeMeshPayload) { nodeMeshPayloadToJson(nodeMeshPayload) }
@@ -194,6 +223,25 @@ fun QrPairScreen(
                                 modifier = Modifier.fillMaxSize().background(Color.White).padding(8.dp)
                             )
                         }
+                    }
+                } else if (listChoices.isNotEmpty()) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.size(240.dp),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.qr_choose_list_first),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            stringResource(R.string.qr_choose_list_first_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
                 } else {
                     Column(

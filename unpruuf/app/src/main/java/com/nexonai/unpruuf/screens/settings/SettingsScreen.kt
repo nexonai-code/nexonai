@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToInfo: () -> Unit,
+    onNavigateToNodeLists: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val bridgesEnabled by viewModel.bridgesEnabled.collectAsState()
@@ -509,6 +510,12 @@ fun SettingsScreen(
                     Text(stringResource(R.string.settings_your_own_nodes_body, NodeMeshManager.OWN_NODES_MAX))
                 },
                 leadingContent = { Icon(Icons.Default.Send, null) }
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_node_lists)) },
+                supportingContent = { Text(stringResource(R.string.settings_node_lists_body)) },
+                leadingContent = { Icon(Icons.Default.Send, null) },
+                modifier = Modifier.clickable { onNavigateToNodeLists() }
             )
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 lockedServers.forEach { server ->

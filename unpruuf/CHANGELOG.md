@@ -5,6 +5,44 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑06 · Fixed 250 nodes per server, node lists in the app, licence for the Android node
+
+**What was done**
+
+- **250 nodes, not a setting.** A server always runs the full number its licence allows, never more than 250
+  (`MAX_NODES_PER_SERVER`). The question in `start.bat`, the `NODE_MESH_NODES` variable (now ignored, with a log
+  line) and the third argument of `start.sh` are gone. The licence tool issues 250 by default and refuses more
+  (`issue-server.js --nodes` is optional, the GUI defaults to 250). Why fixed: every server looks and loads the
+  same, nobody ends up with a small pool by accident, and 250 onions cost almost nothing (measured: 500 nodes ≈ 85 MB).
+- **Node list export.** The setup page has "Liste als Datei speichern": one text file (`unpruuf-node-list:v1`) with
+  all addresses of the server, the write key and, for sealed servers, the control address. Not for locked servers,
+  CSRF-guarded, loopback only. The format is pinned by a test that reads the server's real output in the app.
+- **Node lists in the app** (Settings → Node lists): import a file or pasted text into a new or an existing list,
+  rename, delete (shows how many contacts used the list). Every node is in exactly one list; nodes added by QR land
+  in "Standard"; the same server can be refreshed over Tor as before. Pool limit raised from 500 to 1000 nodes.
+- **Choosing a list when adding a contact.** The Business QR screen requires a list: the QR carries three nodes from
+  it, least-used first and spread over the servers of that list. With one list it is pre-selected. Changing the list
+  starts a fresh pairing (new keys), so a half-used QR never mixes with another list's nodes.
+- **Licence for the Android node** (`relay-android`, `core/NodeLicense.kt`): same code format and key as the server.
+  A licence card in the screen (activate, renew, status). Without a licence the owner QR stays hidden and deposits
+  are refused; after expiry deposits are refused with 402 and reading keeps working.
+
+**Which bug appeared**
+
+None in the new code that tests could find. Two things worth knowing: the throw-away signing key used in the tests
+is not your real one, so the real key has not signed a server code yet; and the Android node differs slightly from
+the PC server: Tor and the HTTP port stay up without a licence, only the owner QR and deposits are blocked.
+
+**Verification**
+
+Server `npm test` 70/70 (was 65): fixed cap, node-list round trip (250 addresses, injection attempt, malformed
+files), export route (header guard, locked server refused). Android node: 15/15 JVM tests (5 licence tests against
+codes signed by the real vendor tool, 402 over real HTTP). App: new `NodeListsTest` (10) reads a file written by the
+server's own builder; all four editions build and pass 80/80 (was 70). Not run on a real device; the file picker and the
+chip row in the QR screen have only been compiled, not looked at.
+
+---
+
 ## 2026‑10‑06 · Node server: licence check (offline, no phone-home)
 
 **What was done**

@@ -55,7 +55,7 @@ Jeder Node-Server läuft mit einer Lizenz. Sie bekommen von uns **einen Lizenzco
 
 1. Beim ersten Start zeigt die Einrichtungsseite „Lizenz erforderlich“. Code einfügen, **Lizenz
    aktivieren**. Der Server startet sofort.
-2. Der Code legt fest, **wie viele Nodes** dieser Server betreiben darf und **bis wann**.
+2. Der Code legt fest, **wie viele Nodes** dieser Server betreibt (normal 250, mehr gibt es nicht) und **bis wann**. Der Server startet immer alle — die Zahl lässt sich nicht einstellen.
 3. 30 Tage vor Ablauf weist die Einrichtungsseite darauf hin. Den Verlängerungscode einfach dort
    einfügen — der Server läuft dabei weiter.
 4. Läuft die Lizenz ab, nimmt der Server **keine neuen Nachrichten** mehr an. Bereits abgelegte
@@ -63,6 +63,18 @@ Jeder Node-Server läuft mit einer Lizenz. Sie bekommen von uns **einen Lizenzco
 
 Der Code wird nur auf Ihrem Rechner geprüft. Er sendet nichts an uns, und wir sehen nicht, wo er läuft.
 Der Betrieb liegt vollständig bei Ihnen: Ihr Server, Ihre Schlüssel, Ihre Daten.
+
+## Node-Listen: welche Server für welche Kontakte
+
+1. Auf der Einrichtungsseite Ihres Servers: **„Liste als Datei speichern“**.
+2. Die Datei auf Ihr eigenes Handy bringen (Kabel oder ein vertrauter Weg) und in der App öffnen:
+   **Einstellungen → Node-Listen → Datei auswählen → Importieren**. Danach die Datei löschen: sie enthält
+   Ihren Schreibschlüssel.
+3. Jeder Server (oder jede Gruppe von Servern) wird eine **Liste** mit Namen, z. B. „Kunde A“ oder „Wien“.
+4. Beim **Hinzufügen eines Kontakts** wählen Sie eine Liste. Der Kontakt bekommt drei Nodes daraus.
+   So legen Sie sauber fest, welche Server welche Kontakte tragen.
+5. Tipp: Legen Sie mehrere Server in eine Liste. Dann liegen die drei Nodes eines Kontakts bei
+   verschiedenen Betreibern, und niemand sieht alle drei.
 
 ## Der QR-Code ist Ihr Schreibschlüssel
 

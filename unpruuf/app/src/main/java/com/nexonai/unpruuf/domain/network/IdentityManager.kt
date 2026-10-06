@@ -527,6 +527,12 @@ class IdentityManager @Inject constructor(
         return pending
     }
 
+    /** The pending pairing values if one exists — never creates one (unlike [pendingNodeMeshPairing]). */
+    fun peekPendingNodeMeshPairing(): PendingNodeMeshPairing? =
+        prefs.getString("pending_nm_pairing", null)?.let { stored ->
+            runCatching { parsePending(String(decryptSecret(stored), Charsets.UTF_8)) }.getOrNull()
+        }
+
     /** Called once a scan has bound the pending values to a contact — the next QR gets new ones. */
     fun clearPendingNodeMeshPairing() {
         prefs.edit().remove("pending_nm_pairing").apply()

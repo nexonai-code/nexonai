@@ -313,4 +313,33 @@ Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow i
     <string name="case_remove_title">Remove case from this phone?</string>
     <string name="case_remove_body">All messages and keys of this case are deleted from this phone. The reporting office keeps the case. You will no longer be able to read replies to it on this phone.</string>
     <string name="case_remove_confirm">Remove</string>
+    <!-- Node lists (named groups of own nodes; a contact gets its 3 nodes from one list) -->
+    <string name="settings_node_lists">Node lists</string>
+    <string name="settings_node_lists_body">Import a server\'s node list from its setup page, rename or delete lists.</string>
+    <string name="node_lists_title">Node lists</string>
+    <string name="node_lists_intro">A list is a group of your own nodes, for example one server or one customer. When you add a contact you choose one list, and the contact gets three nodes from it.</string>
+    <string name="node_lists_empty">No lists yet. Import the file from your server\'s setup page, or add a node by QR under Settings → Business Node-Mesh.</string>
+    <string name="node_lists_row_detail">%1$d nodes · %2$d server(s) · %3$d contact(s)</string>
+    <string name="node_lists_rename">Rename</string>
+    <string name="node_lists_delete">Delete</string>
+    <string name="node_lists_save">Save</string>
+    <string name="node_lists_import_title">Import a list</string>
+    <string name="node_lists_import_hint">Choose the file you saved from the server\'s setup page (\"Liste als Datei speichern\"). Room for %1$d more nodes.</string>
+    <string name="node_lists_import_file">Choose file…</string>
+    <string name="node_lists_paste_field">…or paste the list text</string>
+    <string name="node_lists_import_pasted">Import pasted list</string>
+    <string name="node_lists_secret_warning">The file contains your write key for the server. Move it only to your own phone and delete it afterwards.</string>
+    <string name="node_lists_confirm_title">Import this list?</string>
+    <string name="node_lists_confirm_body">%1$d nodes in the file, %2$d of them new on this device.</string>
+    <string name="node_lists_name_field">List name</string>
+    <string name="node_lists_target_label">Put the nodes into</string>
+    <string name="node_lists_target_new">New list</string>
+    <string name="node_lists_import_confirm">Import</string>
+    <string name="node_lists_delete_title">Delete \"%1$s\"?</string>
+    <string name="node_lists_delete_body">The list and its %1$d nodes are removed from this device. The servers themselves are not touched.</string>
+    <string name="node_lists_delete_body_contacts">The list and its %1$d nodes are removed from this device. %2$d contact(s) use nodes from it and will no longer reach you.</string>
+    <string name="qr_node_list_title">List for this contact</string>
+    <string name="qr_node_list_chip">%1$s · %2$d nodes · %3$d server(s)</string>
+    <string name="qr_choose_list_first">Choose a list first</string>
+    <string name="qr_choose_list_first_body">The QR you show carries three nodes from the list you pick above.</string>
 </resources>

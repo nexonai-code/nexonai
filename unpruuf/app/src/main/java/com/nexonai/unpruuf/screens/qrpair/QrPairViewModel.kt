@@ -331,9 +331,47 @@ class QrPairViewModel @Inject constructor(
     private var shownNodeMeshPairing: IdentityManager.PendingNodeMeshPairing? = null
     private var nodeMeshPairingBound = false
 
+    /** A list a new contact can be given nodes from, with what the picker shows about it. */
+    data class NodeListChoice(val id: String, val name: String, val nodeCount: Int, val serverCount: Int)
+
+    fun nodeListChoices(): List<NodeListChoice> =
+        nodeMeshManager.getNodeLists().map { NodeListChoice(it.id, it.name, it.addresses.size, nodeMeshManager.serverCount(it)) }
+
+    // Which list the contact being added gets its nodes from. Must be chosen before a QR is shown:
+    // the QR carries the three nodes picked from it. With exactly one list it is chosen for you.
+    private val _selectedNodeListId = MutableStateFlow<String?>(initialNodeListId())
+    val selectedNodeListId = _selectedNodeListId.asStateFlow()
+
+    private fun initialNodeListId(): String? {
+        val lists = nodeMeshManager.getNodeLists()
+        // A QR that is already pending (screen left and reopened) keeps the list it was made from.
+        identityManager.peekPendingNodeMeshPairing()?.let { pending ->
+            lists.find { l -> pending.nodeAddresses.any { it in l.addresses } }?.let { return it.id }
+        }
+        return lists.singleOrNull()?.id
+    }
+
+    /** Picking another list starts a fresh pairing (new keys, nodes from that list) — a QR that was
+     *  already scanned by the other side must not be mixed with nodes of a different list. */
+    fun selectNodeList(listId: String) {
+        if (_selectedNodeListId.value == listId) return
+        identityManager.clearPendingNodeMeshPairing()
+        shownNodeMeshPairing = null
+        nodeMeshPairingBound = false
+        _selectedNodeListId.value = listId
+    }
+
     private fun currentNodeMeshPairing(): IdentityManager.PendingNodeMeshPairing? {
         shownNodeMeshPairing?.let { return it }
         if (!nodeMeshManager.isUsable()) return null
+        val listId = _selectedNodeListId.value ?: return null
+        val list = nodeMeshManager.getNodeLists().find { it.id == listId }
+        if (list == null) {
+            // the list was deleted meanwhile
+            _selectedNodeListId.value = null
+            identityManager.clearPendingNodeMeshPairing()
+            return null
+        }
         val pending = identityManager.pendingNodeMeshPairing {
             val usage = runBlocking { contactDao.getAllContactsOnce() }
                 .filter { it.nodeMesh }
@@ -342,13 +380,17 @@ class QrPairViewModel @Inject constructor(
                         .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
                 }
                 .groupingBy { it }.eachCount()
-            nodeMeshManager.chooseNodesForNewContact(usage)
+            nodeMeshManager.chooseNodesForNewContact(listId, usage)
         }
-        // A pending set whose nodes were all removed meanwhile is useless — start fresh.
-        val pool = nodeMeshManager.getMyNodePool().map { it.address }.toSet()
-        if (pending.nodeAddresses.none { it in pool }) {
+        // A pending set that does not come from the selected list (list changed or its nodes were
+        // removed meanwhile) is useless — start fresh from the selected list.
+        if (pending.nodeAddresses.none { it in list.addresses }) {
             identityManager.clearPendingNodeMeshPairing()
-            return currentNodeMeshPairing()
+            val fresh = identityManager.pendingNodeMeshPairing {
+                nodeMeshManager.chooseNodesForNewContact(listId, emptyMap())
+            }
+            shownNodeMeshPairing = fresh
+            return fresh
         }
         shownNodeMeshPairing = pending
         return pending
@@ -403,7 +445,10 @@ class QrPairViewModel @Inject constructor(
                 return@launch
             }
             val mine = currentNodeMeshPairing() ?: run {
-                _errorState.value = "Set up your own node first (Settings → Business Node-Mesh) — without it, this contact's messages would have nowhere to reach you."
+                _errorState.value = if (nodeMeshManager.isUsable())
+                    "Choose a node list for this contact first — the QR you show carries three nodes from it."
+                else
+                    "Set up your own node first (Settings → Business Node-Mesh) — without it, this contact's messages would have nowhere to reach you."
                 return@launch
             }
             val contact = Contact(

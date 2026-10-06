@@ -53,16 +53,19 @@ class NodeMeshManager @Inject constructor(
 
     /** Adds every address in [addresses] under one owner secret (one server's nodes). Returns
      *  false if nothing could be added because the pool is full. */
-    fun addMyNodes(addresses: List<String>, ownerSecret: String): Boolean {
+    fun addMyNodes(addresses: List<String>, ownerSecret: String, listId: String? = null): Boolean {
         val incoming = addresses.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (incoming.isEmpty()) return false
         val existing = getMyNodeConnectionStrings().mapNotNull { parseOwnerConnectionString(it) }
         val kept = existing.filter { e -> incoming.none { it == e.address } }
         val room = OWN_NODES_MAX - kept.size
         if (room <= 0) return false
-        val updated = (kept + incoming.take(room).map { ParsedNodeConnection(it, ownerSecret) })
+        val added = incoming.take(room)
+        val updated = (kept + added.map { ParsedNodeConnection(it, ownerSecret) })
             .map { buildOwnerConnectionString(it) }
         prefs.edit().putString("my_nodes", updated.joinToString(";")).apply()
+        // Nodes that came along with an existing list (siblings of a known server) stay in it.
+        if (listId != null) saveNodeLists(NodeLists.assign(loadNodeLists(), added, listId, NodeLists.DEFAULT_NAME))
         return true
     }
 
@@ -78,7 +81,7 @@ class NodeMeshManager @Inject constructor(
         val before = getMyNodePool().size
         for (source in getPoolSources()) {
             val info = client.listPoolWithControl(source.address, source.ownerSecret) ?: continue
-            addMyNodes(info.addresses, source.ownerSecret)
+            addMyNodes(info.addresses, source.ownerSecret, NodeLists.listOf(getNodeLists(), source.address)?.id)
             info.controlAddress?.let { setControlAddress(source.address, it) }
         }
         return getMyNodePool().size - before
@@ -123,13 +126,90 @@ class NodeMeshManager @Inject constructor(
     }
 
     /**
-     * Picks up to [NODE_POOL_MAX_SIZE] own nodes for a new contact: the least-used ones first
-     * ([usage] = how many existing contacts already have each address), spread over as many
-     * different servers (owner secrets) as possible, ties broken at random. With enough nodes
-     * every contact ends up on nodes no other contact knows.
+     * Picks up to [NODE_POOL_MAX_SIZE] own nodes for a new contact FROM ONE LIST: the least-used
+     * ones first ([usage] = how many existing contacts already have each address), spread over as
+     * many different servers (owner secrets) of that list as possible, ties broken at random. With
+     * enough nodes every contact ends up on nodes no other contact knows.
      */
-    fun chooseNodesForNewContact(usage: Map<String, Int>): List<String> =
-        chooseNodes(getMyNodePool().shuffled(), usage, NODE_POOL_MAX_SIZE)
+    fun chooseNodesForNewContact(listId: String, usage: Map<String, Int>): List<String> {
+        val members = getNodeLists().find { it.id == listId }?.addresses?.toSet() ?: return emptyList()
+        return chooseNodes(getMyNodePool().filter { it.address in members }.shuffled(), usage, NODE_POOL_MAX_SIZE)
+    }
+
+    // ─── Node lists (named groups of own nodes — see NodeLists.kt) ─────────────────────────────
+    // Stored beside the flat pool, never instead of it: the pool (address + owner secret) is what
+    // deposits use, the lists only decide which nodes a NEW contact is given.
+
+    private fun loadNodeLists(): List<NodeList> = NodeLists.parse(prefs.getString("node_lists", "") ?: "")
+
+    private fun saveNodeLists(lists: List<NodeList>) {
+        prefs.edit().putString("node_lists", NodeLists.serialize(lists)).apply()
+    }
+
+    private fun newListId(): String = java.util.UUID.randomUUID().toString()
+
+    /** The lists, always consistent with the real pool (a node that has no list yet — scanned by
+     *  owner QR, or from before lists existed — lands in "Standard"). */
+    fun getNodeLists(): List<NodeList> {
+        val stored = loadNodeLists()
+        val reconciled = NodeLists.reconcile(stored, getMyNodePool().map { it.address }, ::newListId)
+        if (reconciled != stored) saveNodeLists(reconciled)
+        return reconciled
+    }
+
+    /** How many different servers (distinct owner secrets) the nodes of [list] sit on. */
+    fun serverCount(list: NodeList): Int {
+        val members = list.addresses.toSet()
+        return getMyNodePool().filter { it.address in members }.map { it.ownerSecret }.distinct().size
+    }
+
+    sealed class ImportResult {
+        /** [added] = nodes that were new on this device, [total] = nodes now in the list. */
+        data class Ok(val listId: String, val listName: String, val added: Int, val total: Int) : ImportResult()
+        /** Not all of the file's nodes fit under [OWN_NODES_MAX] — nothing was imported. */
+        data class NoRoom(val needed: Int, val free: Int) : ImportResult()
+        object UnknownList : ImportResult()
+    }
+
+    /**
+     * Takes over every node of a server's list file. All or nothing: if they do not all fit under
+     * [OWN_NODES_MAX] nothing is changed. [targetListId] = add to that existing list, null = make a
+     * new list called [name]. Nodes that were already known (same address) just get the file's
+     * secret and move into the target list. The first address is remembered as the server's pool
+     * source, so later "look for more nodes on this server" refreshes keep working.
+     */
+    fun importNodeList(file: NodeListFile.Parsed, name: String, targetListId: String?): ImportResult {
+        val lists = getNodeLists()
+        if (targetListId != null && lists.none { it.id == targetListId }) return ImportResult.UnknownList
+        val known = getMyNodePool().map { it.address }.toSet()
+        val fresh = file.addresses.count { it !in known }
+        val free = OWN_NODES_MAX - known.size
+        if (fresh > free) return ImportResult.NoRoom(fresh, free)
+
+        val listId = targetListId ?: newListId()
+        if (!addMyNodes(file.addresses, file.ownerSecret)) return ImportResult.NoRoom(fresh, free)
+        saveNodeLists(NodeLists.assign(getNodeLists(), file.addresses, listId, name))
+
+        val first = file.addresses.first()
+        val sources = getPoolSources().filter { it.address !in file.addresses } + ParsedNodeConnection(first, file.ownerSecret)
+        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+        file.control?.let { setControlAddress(first, it) }
+
+        val finalList = getNodeLists().first { it.id == listId }
+        return ImportResult.Ok(listId, finalList.name, fresh, finalList.addresses.size)
+    }
+
+    fun renameNodeList(listId: String, name: String) {
+        saveNodeLists(NodeLists.rename(getNodeLists(), listId, name))
+    }
+
+    /** Removes the list AND its nodes from this device. Returns how many nodes went with it. */
+    fun deleteNodeList(listId: String): Int {
+        val list = getNodeLists().find { it.id == listId } ?: return 0
+        list.addresses.forEach { removeMyNode(it) }
+        saveNodeLists(getNodeLists().filter { it.id != listId })
+        return list.addresses.size
+    }
 
     /**
      * NODE_MESH_SPEC.md §6 — one of this device's own nodes changed address (e.g. server moved),
@@ -152,6 +232,7 @@ class NodeMeshManager @Inject constructor(
             if (it.address == oldAddress) ParsedNodeConnection(newAddress, it.ownerSecret) else it
         }
         prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+        saveNodeLists(NodeLists.replaceAddress(loadNodeLists(), oldAddress, newAddress))
         return true
     }
 
@@ -189,8 +270,9 @@ class NodeMeshManager @Inject constructor(
          *  §5's "up to 3 own nodes" redundancy recommendation, now applied per contact. */
         const val NODE_POOL_MAX_SIZE = 3
 
-        /** How many own nodes this device can hold in total, across all servers. */
-        const val OWN_NODES_MAX = 500
+        /** How many own nodes this device can hold in total, across all servers and lists (four
+         *  full servers of 250 nodes). */
+        const val OWN_NODES_MAX = 1000
 
         data class ParsedNodeConnection(val address: String, val ownerSecret: String)
 

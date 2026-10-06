@@ -190,10 +190,12 @@ Kontakts. Solange der Pool genug Nodes hat (3 pro Kontakt), haben zwei Kontakte 
 Gemeinsames mehr. Der angezeigte QR bleibt bis zum Scan gespeichert ("pending"), ein Bildschirm =
 ein Kontakt.
 
-**Viele Nodes pro Server.** `node-mesh-server` betreibt mit `NODE_MESH_NODES=1..500` beliebig
-viele Onion-Adressen in einem Prozess mit einem Tor. Die App scannt einen Owner-QR pro Server und
-holt die übrigen Adressen über `GET /pool` (nur mit Owner-Secret), alle 6 h erneut. Pool-Grenze
-in der App: 500 eigene Nodes. Messung siehe `node-mesh-server/README.md`.
+**Viele Nodes pro Server.** `node-mesh-server` betreibt in einem Prozess mit einem Tor immer die
+volle lizenzierte Zahl an Onion-Adressen (normal und höchstens **250**, keine Einstellung — jeder
+Server sieht und lastet gleich). Die App scannt einen Owner-QR pro Server und holt die übrigen
+Adressen über `GET /pool` (nur mit Owner-Secret), alle 6 h erneut — oder importiert die Node-Liste
+als Datei (§15). Pool-Grenze in der App: 1000 eigene Nodes (vier volle Server). Messung siehe
+`node-mesh-server/README.md`.
 
 **Keine eigene Onion-Adresse auf dem Telefon (2026-10-01).** Im Node-Mesh-Pfad ist das Telefon
 reiner Tor-Client: beim Ablegen weist es sich per Owner-Secret aus, beim Abholen per Routing-Tag.
@@ -738,7 +740,29 @@ A Business Node server runs with an offline-checked licence (`node-mesh-server/s
 `unpruuf-server-license:v1:<b64url payload>:<b64url Ed25519 signature>`, payload
 `1|serial|customer|maxNodes|issuedAtMs|expiresAtMs`, signature over `"unpruuf-server-license-v1\n" + payload`
 with the same key pair as the app licences. No network, no device identification, no telemetry. The licence
-bounds the node count (1–500) and the expiry. Without a licence only the setup page runs; after expiry
+fixes the node count (default and maximum 250; the server always runs exactly that many) and the expiry. Without a licence only the setup page runs; after expiry
 deposits are refused with 402 while fetching keeps working. A Temp Node needs none. The server stays
 structurally blind: the check reads one local file and learns nothing about users or contacts.
+
+Android node (`relay-android`): the same check (`core/NodeLicense.kt`, same code format and key). One node per
+device, so `maxNodes` is read but changes nothing. Without a licence the owner QR stays hidden and deposits are
+refused; after expiry deposits are refused (402), reading keeps working.
+
+## 15. Node lists (2026‑10‑06)
+
+**File.** The server's setup page exports `unpruuf-node-list:v1` (plain text): header lines `name`, `secret`
+(owner secret for every node of that server), optional `control` (sealed servers), `count`, an empty line, then one
+address per line. Parser and writer: `node-mesh-server/src/nodeList.ts`, app: `NodeListFile.kt`; a test pins that the
+Kotlin parser reads the real TypeScript output. The file carries the write key: as sensitive as the owner QR.
+
+**Lists in the app.** A list is a named group of own nodes (`NodeLists.kt`). Every node is in exactly one list, a list
+with no nodes does not exist, a list may hold the nodes of several servers. Importing a file creates a list (or adds
+to an existing one); nodes added by owner QR land in "Standard". Settings → Node lists: import (file or pasted text),
+rename, delete (removes the list's nodes from the device; shows how many contacts used them).
+
+**Adding a contact.** The Business QR screen requires a list: the QR carries three nodes from it (least-used first,
+spread over as many different servers of the list as possible). With exactly one list it is pre-selected. Changing the
+list starts a fresh pairing (new keys), so a half-used QR is never mixed with nodes of another list. Existing
+contacts keep the nodes they were given. Design note: a list of ONE server puts all three nodes of a contact on one
+machine — put several servers in one list to keep the contact's nodes spread over different hosts.
 
