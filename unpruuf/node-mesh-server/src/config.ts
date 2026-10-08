@@ -47,6 +47,11 @@ export const IDENTITY_PATH = path.join(DATA_DIR, "node-mesh-identity.json");
 export const LICENSE_PATH = path.join(DATA_DIR, "license.txt");
 export const TOR_BIN_DIR = process.env.NODE_MESH_TOR_BIN_DIR ?? path.join(PACKAGE_ROOT, "tor-bin");
 
+// Where the encrypted packets wait. Default: a file on disk, so packets survive a restart (until
+// their TTL). NODE_MESH_STORE=ram keeps them in memory only: a restart (or power loss) drops every
+// waiting packet and nothing is ever written to the disk. A Temp Node is always in memory.
+export const STORE_IN_RAM = process.env.NODE_MESH_STORE === "ram";
+
 // Tor is mandatory for a real node. NODE_MESH_TOR=0 exists only for automated tests and for an
 // operator who already runs their own Tor hidden service in front of PORT — never a LAN shortcut.
 export const TOR_ENABLED = process.env.NODE_MESH_TOR !== "0";

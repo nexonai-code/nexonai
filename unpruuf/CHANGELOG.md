@@ -5,6 +5,32 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑08 · Shared nodes, packet lifetime per chat, RAM store
+
+**What was done**
+
+- **Contacts share nodes.** A new contact gets 3 nodes picked at random from the chosen list, one per server first. Before, the
+  least-used nodes were chosen so that no node belonged to two contacts. A node that serves only one contact is that contact's
+  fingerprint; shared nodes mix the traffic. The "room for N contacts with nodes of their own" display is removed everywhere
+  (server setup page, overview, licence tool, list screens, contact picker). Texts that promised "own nodes for every contact"
+  were reworded (node-list hint, README, two slides).
+- **Packet lifetime per chat.** Clock icon in the chat bar: 1, 6 or 24 hours (default 24). Sent as the deposit's `ttl`; the node
+  caps it at its own profile. New column `messageTtlHours` (DB v12, real migration, contacts kept). Cover packets use the chat's
+  value too.
+- **Packets in RAM only (option).** `NODE_MESH_STORE=ram` for a licensed server: waiting packets only in memory, restart drops
+  them, nothing written to disk. `start.bat` asks once. The overview shows where packets live. Default stays on disk.
+- Docs: SPEC §18, BETRIEB (sharing, lifetime, RAM), server README, STATUS.
+
+**Which bug appeared**
+
+None in the tests. One thing to know: the old display and the old tests assumed "own nodes per contact" in four places (server page,
+overview JSON, licence tool, app list rows and picker); all were removed together so no screen still makes the old promise.
+
+**What is not checked:** a real device; a load test (the 100 users per node figure is calculated from the rate limit); the Android
+node still stores packets in its SQLite file, so "RAM only" holds for the PC/Linux/Docker server and the Temp Node, not for it.
+
+---
+
 ## 2026‑10‑06 · Rotating list feed: a company keeps its employees' node lists up to date
 
 **What was done**

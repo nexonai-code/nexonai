@@ -2535,13 +2535,13 @@ class P2PNetworkManager @Inject constructor(
      * depends on the CONTACT's row existing, so there's no "deleted mid-flight" risk to guard
      * against here the way [nodeMeshTagFor] does.
      */
-    private suspend fun depositToOwnNodes(addresses: List<String>, routingTag: String, padded: ByteArray): Boolean {
+    private suspend fun depositToOwnNodes(addresses: List<String>, routingTag: String, padded: ByteArray, ttlMs: Long? = null): Boolean {
         val pool = nodeMeshManager.getMyNodePool().associateBy { it.address }
         val targets = addresses.mapNotNull { pool[it] }
         if (targets.isEmpty()) return false
         var anySucceeded = false
         for (node in targets) {
-            if (nodeMeshClient.deposit(node.address, node.ownerSecret, routingTag, padded)) anySucceeded = true
+            if (nodeMeshClient.deposit(node.address, node.ownerSecret, routingTag, padded, ttlMs)) anySucceeded = true
         }
         return anySucceeded
     }
@@ -2562,10 +2562,13 @@ class P2PNetworkManager @Inject constructor(
             ?: nodeMeshManager.getMyNodePool().take(NodeMeshManager.NODE_POOL_MAX_SIZE).map { it.address }
         val tempAddress = contact?.tempNodeAddress
         val tempSecret = contact?.tempNodeOwnerSecret
+        // The chat's own packet lifetime (1 / 6 / 24 h, MessageTtl). A contact row that is already
+        // gone sends with the node's default, which is the longest it allows.
+        val ttlMs = contact?.let { MessageTtl.toMillis(it.messageTtlHours) }
         if (contact == null || tempAddress == null || tempSecret == null) {
-            return depositToOwnNodes(nodes, routingTag, padded)
+            return depositToOwnNodes(nodes, routingTag, padded, ttlMs)
         }
-        val tempSucceeded = nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded)
+        val tempSucceeded = nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded, ttlMs)
         if (tempSucceeded && !contact.tempNodeActive) {
             // First successful deposit via the Temp Node — §7 step 6's confirmation ("erste
             // erfolgreiche eigene Nachricht über den Temp Node in diese Richtung"). From here on
@@ -2580,11 +2583,11 @@ class P2PNetworkManager @Inject constructor(
             // for THIS one message if the deposit above failed, so a message isn't lost in the
             // gap before the heartbeat loop notices an outage and flips the state back — the
             // state itself is heartbeat-governed, not decided per-send.
-            return tempSucceeded || depositToOwnNodes(nodes, routingTag, padded)
+            return tempSucceeded || depositToOwnNodes(nodes, routingTag, padded, ttlMs)
         }
         // Registered but not yet confirmed: dual-deposit, standard nodes stay the reliable path
         // until the Temp Node has proven itself reachable at least once.
-        val standardSucceeded = depositToOwnNodes(nodes, routingTag, padded)
+        val standardSucceeded = depositToOwnNodes(nodes, routingTag, padded, ttlMs)
         return tempSucceeded || standardSucceeded
     }
 

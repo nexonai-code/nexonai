@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,6 +50,7 @@ import com.nexonai.unpruuf.screens.qrpair.PortraitCaptureActivity
 import androidx.compose.ui.res.stringResource
 import com.nexonai.unpruuf.R
 import com.nexonai.unpruuf.domain.AppEdition
+import com.nexonai.unpruuf.domain.network.MessageTtl
 import kotlinx.coroutines.delay
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -86,6 +88,7 @@ fun ChatScreen(
     var inputText by remember { mutableStateOf("") }
     var showRevokeDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showTtlDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf("") }
     var cameraPermissionDenied by remember { mutableStateOf(false) }
     var fullscreenImage by remember { mutableStateOf<RamMessage?>(null) }
@@ -205,6 +208,41 @@ fun ChatScreen(
                 TextButton(onClick = { showRevokeDialog = false }) {
                     Text(stringResource(R.string.chat_cancel))
                 }
+            }
+        )
+    }
+
+    if (showTtlDialog) {
+        val current = MessageTtl.normalize(contact?.messageTtlHours)
+        AlertDialog(
+            onDismissRequest = { showTtlDialog = false },
+            title = { Text(stringResource(R.string.chat_ttl_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.chat_ttl_body), style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+                    MessageTtl.STEPS_HOURS.forEach { hours ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setMessageTtl(hours)
+                                    showTtlDialog = false
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = hours == current, onClick = {
+                                viewModel.setMessageTtl(hours)
+                                showTtlDialog = false
+                            })
+                            Text(stringResource(R.string.chat_ttl_option, hours))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTtlDialog = false }) { Text(stringResource(R.string.chat_cancel)) }
             }
         )
     }
@@ -342,6 +380,16 @@ fun ChatScreen(
                                 Icon(
                                     Icons.Default.Autorenew,
                                     contentDescription = stringResource(R.string.chat_cd_wechsel),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        // How long my packets for this chat wait on the nodes — Node-Mesh contacts only.
+                        if (contact?.nodeMesh == true) {
+                            IconButton(onClick = { showTtlDialog = true }) {
+                                Icon(
+                                    Icons.Default.Timer,
+                                    contentDescription = stringResource(R.string.chat_cd_ttl),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }

@@ -2,9 +2,9 @@ package com.nexonai.unpruuf.domain.network
 
 /**
  * Named groups of this device's own nodes ("lists"). When a contact is added you pick ONE list and
- * the contact gets three nodes from it (spread over as many different servers of that list as
- * possible, least-used first — see [NodeMeshManager.chooseNodes]). That makes it explicit and
- * auditable which servers carry which contacts, e.g. one list per customer or per site.
+ * the contact gets three nodes from it (picked at random, spread over as many different servers of
+ * that list as possible — see [NodeMeshManager.chooseNodes]). Contacts of one list share its nodes.
+ * That makes it explicit which servers can carry which contacts, e.g. one list per customer or site.
  *
  * Rules: every node address belongs to exactly one list; a list with no nodes does not exist; a
  * list can hold the nodes of several servers (so one contact's three nodes need not all sit at one
@@ -62,25 +62,6 @@ object NodeLists {
             without + NodeList(listId, cleanName(newName).ifEmpty { DEFAULT_NAME }, addresses.distinct())
         }
         return updated.filter { it.addresses.isNotEmpty() }
-    }
-
-    /**
-     * How many contacts a list can carry with nodes of their own (no node shared with another
-     * contact). [serverSizes] = how many of the list's nodes sit on each server. A contact gets three
-     * nodes, one per server when the list has three or more servers (that is how the app picks them).
-     * Then c contacts fit exactly when the servers can supply them: sum over servers of min(size, c)
-     * must reach 3c. With fewer than three servers the three nodes may share a server, so it is
-     * simply total / 3. One server of 250: 83. Three servers of 250 each: 250.
-     */
-    fun capacity(serverSizes: List<Int>): Int {
-        val sizes = serverSizes.filter { it > 0 }
-        val total = sizes.sum()
-        if (sizes.size < 3) return total / 3
-        var best = 0
-        for (c in 1..(sizes.maxOrNull() ?: 0)) {
-            if (sizes.sumOf { minOf(it, c) } >= 3 * c) best = c else break
-        }
-        return best
     }
 
     fun listOf(lists: List<NodeList>, address: String): NodeList? = lists.find { address in it.addresses }

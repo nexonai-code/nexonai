@@ -154,5 +154,9 @@ data class Contact(
     /** When this device first sent its intake to the organisation's letterbox (null = no intake
      *  needed, e.g. not an officer contact). Retried until [caseNumber] is known. */
     val intakeStartedAt: Long? = null,
-    val intakeLastSentAt: Long? = null
+    val intakeLastSentAt: Long? = null,
+    /** How long my packets for this contact may wait on a Node-Mesh node: 1, 6 or 24 hours
+     *  (null = 24, the node's maximum). Sent as the deposit's ttl; a node never keeps a packet
+     *  longer than its own profile allows, whatever is asked. See [MessageTtl]. */
+    val messageTtlHours: Int? = null
 )

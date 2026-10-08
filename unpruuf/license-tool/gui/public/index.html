@@ -212,7 +212,7 @@ document.getElementById('issueBtn').addEventListener('click', async () => {
 function showCapacity() {
   const n = parseInt(document.getElementById('srvNodes').value, 10);
   document.getElementById('srvCapacity').textContent = Number.isInteger(n) && n >= 1
-    ? `${n} nodes = room for ${Math.floor(n / 3)} contacts with nodes of their own on one server, up to ${n} with three servers of this size.`
+    ? `${n} nodes (mailboxes) on this server. Contacts share them: every contact gets 3 nodes, picked at random.`
     : '';
 }
 document.getElementById('srvNodes').addEventListener('input', showCapacity);

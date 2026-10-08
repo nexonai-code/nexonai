@@ -7,7 +7,7 @@ import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
 import {
-  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW,
+  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM,
   RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
 } from "./config";
 import {
@@ -45,7 +45,8 @@ const license = new LicenseGuard({ filePath: ephemeral ? null : LICENSE_PATH, en
 // A Temp Node is one address for one chat by definition. Otherwise the license caps the node count.
 // Not a setting: a licensed server runs every node its licence allows (never more than 250).
 let nodeCount = ephemeral ? 1 : Math.max(1, license.maxNodes());
-const store = new NodeStore(ephemeral ? ":memory:" : DB_PATH, identity.ttlHours);
+const messagesInRam = ephemeral || STORE_IN_RAM;
+const store = new NodeStore(messagesInRam ? ":memory:" : DB_PATH, identity.ttlHours);
 
 let onion: NodeOnionService | null = null;
 let apiServer: Server | null = null;
@@ -118,6 +119,7 @@ const adminApp = createAdminApp(
     profile: NODE_PROFILE,
     slot: NODE_SLOT,
     ephemeral,
+    messagesInRam,
     torEnabled: TOR_ENABLED,
     publicAddress,
     publicAddresses,
@@ -145,6 +147,7 @@ const kind = ephemeral
   : `Business Node server (slot ${NODE_SLOT}/3)`;
 console.log(`unpruuf ${kind} — profile "${NODE_PROFILE.name}" (TTL ${NODE_PROFILE.ttlHours}h)`);
 if (ephemeral) console.log("[identity] Temp Node — identity, onion key and messages exist in memory only");
+else if (messagesInRam) console.log("[store] NODE_MESH_STORE=ram — waiting packets live in memory only; a restart drops them");
 else console.log(wasCreated ? "[identity] new node identity created" : "[identity] existing node identity loaded");
 if (sealed && isLocked(identity)) {
   console.log("[keys] LOCKED — node keys are sealed and only exist on disk encrypted. Nodes stay offline until");

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MAX_FETCH_MANY_TAGS } from "./config";
 import {
-  clientToleranceEpochs, contactCapacity, MAX_NODES_PER_SERVER, MAX_TTL_HOURS, PROFILES, resolveProfile, resolveSlot, slotPorts, slotResetOffsetMs,
+  clientToleranceEpochs, MAX_NODES_PER_SERVER, MAX_TTL_HOURS, PROFILES, resolveProfile, resolveSlot, slotPorts, slotResetOffsetMs,
 } from "./profiles";
 
 test("every profile stays inside MAX_TTL_HOURS, so the fixed client window always covers it", () => {
@@ -36,10 +36,3 @@ test("a server never runs more than 250 nodes", () => {
   assert.equal(MAX_NODES_PER_SERVER, 250);
 });
 
-test("capacity: how many contacts get nodes of their own, alone and with three servers", () => {
-  assert.deepEqual(contactCapacity(5), { alone: 1, threeServers: 5 });
-  assert.deepEqual(contactCapacity(25), { alone: 8, threeServers: 25 });
-  assert.deepEqual(contactCapacity(100), { alone: 33, threeServers: 100 });
-  assert.deepEqual(contactCapacity(250), { alone: 83, threeServers: 250 });
-  assert.deepEqual(contactCapacity(2), { alone: 0, threeServers: 2 });
-});

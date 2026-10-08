@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # unpruuf Business Node server (Linux/macOS). Usage: ./start.sh [slot 1-3] [profile]
 #   The number of nodes comes from the licence (max 250) — it is not a setting.
+#   NODE_MESH_STORE=ram keeps waiting packets in memory only (a restart drops them); default: disk
 #   profile: standard (6h, default) | high-security (1h) | offline-tolerant (24h)
 set -euo pipefail
 cd "$(dirname "$0")"

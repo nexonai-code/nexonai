@@ -124,6 +124,9 @@ interface ContactDao {
     @Query("UPDATE contacts SET intakeStartedAt = NULL WHERE id = :id")
     suspend fun stopIntake(id: String)
 
+    @Query("UPDATE contacts SET messageTtlHours = :hours WHERE id = :id")
+    suspend fun setMessageTtlHours(id: String, hours: Int?)
+
     @Query("SELECT * FROM contacts WHERE id = :id")
     fun observeContact(id: String): Flow<Contact?>
 }

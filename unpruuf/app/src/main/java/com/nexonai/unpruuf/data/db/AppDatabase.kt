@@ -38,7 +38,9 @@ import com.nexonai.unpruuf.data.model.Contact
     // v11: Whistleblower case fields (Contact.caseNumber/caseStatus/caseOpenedAt/caseAckDueAt/
     // caseFeedbackDueAt/caseUpdatedAt/intakeStartedAt/intakeLastSentAt). The first version with a
     // REAL migration (MIGRATION_10_11, plain ADD COLUMNs) — contacts survive this update.
-    version = 11,
+    // v12: Contact.messageTtlHours (per-chat packet lifetime on the nodes: 1 / 6 / 24 h). Plain
+    // nullable ADD COLUMN (MIGRATION_11_12) — contacts survive.
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -53,5 +55,12 @@ val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
             "caseNumber TEXT", "caseStatus TEXT", "caseOpenedAt INTEGER", "caseAckDueAt INTEGER",
             "caseFeedbackDueAt INTEGER", "caseUpdatedAt INTEGER", "intakeStartedAt INTEGER", "intakeLastSentAt INTEGER"
         ).forEach { db.execSQL("ALTER TABLE contacts ADD COLUMN $it") }
+    }
+}
+
+/** v11 → v12: one nullable column, existing contacts are kept. */
+val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE contacts ADD COLUMN messageTtlHours INTEGER")
     }
 }

@@ -87,19 +87,6 @@ fun NodeListsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            stringResource(R.string.node_lists_row_capacity, row.capacity, row.contactCount),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (row.contactCount > row.capacity) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                        )
-                        if (row.contactCount > row.capacity) {
-                            Text(
-                                stringResource(R.string.node_lists_row_over),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { renaming = row }) { Text(stringResource(R.string.node_lists_rename)) }

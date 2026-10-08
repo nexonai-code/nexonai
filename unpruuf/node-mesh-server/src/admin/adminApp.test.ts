@@ -57,6 +57,7 @@ test("setup page serves owner code + QR to localhost and refuses foreign hosts",
       profile: PROFILES.standard,
       slot: 1,
       ephemeral: false,
+      messagesInRam: false,
       torEnabled: true,
       publicAddress: () => "abcdef.onion",
       torStatus: () => ({ state: "ready", bootstrapPercent: 100, onionAddress: "abcdef.onion", onionAddresses: ["abcdef.onion"], controlAddress: null, locked: false, restarts: 0, lastError: null, powEnabled: true }),
@@ -110,6 +111,7 @@ test("a locked server hides the owner QR and refuses rotation", async () => {
       profile: PROFILES.standard,
       slot: 1,
       ephemeral: false,
+      messagesInRam: false,
       torEnabled: true,
       publicAddress: () => null,
       torStatus: () => null,
@@ -144,6 +146,7 @@ test("overview reports nodes, stored packets and counters, and flags a locked or
     profile: PROFILES.standard,
     slot: 1 as const,
     ephemeral: false,
+    messagesInRam: false,
     torEnabled: true,
     publicAddress: () => "a.onion",
     publicAddresses: () => ["a.onion", "b.onion", "c.onion"],
@@ -169,6 +172,12 @@ test("overview reports nodes, stored packets and counters, and flags a locked or
 
   const locked = await overviewPayload({ ...base, sealed: true, isLocked: () => true, registeredNodes: async () => 0 });
   assert.equal(locked.level, "locked");
+
+  // where the waiting packets live is reported honestly, and the "room for N contacts" promise is gone
+  assert.equal(ok.messagesInRam, false);
+  const ram = await overviewPayload({ ...base, messagesInRam: true, registeredNodes: async () => 3 });
+  assert.equal(ram.messagesInRam, true);
+  assert.equal((ok as unknown as Record<string, unknown>).capacity, undefined);
 });
 
 test("the overview page is served on loopback only and embeds valid data", async () => {
@@ -179,6 +188,7 @@ test("the overview page is served on loopback only and embeds valid data", async
       profile: PROFILES.standard,
       slot: 1,
       ephemeral: false,
+      messagesInRam: false,
       torEnabled: false,
       publicAddress: () => "a</script>.onion",
       torStatus: () => null,
@@ -228,6 +238,7 @@ test("the setup page takes a server license: refuses bad codes, activates a good
       profile: PROFILES.standard,
       slot: 1,
       ephemeral: false,
+      messagesInRam: false,
       torEnabled: true,
       publicAddress: () => null,
       torStatus: () => null,
@@ -284,11 +295,10 @@ test("the setup page takes a server license: refuses bad codes, activates a good
     const after = await request(port, `localhost:${port}`, "/");
     assert.match(after.body, /Acme GmbH/);
     assert.doesNotMatch(after.body, /Lizenz erforderlich/);
-    // what the node count means for the customer (licence says 40 nodes)
-    assert.match(after.body, /40 Nodes = Platz für <b>13<\/b> Kontakte/);
-    assert.match(after.body, /bis zu <b>40<\/b> Kontakte/);
+    // nodes are shared between contacts now: no "room for N contacts" promise anywhere
+    assert.doesNotMatch(after.body, /Kontakte mit komplett eigenen Nodes/);
     const ovAfter = JSON.parse((await request(port, `localhost:${port}`, "/overview.json")).body);
-    assert.deepEqual(ovAfter.capacity, { alone: 13, threeServers: 40 });
+    assert.equal(ovAfter.capacity, undefined);
   } finally {
     listener.close();
   }
@@ -305,6 +315,7 @@ test("the setup page exports a node list file for the app, but never while locke
       profile: PROFILES.standard,
       slot: 2,
       ephemeral: false,
+      messagesInRam: false,
       torEnabled: true,
       publicAddress: () => addresses[0],
       publicAddresses: () => addresses,

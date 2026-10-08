@@ -337,22 +337,11 @@ class QrPairViewModel @Inject constructor(
         val name: String,
         val nodeCount: Int,
         val serverCount: Int,
-        /** How many more contacts fit on this list with nodes of their own (0 = full, nodes get shared). */
-        val freeSlots: Int
     )
 
     fun nodeListChoices(): List<NodeListChoice> {
-        val used = runBlocking { contactDao.getAllContactsOnce() }
-            .filter { it.nodeMesh }
-            .map { c ->
-                NodeMeshManager.parseNodeConnectionStringList(c.myNodeAddresses ?: "")
-                    .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }.toSet()
-            }
         return nodeMeshManager.getNodeLists().map { l ->
-            val members = l.addresses.toSet()
-            val inUse = used.count { u -> u.any { it in members } }
-            NodeListChoice(l.id, l.name, l.addresses.size, nodeMeshManager.serverCount(l),
-                (nodeMeshManager.listCapacity(l) - inUse).coerceAtLeast(0))
+            NodeListChoice(l.id, l.name, l.addresses.size, nodeMeshManager.serverCount(l))
         }
     }
 
@@ -392,21 +381,14 @@ class QrPairViewModel @Inject constructor(
             return null
         }
         val pending = identityManager.pendingNodeMeshPairing {
-            val usage = runBlocking { contactDao.getAllContactsOnce() }
-                .filter { it.nodeMesh }
-                .flatMap { c ->
-                    NodeMeshManager.parseNodeConnectionStringList(c.myNodeAddresses ?: "")
-                        .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
-                }
-                .groupingBy { it }.eachCount()
-            nodeMeshManager.chooseNodesForNewContact(listId, usage)
+            nodeMeshManager.chooseNodesForNewContact(listId)
         }
         // A pending set that does not come from the selected list (list changed or its nodes were
         // removed meanwhile) is useless — start fresh from the selected list.
         if (pending.nodeAddresses.none { it in list.addresses }) {
             identityManager.clearPendingNodeMeshPairing()
             val fresh = identityManager.pendingNodeMeshPairing {
-                nodeMeshManager.chooseNodesForNewContact(listId, emptyMap())
+                nodeMeshManager.chooseNodesForNewContact(listId)
             }
             shownNodeMeshPairing = fresh
             return fresh

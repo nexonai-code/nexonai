@@ -760,8 +760,8 @@ with no nodes does not exist, a list may hold the nodes of several servers. Impo
 to an existing one); nodes added by owner QR land in "Standard". Settings → Node lists: import (file or pasted text),
 rename, delete (removes the list's nodes from the device; shows how many contacts used them).
 
-**Adding a contact.** The Business QR screen requires a list: the QR carries three nodes from it (least-used first,
-spread over as many different servers of the list as possible). With exactly one list it is pre-selected. Changing the
+**Adding a contact.** The Business QR screen requires a list: the QR carries three nodes from it (picked at random,
+spread over as many different servers of the list as possible; nodes are shared between contacts — see §18). With exactly one list it is pre-selected. Changing the
 list starts a fresh pairing (new keys), so a half-used QR is never mixed with nodes of another list. Existing
 contacts keep the nodes they were given. Design note: a list of ONE server puts all three nodes of a contact on one
 machine — put several servers in one list to keep the contact's nodes spread over different hosts.
@@ -801,3 +801,28 @@ do not fit under the device limit, nothing changes. Contacts that were given a r
 address plus an encrypted, signed payload is. Not run against a real Tor in this sandbox: the first test on a real server
 is that the setup page reaches "ready" and the app finds the feed. The feed is not covered by the node licence.
 
+## 18. Shared nodes, packet lifetime per chat, RAM store (2026‑10‑08)
+
+**Nodes are shared.** Until now a new contact got the least-used nodes, so that no two contacts shared one. That was dropped.
+A node that serves exactly one contact is that contact's fingerprint: whoever sees the traffic on it sees that one
+conversation's volume and timing. A node that carries many conversations mixes them. What separates two conversations is the
+per-contact keys and the hourly routing tags, not the node. The app now picks 3 nodes at random from the chosen list, one per
+server first (`NodeMeshManager.chooseNodes`), and never looks at how often a node is used. What this costs: a compromised node
+touches every contact that uses it (hence three nodes per contact). What it gains: mixing grows with the number of active users
+per node. The old "room for N contacts with nodes of their own" display (server setup page, overview, licence tool, list
+screens, contact picker) is gone with it.
+
+**Capacity, as far as it can be said.** A node takes 5 fetches/s on average (burst 30, `routes/node.ts`). The app polls about
+every 20 s with one batched request per node, so roughly 100 concurrently active users per node. Calculated from the code, not
+measured; Tor on the customer's hardware is the likelier limit. A load test is still to be done.
+
+**Packet lifetime per chat.** `Contact.messageTtlHours` (1, 6 or 24; null = 24; DB v12, `MIGRATION_11_12`, contacts kept).
+`depositForNodeMesh` sends it as the deposit's `ttl` (ms). The server already accepted `ttl` and caps it at the node's own
+profile; the Android node does the same (`NodeMeshHttpServer`). Cover deposits use the chat's value too, so cover and real
+packets look alike. Only three steps (`MessageTtl`), because the node sees the value. The receiver's poll window is sized for
+24 h, so every step is within it. In the chat: clock icon in the top bar (Node-Mesh contacts only).
+
+**RAM store.** `NODE_MESH_STORE=ram` opens the store as `:memory:` for a normal (licensed) server. A restart drops every
+waiting packet; the owner secret and node keys are unaffected (sealed on disk, `KEY_STORAGE`). Default stays `disk`. The
+Temp Node is always in memory. `start.bat` asks once and remembers it in `node.env.bat`. Not covered: the Android node
+(`relay-android`) still keeps packets in its SQLite file.

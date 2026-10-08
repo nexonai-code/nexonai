@@ -71,25 +71,47 @@ Der Betrieb liegt vollständig bei Ihnen: Ihr Server, Ihre Schlüssel, Ihre Date
    **Einstellungen → Node-Listen → Datei auswählen → Importieren**. Danach die Datei löschen: sie enthält
    Ihren Schreibschlüssel.
 3. Jeder Server (oder jede Gruppe von Servern) wird eine **Liste** mit Namen, z. B. „Kunde A“ oder „Wien“.
-4. Beim **Hinzufügen eines Kontakts** wählen Sie eine Liste. Der Kontakt bekommt drei Nodes daraus.
-   So legen Sie sauber fest, welche Server welche Kontakte tragen.
+4. Beim **Hinzufügen eines Kontakts** wählen Sie eine Liste. Der Kontakt bekommt drei Nodes daraus, zufällig
+   gewählt. So legen Sie sauber fest, welche Server welche Kontakte tragen können.
 5. Tipp: Legen Sie mehrere Server in eine Liste. Dann liegen die drei Nodes eines Kontakts bei
    verschiedenen Betreibern, und niemand sieht alle drei.
 
-## Wie viele Kontakte tragen Ihre Nodes?
+## Teilen sich Kontakte Nodes?
 
-Jeder Kontakt bekommt 3 eigene Nodes, kein Node gehört zwei Kontakten. Daraus folgt:
+Ja, und das ist Absicht. Jeder Kontakt bekommt drei Nodes aus der gewählten Liste, zufällig und auf möglichst
+verschiedene Server verteilt. Mehrere Kontakte dürfen auf denselben Nodes liegen.
 
-| Ein Server mit … Nodes | trägt allein | drei Server dieser Größe tragen |
-|---|---|---|
-| 5 | 1 Kontakt | 5 Kontakte |
-| 25 | 8 Kontakte | 25 Kontakte |
-| 100 | 33 Kontakte | 100 Kontakte |
-| 250 | 83 Kontakte | 250 Kontakte |
+Warum: Ein Node, der nur zu einem einzigen Kontakt gehört, wäre das Erkennungszeichen genau dieses Gesprächs. Wer ihn
+beobachtet, sieht dessen Menge und Zeitpunkte. Tragen viele Gespräche einen Node gemeinsam, vermischt sich der Verkehr,
+und der Node kann ihn keinem Gespräch zuordnen. Die Gespräche trennen die Schlüssel und die stündlich wechselnden
+Paketadressen, nicht der Node.
 
-Server-Einrichtungsseite, Node-Listen und die Listenauswahl beim Hinzufügen eines Kontakts zeigen, wie viel
-Platz noch frei ist. Ist eine Liste voll, teilen sich weitere Kontakte Nodes: es funktioniert weiter, aber die
-Kontakte sind dann über gemeinsame Adressen verbunden. Dann einen weiteren Server in die Liste importieren.
+Was das für Sie heißt:
+
+- Ein Server mit 250 Nodes trägt weit mehr als 83 Kontakte. Eine feste Obergrenze gibt es nicht.
+- Je mehr aktive Leute dieselben Nodes nutzen, desto besser die Vermischung. Bei sehr wenigen Nutzern ist der Effekt klein.
+- Die drei Nodes eines Kontakts liegen auf verschiedenen Servern, sobald die Liste mehrere Server enthält. Dann sieht
+  kein einzelner Server das ganze Gespräch.
+- Ein ausgefallener Node betrifft alle Kontakte, die ihn nutzen. Deshalb hat jeder Kontakt drei.
+- Tragfähigkeit: Ein Node nimmt im Schnitt 5 Abfragen pro Sekunde an. Die App fragt etwa alle 20 Sekunden. Das ergibt
+  rechnerisch rund 100 gleichzeitig aktive Nutzer pro Node. Das ist eine Rechnung aus dem Code, kein Lasttest.
+
+## Wie lange bleiben Pakete liegen?
+
+- **Pro Chat einstellbar:** In jedem Business-Chat gibt es oben die Uhr: 1, 6 oder 24 Stunden. Das gilt für das, was
+  Sie in diesem Chat senden. Standard sind 24 Stunden. Ihr Kontakt muss die Pakete in dieser Zeit abholen.
+- Der Node hält ein Paket nie länger, als sein Profil erlaubt (höchstens 24 Stunden), egal was angefragt wird.
+- Der Node sieht die gewählte Zeit. Es gibt bewusst nur drei Stufen, damit sie Chats nicht unterscheidbar macht.
+- Nach Ablauf wird das Paket überschrieben und gelöscht. Lesen löscht nie.
+
+## Wo liegen die Pakete: Platte oder nur Arbeitsspeicher?
+
+- **Standard: auf der Platte** (SQLite-Datei). Pakete überleben einen Neustart bis zu ihrem Ablauf.
+- **Nur Arbeitsspeicher:** `NODE_MESH_STORE=ram` (die `start.bat` fragt beim ersten Start). Pakete liegen nur im RAM,
+  nichts wird auf die Platte geschrieben. Ein Neustart oder Stromausfall leert alles, was noch wartet. Der Schlüssel
+  bleibt davon getrennt: er liegt weiter verschlüsselt auf der Platte (siehe unten).
+- Die Übersichtsseite zeigt, welche Variante läuft.
+- Der Temp Node liegt immer nur im Arbeitsspeicher.
 
 ## Listen-Dienst für Mitarbeiter (aktuelle Node-Listen automatisch)
 

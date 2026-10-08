@@ -12,6 +12,7 @@ import com.nexonai.unpruuf.data.repository.InMemoryMessageStore
 import com.nexonai.unpruuf.data.repository.MessageType
 import com.nexonai.unpruuf.data.repository.RamMessage
 import com.nexonai.unpruuf.domain.network.MessagePayload
+import com.nexonai.unpruuf.domain.network.MessageTtl
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
 import com.nexonai.unpruuf.domain.network.P2PNetworkManager
 import com.nexonai.unpruuf.domain.network.RelayManager
@@ -288,6 +289,15 @@ class ChatViewModel @Inject constructor(
             contactDao.clearTempNode(contact.id)
             _contact.value = contactDao.getContactById(contact.id)
             p2pNetworkManager.sendTempNodeDeactivate(contact.id)
+        }
+    }
+
+    /** Sets how long my packets for this contact may wait on the nodes (1 / 6 / 24 h). */
+    fun setMessageTtl(hours: Int) {
+        val contact = _contact.value ?: return
+        viewModelScope.launch {
+            contactDao.setMessageTtlHours(contact.id, MessageTtl.normalize(hours))
+            _contact.value = contactDao.getContactById(contact.id)
         }
     }
 

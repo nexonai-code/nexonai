@@ -18,7 +18,7 @@ A separate product from `../server/` (the consumer app's optional relay); that o
    die **Einrichtungsseite** mit dem Owner-QR.
 5. In der unpruuf-App: **Einstellungen → Business Node-Mesh → QR scannen**. Ein Scan reicht:
    Die App holt sich alle anderen Nodes dieses Servers selbst (`GET /pool`) und gibt jedem neuen
-   Kontakt eigene Nodes daraus.
+   Kontakt 3 Nodes daraus (zufällig, auf verschiedene Server verteilt; Kontakte teilen sich Nodes).
 
 Der Owner-QR ist dein **Schreibschlüssel** — nur in die eigene App, nie an Kontakte. Kontakte
 bekommen die Node-Adresse automatisch beim Pairing.
@@ -81,12 +81,14 @@ docker compose up -d           # container, setup page on the host's http://loca
 | **Sealed keys (default)** | `NODE_MESH_KEY_STORAGE=sealed`: owner secret and node keys are stored **only encrypted** (AES-256-GCM under the owner secret, which is never written down). After a restart the server is **locked** — only a control onion is online, nodes stay offline. Unlock in the app (Settings → Your own nodes → **Unlock**) or paste the owner code on the setup page; the nodes come back under the same addresses. A seized, powered-off server can't be run on under your addresses. `NODE_MESH_KEY_STORAGE=disk` = old behaviour (plain file, unattended restarts). Old plain files are sealed in place on first start. |
 | **Proof-of-work DoS defense** | Tor's onion-service PoW (`PoWDefensesEnabled=1`) is always on — flooding the node with connections costs the attacker CPU per attempt. The pinned bundle's Tor 0.4.9 ships the `pow` module (verified with `tor --list-modules`). |
 | **Self-healing** | If Tor crashes or the control connection drops, Tor restarts with backoff and re-adds the same key → same address. Tor also exits on its own if this process dies (`__OwningControllerProcess`), so no orphaned Tor keeps running. |
+| **Per-deposit TTL** | A deposit may carry `ttl` (ms) and gets at most the node's own profile TTL, never more. The app sends 1, 6 or 24 h per chat. |
 | **Profiles** | `NODE_PROFILE=standard\|high-security\|offline-tolerant` (6 h / 1 h / 24 h). Max 24 h, because every unpruuf client polls a window sized for 24 h — so any profile is always fully covered without the client knowing which one a contact runs. Unknown names refuse to start. |
 | **Slots** | `NODE_SLOT=1\|2\|3`: staggered daily Reset at minute 0 / 20 / 40 (UTC-aligned, so nodes on different machines stagger correctly), own default ports and data folder per slot — all three can even run on one machine. |
 | **Reset (hygiene only)** | Closes idle HTTP sockets, verifies the onion is still registered (re-adds it with the same key if not), checkpoints SQLite. Never touches messages, rate-limit counters or the address (NODE_MESH_SPEC.md §5). |
 | **Cleanup** | TTL sweep every 5 min is the only deletion path; expired rows are already invisible to reads. SQLite `secure_delete` overwrites swept ciphertext instead of leaving it in free pages. |
 | **Overview page** | `http://localhost:8790/overview` (slot 1; 8800/8810 for slots 2/3), same loopback-only protection as the setup page, refreshes every 5 s. Shows at a glance: traffic-light banner (all fine / Tor not ready / nodes missing / **locked**), nodes online (registered with Tor vs. configured), packets stored, new messages and fetches of the last 24 h as a bar chart, Tor state, key storage, profile, uptime, refused requests, and every node address with a copy button. Counts only (`src/metrics.ts`, memory only): the node still records nothing about who deposits or fetches. |
 | **Setup page** | Separate port (never part of the onion's port mapping), bound to `127.0.0.1`, loopback `Host` header required (blocks DNS-rebinding pages from reading the owner secret). Shows owner QR, Tor state, profile, slot, stored packet count, and a "rotate owner secret" button (custom-header CSRF guard; takes effect immediately, address unchanged). |
+| **Packets in RAM only** | `NODE_MESH_STORE=ram`: waiting packets live in memory only (SQLite `:memory:`), nothing is written to the disk; a restart drops them. Default `disk` keeps them until their TTL. The overview and the setup page show which one runs. (Keys are a separate matter: sealed on disk.) |
 | **Temp Node** | `EPHEMERAL=1` / `--ephemeral`: owner secret, onion key and messages exist only in memory — the key goes to Tor over the control port, never through a `HiddenServiceDir`. Tor's own working folder is a temp dir deleted on exit. Every start = new address. |
 
 ## Ports (defaults per slot)

@@ -78,6 +78,10 @@ This action cannot be undone.</string>
     <string name="chat_cd_send_connection_update">Send updated connection info</string>
     <string name="chat_cd_wechsel">Wechsel (rotate wire tag)</string>
     <string name="chat_cd_temp_node">Temp Node</string>
+    <string name="chat_cd_ttl">Packet lifetime</string>
+    <string name="chat_ttl_title">How long may packets wait?</string>
+    <string name="chat_ttl_body">Your packets for this chat are deleted from the nodes after this time, at the latest after 24 hours. Shorter means fewer traces; your contact must pick them up within that time. Applies to what you send.</string>
+    <string name="chat_ttl_option">%1$d hour(s)</string>
     <string name="chat_cd_attach_file">Attach file</string>
     <string name="chat_cd_take_photo">Take photo</string>
     <string name="chat_message_placeholder">Message…</string>
@@ -339,12 +343,9 @@ Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow i
     <string name="node_lists_delete_body">The list and its %1$d nodes are removed from this device. The servers themselves are not touched.</string>
     <string name="node_lists_delete_body_contacts">The list and its %1$d nodes are removed from this device. %2$d contact(s) use nodes from it and will no longer reach you.</string>
     <string name="qr_node_list_title">List for this contact</string>
-    <string name="qr_node_list_chip">%1$s · %2$d nodes · %3$d server(s) · room for %4$d more</string>
-    <string name="qr_node_list_chip_full">%1$s · %2$d nodes · %3$d server(s) · full, nodes will be shared</string>
+    <string name="qr_node_list_chip">%1$s · %2$d nodes · %3$d server(s)</string>
     <string name="qr_choose_list_first">Choose a list first</string>
     <string name="qr_choose_list_first_body">The QR you show carries three nodes from the list you pick above.</string>
-    <string name="node_lists_row_capacity">Room for %1$d contacts with nodes of their own · %2$d in use</string>
-    <string name="node_lists_row_over">More contacts than free nodes: some contacts now share nodes. Import another server into this list.</string>
     <string name="node_feeds_title">Company feeds</string>
     <string name="node_feeds_hint">A company can keep your node lists up to date. Paste the feed code you got from them. The app finds the feed itself (its address changes every few hours) and only accepts lists that really come from the company.</string>
     <string name="node_feeds_never">Not updated yet</string>

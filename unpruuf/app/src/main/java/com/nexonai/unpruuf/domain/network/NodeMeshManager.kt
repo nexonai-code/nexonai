@@ -126,14 +126,15 @@ class NodeMeshManager @Inject constructor(
     }
 
     /**
-     * Picks up to [NODE_POOL_MAX_SIZE] own nodes for a new contact FROM ONE LIST: the least-used
-     * ones first ([usage] = how many existing contacts already have each address), spread over as
-     * many different servers (owner secrets) of that list as possible, ties broken at random. With
-     * enough nodes every contact ends up on nodes no other contact knows.
+     * Picks up to [NODE_POOL_MAX_SIZE] own nodes for a new contact FROM ONE LIST: at random, from as
+     * many different servers (owner secrets) of that list as possible. Nodes are SHARED between
+     * contacts on purpose: a node that carries the traffic of many conversations cannot tie its
+     * traffic to one of them, while a node that serves a single contact is that contact's
+     * fingerprint. What separates contacts is the keys and the hourly routing tags, not the node.
      */
-    fun chooseNodesForNewContact(listId: String, usage: Map<String, Int>): List<String> {
+    fun chooseNodesForNewContact(listId: String): List<String> {
         val members = getNodeLists().find { it.id == listId }?.addresses?.toSet() ?: return emptyList()
-        return chooseNodes(getMyNodePool().filter { it.address in members }.shuffled(), usage, NODE_POOL_MAX_SIZE)
+        return chooseNodes(getMyNodePool().filter { it.address in members }, NODE_POOL_MAX_SIZE)
     }
 
     // ─── Node lists (named groups of own nodes — see NodeLists.kt) ─────────────────────────────
@@ -161,13 +162,6 @@ class NodeMeshManager @Inject constructor(
     fun serverCount(list: NodeList): Int {
         val members = list.addresses.toSet()
         return getMyNodePool().filter { it.address in members }.map { it.ownerSecret }.distinct().size
-    }
-
-    /** Contacts the list can carry with nodes of their own — see [NodeLists.capacity]. */
-    fun listCapacity(list: NodeList): Int {
-        val members = list.addresses.toSet()
-        val sizes = getMyNodePool().filter { it.address in members }.groupingBy { it.ownerSecret }.eachCount().values.toList()
-        return NodeLists.capacity(sizes)
     }
 
     // ─── Company list feeds (FeedCrypto.kt, FeedSources.kt) ──────────────────────────────────────
@@ -370,16 +364,16 @@ class NodeMeshManager @Inject constructor(
             return ParsedNodeConnection(address, ownerSecret)
         }
 
-        /** Pure core of [chooseNodesForNewContact]: least-used first (stable for equal usage, so
-         *  the caller's shuffle decides ties), one node per server before any server repeats. */
-        fun chooseNodes(pool: List<ParsedNodeConnection>, usage: Map<String, Int>, count: Int): List<String> {
-            val ordered = pool.sortedBy { usage[it.address] ?: 0 }
+        /** Random pick, one node per server first (so no single server sees a whole conversation),
+         *  then random fill. Contacts may end up on the same nodes — see [chooseNodesForNewContact]. */
+        fun chooseNodes(pool: List<ParsedNodeConnection>, count: Int, random: kotlin.random.Random = kotlin.random.Random.Default): List<String> {
+            val shuffled = pool.shuffled(random)
             val picked = mutableListOf<ParsedNodeConnection>()
-            for (node in ordered) {
+            for (node in shuffled) {
                 if (picked.size >= count) break
                 if (picked.none { it.ownerSecret == node.ownerSecret }) picked += node
             }
-            for (node in ordered) {
+            for (node in shuffled) {
                 if (picked.size >= count) break
                 if (node !in picked) picked += node
             }

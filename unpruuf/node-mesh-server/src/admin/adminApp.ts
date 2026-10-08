@@ -5,7 +5,6 @@ import { Profile, NodeSlot } from "../profiles";
 import { Metrics } from "../metrics";
 import type { LicenseError, LicenseSummary } from "../license";
 import { buildNodeListFile } from "../nodeList";
-import { contactCapacity } from "../profiles";
 
 /**
  * Local setup page — the operator scans the owner QR from here with their own unpruuf app
@@ -22,6 +21,8 @@ export interface AdminState {
   profile: Profile;
   slot: NodeSlot;
   ephemeral: boolean;
+  /** Packets wait in memory only (Temp Node, or NODE_MESH_STORE=ram). */
+  messagesInRam: boolean;
   torEnabled: boolean;
   /** Address contacts reach this node at: the managed onion, or NODE_MESH_PUBLIC_ADDRESS when
    *  the operator runs their own hidden service (Tor disabled here). */
@@ -90,6 +91,7 @@ export async function statusPayload(state: AdminState) {
     profile: { name: state.profile.name, ttlHours: state.profile.ttlHours, description: state.profile.description },
     slot: state.slot,
     ephemeral: state.ephemeral,
+    messagesInRam: state.messagesInRam,
     canRotate: Boolean(state.rotateOwnerSecret) && !locked,
     sealed: Boolean(state.sealed),
     locked,
@@ -102,7 +104,6 @@ export async function statusPayload(state: AdminState) {
     ownerQr: ownerString ? await QRCode.toDataURL(ownerString, { margin: 1, width: 320 }) : null,
     stats: state.stats(),
     license: state.license ? state.license() : null,
-    capacity: contactCapacity(state.configuredNodes ?? state.license?.().maxNodes ?? (state.publicAddresses ? state.publicAddresses().length : 0)),
   };
 }
 
@@ -129,13 +130,13 @@ export async function overviewPayload(state: AdminState) {
     profile: status.profile,
     slot: status.slot,
     ephemeral: status.ephemeral,
+    messagesInRam: status.messagesInRam,
     sealed: status.sealed,
     locked: status.locked,
     tor: status.tor,
     torEnabled: status.torEnabled,
     nodes: { configured, listed: addresses.length, registered },
     license,
-    capacity: status.capacity,
     nodesLicensed: state.configuredNodes ?? state.license?.().maxNodes ?? addresses.length,
     addresses,
     stored: stats,
@@ -275,7 +276,7 @@ ${qrBlock}
 </div>
 <div class="card"><h2>2. Status</h2><dl id="status">${renderStatus(s)}</dl></div>
 ${s.addresses.length > 1 ? `<div class="card"><h2>Nodes auf diesem Server: ${s.addresses.length}</h2>
-<p>Ein Scan reicht: Die App holt sich alle ${s.addresses.length} Adressen selbst und gibt jedem Kontakt eigene Nodes. Kein Kontakt sieht diese Liste.</p>
+<p>Ein Scan reicht: Die App holt sich alle ${s.addresses.length} Adressen selbst und gibt jedem Kontakt 3 Nodes daraus, zufällig und auf verschiedene Server verteilt. Kein Kontakt sieht diese Liste.</p>
 <details><summary>Adressen anzeigen</summary><p class="code">${s.addresses.map(escapeHtml).join("<br>")}</p></details></div>` : ""}
 ${!s.ephemeral && !s.locked && s.addresses.length > 0 ? `<div class="card"><h2>Node-Liste für deine App</h2>
 <p>Eine Datei mit allen ${s.addresses.length} Node${s.addresses.length === 1 ? "" : "s"} dieses Servers. In der unpruuf-App: <b>Einstellungen → Node-Listen → Liste importieren</b>.</p>
@@ -331,7 +332,7 @@ function renderStatus(s: Awaited<ReturnType<typeof statusPayload>>): string {
     `<dt>Profil</dt><dd>${escapeHtml(s.profile.name)} — ${escapeHtml(s.profile.description)}</dd>` +
     `<dt>Slot</dt><dd>${s.slot} von 3</dd><dt>Nodes</dt><dd>${s.addresses.length || 1}</dd>` +
     `<dt>Lizenz</dt><dd>${licenseLine(s.license)}</dd>` +
-    `<dt>Schlüssel</dt><dd>${s.ephemeral ? "nur im Arbeitsspeicher" : !s.sealed ? `<span class="warn">auf der Platte (unverschlüsselt)</span>` : s.locked ? `<span class="bad">versiegelt — gesperrt</span>` : `<span class="ok">versiegelt — entsperrt</span>`}</dd><dt>Gespeichert</dt><dd>${s.stats.queued} verschlüsselte Pakete</dd>`;
+    `<dt>Schlüssel</dt><dd>${s.ephemeral ? "nur im Arbeitsspeicher" : !s.sealed ? `<span class="warn">auf der Platte (unverschlüsselt)</span>` : s.locked ? `<span class="bad">versiegelt — gesperrt</span>` : `<span class="ok">versiegelt — entsperrt</span>`}</dd><dt>Gespeichert</dt><dd>${s.stats.queued} verschlüsselte Pakete · ${s.messagesInRam ? "nur im Arbeitsspeicher" : "auf der Platte"}</dd>`;
 }
 
 function dateOnly(ms: number | null): string {
@@ -347,13 +348,6 @@ function licenseLine(l: LicenseSummary | null): string {
   return `<span class="${warn ? "warn" : "ok"}">bis ${dateOnly(l.expiresAtMs)}${warn ? ` (${l.daysLeft} Tage)` : ""}</span>`;
 }
 
-function capacityText(nodes: number): string {
-  const c = contactCapacity(nodes);
-  if (c.alone < 1) return "";
-  return `<p class="note">${nodes} Nodes = Platz für <b>${c.alone}</b> Kontakte mit komplett eigenen Nodes auf diesem Server allein. ` +
-    `Zusammen mit zwei weiteren Servern dieser Größe (bei drei verschiedenen Anbietern): bis zu <b>${c.threeServers}</b> Kontakte.</p>`;
-}
-
 function renderLicenseCard(l: LicenseSummary): string {
   const form = `<p><input id="lic-code" type="text" autocomplete="off" placeholder="unpruuf-server-license:v1:…" style="width:100%;font:inherit;padding:8px;box-sizing:border-box"></p>
 <button id="lic-go" class="go">Lizenz aktivieren</button>`;
@@ -363,7 +357,7 @@ function renderLicenseCard(l: LicenseSummary): string {
 ${form}</div>`;
   }
   const rows = `<dl><dt>Kunde</dt><dd>${escapeHtml(l.customer ?? "")}</dd><dt>Seriennummer</dt><dd>${escapeHtml(l.serial ?? "")}</dd>` +
-    `<dt>Nodes</dt><dd>${l.maxNodes}</dd><dt>Gültig bis</dt><dd>${licenseLine(l)}</dd></dl>${capacityText(l.maxNodes)}`;
+    `<dt>Nodes</dt><dd>${l.maxNodes}</dd><dt>Gültig bis</dt><dd>${licenseLine(l)}</dd></dl>`;
   if (l.status === "expired") {
     return `<div class="card"><h2>Lizenz abgelaufen</h2>${rows}
 <p class="bad">Neue Nachrichten werden abgelehnt. Das Abholen bereits abgelegter Pakete funktioniert weiter. Neuen Lizenzcode von NexonAI hier einfügen:</p>${form}</div>`;
@@ -412,7 +406,6 @@ svg{width:100%;height:auto;display:block}.legend{display:flex;gap:16px;color:var
 var DATA=${initial};
 function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function dur(ms){if(ms==null)return '—';var m=Math.floor(ms/60000);if(m<60)return m+' Min.';var h=Math.floor(m/60);if(h<48)return h+' Std. '+(m%60)+' Min.';return Math.floor(h/24)+' Tage '+(h%24)+' Std.';}
-function capRow(o){var c=o.capacity;if(!c||c.alone<1||o.ephemeral)return '';return '<dt>Kapazität</dt><dd>'+o.nodesLicensed+' Nodes = Platz für '+c.alone+' Kontakte mit eigenen Nodes. Mit drei Servern dieser Größe: bis zu '+c.threeServers+'.</dd>';}
 function licRow(l){if(!l||l.status==='free')return '';var d=l.expiresAtMs?new Date(l.expiresAtMs).toISOString().slice(0,10):'';
 var txt=l.status==='missing'?'fehlt':l.status==='invalid'?'ungültig':l.status==='expired'?'abgelaufen am '+d:'bis '+d+' · '+l.maxNodes+' Nodes'+(l.status==='expiring'?' — läuft in '+l.daysLeft+' Tagen ab':'');
 var cls=(l.status==='valid')?'':(l.status==='expiring'?' style="color:var(--warn)"':' style="color:var(--bad)"');return '<dt>Lizenz</dt><dd'+cls+'>'+esc(txt)+'</dd>';}
@@ -449,8 +442,8 @@ function render(o){
    +'<dt>Schlüssel</dt><dd>'+(o.ephemeral?'nur im Arbeitsspeicher':!o.sealed?'auf der Platte (unverschlüsselt)':o.locked?'versiegelt — gesperrt':'versiegelt — entsperrt')+'</dd>'
    +'<dt>Profil</dt><dd>'+esc(o.profile.name)+' — Pakete bleiben höchstens '+o.profile.ttlHours+' Std.</dd>'
    +'<dt>Slot</dt><dd>'+o.slot+' von 3</dd>'
+   +'<dt>Pakete liegen</dt><dd>'+(o.messagesInRam?'nur im Arbeitsspeicher — Neustart leert sie':'auf der Platte, bis ihre Zeit abläuft')+'</dd>'
    +licRow(o.license)
-   +capRow(o)
    +'<dt>Läuft seit</dt><dd>'+dur(o.uptimeMs)+'</dd>'
    +'<dt>Adressen (Mailboxen)</dt><dd>'+o.stored.tags+' in Benutzung</dd>'
    +'<dt>Ältestes Paket</dt><dd>'+(o.stored.oldestAgeMs==null?'—':dur(o.stored.oldestAgeMs))+'</dd>'

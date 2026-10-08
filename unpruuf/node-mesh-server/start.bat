@@ -29,15 +29,25 @@ if "%NODE_PROFILE%"=="" (
   if errorlevel 3 (set NODE_PROFILE=offline-tolerant) else if errorlevel 2 (set NODE_PROFILE=high-security) else (set NODE_PROFILE=standard)
 )
 
+if "%NODE_MESH_STORE%"=="" (
+  echo.
+  echo Wo sollen wartende Pakete liegen?
+  echo   1 = auf der Platte      ^(ueberleben einen Neustart bis zum Ablauf der Zeit - Standard^)
+  echo   2 = nur im Arbeitsspeicher ^(Neustart oder Stromausfall leert alles, nichts wird geschrieben^)
+  choice /c 12 /n /m "Speicher 1 oder 2: "
+  if errorlevel 2 (set NODE_MESH_STORE=ram) else (set NODE_MESH_STORE=disk)
+)
+
 (
   echo @echo off
   echo set NODE_SLOT=%NODE_SLOT%
   echo set NODE_PROFILE=%NODE_PROFILE%
+  echo set NODE_MESH_STORE=%NODE_MESH_STORE%
 ) > node.env.bat
 
 set /a ADMIN_PORT_DEFAULT=8790 + (%NODE_SLOT% - 1) * 10
 echo.
-echo Starte Server %NODE_SLOT%, Profil %NODE_PROFILE% ...
+echo Starte Server %NODE_SLOT%, Profil %NODE_PROFILE%, Pakete: %NODE_MESH_STORE% ...
 echo Die Zahl der Nodes steckt in der Lizenz - sie startet automatisch mit allen lizenzierten Nodes.
 echo Die Einrichtungsseite oeffnet sich gleich im Browser: http://localhost:%ADMIN_PORT_DEFAULT%
 echo Beim ersten Start fragt die Seite nach dem Lizenzcode von NexonAI.

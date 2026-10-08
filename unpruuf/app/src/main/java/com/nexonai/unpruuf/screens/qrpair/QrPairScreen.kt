@@ -205,11 +205,7 @@ fun QrPairScreen(
                                 selected = choice.id == selectedNodeListId,
                                 onClick = { viewModel.selectNodeList(choice.id) },
                                 label = {
-                                    Text(
-                                        if (choice.freeSlots > 0)
-                                            stringResource(R.string.qr_node_list_chip, choice.name, choice.nodeCount, choice.serverCount, choice.freeSlots)
-                                        else stringResource(R.string.qr_node_list_chip_full, choice.name, choice.nodeCount, choice.serverCount)
-                                    )
+                                    Text(stringResource(R.string.qr_node_list_chip, choice.name, choice.nodeCount, choice.serverCount))
                                 }
                             )
                         }
