@@ -3,8 +3,24 @@ import { loadOrCreateOfficerIdentity, WrongPasswordError } from "./officer/offic
 import { CaseStore, deriveDbKey } from "./store/caseStore";
 import { RelayClient } from "./relay/relayClient";
 import { PollAndIngestLoop } from "./officer/pollAndIngest";
-import { createDashboardApp } from "./web/app";
+import { createDashboardApp, DashboardStatus } from "./web/app";
+import { spawn } from "node:child_process";
 import { startTorAndWaitReady, TorClient } from "./tor/tor";
+
+/** Opens the dashboard in the default browser so a live demo needs no typing. OFFICER_OPEN_BROWSER=0 turns it off. */
+function openInBrowser(url: string): void {
+  if (process.env.OFFICER_OPEN_BROWSER === "0") return;
+  try {
+    const child =
+      process.platform === "win32" ? spawn("cmd", ["/c", "start", "", url], { stdio: "ignore", detached: true })
+      : process.platform === "darwin" ? spawn("open", [url], { stdio: "ignore", detached: true })
+      : spawn("xdg-open", [url], { stdio: "ignore", detached: true });
+    child.on("error", () => {});
+    child.unref();
+  } catch {
+    // no browser available: the URL is printed above anyway
+  }
+}
 
 async function main() {
   const config = loadConfig();
@@ -59,18 +75,23 @@ async function main() {
   });
   const pollLoop = new PollAndIngestLoop(identity, store, relay);
 
-  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl);
+  const status: DashboardStatus = { viaTor: Boolean(torClient), lastPollAt: null, lastPollOk: true };
+  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl, () => status);
   app.listen(config.dashboardPort, () => {
     console.log(`[startup] Panoul ascultă pe http://localhost:${config.dashboardPort}`);
+    openInBrowser(`http://localhost:${config.dashboardPort}`);
     console.log(`[startup] Interoghez releul la ${relayReachableBaseUrl} la fiecare ${config.pollIntervalMs}ms${torClient ? " (prin Tor)" : ""}.`);
   });
 
   const pollTick = async () => {
     try {
       await pollLoop.pollOnce();
+      status.lastPollOk = true;
     } catch (err) {
+      status.lastPollOk = false;
       console.error("[poll] rundă eșuată:", err instanceof Error ? err.message : err);
     }
+    status.lastPollAt = Date.now();
   };
   setInterval(pollTick, config.pollIntervalMs).unref();
   void pollTick();

@@ -16,12 +16,23 @@ import { RelayClient } from "../relay/relayClient";
  * README.md's known gaps: this has no login of its own, `OFFICER_PASSWORD` only protects the
  * data at rest, not this HTTP server).
  */
+/** What the dashboard's connection light shows. Filled by the poll loop in index.ts. */
+export interface DashboardStatus {
+  /** True when the relay is reached over Tor (the normal case), false for the direct LAN opt-out. */
+  viaTor: boolean;
+  /** When the last poll of the relay finished (ms), or null before the first one. */
+  lastPollAt: number | null;
+  /** Whether that last poll reached the relay. */
+  lastPollOk: boolean;
+}
+
 export function createDashboardApp(
   identity: OfficerIdentity,
   store: CaseStore,
   relay: RelayClient,
   advertisedRelayConnectionString: string,
   relayReachableBaseUrl: string,
+  getStatus: () => DashboardStatus = () => ({ viaTor: true, lastPollAt: null, lastPollOk: true }),
 ): Express {
   const app = express();
   app.use(express.json({ limit: "64kb" }));
@@ -30,7 +41,13 @@ export function createDashboardApp(
   app.get("/api/me", async (_req, res) => {
     const pairingJson = myPairingPayloadJson(identity, advertisedRelayConnectionString);
     const qrDataUrl = await QRCode.toDataURL(pairingJson, { margin: 1, width: 320 });
-    res.json({ userId: identity.userId, pairingCode: pairingJson, qrDataUrl, relayReachableBaseUrl });
+    // A second, large rendering for showing the code on a projector or big screen.
+    const qrDataUrlLarge = await QRCode.toDataURL(pairingJson, { margin: 2, width: 1000, errorCorrectionLevel: "M" });
+    res.json({ userId: identity.userId, pairingCode: pairingJson, qrDataUrl, qrDataUrlLarge, relayReachableBaseUrl });
+  });
+
+  app.get("/api/status", (_req, res) => {
+    res.json({ ...getStatus(), now: Date.now() });
   });
 
   app.get("/api/cases", (_req, res) => {

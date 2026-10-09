@@ -24,7 +24,7 @@ sehen, ist jetzt Rumänisch (Details: CHANGELOG.md).
 |---|---|
 | Android Whistleblower-App | ✅ eigene Flavor-Ressource (280+ Strings), ein Firmen-QR mit automatischem Fall-Eingang, Bildschirm „Mein Fall“ (Fallnummer, Status, Fristen), 70/70 Tests, alle 4 Editionen bauen · 🟡 nicht auf echtem Gerät gesehen |
 | relay-android (Tablet) | ✅ `values-ro` (Gerätesprache-abhängig, betrifft andere Kunden nicht), 8/8 Tests · 🟡 nicht auf Gerät gesehen |
-| officer-app (Dashboard) | ✅ Web-UI, Konsolentext, install/start.bat, `npm run build` sauber · 🟡 nicht im echten Browser/Windows gesehen |
+| officer-app (Dashboard) | ✅ neues Dashboard (9.10.2026): Prezentare generală / Cazuri / Codul organizației / Fall, Fristen farbig, QR „Afișează mare“, Live-Aktualisierung mit Hinweis bei neuem Fall, Verbindungsanzeige, Browser öffnet sich selbst, Schriften gebündelt · 8/8 Tests · 🟡 mit Beispieldaten und Stand-in-Relay geprüft, nicht über echtes Tor und nicht auf einem Windows-Laptop gesehen |
 | web-reporter (Browser-Fallback) | ✅ Seite inkl. Sicherheitshinweis, install/start.bat, Bundle gebaut und geprüft · 🟡 nicht im echten Browser gesehen |
 
 **Echter Bug gefunden:** unescapte Apostrophe in mehreren Standard-(Englisch)-Strings brachen den

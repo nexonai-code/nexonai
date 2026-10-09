@@ -27,12 +27,27 @@ addressed to them. Keep the two conceptually separate.
 4. First start downloads the Tor Expert Bundle (one-time, ~30-50 MB) and bootstraps a real Tor
    connection — the same path the Android app uses, not a LAN shortcut (see "Architecture" below).
    Takes a few seconds to under a minute depending on the network; progress prints live.
-5. Open `http://localhost:3000` — your pairing QR is on the dashboard's first screen.
+5. The dashboard opens by itself in your browser (`http://localhost:3000`; `OFFICER_OPEN_BROWSER=0` turns that off). With no cases yet, its first screen is the organisation's QR code, with a **Afișează mare** button that shows it full screen for a projector.
 
 Don't have or want Tor for a quick local test? Set `RELAY_REACHABLE_BASE_URL` (e.g.
 `http://192.168.1.50:8787`) before starting — this skips Tor entirely and talks directly to the
 relay's LAN address instead (needs the relay's own "Allow LAN access" setting turned on too). See
 "Known gaps" for what this trades away.
+
+## The dashboard
+
+Romanian, light, built to be read from a distance. Four views (left side bar):
+
+- **Prezentare generală** — four figures (open cases, receipts due, answers due, closed this year), the cases that need attention first (sorted by the next legal deadline, coloured red / amber / green with a progress bar), the next four deadlines, the organisation's QR, cases by category and new reports per week. With no cases yet it shows the QR and three steps instead.
+- **Cazuri** — all cases, tabs Deschise / Noi / În lucru / Închise, search by case number or category.
+- **Codul organizației** — the QR large, the code as text, a full-screen mode, and the manual add for older reporter apps.
+- **A case** — the conversation, status buttons (Nou / Confirmat / În lucru / Închis), both deadlines, category (suggestions plus free text) and the case data. Ctrl+Enter sends a reply.
+
+It is live: the page asks for news every 3 seconds. A new case or a new message shows as a toast in the corner and a dot before the case number until the officer opens it. The bottom of the side bar shows the connection (green after a successful poll of the relay, red if the relay does not answer).
+
+Deadlines follow the case store: receipt 7 days and answer 90 days after the case is opened (Directive 2019/1937 Art. 9(1)(b) and (f)). The dashboard only reads what the store keeps. It never shows who a reporter is, because the app does not know.
+
+The fonts (IBM Plex, SIL OFL) are bundled in `src/web/public/fonts/`, so the page looks the same without internet. Pure static files, no build step; `npm test` includes tests for the API it uses. `start.bat` polls the relay every 4 seconds (the app default is 8; set `POLL_INTERVAL_MS` to change it), so a report appears within a few seconds on stage.
 
 ## How a case gets started
 

@@ -5,6 +5,25 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑09 · Officer app: new dashboard, ready for the live demo
+
+**What was done**
+
+- **New look and structure** (`officer-app/src/web/public/`, still plain static files, no build step): side bar with Prezentare generală, Cazuri and Codul organizației; four figures on top (open cases, receipts due, answers due, closed this year); the cases sorted by the next legal deadline with red / amber / green and a progress bar; the next four deadlines; cases by category; new reports per week.
+- **Built for the demo:** the browser opens by itself after `start.bat`. With no cases the first screen is the organisation's QR with three steps, and **Afișează mare** shows it full screen for a projector (a second, large QR rendering in `/api/me`). The page asks for news every 3 seconds; a new case or message shows a toast and a dot until the case is opened. `start.bat` polls the relay every 4 seconds (was 8).
+- **A case:** conversation, status as four buttons, both deadlines, category with suggestions, case data. Ctrl+Enter sends. If sending fails the typed text stays.
+- **Connection light** in the side bar (`/api/status`): green after a successful poll of the relay, red if the relay does not answer.
+- **Fonts bundled** (IBM Plex, SIL OFL, `public/fonts/`), so the page looks the same without internet; `copy-public.js` copies sub-folders.
+- **Tests:** 8 of 8 (4 existing end-to-end tests plus 4 for the dashboard API, the bundled fonts, the large QR and the status). Unchanged: crypto, case store, relay, intake.
+
+**Which bug appeared**
+
+In the first preview of the design the right-hand cards ran past the bottom of the screen and the table did not fill its card; both were fixed in the layout. A focus outline sat wrongly inside the search box and a 1366-pixel laptop cut off the last table column; the layout now stacks below 1420 pixels. No bug in the case logic.
+
+**What is not checked:** the full phone-to-laptop round trip with the new page over real Tor (the page was exercised against the real case store and API with sample data and a stand-in relay, not against a live relay); Internet Explorer and old browsers; the deadline wording "3 luni de la primire" follows the case store (90 days from opening), not "from confirmation" as the directive words it.
+
+---
+
 ## 2026‑10‑08 · Shared nodes, packet lifetime per chat, RAM store
 
 **What was done**

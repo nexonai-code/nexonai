@@ -41,6 +41,9 @@ if "%RELAY_REACHABLE_BASE_URL%"=="" (
 ) else (
   echo RELAY_REACHABLE_BASE_URL este setat - Tor este omis, se comunica direct cu %RELAY_REACHABLE_BASE_URL%.
 )
-echo Cand apare "Panoul asculta", deschide http://localhost:3000 in browser.
+echo Cand apare "Panoul asculta", se deschide singur http://localhost:3000 in browser.
+echo Daca nu se deschide, deschide adresa manual. Pentru demonstratie: apasa "Afiseaza mare" pentru codul QR.
+rem Interogare mai rapida a releului: o sesizare apare in cateva secunde (implicit al aplicatiei: 8 s).
+if "%POLL_INTERVAL_MS%"=="" set POLL_INTERVAL_MS=4000
 node dist\index.js
 pause
