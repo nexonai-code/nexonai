@@ -4,6 +4,10 @@ Offline license issuing for unpruuf Standard/Pro (Client is free, never needs a 
 `AppEdition`/`LicenseManager.requiresLicense`). No server, no network calls, nothing installed
 beyond Node.js itself (uses only Node's built-in `crypto` module).
 
+## Sign a server release
+
+After `npm run build` in `node-mesh-server/`, `node sign-release.js` (or the "Sign a server release" card in the GUI) signs the list of program files and writes `release-manifest.txt` into that folder. Then pack the release. Every server shows "unchanged, signed" plus the fingerprint; publish that fingerprint next to the download (also kept in `release-fingerprints.txt`). Same key pair, own signing domain. See `NODE_MESH_SPEC.md` §19.
+
 ## How it works
 
 A license code is a small signed blob:

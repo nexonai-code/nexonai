@@ -5,6 +5,26 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑10 · Node server: is this the program NexonAI shipped?
+
+**What was done**
+
+- **Signed file list** (`release-manifest.txt`): SHA-256 of every program file, signed with the licence key pair under its own signing domain. Built and checked by one module (`src/integrity.ts`), so signer and checker cannot disagree. Builds are made byte-identical across Windows and Linux (`newLine: lf`).
+- **Self-check** at start and every hour. The overview and the setup page show a "Programm" row: unchanged and signed with version and fingerprint, VERÄNDERT with the number of changed, missing and extra files, signature invalid, or not signed (development). A changed install raises the "Achtung" banner. `NODE_MESH_REQUIRE_SIGNED=1` makes the server refuse to start unless everything matches.
+- **Outside check:** `verify-release.bat` / `.sh` / `tools/verify-release.js` on a copy of the files, optionally with the fingerprint NexonAI published; says whether it matches.
+- **Signing in the licence tool:** `sign-release.js` and a card in the tool's page. Writes the manifest into the built server folder, prints the fingerprint to publish, keeps a list in `release-fingerprints.txt`.
+- Tests: 94 of 94 for the server (11 new for the integrity module, one extended for the overview page). Checked end to end with a scratch key: sign, verify ok, edit a file, verify "modified", and with the real embedded key the scratch signature is rejected.
+
+**Which bug appeared**
+
+First edit put a helper into the middle of the setup page's template string and broke the build; fixed by moving it out and adding the client-side row separately.
+
+**What is not checked:** the real signing key has not been used (the scratch key proved the mechanism); a Windows build produced on a Windows machine (the byte-for-byte equality with a Linux build rests on `newLine: lf` and the pinned compiler, not on a run); the single-file `.exe` path (shows its SHA-256 only).
+
+**Honest limit:** this is a self-check. A server that is hacked while running can lie about itself; an attacker who can edit the files can edit the check. It finds changes on disk and allows a comparison from outside. It does not prove a running machine is clean.
+
+---
+
 ## 2026‑10‑09 · Officer app: new dashboard, ready for the live demo
 
 **What was done**

@@ -52,6 +52,10 @@ export const TOR_BIN_DIR = process.env.NODE_MESH_TOR_BIN_DIR ?? path.join(PACKAG
 // waiting packet and nothing is ever written to the disk. A Temp Node is always in memory.
 export const STORE_IN_RAM = process.env.NODE_MESH_STORE === "ram";
 
+// With NODE_MESH_REQUIRE_SIGNED=1 the server refuses to start unless its program files match the
+// signed release list (integrity.ts). For operators who would rather have no server than a changed one.
+export const REQUIRE_SIGNED = process.env.NODE_MESH_REQUIRE_SIGNED === "1";
+
 // Tor is mandatory for a real node. NODE_MESH_TOR=0 exists only for automated tests and for an
 // operator who already runs their own Tor hidden service in front of PORT — never a LAN shortcut.
 export const TOR_ENABLED = process.env.NODE_MESH_TOR !== "0";

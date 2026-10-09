@@ -100,6 +100,16 @@
   </div>
 
   <div class="card">
+    <h2>Sign a server release</h2>
+    <p class="note">After <code>npm run build</code> in the node-mesh-server folder: this signs the list of its program files. Every server then shows "unchanged, signed" and its fingerprint. Publish the fingerprint next to the download.</p>
+    <label>Folder (empty = ../node-mesh-server next to this tool)</label>
+    <input id="relFolder" type="text" placeholder="C:\path\to\node-mesh-server">
+    <button id="relBtn">Sign release</button>
+    <div id="relErr" class="err"></div>
+    <div id="relResult"></div>
+  </div>
+
+  <div class="card">
     <h2>Issue a server license</h2>
     <div class="row">
       <div>
@@ -254,6 +264,29 @@ document.getElementById('srvBtn').addEventListener('click', async () => {
 });
 
 loadCustomers();
+
+document.getElementById('relBtn').addEventListener('click', async () => {
+  const button = document.getElementById('relBtn');
+  document.getElementById('relErr').textContent = '';
+  document.getElementById('relResult').textContent = '';
+  button.disabled = true;
+  try {
+    const res = await fetch('/api/sign-release', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ folder: document.getElementById('relFolder').value }),
+    });
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('relErr').textContent = data.error || 'Failed.'; return; }
+    const div = document.createElement('div');
+    div.className = 'note';
+    div.textContent = `Signed: version ${data.version}, ${data.files} files. Fingerprint to publish: ${data.fingerprint}`;
+    document.getElementById('relResult').appendChild(div);
+  } catch (err) {
+    document.getElementById('relErr').textContent = 'Could not reach the local server — is it still running?';
+  } finally {
+    button.disabled = false;
+  }
+});
 </script>
 </body>
 </html>

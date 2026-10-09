@@ -173,6 +173,20 @@ test("overview reports nodes, stored packets and counters, and flags a locked or
   const locked = await overviewPayload({ ...base, sealed: true, isLocked: () => true, registeredNodes: async () => 0 });
   assert.equal(locked.level, "locked");
 
+  // release integrity: a signed, unchanged install is no problem; changed files or a bad signature are
+  const clean = { state: "ok" as const, version: "1.0.0", fingerprint: "aaaa bbbb", changed: [], missing: [], extra: [], filesChecked: 3, checkedAt: 0 };
+  const okInt = await overviewPayload({ ...base, integrity: () => clean, registeredNodes: async () => 3 });
+  assert.equal(okInt.level, "ok");
+  assert.equal(okInt.integrity?.state, "ok");
+  const bad = await overviewPayload({ ...base, integrity: () => ({ ...clean, state: "modified" as const, changed: ["dist/index.js"] }), registeredNodes: async () => 3 });
+  assert.equal(bad.level, "warn");
+  assert.ok(bad.problems.includes("integrity"));
+  const badSig = await overviewPayload({ ...base, integrity: () => ({ ...clean, state: "bad-signature" as const }), registeredNodes: async () => 3 });
+  assert.ok(badSig.problems.includes("integrity"));
+  const dev = await overviewPayload({ ...base, integrity: () => ({ ...clean, state: "unsigned" as const, fingerprint: null }), registeredNodes: async () => 3 });
+  assert.equal(dev.level, "ok", "a development checkout without a manifest is not an alarm");
+  assert.equal((ok as unknown as Record<string, unknown>).integrity, null, "no integrity function: nothing is claimed");
+
   // where the waiting packets live is reported honestly, and the "room for N contacts" promise is gone
   assert.equal(ok.messagesInRam, false);
   const ram = await overviewPayload({ ...base, messagesInRam: true, registeredNodes: async () => 3 });

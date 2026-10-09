@@ -7,7 +7,7 @@ import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
 import {
-  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM,
+  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM, PACKAGE_ROOT, REQUIRE_SIGNED,
   RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
 } from "./config";
 import {
@@ -16,6 +16,7 @@ import {
 import { NodeOnionService } from "./tor/onionService";
 import { Metrics } from "./metrics";
 import { LicenseGuard } from "./license";
+import { describeIntegrity, IntegrityResult, verifyIntegrity } from "./integrity";
 
 // Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
 // Tor's own working files go to a throwaway temp folder that is deleted on exit.
@@ -45,6 +46,23 @@ const license = new LicenseGuard({ filePath: ephemeral ? null : LICENSE_PATH, en
 // A Temp Node is one address for one chat by definition. Otherwise the license caps the node count.
 // Not a setting: a licensed server runs every node its licence allows (never more than 250).
 let nodeCount = ephemeral ? 1 : Math.max(1, license.maxNodes());
+// Release integrity (integrity.ts): once at start, then hourly. A changed file is reported loudly;
+// with NODE_MESH_REQUIRE_SIGNED=1 the server does not start at all.
+let integrity: IntegrityResult = verifyIntegrity(PACKAGE_ROOT);
+console.log(`[integrity] ${describeIntegrity(integrity)}`);
+if (REQUIRE_SIGNED && integrity.state !== "ok" && integrity.state !== "exe") {
+  console.error("[integrity] NODE_MESH_REQUIRE_SIGNED=1 and the program files are not a verified release. Not starting.");
+  process.exit(1);
+}
+setInterval(() => {
+  const before = integrity.state;
+  integrity = verifyIntegrity(PACKAGE_ROOT);
+  if (integrity.state !== before) {
+    console.log(`[integrity] changed: ${describeIntegrity(integrity)}`);
+    for (const f of [...integrity.changed, ...integrity.missing, ...integrity.extra].slice(0, 8)) console.log(`[integrity]   ${f}`);
+  }
+}, 60 * 60 * 1000).unref();
+
 const messagesInRam = ephemeral || STORE_IN_RAM;
 const store = new NodeStore(messagesInRam ? ":memory:" : DB_PATH, identity.ttlHours);
 
@@ -120,6 +138,7 @@ const adminApp = createAdminApp(
     slot: NODE_SLOT,
     ephemeral,
     messagesInRam,
+    integrity: () => integrity,
     torEnabled: TOR_ENABLED,
     publicAddress,
     publicAddresses,

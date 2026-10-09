@@ -150,7 +150,34 @@ function verifyServerLicense(publicKey, code) {
   return ok ? parseServerPayload(payload) : null;
 }
 
+
+// ---------------------------------------------------------------------------------------------
+// Release signing (unpruuf Business node server). Signs the list of program files of one built
+// node-mesh-server folder, so every server can check "is this the release NexonAI shipped, and is
+// it unchanged?" (node-mesh-server/src/integrity.ts). Same Ed25519 key pair as the licences, its own
+// signature DOMAIN, so a release signature can never pass as a licence signature or the reverse.
+// The manifest body is built by the server's own compiled integrity.js, so signer and checker can
+// never disagree about the file list or the hashing.
+// ---------------------------------------------------------------------------------------------
+const RELEASE_SIGN_DOMAIN = 'unpruuf-release-v1\n';
+
+function signRelease(serverFolder, privateKey) {
+  const fs = require('fs');
+  const path = require('path');
+  const mod = path.join(serverFolder, 'dist', 'integrity.js');
+  if (!fs.existsSync(mod)) {
+    throw new Error(`dist/integrity.js not found in ${serverFolder}. Build the server first (npm run build).`);
+  }
+  const integrity = require(mod);
+  const body = integrity.buildManifestBody(serverFolder);
+  const signature = crypto.sign(null, Buffer.from(RELEASE_SIGN_DOMAIN + body, 'utf8'), privateKey).toString('base64url');
+  const text = `${body}signature: ${signature}\n`;
+  fs.writeFileSync(path.join(serverFolder, integrity.MANIFEST_FILE), text);
+  return { version: integrity.readVersion(serverFolder), fingerprint: integrity.fingerprintOf(body), files: integrity.listCoveredFiles(serverFolder).length };
+}
+
 module.exports = {
+  signRelease,
   SERVER_LICENSE_PREFIX,
   SERVER_SIGN_DOMAIN,
   MAX_SERVER_NODES,

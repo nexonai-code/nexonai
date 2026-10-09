@@ -11,3 +11,4 @@ data/
 tor-bin/
 node.env.bat
 tools/measure-runs/
+release-manifest.txt

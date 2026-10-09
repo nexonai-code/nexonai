@@ -5,6 +5,7 @@ import { Profile, NodeSlot } from "../profiles";
 import { Metrics } from "../metrics";
 import type { LicenseError, LicenseSummary } from "../license";
 import { buildNodeListFile } from "../nodeList";
+import type { IntegrityResult } from "../integrity";
 
 /**
  * Local setup page — the operator scans the owner QR from here with their own unpruuf app
@@ -23,6 +24,8 @@ export interface AdminState {
   ephemeral: boolean;
   /** Packets wait in memory only (Temp Node, or NODE_MESH_STORE=ram). */
   messagesInRam: boolean;
+  /** Result of the last release-integrity check (integrity.ts). Absent in tests. */
+  integrity?: () => IntegrityResult;
   torEnabled: boolean;
   /** Address contacts reach this node at: the managed onion, or NODE_MESH_PUBLIC_ADDRESS when
    *  the operator runs their own hidden service (Tor disabled here). */
@@ -104,6 +107,7 @@ export async function statusPayload(state: AdminState) {
     ownerQr: ownerString ? await QRCode.toDataURL(ownerString, { margin: 1, width: 320 }) : null,
     stats: state.stats(),
     license: state.license ? state.license() : null,
+    integrity: state.integrity ? state.integrity() : null,
   };
 }
 
@@ -123,6 +127,7 @@ export async function overviewPayload(state: AdminState) {
   else if (state.torEnabled && (!status.tor || status.tor.state !== "ready")) problems.push("tor-not-ready");
   if (!unlicensed && !status.locked && registered !== null && registered < addresses.length) problems.push("nodes-missing");
   if (license?.status === "expired") problems.push("license-expired");
+  if (status.integrity && (status.integrity.state === "modified" || status.integrity.state === "bad-signature")) problems.push("integrity");
   const level = !unlicensed && status.locked ? "locked" : problems.length ? "warn" : "ok";
   return {
     level,
@@ -137,6 +142,7 @@ export async function overviewPayload(state: AdminState) {
     torEnabled: status.torEnabled,
     nodes: { configured, listed: addresses.length, registered },
     license,
+    integrity: status.integrity,
     nodesLicensed: state.configuredNodes ?? state.license?.().maxNodes ?? addresses.length,
     addresses,
     stored: stats,
@@ -312,12 +318,25 @@ function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 function torLine(s){if(s.license&&(s.license.status==='missing'||s.license.status==='invalid'))return '<span class="warn">wartet auf Lizenz</span>';if(!s.torEnabled)return '<span class="warn">Aus (eigener Hidden Service des Betreibers)</span>';const t=s.tor;if(!t)return 'startet …';
 const cls=t.state==='ready'?'ok':(t.state==='failed'?'bad':'warn');const label={starting:'startet',bootstrapping:'verbindet ('+t.bootstrapPercent+'%)',ready:'online',restarting:'Neustart läuft',failed:'Fehler',stopped:'gestoppt'}[t.state]||t.state;
 return '<span class="'+cls+'">'+esc(label)+'</span>'+(t.restarts?' · '+t.restarts+' Neustart(s)':'')+(t.lastError&&t.state!=='ready'?'<br><small>'+esc(t.lastError)+'</small>':'');}
-function renderStatus(s){return '<dt>Tor</dt><dd>'+torLine(s)+'</dd><dt>PoW-Schutz</dt><dd>'+(s.torEnabled?'aktiv':'—')+'</dd><dt>Adresse</dt><dd class="code">'+esc(s.address||'…')+'</dd><dt>Profil</dt><dd>'+esc(s.profile.name)+' — '+esc(s.profile.description)+'</dd><dt>Slot</dt><dd>'+s.slot+' von 3</dd><dt>Lizenz</dt><dd>'+licLine(s)+'</dd><dt>Schlüssel</dt><dd>'+keyLine(s)+'</dd><dt>Gespeichert</dt><dd>'+s.stats.queued+' verschlüsselte Pakete</dd>';}
+function renderStatus(s){return '<dt>Tor</dt><dd>'+torLine(s)+'</dd><dt>PoW-Schutz</dt><dd>'+(s.torEnabled?'aktiv':'—')+'</dd><dt>Adresse</dt><dd class="code">'+esc(s.address||'…')+'</dd><dt>Profil</dt><dd>'+esc(s.profile.name)+' — '+esc(s.profile.description)+'</dd><dt>Slot</dt><dd>'+s.slot+' von 3</dd><dt>Lizenz</dt><dd>'+licLine(s)+'</dd><dt>Programm</dt><dd>'+intLine(s.integrity)+'</dd><dt>Schlüssel</dt><dd>'+keyLine(s)+'</dd><dt>Gespeichert</dt><dd>'+s.stats.queued+' verschlüsselte Pakete</dd>';}
 function licLine(s){var l=s.license;if(!l||l.status==='free')return '—';var d=l.expiresAtMs?new Date(l.expiresAtMs).toISOString().slice(0,10):'';
 if(l.status==='missing')return '<span class="bad">fehlt</span>';if(l.status==='invalid')return '<span class="bad">ungültig</span>';if(l.status==='expired')return '<span class="bad">abgelaufen am '+d+'</span>';
 return '<span class="'+(l.status==='expiring'?'warn':'ok')+'">bis '+d+(l.status==='expiring'?' ('+l.daysLeft+' Tage)':'')+'</span>';}
+function intLine(i){if(!i)return '—';var fp=i.fingerprint?' <span style="font:12px ui-monospace,Consolas,monospace;word-break:break-all">'+esc(i.fingerprint)+'</span>':'';if(i.state==='ok')return '<span class="ok">unverändert, signiert</span> (Version '+esc(i.version||'?')+')'+fp;if(i.state==='modified')return '<span class="bad">VERÄNDERT</span>: '+i.changed.length+' geändert, '+i.missing.length+' fehlen, '+i.extra.length+' zusätzlich';if(i.state==='bad-signature')return '<span class="bad">Signatur ungültig</span>';if(i.state==='exe')return 'Einzelne Programmdatei, SHA-256'+fp;return '<span class="warn">nicht signiert</span> (Entwicklungsstand)';}
 function keyLine(s){if(s.ephemeral)return 'nur im Arbeitsspeicher';if(!s.sealed)return '<span class="warn">auf der Platte (unverschlüsselt)</span>';return s.locked?'<span class="bad">versiegelt — gesperrt</span>':'<span class="ok">versiegelt — entsperrt</span>';}
 </script></body></html>`;
+}
+
+function integrityLine(i: { state: string; version: string | null; fingerprint: string | null; changed: string[]; missing: string[]; extra: string[] } | null): string {
+  if (!i) return "—";
+  const fp = i.fingerprint ? ` <span style="font:12px ui-monospace,Consolas,monospace;word-break:break-all">${escapeHtml(i.fingerprint)}</span>` : "";
+  switch (i.state) {
+    case "ok": return `<span class="ok">unverändert, signiert</span> (Version ${escapeHtml(i.version ?? "?")})${fp}`;
+    case "modified": return `<span class="bad">VERÄNDERT</span>: ${i.changed.length} geändert, ${i.missing.length} fehlen, ${i.extra.length} zusätzlich`;
+    case "bad-signature": return `<span class="bad">Signatur ungültig</span>`;
+    case "exe": return `Einzelne Programmdatei, SHA-256${fp}`;
+    default: return `<span class="warn">nicht signiert</span> (Entwicklungsstand)`;
+  }
 }
 
 function renderStatus(s: Awaited<ReturnType<typeof statusPayload>>): string {
@@ -332,6 +351,7 @@ function renderStatus(s: Awaited<ReturnType<typeof statusPayload>>): string {
     `<dt>Profil</dt><dd>${escapeHtml(s.profile.name)} — ${escapeHtml(s.profile.description)}</dd>` +
     `<dt>Slot</dt><dd>${s.slot} von 3</dd><dt>Nodes</dt><dd>${s.addresses.length || 1}</dd>` +
     `<dt>Lizenz</dt><dd>${licenseLine(s.license)}</dd>` +
+    `<dt>Programm</dt><dd>${integrityLine(s.integrity)}</dd>` +
     `<dt>Schlüssel</dt><dd>${s.ephemeral ? "nur im Arbeitsspeicher" : !s.sealed ? `<span class="warn">auf der Platte (unverschlüsselt)</span>` : s.locked ? `<span class="bad">versiegelt — gesperrt</span>` : `<span class="ok">versiegelt — entsperrt</span>`}</dd><dt>Gespeichert</dt><dd>${s.stats.queued} verschlüsselte Pakete · ${s.messagesInRam ? "nur im Arbeitsspeicher" : "auf der Platte"}</dd>`;
 }
 
@@ -406,6 +426,7 @@ svg{width:100%;height:auto;display:block}.legend{display:flex;gap:16px;color:var
 var DATA=${initial};
 function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function dur(ms){if(ms==null)return '—';var m=Math.floor(ms/60000);if(m<60)return m+' Min.';var h=Math.floor(m/60);if(h<48)return h+' Std. '+(m%60)+' Min.';return Math.floor(h/24)+' Tage '+(h%24)+' Std.';}
+function intRow(i){if(!i)return '';var fp=i.fingerprint?' · <span style="font:12px ui-monospace,Consolas,monospace;word-break:break-all">'+esc(i.fingerprint)+'</span>':'';var v=i.state==='ok'?'<span class="ok">unverändert, signiert</span> (Version '+esc(i.version||'?')+')'+fp:i.state==='modified'?'<span class="bad">VERÄNDERT</span>: '+i.changed.length+' geändert, '+i.missing.length+' fehlen, '+i.extra.length+' zusätzlich':i.state==='bad-signature'?'<span class="bad">Signatur ungültig</span>':i.state==='exe'?'Einzelne Programmdatei, SHA-256'+fp:'<span class="warn">nicht signiert</span> (Entwicklungsstand)';return '<dt>Programm</dt><dd>'+v+'</dd>';}
 function licRow(l){if(!l||l.status==='free')return '';var d=l.expiresAtMs?new Date(l.expiresAtMs).toISOString().slice(0,10):'';
 var txt=l.status==='missing'?'fehlt':l.status==='invalid'?'ungültig':l.status==='expired'?'abgelaufen am '+d:'bis '+d+' · '+l.maxNodes+' Nodes'+(l.status==='expiring'?' — läuft in '+l.daysLeft+' Tagen ab':'');
 var cls=(l.status==='valid')?'':(l.status==='expiring'?' style="color:var(--warn)"':' style="color:var(--bad)"');return '<dt>Lizenz</dt><dd'+cls+'>'+esc(txt)+'</dd>';}
@@ -428,7 +449,7 @@ function render(o){
   var t=o.totals||{deposit:0,fetch:0,rejected:0},d=o.last24h||{deposit:0,fetch:0,rejected:0};
   var tor=!o.torEnabled?'Aus (eigener Hidden Service)':(!o.tor?'startet …':({starting:'startet',bootstrapping:'verbindet ('+o.tor.bootstrapPercent+' %)',ready:'online',restarting:'Neustart läuft',failed:'Fehler',stopped:'gestoppt'}[o.tor.state]||o.tor.state));
   var head={ok:['Alles in Ordnung','Server läuft, alle Nodes sind online.'],locked:['Gesperrt nach Neustart','Alle Nodes sind offline, bis du in der App auf „Entsperren“ tippst.'],warn:['Achtung','']}[o.level];
-  if(o.level==='warn'){var msgs=[];if(o.problems.indexOf('license-missing')>=0)msgs.push('Es fehlt eine gültige Server-Lizenz. Bitte auf der Einrichtungsseite eintragen.');if(o.problems.indexOf('license-expired')>=0)msgs.push('Die Lizenz ist abgelaufen: neue Nachrichten werden abgelehnt.');if(o.problems.indexOf('tor-not-ready')>=0)msgs.push('Tor ist noch nicht online.');if(o.problems.indexOf('nodes-missing')>=0)msgs.push('Nur '+o.nodes.registered+' von '+o.nodes.listed+' Nodes sind bei Tor angemeldet. Der Server holt fehlende Nodes beim nächsten täglichen Abgleich selbst nach.');head[1]=msgs.join(' ');}
+  if(o.level==='warn'){var msgs=[];if(o.problems.indexOf('license-missing')>=0)msgs.push('Es fehlt eine gültige Server-Lizenz. Bitte auf der Einrichtungsseite eintragen.');if(o.problems.indexOf('license-expired')>=0)msgs.push('Die Lizenz ist abgelaufen: neue Nachrichten werden abgelehnt.');if(o.problems.indexOf('tor-not-ready')>=0)msgs.push('Tor ist noch nicht online.');if(o.problems.indexOf('integrity')>=0)msgs.push('Die Programmdateien stimmen nicht mit der signierten Liste überein. Neu von NexonAI herunterladen und vergleichen, bevor der Server weiter benutzt wird.');if(o.problems.indexOf('nodes-missing')>=0)msgs.push('Nur '+o.nodes.registered+' von '+o.nodes.listed+' Nodes sind bei Tor angemeldet. Der Server holt fehlende Nodes beim nächsten täglichen Abgleich selbst nach.');head[1]=msgs.join(' ');}
   var nodesVal=o.locked?'0 / '+o.nodes.configured:(o.nodes.registered==null?o.nodes.listed:o.nodes.registered+' / '+o.nodes.listed);
   var h='<div class="banner '+o.level+'">'+head[0]+'<small>'+esc(head[1])+'</small></div>';
   h+='<div class="grid">'
@@ -444,6 +465,7 @@ function render(o){
    +'<dt>Slot</dt><dd>'+o.slot+' von 3</dd>'
    +'<dt>Pakete liegen</dt><dd>'+(o.messagesInRam?'nur im Arbeitsspeicher — Neustart leert sie':'auf der Platte, bis ihre Zeit abläuft')+'</dd>'
    +licRow(o.license)
+   +intRow(o.integrity)
    +'<dt>Läuft seit</dt><dd>'+dur(o.uptimeMs)+'</dd>'
    +'<dt>Adressen (Mailboxen)</dt><dd>'+o.stored.tags+' in Benutzung</dd>'
    +'<dt>Ältestes Paket</dt><dd>'+(o.stored.oldestAgeMs==null?'—':dur(o.stored.oldestAgeMs))+'</dd>'

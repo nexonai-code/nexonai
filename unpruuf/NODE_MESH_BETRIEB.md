@@ -165,6 +165,20 @@ ausfällt — nach drei verpassten Lebenszeichen).
 - Stürzt Tor ab, startet der Node es selbst neu — mit derselben Adresse.
 - Abgelaufene Nachrichten werden automatisch und überschreibend gelöscht. Lesen löscht nie.
 
+## Prüfen, ob der Server das Original von NexonAI ist
+
+Jede Version von NexonAI enthält eine signierte Liste aller Programmdateien (`release-manifest.txt`). Der Server prüft sich damit beim Start und danach jede Stunde selbst.
+
+- **Übersichtsseite, Zeile „Programm“:**
+  - grün „unverändert, signiert“ mit Version und **Fingerprint**: alle Dateien stimmen mit der Liste von NexonAI überein.
+  - rot „VERÄNDERT“: eine Datei wurde geändert, fehlt oder ist neu dazugekommen. Das Banner oben warnt. Neu von NexonAI laden und vergleichen, bevor der Server weiter benutzt wird.
+  - gelb „nicht signiert“: Entwicklungsstand ohne Liste. Kein Alarm, aber auch kein Nachweis.
+- **Fingerprint vergleichen:** NexonAI veröffentlicht zu jeder Version den Fingerprint (16 Vierergruppen). Er muss mit dem auf Ihrer Übersichtsseite übereinstimmen.
+- **Von außen prüfen (Prüfer, Kunde):** `verify-release.bat` (Windows) oder `./verify-release.sh` (Linux) auf einer Kopie der Dateien. Dort kann der veröffentlichte Fingerprint eingegeben werden; das Skript sagt, ob er stimmt. Dafür muss der Server nicht laufen.
+- **Streng starten:** `NODE_MESH_REQUIRE_SIGNED=1` lässt den Server nur starten, wenn alles stimmt.
+
+**Was das nicht kann:** Ein Server, der gerade gehackt läuft, kann über sich selbst lügen. Die Prüfung findet Dateien, die auf der Platte verändert wurden, und erlaubt einen Vergleich von außen. Sie beweist nicht, dass ein laufender Rechner sauber ist. Dazu gehören ein gehärteter Rechner (Container, schreibgeschütztes Dateisystem), der Arbeitsspeicher-Modus und ein Neustart-Plan. Nicht abgedeckt sind `node_modules` und der Datenordner. Bei der einzelnen `.exe` zeigt die Seite nur deren SHA-256, den Sie mit dem veröffentlichten vergleichen.
+
 ## Was Sie wissen sollten
 
 - Keine unabhängige Sicherheitsprüfung (Audit) bisher. Die Eigenschaften sind so gebaut und im

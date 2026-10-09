@@ -826,3 +826,17 @@ packets look alike. Only three steps (`MessageTtl`), because the node sees the v
 waiting packet; the owner secret and node keys are unaffected (sealed on disk, `KEY_STORAGE`). Default stays `disk`. The
 Temp Node is always in memory. `start.bat` asks once and remembers it in `node.env.bat`. Not covered: the Android node
 (`relay-android`) still keeps packets in its SQLite file.
+
+## 19. Release integrity (2026‑10‑10)
+
+**Purpose.** An operator, a customer or an auditor can ask "is this the program NexonAI shipped, and is it unchanged?". The answer is a signed list of hashes, not a promise.
+
+**Format.** `release-manifest.txt` next to `dist/`: header `unpruuf-release:v1`, `version:`, `files:`, then one `<sha256>␣␣<path>` line per covered file (all `.js` under `dist/` except tests, plus `package.json`; sorted; "/" separators), then `signature:` (base64url Ed25519). The signed bytes are `"unpruuf-release-v1\n"` plus everything above the signature line. Same key pair as the licences, own signing domain: a licence signature never verifies as a release signature, nor the reverse (test `integrity.test.ts`). Fingerprint = SHA-256 of the signed body, 16 groups of four hex digits. `tsconfig.json` sets `newLine: lf` so a build on Windows and one on Linux produce the same bytes.
+
+**Check.** `integrity.ts` `verifyIntegrity`: states `ok`, `modified` (changed / missing / extra files named), `bad-signature`, `unsigned` (no manifest: development checkout, not an alarm), `exe` (single-file build: SHA-256 of the program file only). At start and hourly; shown on the overview and setup page; a `modified` or `bad-signature` result raises the "Achtung" banner. `NODE_MESH_REQUIRE_SIGNED=1` exits when the state is not `ok`/`exe`.
+
+**Signing.** Offline in `license-tool`: `sign-release.js` or the "Sign a server release" card in the tool's page. It builds the body with the server's own compiled `integrity.js`, so signer and checker cannot disagree. The fingerprint is appended to `release-fingerprints.txt` for publishing.
+
+**Outside check.** `verify-release.js` (`.bat`/`.sh`) on a copy of the files, optionally with the published fingerprint.
+
+**Limits.** Self-check: a server compromised while running can lie about itself, and someone who can edit the files can edit the check. Not covered: `node_modules` (native, platform-specific) and the data folder. Real remote attestation would need hardware (TPM, protected environments) and is not built.

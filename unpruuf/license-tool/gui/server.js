@@ -11,7 +11,7 @@ const path = require('path');
 const express = require('express');
 const {
   EDITIONS, MS_PER_YEAR, MAX_SERVER_NODES,
-  privateKeyFromRecord, buildPayload, signLicense, buildServerPayload, signServerLicense,
+  privateKeyFromRecord, buildPayload, signLicense, buildServerPayload, signServerLicense, signRelease,
 } = require('../lib');
 
 const KEY_FILE = path.join(__dirname, '..', 'private-key.json');
@@ -120,6 +120,20 @@ app.post('/api/issue-server', (req, res) => {
   customers.push(record);
   saveCustomers(customers);
   res.json({ issued: [record] });
+});
+
+// Signs a built node-mesh-server folder (see ../lib.js "Release signing" and ../sign-release.js).
+app.post('/api/sign-release', (req, res) => {
+  const body = req.body || {};
+  const folder = path.resolve((typeof body.folder === 'string' && body.folder.trim()) || path.join(__dirname, '..', '..', 'node-mesh-server'));
+  try {
+    const r = signRelease(folder, privateKey);
+    const line = `${new Date().toISOString()}  version ${r.version}  ${r.files} files  fingerprint ${r.fingerprint}\n`;
+    fs.appendFileSync(path.join(__dirname, '..', 'release-fingerprints.txt'), line);
+    res.json({ folder, ...r });
+  } catch (err) {
+    res.status(400).json({ error: String(err.message || err) });
+  }
 });
 
 app.listen(PORT, '127.0.0.1', () => {
