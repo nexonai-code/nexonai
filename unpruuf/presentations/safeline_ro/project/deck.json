@@ -1,0 +1,54 @@
+{
+ "v": 4,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-10T14:54:07Z"
+ },
+ "lists": "css",
+ "title": "safeline (RO)",
+ "order": [
+  "cover",
+  "how-1",
+  "how-2",
+  "how-3",
+  "duty",
+  "problem",
+  "flow",
+  "employee",
+  "officer",
+  "organisation",
+  "who",
+  "start",
+  "status",
+  "contact"
+ ],
+ "sections": {
+  "s1": {
+   "description": "Cum funcționează unpruuf: imaginea cu poșta, în trei diapozitive.",
+   "start": "how-1"
+  },
+  "s2": {
+   "description": "Obligația și problema.",
+   "start": "duty"
+  },
+  "s3": {
+   "description": "safeline pentru angajat, responsabil și organizație.",
+   "start": "flow"
+  },
+  "s4": {
+   "description": "Stadiu sincer și pașii următori.",
+   "start": "who"
+  }
+ },
+ "faces": {
+  "archivo": {
+   "family": "Archivo",
+   "href": "https://fonts.googleapis.com/css2?family=Archivo:wght@500..800&display=swap"
+  },
+  "ibm-plex-sans": {
+   "family": "IBM Plex Sans",
+   "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+  }
+ },
+ "designSystems": []
+}

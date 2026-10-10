@@ -6,12 +6,14 @@ from PIL import Image
 from pptx import Presentation
 from pptx.util import Inches
 
-NAMES = {"business": "unpruuf_Business_RO", "business_de": "unpruuf_Business_DE",
+NAMES = {"safeline_en": "safeline_EN", "safeline_ro": "safeline_RO", "business": "unpruuf_Business_RO", "business_de": "unpruuf_Business_DE",
          "compliance": "unpruuf_Compliance_RO", "compliance_de": "unpruuf_Compliance_DE"}
 root, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
 for deck, name in NAMES.items():
     files = sorted(glob.glob(os.path.join(root, deck, "*.png")))
+    if not files:
+        continue
     meta = json.load(open(os.path.join(root, deck, "notes.json"), encoding="utf-8"))
     imgs = [Image.open(f).convert("RGB") for f in files]
     imgs[0].save(os.path.join(out, name + ".pdf"), save_all=True, append_images=imgs[1:], resolution=144.0)
