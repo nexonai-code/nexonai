@@ -41,3 +41,11 @@ Beispiele:
 - Die Basistexte stehen in `unpruuf_Story_DE/EN/RO.docx` und in der Landing-Page-Story (Postamt). Neue Materialien übernehmen sie unverändert oder gekürzt, nicht neu erfunden. Protokolldetails bleiben draußen (Patent).
 - Die Hinweisgeber-Lösung heißt **safeline** (seit 10.10.2026). In neuem Kundenmaterial so nennen, nicht mehr „unpruuf Compliance“ oder „Whistleblower“. Das Grundsystem heißt weiter unpruuf („Wie unpruuf funktioniert“). Deck: `unpruuf/presentations/safeline.py` (EN und RO), Export in `presentations/export/safeline_EN/RO.pdf/.pptx`. App-Namen, Docs und ältere Compliance-Decks sind noch nicht umbenannt.
 - Newsletter-Anmeldungen und Newsletter-Anfragen gehen an **unpruuf@nexonai.ro** (Festlegung vom 11.10.2026). Die Landing Page hat dafür einen Abo-Knopf als E-Mail an diese Adresse, ohne Server-Formular. Der Datenschutztext muss den Newsletter nennen (Einwilligung, Abmeldung per E-Mail), sobald klar ist, womit versendet wird.
+
+## GDPR (11.10.2026)
+
+- Nie „GDPR-konform“ behaupten. Sagen: Die Architektur unterstützt die Prinzipien (Datenminimierung, Speicherbegrenzung, Vertraulichkeit, Art. 5, 25, 32). Die Organisation ist Verantwortliche (Art. 4 Nr. 7). NexonAI ist normalerweise nicht Auftragsverarbeiter (Art. 28), solange kein Datenzugriff besteht. Einordnung bestätigt ein Jurist oder der Datenschutzbeauftragte.
+- Datenlandkarte: Server = verschlüsselte Pakete höchstens 24 h, keine Namen/IPs; Telefon = lokal; Officer-Laptop = Falldateien lokal verschlüsselt; Lizenz = offline; Website = keine Cookies.
+- Hinweisgeber: Richtlinie 2019/1937 Art. 16 (Vertraulichkeit), 17 (DSGVO gilt, Irrelevantes löschen), 18 (Aufbewahrung nur so lange nötig).
+- Bekannte Lücke: Das Officer-Dashboard kann einen einzelnen Fall noch nicht löschen oder exportieren. Offen nennen, bis gebaut.
+- Material: Deck-Folie 11 (GDPR), Whitepaper Kapitel 9, Landing-Page-Bereich GDPR (RO/EN).
