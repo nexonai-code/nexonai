@@ -95,3 +95,21 @@ test("cases, status and category changes go through the API the new dashboard us
     assert.equal(detail.messages[0].text, "Bună ziua");
   });
 });
+
+test("the dashboard offers English next to Romanian, with every key present in both", async () => {
+  await withApp(async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    assert.match(html, /data-lang="en"/);
+    const src = await (await fetch(`${base}/i18n.js`)).text();
+    const dict = new Function(`${src}; return I18N;`)() as Record<string, Record<string, unknown>>;
+    const ro = Object.keys(dict.ro).sort();
+    const en = Object.keys(dict.en).sort();
+    assert.deepEqual(en, ro, "English and Romanian have the same keys");
+    for (const key of ro) {
+      const a = dict.ro[key], b = dict.en[key];
+      if (Array.isArray(a)) assert.equal((b as unknown[]).length, a.length, `${key} has the same number of entries`);
+      const vars = (v: unknown) => (typeof v === "string" ? (v.match(/\{\w+\}/g) || []).sort().join() : "");
+      assert.equal(vars(b), vars(a), `${key} uses the same placeholders`);
+    }
+  });
+});

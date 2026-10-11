@@ -24,6 +24,9 @@ nav { display: flex; flex-direction: column; gap: 6px; }
 .nav svg { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; }
 .nav .n { margin-left: auto; font: 500 12px "IBM Plex Mono", monospace; background: #264f55; color: #fff; padding: 1px 8px; border-radius: 99px; }
 .sp { flex: 1; }
+.lang { display: flex; gap: 4px; background: rgba(255,255,255,.08); border-radius: 10px; padding: 3px; margin-bottom: 12px; align-self: flex-start; }
+.lang button { background: none; border: 0; color: #a9c6c9; font: inherit; font-weight: 600; font-size: 12px; letter-spacing: .06em; padding: 7px 12px; min-height: 32px; border-radius: 8px; cursor: pointer; }
+.lang button.on { background: #eaf3f1; color: #0e2a2e; }
 .conn { border: 1px solid #2a5258; border-radius: 10px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5; color: #a9c6c9; }
 .conn b { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: 500; font-size: 13px; margin-bottom: 4px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade9a; display: inline-block; flex: none; }
@@ -201,6 +204,7 @@ a.back { align-self: flex-start; text-decoration: none; font-size: 13.5px; font-
   aside { width: 100%; height: auto; position: static; flex-direction: row; flex-wrap: wrap; align-items: center; }
   nav { flex-direction: row; flex-wrap: wrap; }
   .sp, .conn { display: none; }
+  .lang { margin-bottom: 0; }
   .start { flex-direction: column; align-items: flex-start; }
 }
 @media print { aside, .sr, #toasts { display: none; } body { background: #fff; } }

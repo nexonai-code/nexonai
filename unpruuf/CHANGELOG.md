@@ -5,6 +5,23 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑11 · Officer dashboard speaks English
+
+**What was done**
+
+- The officer dashboard (`officer-app/src/web/public`) has a Romanian/English switch (bottom left, remembered in the browser; default stays Romanian). All texts live in `i18n.js`; dates, deadlines, toasts and server error messages follow the language.
+- New test: both languages must have the same keys, list lengths and placeholders.
+
+**Bug found on the way**
+
+- A local variable named `t` hid the new translation function and broke the case page. Renamed; the page now loads without errors in both languages.
+
+**Limits**
+
+- Not yet translated: the officer app's console messages and the pairing-code error texts that come from deeper layers (a few are mapped, the rest stay Romanian).
+
+---
+
 ## 2026‑10‑11 · Tor blocked? The app finds a way, and the company can run its own bridge
 
 **What was done**
