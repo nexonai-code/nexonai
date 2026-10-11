@@ -45,6 +45,9 @@ export interface AdminState {
   registeredNodes?: () => Promise<number | null>;
   /** Server license (license.ts). Absent = no license handling (older tests); a Temp Node reports "free". */
   license?: () => LicenseSummary;
+  /** The company's own Tor bridge (bridgeLines.ts): shown on the setup page, put into the node-list file. */
+  bridgeLines?: () => string[];
+  setBridgeLines?: (lines: string[]) => string[];
   applyLicense?: (code: string) => Promise<{ ok: true; summary: LicenseSummary } | { ok: false; error: LicenseError }>;
 }
 
@@ -107,6 +110,7 @@ export async function statusPayload(state: AdminState) {
     ownerQr: ownerString ? await QRCode.toDataURL(ownerString, { margin: 1, width: 320 }) : null,
     stats: state.stats(),
     license: state.license ? state.license() : null,
+    bridgeLines: state.bridgeLines ? state.bridgeLines() : [],
     integrity: state.integrity ? state.integrity() : null,
   };
 }
@@ -195,8 +199,18 @@ export function createAdminApp(state: AdminState, adminPort: number): Express {
     const name = `${customer ? customer + " · " : ""}Server ${state.slot}`;
     res.setHeader("Content-Disposition", `attachment; filename="unpruuf-nodes-server-${state.slot}.txt"`);
     res.type("text/plain").send(
-      buildNodeListFile({ name, ownerSecret: state.getOwnerSecret(), control: state.controlAddress?.() ?? null, addresses }),
+      buildNodeListFile({ name, ownerSecret: state.getOwnerSecret(), control: state.controlAddress?.() ?? null, addresses, bridges: state.bridgeLines?.() ?? [] }),
     );
+  });
+
+  // The company's own Tor bridge lines (one per line). Same custom-header CSRF guard as the others.
+  app.post("/bridge-lines", express.json({ limit: "8kb" }), (req, res) => {
+    if (req.header("x-unpruuf-admin") !== "1") return res.status(403).json({ error: "forbidden" });
+    if (!state.setBridgeLines) return res.status(409).json({ error: "no bridge handling" });
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    const given = text.split(/\r?\n/).map((l: string) => l.trim()).filter((l: string) => l !== "");
+    const saved = state.setBridgeLines(given);
+    return res.json({ ok: true, saved, rejected: given.length - saved.length });
   });
 
   // Paste a server license (or a renewal). Same custom-header CSRF guard as rotation/unlock.
@@ -288,6 +302,10 @@ ${!s.ephemeral && !s.locked && s.addresses.length > 0 ? `<div class="card"><h2>N
 <p>Eine Datei mit allen ${s.addresses.length} Node${s.addresses.length === 1 ? "" : "s"} dieses Servers. In der unpruuf-App: <b>Einstellungen → Node-Listen → Liste importieren</b>.</p>
 <p class="warn"><b>Die Datei enthält deinen Schreibschlüssel.</b> Nur auf dein eigenes Handy übertragen (Kabel oder vertrauter Weg) und danach löschen. Niemals an einen Kontakt geben.</p>
 <button id="export-list" class="go">Liste als Datei speichern</button></div>` : ""}
+${!s.ephemeral && !s.locked && s.bridgeLines !== undefined ? `<div class="card"><h2>Firmen-Bridge (für Länder und Netze, die Tor sperren)</h2>
+<p>Eine Bridge ist ein kleiner, nirgends gelisteter Server der Firma. Wo Tor oder die öffentlichen Bridges gesperrt sind, kommt das Handy darüber trotzdem ins Netz, denn außerhalb der Firma kennt niemand die Adresse. Die Zeile erzeugt <b>start-bridge.bat</b> (Windows) oder <b>start-bridge.sh</b> (Linux) auf einem eigenen, kleinen Server. Hier einfügen, eine Zeile pro Bridge. Sie steht danach in der Node-Liste und im Firmen-Feed, die Handys probieren sie als Erstes.</p>
+<p><textarea id="bridge-text" rows="4" spellcheck="false" placeholder="obfs4 203.0.113.9:443 0123…ABCD cert=… iat-mode=0" style="width:100%;font:13px ui-monospace,Consolas,monospace;padding:8px;box-sizing:border-box">${escapeHtml(s.bridgeLines.join("\n"))}</textarea></p>
+<button id="bridge-save" class="go">Bridge speichern</button> <span id="bridge-msg" class="dim"></span></div>` : ""}
 ${s.canRotate ? `<div class="card"><h2>3. Schreibschlüssel erneuern</h2>
 <p>Nur nötig, wenn der Owner-QR in falsche Hände geraten sein könnte. Danach den neuen QR in deine eigene App scannen. Kontakte sind nicht betroffen.</p>
 <button id="rotate">Schreibschlüssel erneuern</button></div>` : ""}
@@ -308,6 +326,12 @@ if(lb)lb.onclick=async()=>{const code=document.getElementById('lic-code').value;
 const r=await fetch('/license',{method:'POST',headers:{'X-Unpruuf-Admin':'1','Content-Type':'application/json'},body:JSON.stringify({code})});
 const d=await r.json().catch(()=>({}));
 if(r.ok)location.reload();else alert(d.error==='wrong-type'?'Das ist eine App-Lizenz. Hier wird die Server-Lizenz gebraucht (beginnt mit unpruuf-server-license:).':'Dieser Lizenzcode ist ungültig.');};
+const bs=document.getElementById('bridge-save');
+if(bs)bs.onclick=async()=>{const text=document.getElementById('bridge-text').value;
+const r=await fetch('/bridge-lines',{method:'POST',headers:{'X-Unpruuf-Admin':'1','Content-Type':'application/json'},body:JSON.stringify({text})});
+const d=await r.json().catch(()=>({}));const m=document.getElementById('bridge-msg');
+if(!r.ok){m.textContent='Speichern nicht möglich.';return;}
+m.textContent=d.saved.length+' Zeile(n) gespeichert'+(d.rejected?(', '+d.rejected+' nicht erkannt und ausgelassen'):'')+'.';};
 const rb=document.getElementById('rotate');
 if(rb)rb.onclick=async()=>{if(!confirm('Neuen Schreibschlüssel erzeugen? Deine App kann erst wieder senden, wenn du den neuen QR scannst.'))return;
 const r=await fetch('/rotate-owner-secret',{method:'POST',headers:{'X-Unpruuf-Admin':'1'}});if(r.ok)location.reload();else alert('Fehlgeschlagen');};

@@ -1,3 +1,4 @@
+import { readBridgeLines, writeBridgeLines } from "./bridgeLines";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -7,7 +8,7 @@ import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
 import { NodeStore } from "./store/nodeStore";
 import {
-  ADMIN_PORT, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM, PACKAGE_ROOT, REQUIRE_SIGNED,
+  ADMIN_PORT, BRIDGE_LINES_PATH, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM, PACKAGE_ROOT, REQUIRE_SIGNED,
   RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
 } from "./config";
 import {
@@ -150,6 +151,8 @@ const adminApp = createAdminApp(
     },
     registeredNodes: () => (onion ? onion.registeredNodeCount() : Promise.resolve(null)),
     license: () => license.summary(),
+    bridgeLines: () => readBridgeLines(BRIDGE_LINES_PATH),
+    setBridgeLines: (lines: string[]) => writeBridgeLines(BRIDGE_LINES_PATH, lines),
     applyLicense: async (code: string) => {
       const result = license.apply(code);
       if (!result.ok) return result;

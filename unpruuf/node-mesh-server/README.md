@@ -92,6 +92,10 @@ docker compose up -d           # container, setup page on the host's http://loca
 | **Packets in RAM only** | `NODE_MESH_STORE=ram`: waiting packets live in memory only (SQLite `:memory:`), nothing is written to the disk; a restart drops them. Default `disk` keeps them until their TTL. The overview and the setup page show which one runs. (Keys are a separate matter: sealed on disk.) |
 | **Temp Node** | `EPHEMERAL=1` / `--ephemeral`: owner secret, onion key and messages exist only in memory — the key goes to Tor over the control port, never through a `HiddenServiceDir`. Tor's own working folder is a temp dir deleted on exit. Every start = new address. |
 
+## Tor blocked? Company bridge
+
+The app finds a way to Tor by itself (direct, then the company bridge, obfs4, Snowflake). For networks and countries that block the public bridges too, the company runs a **private, unlisted obfs4 bridge** on a small separate server: `start-bridge.bat` (Windows) or `./start-bridge.sh <ip-or-dns> [port]` prints the bridge line. Paste it on this server's setup page ("Firmen-Bridge"); it is then exported as `bridge:` lines in the node-list file and the company feed, and every phone that imports the list tries it first. Environment: `NODE_MESH_BRIDGE_ADDRESS`, `NODE_MESH_BRIDGE_PORT` (default 443), `NODE_MESH_BRIDGE_DIR` (default `data/bridge`, keep it: it holds the keys). Bridges protect against blocking, not against being noticed. Details: `../NODE_MESH_BETRIEB.md`.
+
 ## Ports (defaults per slot)
 
 | Slot | API (loopback, behind the onion) | Setup page |

@@ -151,8 +151,20 @@ Această acțiune nu poate fi anulată.</string>
     <string name="settings_section_censorship">Ocolirea cenzurii</string>
     <string name="settings_use_tor_bridges">Folosește punți Tor</string>
     <string name="settings_use_tor_bridges_body">Pentru rețele care blochează Tor (de ex. anumite țări/furnizori)</string>
-    <string name="settings_bridges_help">Lipește liniile de punte (câte una pe rând). Le găsești pe bridges.torproject.org sau la botul de Telegram @GetBridgesBot.
-Punțile obișnuite (IP:Port Amprentă) funcționează imediat. obfs4/Snowflake urmează într-o actualizare viitoare.</string>
+    <string name="settings_bridges_help">Opțional: lipește propriile linii de punte (câte una pe rând). Au întotdeauna prioritate față de conectarea automată. Le găsești pe bridges.torproject.org sau la botul de Telegram @GetBridgesBot. Sunt acceptate punțile obfs4, Snowflake și IP:Port simple.</string>
+    <string name="settings_auto_connect">Conectare automată</string>
+    <string name="settings_auto_connect_body">Dacă rețeaua blochează Tor, aplicația încearcă singură alte căi. Nu trebuie configurat nimic.</string>
+    <string name="settings_conn_idle">Se așteaptă Tor…</string>
+    <string name="settings_conn_trying">Se încearcă %1$s … %2$d%%</string>
+    <string name="settings_conn_connected">Conectat %1$s</string>
+    <string name="settings_conn_failed">Încă nu s-a găsit nicio cale. Aplicația încearcă din nou în câteva minute.</string>
+    <string name="settings_conn_retry">Încearcă acum</string>
+    <string name="settings_path_direct">direct</string>
+    <string name="settings_path_company">prin puntea companiei</string>
+    <string name="settings_path_obfs4">printr-o punte obfs4</string>
+    <string name="settings_path_snowflake">prin Snowflake</string>
+    <string name="settings_company_bridge">Puntea companiei este salvată (%1$d linie/linii). Este încercată prima când Tor este blocat.</string>
+    <string name="settings_company_bridge_remove">Elimină</string>
     <string name="settings_bridge_lines_field">Linii de punte</string>
     <string name="settings_save_reconnect_tor">Salvează și reconectează Tor</string>
     <string name="settings_license_active">Activă — expiră %1$s</string>

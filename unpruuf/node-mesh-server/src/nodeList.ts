@@ -8,6 +8,7 @@
  *   secret: <owner secret>          ← the write key for every node on this server
  *   control: <control onion>        ← sealed servers only (lets the app unlock after a restart)
  *   count: 250
+ *   bridge: obfs4 …                 ← optional, repeatable: the company's own Tor bridge
  *   <empty line>
  *   <address 1>
  *   <address 2>
@@ -17,6 +18,8 @@
  * phone over a cable or a trusted channel and delete it afterwards. Contacts never get this file.
  * The Android app parses the same format (NodeListFile.kt).
  */
+
+import { cleanBridgeLines } from "./bridgeLines";
 
 export const NODE_LIST_HEADER = "unpruuf-node-list:v1";
 
@@ -28,6 +31,8 @@ export interface NodeListFile {
   ownerSecret: string;
   control: string | null;
   addresses: string[];
+  /** The company's own Tor bridge lines (bridgeLines.ts), if it runs one. */
+  bridges?: string[];
 }
 
 function cleanName(name: string): string {
@@ -41,7 +46,9 @@ export function buildNodeListFile(list: NodeListFile): string {
     `secret: ${list.ownerSecret}`,
   ];
   if (list.control) lines.push(`control: ${list.control}`);
-  lines.push(`count: ${list.addresses.length}`, "", ...list.addresses);
+  lines.push(`count: ${list.addresses.length}`);
+  for (const b of cleanBridgeLines(list.bridges ?? [])) lines.push(`bridge: ${b}`);
+  lines.push("", ...list.addresses);
   return lines.join("\n") + "\n";
 }
 
@@ -50,11 +57,13 @@ export function parseNodeListFile(text: string): NodeListFile | null {
   const lines = text.replace(/^﻿/, "").split(/\r?\n/);
   if ((lines[0] ?? "").trim() !== NODE_LIST_HEADER) return null;
   const header: Record<string, string> = {};
+  const bridgeLines: string[] = [];
   let i = 1;
   for (; i < lines.length && lines[i].trim() !== ""; i++) {
     const m = /^([a-z]+):\s?(.*)$/.exec(lines[i]);
     if (!m) return null;
-    header[m[1]] = m[2].trim();
+    if (m[1] === "bridge") bridgeLines.push(m[2].trim());
+    else header[m[1]] = m[2].trim();
   }
   const addresses: string[] = [];
   for (i++; i < lines.length; i++) {
@@ -68,5 +77,5 @@ export function parseNodeListFile(text: string): NodeListFile | null {
   if (header.count !== undefined && Number(header.count) !== addresses.length) return null;
   const control = header.control ? header.control : null;
   if (control && !ADDRESS_RE.test(control)) return null;
-  return { name: cleanName(header.name ?? "") || "Server", ownerSecret: header.secret, control, addresses };
+  return { name: cleanName(header.name ?? "") || "Server", ownerSecret: header.secret, control, addresses, bridges: cleanBridgeLines(bridgeLines) };
 }

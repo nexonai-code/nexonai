@@ -45,6 +45,8 @@ export const DB_PATH = process.env.NODE_MESH_DB_PATH ?? path.join(DATA_DIR, "nod
 export const IDENTITY_PATH = path.join(DATA_DIR, "node-mesh-identity.json");
 // The server license (license.ts): written by the setup page, or NODE_MESH_LICENSE in the environment.
 export const LICENSE_PATH = path.join(DATA_DIR, "license.txt");
+// The company's own Tor bridge lines (bridgeLines.ts), set on the setup page, exported with the node list.
+export const BRIDGE_LINES_PATH = path.join(DATA_DIR, "bridge-lines.txt");
 export const TOR_BIN_DIR = process.env.NODE_MESH_TOR_BIN_DIR ?? path.join(PACKAGE_ROOT, "tor-bin");
 
 // Where the encrypted packets wait. Default: a file on disk, so packets survive a restart (until

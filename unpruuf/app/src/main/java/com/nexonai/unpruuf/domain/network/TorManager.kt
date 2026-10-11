@@ -27,12 +27,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import net.freehaven.tor.control.TorControlCommands
 import net.freehaven.tor.control.TorControlConnection
 import org.torproject.jni.TorService
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Where the automatic connection stands, for the settings screen. */
+data class TorConnectionState(
+    val phase: Phase = Phase.IDLE,
+    /** The path being tried, or the one that worked. */
+    val path: TorPath? = null,
+    val progress: Int = 0
+) {
+    enum class Phase { IDLE, CONNECTING, CONNECTED, FAILED }
+}
 
 @Singleton
 class TorManager @Inject constructor(
@@ -46,6 +58,11 @@ class TorManager @Inject constructor(
 
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+
+    private val _connection = MutableStateFlow(TorConnectionState())
+    val connection: StateFlow<TorConnectionState> = _connection.asStateFlow()
+    private val assistantMutex = Mutex()
+    private var assistantJob: Job? = null
 
     private val _onionAddress = MutableStateFlow<String?>(null)
     val onionAddress: StateFlow<String?> = _onionAddress.asStateFlow()
@@ -113,6 +130,9 @@ class TorManager @Inject constructor(
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
                 torService = (binder as TorService.LocalBinder).service
+                // Tor has begun bootstrapping by itself (direct). The assistant watches that and,
+                // if the network blocks it, tries the other paths. See runAssistant().
+                startAssistant(preferRemembered = true)
             }
             override fun onServiceDisconnected(name: ComponentName?) {
                 torService = null
@@ -226,62 +246,154 @@ class TorManager @Inject constructor(
         // couldn't run.
         delay(1_500)
         _networkChanged.emit(Unit)
+        // A new network may block what the old one allowed: if Tor has no circuit 25 s after the
+        // switch, let the assistant look again (fresh, direct path first).
+        scope.launch {
+            delay(25_000)
+            val c = torService?.torControlConnection ?: return@launch
+            if (!circuitEstablished(c)) startAssistant(preferRemembered = false)
+        }
     }
 
-    // Wendet die Bridge-Konfiguration an. SICHERHEIT: Es werden nur Bridges
-    // aktiviert, die OHNE Pluggable Transport funktionieren (Vanilla). Reine
-    // PT-Bridges (obfs4/snowflake) wuerden Tor ohne die IPtProxy-Binaries
-    // komplett lahmlegen — daher werden sie hier bewusst NICHT gesetzt, bis
-    // der PT-Client verfuegbar ist. So kann die Einstellung Tor nie zerstoeren.
+    // Wendet die HANDGEPFLEGTEN Bridges an (Einstellungen, Schalter "Tor-Bridges verwenden").
+    // SICHERHEIT: Ein Transport ohne laufenden lokalen Client wird nicht eingetragen, Tor kann so
+    // nie in einen halb konfigurierten Bridge-Zustand geraten. Ohne eigene Bridges bleibt es bei
+    // der automatischen Verbindung (siehe runAssistant), die selbst entscheidet.
     private suspend fun applyBridges(ctrl: TorControlConnection) {
         runCatching {
             if (!bridgeManager.isEnabled()) {
-                ctrl.setConf("UseBridges", "0")
+                if (!bridgeManager.isAutomatic()) setDirect(ctrl)
                 return
             }
-            val vanilla = bridgeManager.usableVanillaLines()
-            val ptLines = bridgeManager.pluggableTransportLines()
-            val neededTransports = ptLines.mapNotNull { line ->
-                line.substringBefore(' ').lowercase().takeIf { it == "obfs4" || it == "snowflake" }
-            }.toSet()
+            if (!applyBridgeLines(ctrl, bridgeManager.usableVanillaLines(), bridgeManager.pluggableTransportLines())) setDirect(ctrl)
+        }
+    }
 
-            // Start each configured PT client and see which ones actually came up. A PT that
-            // fails to start (missing native lib, resolution mismatch, anything) simply isn't in
-            // this map — its bridge lines get skipped below rather than left half-configured.
-            val livePorts = if (neededTransports.isEmpty()) emptyMap()
-                else runCatching { pluggableTransportManager.ensureStarted(neededTransports) }.getOrDefault(emptyMap())
+    private fun setDirect(ctrl: TorControlConnection) {
+        runCatching { ctrl.resetConf(listOf("Bridge", "ClientTransportPlugin")) }
+        ctrl.setConf("UseBridges", "0")
+    }
 
-            if (vanilla.isEmpty() && livePorts.isEmpty()) {
-                // Nothing usable right now (no vanilla bridges, and either no PT bridges
-                // configured or none of them actually started) → keep the direct connection
-                // instead of leaving Tor in a broken bridge state.
-                ctrl.setConf("UseBridges", "0")
+    /**
+     * Starts the local client of every transport the PT lines need, and puts Tor on exactly those
+     * bridges. False (and nothing changed) if nothing usable came up.
+     */
+    private suspend fun applyBridgeLines(ctrl: TorControlConnection, vanilla: List<String>, ptLines: List<String>): Boolean {
+        val needed = ptLines.mapNotNull { line ->
+            line.substringBefore(' ').lowercase().takeIf { it == "obfs4" || it == "snowflake" }
+        }.toSet()
+        val live = if (needed.isEmpty()) emptyMap()
+            else runCatching { pluggableTransportManager.ensureStarted(needed) }.getOrDefault(emptyMap())
+        val ptUsable = ptLines.filter { it.substringBefore(' ').lowercase() in live }
+        if (vanilla.isEmpty() && ptUsable.isEmpty()) return false
+        runCatching { ctrl.resetConf(listOf("Bridge", "ClientTransportPlugin")) }
+        val conf = mutableListOf("UseBridges 1")
+        live.forEach { (transport, port) -> conf.add("ClientTransportPlugin $transport socks5 127.0.0.1:$port") }
+        vanilla.forEach { conf.add("Bridge $it") }
+        ptUsable.forEach { conf.add("Bridge $it") }
+        ctrl.setConf(conf)
+        return true
+    }
+
+    // ─── Automatic connection ───────────────────────────────────────────────────────────────
+    // Tor starts bootstrapping by itself, direct. The assistant watches that. If the network
+    // blocks Tor, it tries the next paths (company bridge, obfs4, Snowflake; see ConnectionPaths)
+    // until one reaches "Bootstrapped 100%" and remembers which one did. The user is never asked
+    // for bridge lines. Hand-entered bridges (Settings) always win: then the assistant stays out.
+
+    /** (Re)starts the assistant. [preferRemembered]: app start only, not after a network change. */
+    fun startAssistant(preferRemembered: Boolean) {
+        if (bridgeManager.isEnabled()) {
+            // Hand-entered bridges: apply them right away. (TorService only announces "on" after the
+            // first circuit exists, so waiting for that would never come on a network that blocks Tor.)
+            scope.launch { awaitControlConnection(tries = 120)?.let { applyBridges(it) } }
+            return
+        }
+        if (!bridgeManager.isAutomatic()) return
+        assistantJob?.cancel()
+        assistantJob = scope.launch { assistantMutex.withLock { runAssistant(preferRemembered) } }
+    }
+
+    private fun bootstrapProgress(ctrl: TorControlConnection): Int =
+        ConnectionPaths.parseBootstrapProgress(runCatching { ctrl.getInfo("status/bootstrap-phase") }.getOrNull())
+
+    private fun circuitEstablished(ctrl: TorControlConnection): Boolean =
+        runCatching { ctrl.getInfo("status/circuit-established") }.getOrNull()?.trim() == "1"
+
+    /** Waits until Tor says "Bootstrapped 100%" or [seconds] have passed. */
+    private suspend fun waitForBootstrap(ctrl: TorControlConnection, path: TorPath, seconds: Int): Boolean {
+        repeat(seconds) {
+            val p = bootstrapProgress(ctrl)
+            _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, path, p.coerceAtLeast(0))
+            if (p >= 100) return true
+            delay(1_000)
+        }
+        return bootstrapProgress(ctrl) >= 100
+    }
+
+    private suspend fun applyPath(ctrl: TorControlConnection, path: TorPath): Boolean = runCatching {
+        when (path) {
+            TorPath.DIRECT -> { setDirect(ctrl); true }
+            TorPath.COMPANY -> {
+                val lines = bridgeManager.companyLines()
+                applyBridgeLines(ctrl, lines.filter { !ConnectionPaths.isObfs4(it) }, lines.filter { ConnectionPaths.isObfs4(it) })
+            }
+            TorPath.OBFS4 -> applyBridgeLines(ctrl, emptyList(), ConnectionPaths.BUILT_IN_OBFS4)
+            TorPath.SNOWFLAKE -> applyBridgeLines(ctrl, emptyList(), ConnectionPaths.BUILT_IN_SNOWFLAKE)
+        }
+    }.getOrDefault(false)
+
+    private suspend fun runAssistant(preferRemembered: Boolean) {
+        var ctrl = torService?.torControlConnection
+        var waited = 0
+        while (ctrl == null && waited < 60) { delay(1_000); waited++; ctrl = torService?.torControlConnection }
+        if (ctrl == null) return
+
+        // Already connected (a restart of the app with Tor still warm): nothing to do.
+        if (bootstrapProgress(ctrl) >= 100) {
+            _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTED, bridgeManager.lastPath() ?: TorPath.DIRECT, 100)
+            return
+        }
+        val order = ConnectionPaths.order(bridgeManager.lastPath(), bridgeManager.companyLines().isNotEmpty(), preferRemembered)
+        for (path in order) {
+            _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, path, 0)
+            if (!applyPath(ctrl, path)) continue
+            if (waitForBootstrap(ctrl, path, ConnectionPaths.budgetSeconds(path))) {
+                bridgeManager.setLastPath(path)
+                _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTED, path, 100)
                 return
             }
-
-            val conf = mutableListOf("UseBridges 1")
-            livePorts.forEach { (transport, port) ->
-                conf.add("ClientTransportPlugin $transport socks5 127.0.0.1:$port")
-            }
-            vanilla.forEach { conf.add("Bridge $it") }
-            ptLines.forEach { line ->
-                val transport = line.substringBefore(' ').lowercase()
-                if (transport in livePorts) conf.add("Bridge $line")
-            }
-            ctrl.setConf(conf)
+        }
+        // Nothing worked. Back to the direct path (the quiet default) and look again in a few minutes.
+        runCatching { setDirect(ctrl) }
+        _connection.value = TorConnectionState(TorConnectionState.Phase.FAILED, null, 0)
+        scope.launch {
+            delay(5 * 60_000L)
+            if (_connection.value.phase == TorConnectionState.Phase.FAILED) startAssistant(preferRemembered = false)
         }
     }
 
     /** Bridges nach einer Einstellungsaenderung sofort neu anwenden. */
     suspend fun reapplyBridges() {
         val ctrl = torService?.torControlConnection ?: return
-        applyBridges(ctrl)
-        bounceTorNetwork()
+        if (bridgeManager.isEnabled()) {
+            applyBridges(ctrl)
+            bounceTorNetwork()
+        } else {
+            setDirect(ctrl)
+            startAssistant(preferRemembered = false)
+        }
     }
 
-    private suspend fun awaitControlConnection(): TorControlConnection? {
+    /** "Try again now" in the settings. */
+    fun retryConnection() {
+        _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, TorPath.DIRECT, 0)
+        startAssistant(preferRemembered = false)
+    }
+
+    private suspend fun awaitControlConnection(tries: Int = 20): TorControlConnection? {
         var ctrl = torService?.torControlConnection
-        repeat(20) {
+        repeat(tries) {
             if (ctrl != null) return@repeat
             delay(500)
             ctrl = torService?.torControlConnection

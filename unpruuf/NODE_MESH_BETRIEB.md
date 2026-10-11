@@ -179,6 +179,25 @@ Jede Version von NexonAI enthält eine signierte Liste aller Programmdateien (`r
 
 **Was das nicht kann:** Ein Server, der gerade gehackt läuft, kann über sich selbst lügen. Die Prüfung findet Dateien, die auf der Platte verändert wurden, und erlaubt einen Vergleich von außen. Sie beweist nicht, dass ein laufender Rechner sauber ist. Dazu gehören ein gehärteter Rechner (Container, schreibgeschütztes Dateisystem), der Arbeitsspeicher-Modus und ein Neustart-Plan. Nicht abgedeckt sind `node_modules` und der Datenordner. Bei der einzelnen `.exe` zeigt die Seite nur deren SHA-256, den Sie mit dem veröffentlichten vergleichen.
 
+## Wenn ein Land oder ein Netz Tor sperrt: automatische Verbindung und Firmen-Bridge
+
+**Die App findet den Weg selbst.** Sie versucht erst Tor direkt. Klappt das nicht, probiert sie nacheinander die Firmen-Bridge (falls die Firma eine hat), eine obfs4-Bridge und Snowflake. Der Nutzer gibt nichts ein. Den Weg, der geklappt hat, merkt sich die App für den nächsten Start. Wo die Verbindung steht, sieht man in den Einstellungen unter „Zensur umgehen“, mit einem Knopf „Jetzt versuchen“. Die Standard-Bridges (obfs4, Snowflake) sind die, die auch der Tor Browser mitbringt. Öffentliche Standard-Bridges können von einem Land oder Netz gezielt gesperrt werden. Deshalb gibt es die Firmen-Bridge.
+
+**Die Firmen-Bridge** ist ein kleiner Server der Firma, der nirgends gelistet ist. Wer Tor sperrt, sperrt Listen: öffentliche Tor-Relays, öffentliche Bridges. Eine Bridge, deren Adresse nur die Firma kennt, steht auf keiner Liste. Sie sieht von außen aus wie zufälliges Rauschen (obfs4).
+
+So richten Sie sie ein:
+1. Einen **eigenen kleinen Server** mieten (wenige Euro im Monat, nicht der Node-Server, damit Bridge und Nodes nicht dasselbe Schicksal haben). Port 443 (TCP) in der Firewall und beim Hoster freigeben.
+2. Dort `install.bat`, dann **`start-bridge.bat`** (Linux: `./start-bridge.sh <IP-oder-Name> [Port]`). Beim ersten Start lädt es Tor und zeigt nach wenigen Sekunden die **Bridge-Zeile** (`obfs4 203.0.113.9:443 … cert=… iat-mode=0`).
+3. Diese Zeile auf der Einrichtungsseite des **Node-Servers** in die Karte „Firmen-Bridge“ einfügen und speichern. Sie steht danach in der Node-Liste (`bridge:`-Zeile) und im Listen-Dienst. Wer die Liste importiert oder dem Firmen-Feed folgt, hat die Bridge automatisch.
+4. Den Ordner `data/bridge` der Bridge **nicht löschen**: Er enthält ihre Schlüssel. Ohne ihn ändert sich die Zeile und alle Handys müssten eine neue bekommen.
+
+Gut zu wissen:
+- **Bridges schützen vor dem Blockieren, nicht vor dem Auffallen.** Wer in einem Land mit Tor-Sperre ein Handy mit Bridge benutzt, kann auffallen, auch wenn niemand sieht, was geschrieben wird. Das gehört in jede Aufklärung der Mitarbeiter.
+- Eine einzelne Bridge ist ein einzelner Punkt, den ein Angreifer sperren kann, sobald er die Zeile kennt. Wer eine Zeile erhält, kennt sie. Bei großem Kreis lieber mehrere Bridges (bis zu 10 Zeilen) und sie bei Verdacht tauschen.
+- Die Bridge sieht nur verschlüsselten Verkehr zum Tor-Netz. Sie kennt weder Inhalte noch Nodes, weder Kontakte noch Namen.
+- Snowflake nutzt die Rechner Fremder als Brücke. Es ist eine Rückfallebene für den Notfall, kein Teil des Firmensystems.
+- Noch nicht getestet: Snowflake und die Standard-Bridges auf einem Gerät in einem Netz, das Tor wirklich sperrt. Getestet ist: die Bridge startet, erzeugt eine gültige Zeile, und ein Tor-Client verbindet sich über obfs4 mit ihr (Handshake, Anfrage der Netzübersicht). Vollständiges Hochfahren über sie ist in dieser Umgebung nicht möglich gewesen.
+
 ## Was Sie wissen sollten
 
 - Keine unabhängige Sicherheitsprüfung (Audit) bisher. Die Eigenschaften sind so gebaut und im

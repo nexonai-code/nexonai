@@ -49,6 +49,10 @@ fun SettingsScreen(
     onNavigateToNodeLists: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val autoConnect by viewModel.autoConnect.collectAsState()
+    val connection by viewModel.connection.collectAsState()
+    val companyBridgeCount by viewModel.companyBridgeCount.collectAsState()
+    LaunchedEffect(Unit) { viewModel.refreshCompanyBridges() }
     val bridgesEnabled by viewModel.bridgesEnabled.collectAsState()
     val bridgeText by viewModel.bridgeText.collectAsState()
     val status by viewModel.status.collectAsState()
@@ -240,6 +244,55 @@ fun SettingsScreen(
             HorizontalDivider()
 
             SectionHeader(stringResource(R.string.settings_section_censorship))
+            // Automatic connection: the app finds a way to Tor by itself (TorManager.runAssistant).
+            val pathName = when (connection.path) {
+                com.nexonai.unpruuf.domain.network.TorPath.DIRECT -> stringResource(R.string.settings_path_direct)
+                com.nexonai.unpruuf.domain.network.TorPath.COMPANY -> stringResource(R.string.settings_path_company)
+                com.nexonai.unpruuf.domain.network.TorPath.OBFS4 -> stringResource(R.string.settings_path_obfs4)
+                com.nexonai.unpruuf.domain.network.TorPath.SNOWFLAKE -> stringResource(R.string.settings_path_snowflake)
+                null -> ""
+            }
+            val connectionText = when (connection.phase) {
+                com.nexonai.unpruuf.domain.network.TorConnectionState.Phase.IDLE -> stringResource(R.string.settings_conn_idle)
+                com.nexonai.unpruuf.domain.network.TorConnectionState.Phase.CONNECTING -> stringResource(R.string.settings_conn_trying, pathName, connection.progress)
+                com.nexonai.unpruuf.domain.network.TorConnectionState.Phase.CONNECTED -> stringResource(R.string.settings_conn_connected, pathName)
+                com.nexonai.unpruuf.domain.network.TorConnectionState.Phase.FAILED -> stringResource(R.string.settings_conn_failed)
+            }
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_auto_connect)) },
+                supportingContent = { Text(stringResource(R.string.settings_auto_connect_body)) },
+                leadingContent = { Icon(Icons.Default.Public, null) },
+                trailingContent = {
+                    Switch(checked = autoConnect, onCheckedChange = { viewModel.onAutoConnectChange(it) })
+                }
+            )
+            if (autoConnect && !bridgesEnabled) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(
+                        connectionText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { viewModel.retryConnection() }) { Text(stringResource(R.string.settings_conn_retry)) }
+                }
+            }
+            if (companyBridgeCount > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.settings_company_bridge, companyBridgeCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { viewModel.clearCompanyBridges() }) { Text(stringResource(R.string.settings_company_bridge_remove)) }
+                }
+            }
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_use_tor_bridges)) },
                 supportingContent = {

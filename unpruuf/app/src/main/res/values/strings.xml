@@ -155,8 +155,20 @@ and wiped when the screen locks</string>
     <string name="settings_section_censorship">Censorship Circumvention</string>
     <string name="settings_use_tor_bridges">Use Tor bridges</string>
     <string name="settings_use_tor_bridges_body">For networks that block Tor (e.g. certain countries/providers)</string>
-    <string name="settings_bridges_help">Paste bridge lines (one per line). Get them from bridges.torproject.org or the Telegram bot @GetBridgesBot.
-Vanilla bridges (IP:Port Fingerprint) work immediately. obfs4/Snowflake follow in the next update.</string>
+    <string name="settings_bridges_help">Optional: paste your own bridge lines (one per line). They always win over the automatic connection. Get them from bridges.torproject.org or the Telegram bot @GetBridgesBot. obfs4, Snowflake and plain IP:Port bridges are supported.</string>
+    <string name="settings_auto_connect">Connect automatically</string>
+    <string name="settings_auto_connect_body">If the network blocks Tor, the app tries other ways by itself. Nothing to set up.</string>
+    <string name="settings_conn_idle">Waiting for Tor…</string>
+    <string name="settings_conn_trying">Trying %1$s … %2$d%%</string>
+    <string name="settings_conn_connected">Connected %1$s</string>
+    <string name="settings_conn_failed">No way found yet. The app tries again in a few minutes.</string>
+    <string name="settings_conn_retry">Try now</string>
+    <string name="settings_path_direct">directly</string>
+    <string name="settings_path_company">through the company bridge</string>
+    <string name="settings_path_obfs4">through an obfs4 bridge</string>
+    <string name="settings_path_snowflake">through Snowflake</string>
+    <string name="settings_company_bridge">Company bridge saved (%1$d line(s)). Tried first when Tor is blocked.</string>
+    <string name="settings_company_bridge_remove">Remove</string>
     <string name="settings_bridge_lines_field">Bridge lines</string>
     <string name="settings_save_reconnect_tor">Save &amp; reconnect Tor</string>
     <string name="settings_license_active">Active — expires %1$s</string>

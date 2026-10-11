@@ -40,3 +40,14 @@ test("a name with line breaks cannot inject extra header lines", () => {
   const text = buildNodeListFile({ name: "A\nsecret: Evil_secret_0123456789", ownerSecret: SECRET, control: null, addresses: [addr(1)] });
   assert.equal(parseNodeListFile(text)!.ownerSecret, SECRET);
 });
+
+test("the company's Tor bridge travels in the list file; broken bridge lines are dropped", () => {
+  const obfs4 = "obfs4 203.0.113.9:443 D9A82D2F9C2F65A18407B1D2B764F130847F8B5D cert=bjRaMrr1BRiAW8IE9U5z27fQaYgOhX1UCmOpg2pFpoMvo6ZgQMzLsaTzzQNTlm7hNcb+Sg iat-mode=0";
+  const text = buildNodeListFile({ name: "x", ownerSecret: SECRET, control: null, addresses: [addr(1)], bridges: [obfs4, "not a bridge"] });
+  assert.equal((text.match(/^bridge: /gm) ?? []).length, 1);
+  const parsed = parseNodeListFile(text)!;
+  assert.deepEqual(parsed.bridges, [obfs4]);
+  assert.deepEqual(parsed.addresses, [addr(1)]);
+  const none = parseNodeListFile(buildNodeListFile({ name: "x", ownerSecret: SECRET, control: null, addresses: [addr(1)] }))!;
+  assert.deepEqual(none.bridges, []);
+});

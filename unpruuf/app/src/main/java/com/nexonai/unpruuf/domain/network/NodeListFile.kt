@@ -10,6 +10,7 @@ package com.nexonai.unpruuf.domain.network
  *   secret: <owner secret>          ← the write key for every node on that server
  *   control: <control onion>        ← sealed servers only
  *   count: 250
+ *   bridge: obfs4 …                 ← optional, repeatable: the company's own Tor bridge
  *   <empty line>
  *   <address>                       ← one per line
  *
@@ -32,7 +33,9 @@ object NodeListFile {
         val name: String,
         val ownerSecret: String,
         val control: String?,
-        val addresses: List<String>
+        val addresses: List<String>,
+        /** The company's own Tor bridge lines (valid ones only, see [ConnectionPaths]). */
+        val bridges: List<String> = emptyList()
     )
 
     /** The list inside [text], or null for anything that is not a well-formed node list. */
@@ -41,10 +44,12 @@ object NodeListFile {
         val lines = text.removePrefix("﻿").split(Regex("\r?\n"))
         if (lines.firstOrNull()?.trim() != HEADER) return null
         val header = mutableMapOf<String, String>()
+        val bridgeLines = mutableListOf<String>()
         var i = 1
         while (i < lines.size && lines[i].isNotBlank()) {
             val m = KEY_VALUE.matchEntire(lines[i]) ?: return null
-            header[m.groupValues[1]] = m.groupValues[2].trim()
+            if (m.groupValues[1] == "bridge") bridgeLines += m.groupValues[2].trim()
+            else header[m.groupValues[1]] = m.groupValues[2].trim()
             i++
         }
         val addresses = mutableListOf<String>()
@@ -62,6 +67,6 @@ object NodeListFile {
         header["count"]?.let { if (it.toIntOrNull() != addresses.size) return null }
         val control = header["control"]?.takeIf { it.isNotEmpty() }
         if (control != null && !ADDRESS_RE.matches(control)) return null
-        return Parsed(NodeLists.cleanName(header["name"] ?: ""), secret, control, addresses)
+        return Parsed(NodeLists.cleanName(header["name"] ?: ""), secret, control, addresses, ConnectionPaths.cleanCompanyBridgeLines(bridgeLines))
     }
 }

@@ -13,8 +13,12 @@ import javax.inject.Singleton
  *    helfen gegen einfaches IP-Blocking bekannter Tor-Relays. Werden jetzt
  *    schon angewendet.
  *  - Pluggable Transports (obfs4/snowflake/meek/webtunnel): brauchen die
- *    IPtProxy-Binaries. Werden gespeichert, aber erst im spaeteren
- *    Snowflake-Update aktiv (siehe [needsPluggableTransport]).
+ *    IPtProxy-Binaries ([PluggableTransportManager]).
+ *
+ * Dazu die automatische Verbindung (Standard: an): die App probiert selbst die Wege direkt,
+ * Firmen-Bridge, obfs4, Snowflake ([ConnectionPaths]) und merkt sich den, der funktioniert hat.
+ * Die Firmen-Bridge kommt aus der Node-Liste oder dem Firmen-Feed (Zeilen "bridge:").
+ * Die handgepflegten Zeilen oben (Schalter "Tor-Bridges verwenden") haben immer Vorrang.
  */
 @Singleton
 class BridgeManager @Inject constructor(
@@ -49,4 +53,39 @@ class BridgeManager @Inject constructor(
 
     fun needsPluggableTransport(): Boolean =
         isEnabled() && usableVanillaLines().isEmpty() && pluggableTransportLines().isNotEmpty()
+
+    // ─── Automatische Verbindung ───
+
+    fun isAutomatic(): Boolean = prefs.getBoolean("auto", true)
+
+    fun setAutomatic(on: Boolean) {
+        prefs.edit().putBoolean("auto", on).apply()
+    }
+
+    /** Der Weg, der beim letzten Mal funktioniert hat (nur fuer den naechsten App-Start). */
+    fun lastPath(): TorPath? =
+        prefs.getString("lastPath", null)?.let { name -> TorPath.values().firstOrNull { it.name == name } }
+
+    fun setLastPath(path: TorPath?) {
+        prefs.edit().apply { if (path == null) remove("lastPath") else putString("lastPath", path.name) }.apply()
+    }
+
+    // ─── Firmen-Bridge (aus Node-Liste / Firmen-Feed) ───
+
+    /** Die Bridge-Zeilen der Firma, eine pro Zeile gespeichert. */
+    fun companyLines(): List<String> =
+        ConnectionPaths.cleanCompanyBridgeLines((prefs.getString("company", "") ?: "").lines())
+
+    /** Fuegt Zeilen aus einer Liste hinzu (ohne Duplikate). Gibt zurueck, ob sich etwas geaendert hat. */
+    fun addCompanyLines(lines: List<String>): Boolean {
+        val before = companyLines()
+        val after = ConnectionPaths.cleanCompanyBridgeLines(before + lines)
+        if (after == before) return false
+        prefs.edit().putString("company", after.joinToString("\n")).apply()
+        return true
+    }
+
+    fun clearCompanyLines() {
+        prefs.edit().remove("company").apply()
+    }
 }

@@ -78,6 +78,30 @@ class SettingsViewModel @Inject constructor(
     private val _backupRelayStatus = MutableStateFlow<String?>(null)
     val backupRelayStatus = _backupRelayStatus.asStateFlow()
 
+    // ─── Automatic connection (see TorManager.runAssistant) ───
+    private val _autoConnect = MutableStateFlow(bridgeManager.isAutomatic())
+    val autoConnect = _autoConnect.asStateFlow()
+
+    val connection = torManager.connection
+
+    private val _companyBridgeCount = MutableStateFlow(bridgeManager.companyLines().size)
+    val companyBridgeCount = _companyBridgeCount.asStateFlow()
+
+    fun onAutoConnectChange(on: Boolean) {
+        _autoConnect.value = on
+        bridgeManager.setAutomatic(on)
+        viewModelScope.launch { torManager.reapplyBridges() }
+    }
+
+    fun retryConnection() { torManager.retryConnection() }
+
+    fun refreshCompanyBridges() { _companyBridgeCount.value = bridgeManager.companyLines().size }
+
+    fun clearCompanyBridges() {
+        bridgeManager.clearCompanyLines()
+        refreshCompanyBridges()
+    }
+
     fun onBridgesEnabledChange(enabled: Boolean) { _bridgesEnabled.value = enabled }
     fun onBridgeTextChange(text: String) { _bridgeText.value = text }
 
@@ -87,10 +111,7 @@ class SettingsViewModel @Inject constructor(
 
         _status.value = when {
             !_bridgesEnabled.value -> "Bridges disabled."
-            bridgeManager.needsPluggableTransport() ->
-                "Note: your bridges (obfs4/snowflake) need the upcoming " +
-                "Snowflake update. Vanilla bridges (IP:Port Fingerprint) work immediately."
-            bridgeManager.usableVanillaLines().isEmpty() ->
+            bridgeManager.usableVanillaLines().isEmpty() && bridgeManager.pluggableTransportLines().isEmpty() ->
                 "No valid bridge lines detected."
             else -> "Bridges active. Reconnecting Tor…"
         }

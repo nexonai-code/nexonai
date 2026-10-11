@@ -361,3 +361,48 @@ test("the setup page exports a node list file for the app, but never while locke
     listener.close();
   }
 });
+
+
+test("the setup page saves the company's Tor bridge, shows it, puts it into the exported list, and needs the CSRF header", async () => {
+  const { parseNodeListFile } = await import("../nodeList");
+  const { cleanBridgeLines } = await import("../bridgeLines");
+  const obfs4 = "obfs4 203.0.113.9:443 D9A82D2F9C2F65A18407B1D2B764F130847F8B5D cert=bjRaMrr1BRiAW8IE9U5z27fQaYgOhX1UCmOpg2pFpoMvo6ZgQMzLsaTzzQNTlm7hNcb+Sg iat-mode=0";
+  const port = 21000 + Math.floor(Math.random() * 1000);
+  let saved: string[] = [];
+  const addresses = Array.from({ length: 3 }, (_, i) => `node${i}${"a".repeat(50)}.onion`);
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "Owner_secret_0123456789",
+      profile: PROFILES.standard, slot: 1, ephemeral: false, messagesInRam: false, torEnabled: true,
+      publicAddress: () => addresses[0], publicAddresses: () => addresses, isLocked: () => false,
+      torStatus: () => null, stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      license: () => ({ status: "valid", customer: "Acme", serial: "S", maxNodes: 3, expiresAtMs: Date.now() + 1e9, daysLeft: 100 }),
+      bridgeLines: () => saved,
+      setBridgeLines: (lines: string[]) => (saved = cleanBridgeLines(lines)),
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  const postJson = (headers: Record<string, string>, body: unknown) => new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = http.request({ host: "127.0.0.1", port, path: "/bridge-lines", method: "POST", headers: { host: `localhost:${port}`, "content-type": "application/json", "content-length": String(Buffer.byteLength(data)), ...headers } }, (res) => {
+      let b = ""; res.on("data", (c) => (b += c)); res.on("end", () => resolve({ status: res.statusCode!, body: b }));
+    });
+    req.on("error", reject); req.write(data); req.end();
+  });
+  try {
+    assert.equal((await postJson({}, { text: obfs4 })).status, 403);
+    assert.deepEqual(saved, []);
+    const ok = await postJson({ "x-unpruuf-admin": "1" }, { text: obfs4 + "\r\nnonsense\n\n" });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(JSON.parse(ok.body), { ok: true, saved: [obfs4], rejected: 1 });
+    const page = await request(port, `localhost:${port}`, "/");
+    assert.match(page.body, /Firmen-Bridge/);
+    assert.ok(page.body.includes("203.0.113.9:443"));
+    const list = await post(port, `localhost:${port}`, "/export-list", { "x-unpruuf-admin": "1" });
+    assert.deepEqual(parseNodeListFile(list.body)!.bridges, [obfs4]);
+    assert.equal(JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body).bridgeLines.length, 1);
+  } finally {
+    listener.close();
+  }
+});

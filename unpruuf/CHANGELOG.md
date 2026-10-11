@@ -5,6 +5,23 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑11 · Tor blocked? The app finds a way, and the company can run its own bridge
+
+**What was done**
+
+- **Automatic connection in the app** (`ConnectionPaths.kt`, `TorManager`): direct → company bridge → obfs4 → Snowflake, each with a time budget, the working path remembered. Settings → "Censorship circumvention": switch "Connect automatically" (on by default), live status line, "Try now". Hand-entered bridges still win and are now applied at once (before, they were applied only after Tor reported "on", which never happens on a blocked network).
+- **Company bridge** distributed with the lists: new optional `bridge:` lines in the node-list file (server export and app import, also through the company feed). The setup page has a "Firmen-Bridge" card. New `start-bridge.bat` / `start-bridge.sh` run a private obfs4 bridge on a small separate server and print the line.
+- **Bug found and fixed:** the Snowflake support started IPtProxy's `SnowflakeProxy`, which is the volunteer proxy that lends the phone to OTHER people, not the client. Read from the library's public API: the client is the same `Controller` that runs obfs4, configured by its `snowflake*` properties. Now it uses those, with the broker, front domains and STUN servers of Tor Browser's Snowflake bridge lines.
+- **Bug found and fixed in the bridge tool:** `ORPort auto` also binds IPv6 and Tor refused to start on a host without IPv6; the ORPort now stays on `127.0.0.1` (only the obfs4 front uses it). lyrebird writes `obfs4_bridgeline.txt` (not `obfs4_bridge_line.txt`), now both are read.
+- Tests: app 12 new (path order, budgets, bootstrap parsing, bridge-line shape and Tor-configuration injection, list file with bridge), all app unit tests green, all four flavours compile; server 100 of 100 (new: bridge lines, list file with bridge, setup page saves/shows/exports the bridge, bridge torrc and line composition).
+- Checked for real: the bridge starts, writes a valid line, and a Tor client connected to it over obfs4 (pluggable transport up, handshake done, consensus requested).
+
+**Not checked:** Snowflake and the public obfs4 bridges on a network that really blocks Tor (needs a device there); a full bootstrap through the company bridge (the bridge could not finish bootstrapping in this environment); the bridge on Windows. The built-in public bridge lines are a snapshot of Tor Browser's list from 2026-10-11 and must be refreshed with each app version. Not built: the same logic for the officer app and the node server's own Tor, iOS.
+
+**Honest limit:** bridges protect against blocking, not against being noticed.
+
+---
+
 ## 2026‑10‑10 · Node server: is this the program NexonAI shipped?
 
 **What was done**

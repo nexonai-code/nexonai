@@ -3,6 +3,7 @@ package com.nexonai.unpruuf.screens.nodelists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexonai.unpruuf.data.db.ContactDao
+import com.nexonai.unpruuf.domain.network.BridgeManager
 import com.nexonai.unpruuf.domain.network.FeedSource
 import com.nexonai.unpruuf.domain.network.NodeListFile
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
@@ -30,7 +31,8 @@ data class PendingListImport(val file: NodeListFile.Parsed, val newCount: Int)
 class NodeListsViewModel @Inject constructor(
     private val nodeMeshManager: NodeMeshManager,
     private val contactDao: ContactDao,
-    private val p2pNetworkManager: P2PNetworkManager
+    private val p2pNetworkManager: P2PNetworkManager,
+    private val bridgeManager: BridgeManager
 ) : ViewModel() {
 
     private val _lists = MutableStateFlow<List<NodeListRow>>(emptyList())
@@ -116,7 +118,9 @@ class NodeListsViewModel @Inject constructor(
         val file = _pending.value?.file ?: return
         when (val r = nodeMeshManager.importNodeList(file, name, targetListId)) {
             is NodeMeshManager.ImportResult.Ok -> {
-                _status.value = "\"${r.listName}\": ${r.added} new node(s), ${r.total} in the list."
+                bridgeManager.addCompanyLines(file.bridges)
+                val bridgeNote = if (file.bridges.isNotEmpty()) " Company bridge saved." else ""
+                _status.value = "\"${r.listName}\": ${r.added} new node(s), ${r.total} in the list.$bridgeNote"
                 _pending.value = null
             }
             is NodeMeshManager.ImportResult.NoRoom -> {

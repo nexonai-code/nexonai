@@ -11,7 +11,8 @@ import javax.inject.Singleton
 @Singleton
 class FeedUpdater @Inject constructor(
     private val nodeMeshManager: NodeMeshManager,
-    private val client: NodeMeshClient
+    private val client: NodeMeshClient,
+    private val bridgeManager: BridgeManager
 ) {
     /** What one attempt did, as a short line for the screen. */
     fun updateSource(source: FeedSource, nowMs: Long = System.currentTimeMillis()): FeedSource {
@@ -31,12 +32,18 @@ class FeedUpdater @Inject constructor(
         val files = FeedCrypto.splitLists(opened.plaintext).map { NodeListFile.parse(it) ?: return finish(source, nowMs, source.lastSeq, "Rejected: the list is damaged. Nothing changed.") }
         if (files.isEmpty()) return finish(source, nowMs, source.lastSeq, "Rejected: the list is empty. Nothing changed.")
         return when (val r = nodeMeshManager.applyFeedLists(source.id, files)) {
-            is NodeMeshManager.FeedApplyResult.Ok ->
-                source.copy(lastSeq = opened.seq, lastUpdatedMs = nowMs, lastResult = "Updated to version ${opened.seq}: ${r.lists} list(s), ${r.newNodes} new node(s), ${r.removedNodes} removed.")
+            is NodeMeshManager.FeedApplyResult.Ok -> {
+                // The company's own Tor bridge travels with its lists.
+                bridgeManager.addCompanyLines(files.flatMap { it.bridges })
+                finishOk(source, nowMs, opened.seq, r)
+            }
             is NodeMeshManager.FeedApplyResult.NoRoom ->
                 finish(source, nowMs, source.lastSeq, "Not applied: needs room for ${r.needed} more nodes, only ${r.free} free. Delete a list you no longer use.")
         }
     }
+
+    private fun finishOk(source: FeedSource, nowMs: Long, seq: Long, r: NodeMeshManager.FeedApplyResult.Ok): FeedSource =
+        source.copy(lastSeq = seq, lastUpdatedMs = nowMs, lastResult = "Updated to version $seq: ${r.lists} list(s), ${r.newNodes} new node(s), ${r.removedNodes} removed.")
 
     private fun finish(source: FeedSource, nowMs: Long, seq: Long, message: String): FeedSource =
         source.copy(lastSeq = seq, lastUpdatedMs = nowMs, lastResult = message)
