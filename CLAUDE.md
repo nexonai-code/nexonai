@@ -49,3 +49,10 @@ Beispiele:
 - Hinweisgeber: Richtlinie 2019/1937 Art. 16 (Vertraulichkeit), 17 (DSGVO gilt, Irrelevantes löschen), 18 (Aufbewahrung nur so lange nötig).
 - Bekannte Lücke: Das Officer-Dashboard kann einen einzelnen Fall noch nicht löschen oder exportieren. Offen nennen, bis gebaut.
 - Material: Deck-Folie 11 (GDPR), Whitepaper Kapitel 9, Landing-Page-Bereich GDPR (RO/EN).
+
+## Produkte und Stand (12.10.2026, von Gabriel bestätigt)
+
+- Drei Produkte auf demselben System: **safeline** (Compliance), **unpruuf Business** (interne Kommunikation), **safeline Press** (Journalisten).
+- Stand: Compliance und Business sind getestet und funktionieren. Ein unabhängiges Audit steht an. Bis dahin: nicht auditiert, nicht zertifiziert. safeline Press ist eine Pilotversion, nicht mit einer echten Quelle getestet.
+- Folien und Seiten: Briefkastenbild ohne Zahlen (kein 250, kein 100 pro Node), „Was der Server weiß“, „Nur der Kunde hat seine Daten“. Business-App hat heute nur eine englische Oberfläche (Rumänisch nur in safeline und Press). Die Einrichtungsseite des Node-Servers ist deutsch.
+- Telefon-Bilder in Decks sind Nachbauten und so zu kennzeichnen, bis echte Aufnahmen vorliegen.
