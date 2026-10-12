@@ -5,6 +5,29 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑12 · safeline Press (journalist version of the officer app)
+
+**What was done**
+
+- New edition of the officer app for journalists and newsrooms, switched with `OFFICER_EDITION=press` (`start-press.bat`, port 3001, data in `data-press/`). One code base, own start script, own name in the dashboard (safeline Press).
+- No legal deadlines, tips instead of cases, free-text topics, tips sorted by latest activity.
+- Settings: how long tips are kept (until deleted, or deleted after N days without activity) and when to warn about a missed pickup. Tips are deleted for good (secure delete, file compacted).
+- Delete one tip (press only; the compliance dashboard is unchanged).
+- Pickup warning: the app remembers the last successful fetch. After a restart, or when fetching fails for longer than the chosen time, the dashboard warns that tips wait on the server for 24 hours at most.
+- Website code: download the QR as PNG or copy a ready HTML snippet.
+- 4 new tests (edition info, settings validation, delete, retention, settings file). 13 pass.
+
+**Checked**
+
+- Pages rendered in both languages and looked at: overview, tips, code, settings, one tip.
+
+**Not checked**
+
+- Retention and warning over real days; a real source with the Android app; the browser reporter does not use Tor (documented in `README-PRESS.md`).
+- The reporting app still says "reporting office" in places; press wording for the app is not done.
+
+---
+
 ## 2026‑10‑11 · Officer dashboard speaks English
 
 **What was done**

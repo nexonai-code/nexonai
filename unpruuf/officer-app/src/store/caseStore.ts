@@ -298,6 +298,39 @@ export class CaseStore {
     return this.db.prepare(`SELECT case_id as caseId, identity, generation FROM poll_candidates`).all() as any[];
   }
 
+  /** Removes one case for good: its messages, its secrets and its poll tags. Freed pages are
+   *  overwritten (secure_delete) and the file is compacted, so deleted text does not linger in
+   *  the database file. Returns false when the case does not exist. */
+  deleteCase(caseId: string): boolean {
+    const removed = this.deleteCases([caseId]);
+    return removed > 0;
+  }
+
+  /** Removes every case whose last activity is older than the given moment. Returns how many. */
+  deleteInactiveBefore(cutoffMs: number): number {
+    const ids = (this.db.prepare(`SELECT id FROM cases WHERE last_activity_at < ?`).all(cutoffMs) as { id: string }[]).map((r) => r.id);
+    return this.deleteCases(ids);
+  }
+
+  private deleteCases(ids: string[]): number {
+    if (ids.length === 0) return 0;
+    this.db.pragma("secure_delete = ON");
+    const run = this.db.transaction((list: string[]) => {
+      let n = 0;
+      for (const id of list) {
+        this.db.prepare(`DELETE FROM case_messages WHERE case_id = ?`).run(id);
+        this.db.prepare(`DELETE FROM poll_candidates WHERE case_id = ?`).run(id);
+        n += this.db.prepare(`DELETE FROM cases WHERE id = ?`).run(id).changes;
+      }
+      return n;
+    });
+    const removed = run(ids);
+    // VACUUM cannot run inside a transaction; WAL mode needs a checkpoint so the old pages leave the -wal file too.
+    this.db.exec("VACUUM");
+    this.db.pragma("wal_checkpoint(TRUNCATE)");
+    return removed;
+  }
+
   close(): void {
     this.db.close();
   }

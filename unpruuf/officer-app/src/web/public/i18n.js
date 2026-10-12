@@ -79,6 +79,46 @@ const I18N = {
     copied: "Codul a fost copiat", copied_sub: "Poți să-l lipești în aplicația raportorului.", selected: "Selectat", selected_sub: "Apasă Ctrl+C pentru a copia codul.",
     added: "Cazul a fost adăugat", added_sub: "Confirmarea de primire a fost trimisă.",
     lang_label: "Limba",
+    /* safeline Press: new texts */
+    nav_settings: "Setări", dismiss: "Am înțeles", save: "Salvează", saved: "Salvat",
+    web_h: "Pentru site-ul tău", web_note: "Pune codul QR pe site-ul tău. Sursa îl scanează cu aplicația unpruuf gratuită și scrie direct.",
+    web_png: "Descarcă QR (PNG)", web_embed: "Copiază codul HTML",
+    web_caption: "Scanează cu aplicația unpruuf gratuită pentru a ne trimite un pont. Fără nume, fără cont.", web_alt: "Cod QR pentru ponturi securizate",
+    web_embed_ok: "Codul HTML a fost copiat", web_embed_ok_sub: "Lipește-l în pagina ta.", web_png_name: "safeline-press-qr.png",
+    del_h: "Ștergere", del_note: "Șterge definitiv acest mesaj și toată conversația de pe acest calculator.", del_btn: "Șterge definitiv",
+    del_confirm: "Ștergi definitiv acest mesaj și toată conversația? Nu se poate anula.", del_done: "Șters",
+    set_keep_h: "Cât timp se păstrează mesajele",
+    set_keep_note: "Mesajele fără activitate mai veche decât perioada aleasă sunt șterse definitiv de pe acest calculator. „Păstrează” înseamnă că rămân până le ștergi tu.",
+    set_keep_label: "Păstrare", set_warn_h: "Avertizare la preluare",
+    set_warn_note: "Mesajele așteaptă pe server cel mult 24 de ore. Dacă aplicația a fost oprită mai mult, un mesaj se poate pierde. Panoul te avertizează înainte.",
+    set_warn_label: "Avertizează după",
+    keep_forever: "Păstrează până șterg eu", keep_day_1: "1 zi", keep_days_n: "{n} zile", keep_year: "1 an", warn_hours_n: "{n} ore",
+    warn_gap: "Aplicația a fost oprită {h} ore. Mesajele așteaptă pe server cel mult 24 de ore.",
+    warn_gap_lost: "Aplicația a fost oprită {h} ore. Mesajele mai vechi de 24 de ore de pe server s-au pierdut, dacă au existat.",
+    warn_now: "Nicio preluare reușită de {h} ore. Mesajele așteaptă pe server cel mult 24 de ore.",
+    kp_open: "Ponturi deschise", kp_pickup: "Ultima preluare", kp_keep: "Păstrare", kp_none_yet: "încă niciuna", kp_forever: "până șterg eu", kp_days: "{n} zile",
+    page_settings: "Setări", page_settings_sub: "Păstrare și avertizări",
+    /* safeline Press: overlay (p_ replaces the key without p_ in the press version) */
+    p_title: "safeline Press — Panoul redacției", p_role: "Presă", p_nav_cases: "Ponturi", p_cases: "Ponturi", p_nav_code: "Codul tău", p_code_h: "Codul tău",
+    p_search_ph: "Caută după număr de pont", p_th_nr: "Nr. pont", p_sorted_by: "Cele mai recente primele", p_all_cases: "Toate ponturile",
+    p_weeks_h: "Ponturi noi pe săptămână", p_cats_h: "Ponturi pe subiecte",
+    p_start_h: "Începe aici: arată codul tău", p_start_1: "Apasă <b>Afișează mare</b> sau pune codul pe site-ul tău.",
+    p_start_2: "Sursa îl scanează în aplicația unpruuf gratuită, fără nume și fără cont.", p_start_3: "Pontul apare aici singur. Sursa primește confirmarea automat.",
+    p_code_blurb: "Un singur cod pentru tine sau pentru redacție. Cine îl scanează îți scrie direct, fără nume.",
+    p_no_cases: "Niciun pont încă. Ponturile apar aici automat imediat ce cineva scanează codul tău și scrie.",
+    p_how_1: "<b>Un singur cod pentru tine sau pentru redacție.</b> Pune-l pe site, în articole sau pe cărți de vizită. Sursa nu trebuie să se identifice.",
+    p_how_2: "Cine îl scanează în aplicația unpruuf trimite pontul aici. Apare singur în listă, cu număr, iar sursa primește confirmarea automat. Poți răspunde direct în conversație.",
+    p_how_3: "Sursa scrie printr-un browser în loc de aplicație? Are nevoie și de adresa releului:",
+    p_org_qr_alt: "Codul QR al redacției", p_qr_dialog: "Codul tău",
+    p_category_h: "Subiect", p_category_ph: "ex. politică, justiție, sănătate…", p_cat_suggest: ["Politică", "Economie", "Justiție", "Sănătate", "Mediu", "Altele"],
+    p_uncategorised: "Fără subiect", p_uncategorised_l: "fără subiect",
+    p_toast_new: "Pont nou: {c}", p_toast_new_sub: "A sosit un pont nou.", p_toast_msg: "Mesaj nou la pontul {c}", p_toast_msg_sub: "Sursa a scris.",
+    p_page_cases_sub: "Toate ponturile primite", p_page_code_sub: "Un singur cod pentru tine", p_page_detail: "Pont", p_case_title: "Pontul {c}",
+    p_f_nr: "Număr de pont", p_f_identity: "Identitate sursă", p_reporter: "sursă",
+    p_thread_none: "Încă niciun mesaj. Sursa poate scrie din aplicație; răspunsul tău apare aici și la ea.",
+    p_none_in_tab: "Niciun pont în această categorie.", p_open_fail: "Pontul nu a putut fi deschis", p_added: "Pontul a fost adăugat",
+    p_cases_foot: "Se afișează {a} din {b} ponturi · cele mai recente primele", p_shown_of: "Se afișează {a} din {b}. Toate ponturile",
+    p_c_ok_t: "Releul răspunde. Ultima verificare: {ago}. Baza de date este criptată.", p_back: "← Înapoi la ponturi",
   },
   en: {
     title: "unpruuf Whistleblower — Officer dashboard",
@@ -156,6 +196,46 @@ const I18N = {
     copied: "The code was copied", copied_sub: "You can paste it into the reporter's app.", selected: "Selected", selected_sub: "Press Ctrl+C to copy the code.",
     added: "The case was added", added_sub: "The confirmation of receipt was sent.",
     lang_label: "Language",
+    /* safeline Press: new texts */
+    nav_settings: "Settings", dismiss: "Understood", save: "Save", saved: "Saved",
+    web_h: "For your website", web_note: "Put the QR code on your website. The source scans it with the free unpruuf app and writes directly.",
+    web_png: "Download QR (PNG)", web_embed: "Copy HTML code",
+    web_caption: "Scan with the free unpruuf app to send us a tip. No name, no account.", web_alt: "QR code for secure tips",
+    web_embed_ok: "The HTML code was copied", web_embed_ok_sub: "Paste it into your page.", web_png_name: "safeline-press-qr.png",
+    del_h: "Delete", del_note: "Permanently deletes this tip and the whole conversation from this computer.", del_btn: "Delete permanently",
+    del_confirm: "Permanently delete this tip and the whole conversation? This cannot be undone.", del_done: "Deleted",
+    set_keep_h: "How long tips are kept",
+    set_keep_note: "Tips with no activity for longer than the chosen period are permanently deleted from this computer. \"Keep\" means they stay until you delete them.",
+    set_keep_label: "Keep", set_warn_h: "Pickup warning",
+    set_warn_note: "Tips wait on the server for 24 hours at most. If the app was switched off for longer, a tip can be lost. The dashboard warns you before that.",
+    set_warn_label: "Warn after",
+    keep_forever: "Keep until I delete", keep_day_1: "1 day", keep_days_n: "{n} days", keep_year: "1 year", warn_hours_n: "{n} hours",
+    warn_gap: "The app was switched off for {h} hours. Tips wait on the server for 24 hours at most.",
+    warn_gap_lost: "The app was switched off for {h} hours. Tips that waited on the server for more than 24 hours are lost, if there were any.",
+    warn_now: "No successful pickup for {h} hours. Tips wait on the server for 24 hours at most.",
+    kp_open: "Open tips", kp_pickup: "Last pickup", kp_keep: "Retention", kp_none_yet: "none yet", kp_forever: "until I delete", kp_days: "{n} days",
+    page_settings: "Settings", page_settings_sub: "Retention and warnings",
+    /* safeline Press: overlay */
+    p_title: "safeline Press — Editorial dashboard", p_role: "Press", p_nav_cases: "Tips", p_cases: "Tips", p_nav_code: "Your code", p_code_h: "Your code",
+    p_search_ph: "Search by tip number", p_th_nr: "Tip no.", p_sorted_by: "Most recent first", p_all_cases: "All tips",
+    p_weeks_h: "New tips per week", p_cats_h: "Tips by topic",
+    p_start_h: "Start here: show your code", p_start_1: "Press <b>Show large</b> or put the code on your website.",
+    p_start_2: "The source scans it in the free unpruuf app, without a name and without an account.", p_start_3: "The tip appears here by itself. The source gets the confirmation automatically.",
+    p_code_blurb: "One code for you or for the newsroom. Whoever scans it writes to you directly, without a name.",
+    p_no_cases: "No tips yet. Tips appear here automatically as soon as someone scans your code and writes.",
+    p_how_1: "<b>One code for you or for the newsroom.</b> Put it on your website, in articles or on business cards. The source does not have to identify themselves.",
+    p_how_2: "Whoever scans it in the unpruuf app sends the tip here. It appears in the list by itself, with a number, and the source gets the confirmation automatically. You can answer right in the conversation.",
+    p_how_3: "The source writes through a browser instead of the app? They will also need the relay address:",
+    p_org_qr_alt: "The newsroom QR code", p_qr_dialog: "Your code",
+    p_category_h: "Topic", p_category_ph: "e.g. politics, justice, health…", p_cat_suggest: ["Politics", "Business", "Justice", "Health", "Environment", "Other"],
+    p_uncategorised: "No topic", p_uncategorised_l: "no topic",
+    p_toast_new: "New tip: {c}", p_toast_new_sub: "A new tip has arrived.", p_toast_msg: "New message in tip {c}", p_toast_msg_sub: "The source wrote.",
+    p_page_cases_sub: "All tips received", p_page_code_sub: "One code for you", p_page_detail: "Tip", p_case_title: "Tip {c}",
+    p_f_nr: "Tip number", p_f_identity: "Source identity", p_reporter: "source",
+    p_thread_none: "No messages yet. The source can write from the app; your reply appears here and on their phone.",
+    p_none_in_tab: "No tips in this category.", p_open_fail: "The tip could not be opened", p_added: "The tip was added",
+    p_cases_foot: "Showing {a} of {b} tips · most recent first", p_shown_of: "Showing {a} of {b}. All tips",
+    p_c_ok_t: "The relay answers. Last check: {ago}. The database is encrypted.", p_back: "← Back to tips",
   },
 };
 
@@ -171,10 +251,13 @@ const SERVER_ERRORS_EN = {
 };
 
 let LANG = "ro";
+/** "compliance" (safeline) or "press" (safeline Press). Press texts live under the p_ prefix. */
+let EDITION = "compliance";
 try { const saved = localStorage.getItem("lang"); if (saved === "en" || saved === "ro") LANG = saved;; } catch { /* no storage: Romanian */ }
 
 function t(key, vars) {
-  let s = (I18N[LANG] && I18N[LANG][key]);
+  let s = EDITION === "press" ? (I18N[LANG] || {})["p_" + key] : undefined;
+  if (s === undefined) s = (I18N[LANG] && I18N[LANG][key]);
   if (s === undefined) s = I18N.ro[key];
   if (typeof s === "string" && vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
   return s;

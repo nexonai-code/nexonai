@@ -6,6 +6,7 @@ import { PollAndIngestLoop } from "./officer/pollAndIngest";
 import { createDashboardApp, DashboardStatus } from "./web/app";
 import { spawn } from "node:child_process";
 import { startTorAndWaitReady, TorClient } from "./tor/tor";
+import { PressSettingsStore } from "./settings/pressSettings";
 
 /** Opens the dashboard in the default browser so a live demo needs no typing. OFFICER_OPEN_BROWSER=0 turns it off. */
 function openInBrowser(url: string): void {
@@ -76,7 +77,9 @@ async function main() {
   const pollLoop = new PollAndIngestLoop(identity, store, relay);
 
   const status: DashboardStatus = { viaTor: Boolean(torClient), lastPollAt: null, lastPollOk: true };
-  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl, () => status);
+  const press = config.edition === "press" ? new PressSettingsStore(config.settingsPath) : undefined;
+  if (press) console.log("[startup] safeline Press: fără termene legale, păstrare reglabilă, ștergere pe caz.");
+  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl, () => status, config.edition, press);
   app.listen(config.dashboardPort, () => {
     console.log(`[startup] Panoul ascultă pe http://localhost:${config.dashboardPort}`);
     openInBrowser(`http://localhost:${config.dashboardPort}`);
@@ -87,6 +90,7 @@ async function main() {
     try {
       await pollLoop.pollOnce();
       status.lastPollOk = true;
+      press?.recordPoll();
     } catch (err) {
       status.lastPollOk = false;
       console.error("[poll] rundă eșuată:", err instanceof Error ? err.message : err);
@@ -95,6 +99,22 @@ async function main() {
   };
   setInterval(pollTick, config.pollIntervalMs).unref();
   void pollTick();
+
+  // safeline Press: tips with no activity for the chosen number of days are deleted for good.
+  if (press) {
+    const sweep = () => {
+      const days = press.get().retentionDays;
+      if (days <= 0) return;
+      try {
+        const n = store.deleteInactiveBefore(Date.now() - days * 24 * 60 * 60 * 1000);
+        if (n > 0) console.log(`[retention] ${n} sesizări șterse (fără activitate de peste ${days} zile).`);
+      } catch (err) {
+        console.error("[retention] eșuat:", err instanceof Error ? err.message : err);
+      }
+    };
+    sweep();
+    setInterval(sweep, 60 * 60 * 1000).unref();
+  }
 
   const shutdown = () => {
     torClient?.stop();

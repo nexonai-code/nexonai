@@ -113,3 +113,90 @@ test("the dashboard offers English next to Romanian, with every key present in b
     }
   });
 });
+
+import { PressSettingsStore } from "../settings/pressSettings";
+
+async function withPressApp(run: (base: string, store: CaseStore, settings: PressSettingsStore, file: string) => Promise<void>) {
+  const id = identity();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "officer-press-"));
+  const store = new CaseStore(path.join(dir, "cases.sqlite"), deriveDbKey(id));
+  const file = path.join(dir, "settings.json");
+  const settings = new PressSettingsStore(file);
+  const relay = { push: async () => true, fetchMany: async () => ({}) } as unknown as RelayClient;
+  const app = createDashboardApp(id, store, relay, "unpruuf-relay:v1:abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzab.onion:tok", "http://relay.example", undefined, "press", settings);
+  const server = app.listen(0);
+  try {
+    await run(`http://127.0.0.1:${(server.address() as AddressInfo).port}`, store, settings, file);
+  } finally {
+    server.close();
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("the standard dashboard reports itself as compliance and cannot delete or change settings", async () => {
+  await withApp(async (base, store) => {
+    assert.deepEqual(await (await fetch(`${base}/api/edition`)).json(), { edition: "compliance" });
+    const row = store.createCase(SECRETS, "HW-DEL-0001");
+    assert.equal((await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" })).status, 404);
+    assert.ok(store.getCase(row.id), "the case is still there");
+    const res = await fetch(`${base}/api/settings`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ retentionDays: 5, pickupWarnHours: 6 }) });
+    assert.equal(res.status, 404);
+  });
+});
+
+test("safeline Press: edition info, settings with validation, and deleting a tip for good", async () => {
+  await withPressApp(async (base, store, _settings, file) => {
+    const e = (await (await fetch(`${base}/api/edition`)).json()) as any;
+    assert.equal(e.edition, "press");
+    assert.deepEqual(e.settings, { retentionDays: 0, pickupWarnHours: 12 });
+    assert.equal(e.offlineGapMs, null, "first start: no gap");
+
+    const post = (body: unknown) => fetch(`${base}/api/settings`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    assert.equal((await post({ retentionDays: 30, pickupWarnHours: 6 })).status, 200);
+    assert.equal((await post({ retentionDays: -1, pickupWarnHours: 6 })).status, 400);
+    assert.equal((await post({ retentionDays: 30, pickupWarnHours: 24 })).status, 400, "a warning at 24 hours comes too late");
+    assert.equal((await post({ retentionDays: "x", pickupWarnHours: 6 })).status, 400);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, "utf8")).retentionDays, 30);
+
+    const row = store.createCase(SECRETS, "HW-DEL-0002");
+    store.appendMessage(row.id, "in", "a tip text that must disappear");
+    const del = await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" });
+    assert.equal(del.status, 200);
+    assert.equal(store.getCase(row.id), null);
+    assert.deepEqual(store.listMessages(row.id), []);
+    assert.equal(store.allPollCandidates().length, 0);
+    assert.equal((await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" })).status, 404);
+  });
+});
+
+test("safeline Press: tips older than the retention period are removed, newer ones stay", async () => {
+  await withPressApp(async (_base, store) => {
+    const old = store.createCase(SECRETS, "HW-OLD-0001");
+    const fresh = store.createCase(SECRETS, "HW-NEW-0001");
+    const day = 24 * 60 * 60 * 1000;
+    store.appendMessage(old.id, "in", "old", Date.now() - 40 * day);
+    store.appendMessage(fresh.id, "in", "fresh", Date.now() - 1 * day);
+    assert.equal(store.deleteInactiveBefore(Date.now() - 30 * day), 1);
+    assert.equal(store.getCase(old.id), null);
+    assert.ok(store.getCase(fresh.id));
+  });
+});
+
+test("safeline Press: the settings file remembers the last pickup, so a restart shows how long the app was off", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "press-settings-"));
+  const file = path.join(dir, "settings.json");
+  try {
+    const first = new PressSettingsStore(file, 1_000_000);
+    assert.equal(first.offlineGapMs, null);
+    first.recordPoll(2_000_000);
+    first.update({ retentionDays: 7, pickupWarnHours: 18 });
+    const second = new PressSettingsStore(file, 2_000_000 + 5 * 3600 * 1000);
+    assert.equal(second.offlineGapMs, 5 * 3600 * 1000);
+    assert.deepEqual(second.get(), { retentionDays: 7, pickupWarnHours: 18 });
+    fs.writeFileSync(file, "{ not json");
+    assert.deepEqual(new PressSettingsStore(file).get(), { retentionDays: 0, pickupWarnHours: 12 }, "a damaged file falls back to defaults");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

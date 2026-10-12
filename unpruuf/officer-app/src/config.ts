@@ -10,7 +10,13 @@ function requireEnv(name: string, hint: string): string {
   return value.trim();
 }
 
+/** "compliance" = safeline (organisation, legal deadlines). "press" = safeline Press (editorial
+ *  tip line: no deadlines, adjustable retention, delete a tip, pickup warning). */
+export type OfficerEdition = "compliance" | "press";
+
 export interface OfficerConfig {
+  edition: OfficerEdition;
+  settingsPath: string;
   password: string;
   relayConnectionString: string;
   relayAuthToken: string;
@@ -58,8 +64,11 @@ export function loadConfig(): OfficerConfig {
   }
   const torEnabled = !torExplicitlyDisabled && !relayReachableBaseUrlOverride;
 
-  const dataDir = process.env.OFFICER_DATA_DIR ?? path.join(__dirname, "..", "data");
+  const edition: OfficerEdition = process.env.OFFICER_EDITION === "press" ? "press" : "compliance";
+  const dataDir = process.env.OFFICER_DATA_DIR ?? path.join(__dirname, "..", edition === "press" ? "data-press" : "data");
   return {
+    edition,
+    settingsPath: path.join(dataDir, "settings.json"),
     password,
     relayConnectionString,
     relayAuthToken: parsed.authToken,

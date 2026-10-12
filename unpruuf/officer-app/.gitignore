@@ -3,3 +3,5 @@ dist/
 data/
 officer.env.bat
 *.log
+press.env.bat
+data-press/

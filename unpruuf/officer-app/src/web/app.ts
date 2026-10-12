@@ -7,6 +7,8 @@ import { addCaseFromPastedCode, InvalidPairingCodeError, myPairingPayloadJson } 
 import { sendReply } from "../officer/sendReply";
 import { sendCaseUpdate } from "../officer/caseSignals";
 import { RelayClient } from "../relay/relayClient";
+import { InvalidSettingsError, PressSettingsStore } from "../settings/pressSettings";
+import type { OfficerEdition } from "../config";
 
 /**
  * The officer's local dashboard — deliberately plain server-rendered JSON + a small vanilla-JS
@@ -33,6 +35,8 @@ export function createDashboardApp(
   advertisedRelayConnectionString: string,
   relayReachableBaseUrl: string,
   getStatus: () => DashboardStatus = () => ({ viaTor: true, lastPollAt: null, lastPollOk: true }),
+  edition: OfficerEdition = "compliance",
+  press?: PressSettingsStore,
 ): Express {
   const app = express();
   app.use(express.json({ limit: "64kb" }));
@@ -48,6 +52,35 @@ export function createDashboardApp(
 
   app.get("/api/status", (_req, res) => {
     res.json({ ...getStatus(), now: Date.now() });
+  });
+
+  // Which version of the dashboard this is. The press version also reports its settings and the
+  // pickup history, so the page can warn when the app was switched off.
+  app.get("/api/edition", (_req, res) => {
+    if (edition !== "press" || !press) return res.json({ edition: "compliance" });
+    return res.json({
+      edition: "press",
+      settings: press.get(),
+      startedAt: press.startedAt,
+      offlineGapMs: press.offlineGapMs,
+      lastOkPollAt: press.lastOkPollAt,
+    });
+  });
+
+  app.post("/api/settings", (req, res) => {
+    if (edition !== "press" || !press) return res.status(404).json({ error: "nu a fost găsit" });
+    try {
+      return res.json(press.update(req.body));
+    } catch (err) {
+      if (err instanceof InvalidSettingsError) return res.status(400).json({ error: err.message });
+      throw err;
+    }
+  });
+
+  app.delete("/api/cases/:id", (req, res) => {
+    if (edition !== "press") return res.status(404).json({ error: "nu a fost găsit" });
+    if (!store.deleteCase(req.params.id)) return res.status(404).json({ error: "nu a fost găsit" });
+    return res.json({ deleted: true });
   });
 
   app.get("/api/cases", (_req, res) => {

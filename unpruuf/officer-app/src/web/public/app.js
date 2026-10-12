@@ -13,6 +13,9 @@ const state = {
   me: null,
   tab: "open",
   filter: "",
+  press: null, // safeline Press only: { settings, startedAt, offlineGapMs, lastOkPollAt }
+  lastOkAt: null, // when the last successful fetch from the server finished
+  dismissedWarn: new Set(),
   detail: null, // the open case incl. messages
   previous: null, // id -> lastActivityAt, for "new case" toasts
   ownTouch: new Set(), // case ids this officer just changed (no toast for those)
@@ -57,6 +60,16 @@ function ago(ms) {
 }
 function daysWord(n) { return n === 1 ? t("day_1") : t("day_n", { n }); }
 
+function shortAgo(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 90) return `${s} s`;
+  const m = Math.round(s / 60);
+  if (m < 90) return `${m} min`;
+  const hrs = Math.round(m / 60);
+  if (hrs < 48) return `${hrs} h`;
+  return `${Math.round(hrs / 24)} d`;
+}
+
 function seenMap() {
   try { return JSON.parse(localStorage.getItem("seenAt") || "{}"); } catch { return {}; }
 }
@@ -89,6 +102,8 @@ function urgency(nd) {
   return { cls, text, days: remaining / DAY, progress, mode, dayText };
 }
 function sortedByUrgency(list) {
+  // safeline Press has no legal deadlines: unread first, then the most recent activity.
+  if (EDITION === "press") return [...list].sort((a, b) => (isUnread(b) - isUnread(a)) || (b.lastActivityAt - a.lastActivityAt));
   return [...list].sort((a, b) => {
     const ca = a.status === "closed", cb = b.status === "closed";
     if (ca !== cb) return ca ? 1 : -1;
@@ -102,20 +117,22 @@ function parseRoute() {
   const h = location.hash.replace(/^#\/?/, "");
   if (h === "cazuri") return { name: "cases", id: null };
   if (h === "cod") return { name: "code", id: null };
+  if (h === "setari" && EDITION === "press") return { name: "settings", id: null };
   if (h.startsWith("caz/")) return { name: "detail", id: decodeURIComponent(h.slice(4)) };
   return { name: "overview", id: null };
 }
-const titleFor = (r) => ({ overview: t("nav_overview"), cases: t("nav_cases"), code: t("nav_code"), detail: t("page_detail") })[r];
+const titleFor = (r) => ({ overview: t("nav_overview"), cases: t("nav_cases"), code: t("nav_code"), detail: t("page_detail"), settings: t("page_settings") })[r];
 
 async function route() {
   state.route = parseRoute();
   const r = state.route.name;
-  for (const v of ["overview", "cases", "code", "detail"]) $(`v-${v}`).classList.toggle("hidden", v !== r);
+  for (const v of ["overview", "cases", "code", "detail", "settings"]) $(`v-${v}`).classList.toggle("hidden", v !== r);
   for (const a of document.querySelectorAll(".nav")) a.classList.toggle("on", a.dataset.route === (r === "detail" ? "cases" : r));
   $("pageTitle").textContent = titleFor(r);
-  $("pageSub").textContent = r === "overview" ? todayLong() : r === "code" ? t("page_code_sub") : r === "cases" ? t("page_cases_sub") : "";
+  $("pageSub").textContent = r === "overview" ? todayLong() : r === "code" ? t("page_code_sub") : r === "cases" ? t("page_cases_sub") : r === "settings" ? t("page_settings_sub") : "";
   state.detail = null;
   if (r === "detail") await openDetail(state.route.id, true);
+  else if (r === "settings") renderSettings();
   else render();
   window.scrollTo({ top: 0 });
 }
@@ -170,6 +187,8 @@ function toast(title, sub, caseId) {
 async function loadStatus() {
   try {
     const s = await api("/api/status");
+    if (s.lastPollOk && s.lastPollAt) state.lastOkAt = s.lastPollAt;
+    updatePickupWarn(s);
     const dot = $("connDot");
     dot.className = "dot";
     if (s.lastPollAt === null) {
@@ -189,6 +208,95 @@ async function loadStatus() {
     $("connTitle").textContent = t("c_panel");
     $("connText").textContent = t("c_panel_t");
   }
+}
+
+/* ───────── safeline Press: pickup warning, settings, delete, website code ───────── */
+async function loadEdition() {
+  try {
+    const e = await api("/api/edition");
+    if (e.edition === "press") { EDITION = "press"; state.press = e; }
+  } catch { /* older server: stays the standard dashboard */ }
+  document.body.dataset.edition = EDITION;
+}
+
+function updatePickupWarn(s) {
+  const box = $("pickupWarn");
+  if (EDITION !== "press" || !state.press) { box.classList.add("hidden"); return; }
+  const HOUR = 3600 * 1000;
+  const warnMs = state.press.settings.pickupWarnHours * HOUR;
+  let text = null, red = false, key = null;
+  const gap = state.press.offlineGapMs;
+  if (gap !== null && gap >= warnMs) {
+    key = `gap${state.press.startedAt}`;
+    text = t(gap >= 24 * HOUR ? "warn_gap_lost" : "warn_gap", { h: Math.floor(gap / HOUR) });
+  }
+  if (!s.lastPollOk && state.lastOkAt && s.now - state.lastOkAt >= warnMs) {
+    key = "live";
+    red = true;
+    text = t("warn_now", { h: Math.floor((s.now - state.lastOkAt) / HOUR) });
+  }
+  if (!text || state.dismissedWarn.has(key)) { box.classList.add("hidden"); return; }
+  $("pickupWarnText").textContent = text;
+  box.classList.toggle("red", red);
+  box.dataset.key = key;
+  box.classList.remove("hidden");
+}
+
+function fillSelect(el, options, selected) {
+  el.innerHTML = options.map(([v, label]) => `<option value="${v}"${v === selected ? " selected" : ""}>${esc(label)}</option>`).join("");
+}
+function renderSettings() {
+  if (!state.press) return;
+  const days = state.press.settings.retentionDays;
+  const retention = [[0, t("keep_forever")], [1, t("keep_day_1")], [7, t("keep_days_n", { n: 7 })], [30, t("keep_days_n", { n: 30 })], [90, t("keep_days_n", { n: 90 })], [180, t("keep_days_n", { n: 180 })], [365, t("keep_year")]];
+  if (!retention.some(([v]) => v === days)) retention.push([days, t("keep_days_n", { n: days })]);
+  fillSelect($("retentionSelect"), retention, days);
+  const warn = state.press.settings.pickupWarnHours;
+  const hours = [6, 12, 18, 22];
+  if (!hours.includes(warn)) hours.push(warn);
+  fillSelect($("warnSelect"), hours.sort((a, b) => a - b).map((n) => [n, t("warn_hours_n", { n })]), warn);
+  $("settingsMsg").textContent = "";
+}
+async function saveSettings() {
+  const msg = $("settingsMsg");
+  msg.textContent = "";
+  try {
+    const next = await api("/api/settings", { method: "POST", body: JSON.stringify({ retentionDays: Number($("retentionSelect").value), pickupWarnHours: Number($("warnSelect").value) }) });
+    state.press.settings = next;
+    toast(t("saved"), "");
+    await loadStatus();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+}
+async function deleteCurrentCase() {
+  const c = state.detail;
+  if (!c || !confirm(t("del_confirm"))) return;
+  try {
+    await api(`/api/cases/${encodeURIComponent(c.id)}`, { method: "DELETE" });
+    state.detail = null;
+    toast(t("del_done"), c.caseNumber || "");
+    await loadCases();
+    location.hash = "#/cazuri";
+  } catch (err) {
+    toast(t("open_fail"), err.message);
+  }
+}
+function downloadQr() {
+  if (!state.me) return;
+  const a = document.createElement("a");
+  a.href = state.me.qrDataUrlLarge || state.me.qrDataUrl;
+  a.download = t("web_png_name");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+async function copyEmbed() {
+  if (!state.me) return;
+  const src = state.me.qrDataUrlLarge || state.me.qrDataUrl;
+  const html = `<figure style="margin:0;max-width:260px;font-family:sans-serif"><img src="${src}" alt="${esc(t("web_alt"))}" width="240" height="240" style="display:block"><figcaption style="font-size:14px;line-height:1.4">${esc(t("web_caption"))}</figcaption></figure>`;
+  try { await navigator.clipboard.writeText(html); toast(t("web_embed_ok"), t("web_embed_ok_sub")); }
+  catch { toast(t("selected"), t("selected_sub")); }
 }
 
 /* ───────── rendering: overview + list ───────── */
@@ -230,13 +338,14 @@ function rowHtml(c) {
   const deadline = nd.kind === "closed"
     ? `<div class="dl"><span class="dlt none">${t("dl_closed")}</span></div>`
     : `<div class="dl"><span class="dlt ${u.cls}">${esc(u.text)}</span><span class="dll">${nd.label}</span></div><div class="bar"><i class="${u.cls}" style="width:${Math.round(u.progress * 100)}%"></i></div>`;
-  const rowCls = ["case-row", nd.kind !== "closed" && u.cls === "red" ? "r-red" : "", nd.kind !== "closed" && u.cls === "amber" ? "r-amber" : "", unread ? "unread" : ""].join(" ");
+  const press = EDITION === "press";
+  const rowCls = ["case-row", !press && nd.kind !== "closed" && u.cls === "red" ? "r-red" : "", !press && nd.kind !== "closed" && u.cls === "amber" ? "r-amber" : "", unread ? "unread" : ""].join(" ");
   return `<tr class="${rowCls}" data-id="${esc(c.id)}">
     <td class="nr">${unread ? `<span class="unread-dot" title="${t("unread")}"></span>` : ""}${c.caseNumber ? esc(c.caseNumber) : "—"}${c.signalPending ? `<span class="mark" title="${t("sending_t")}">${t("sending")}</span>` : ""}</td>
     <td><span class="pill ${c.status}">${esc(statusLabel(c.status))}</span></td>
     <td>${cat}</td>
     <td class="dim">${fmtDay(c.openedAt)}</td>
-    <td>${deadline}</td>
+    <td class="col-dl">${deadline}</td>
     <td class="dim">${ago(c.lastActivityAt)}</td>
   </tr>`;
 }
@@ -284,6 +393,19 @@ function renderKpis() {
   const closed = cases.filter((c) => c.status === "closed" && c.closedAt && new Date(c.closedAt).getFullYear() === year);
   const avg = closed.length ? Math.round(closed.reduce((s, c) => s + (c.closedAt - c.openedAt), 0) / closed.length / DAY) : null;
 
+  if (EDITION === "press") {
+    const kp = (cls, l, v, small, s) => `<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}${small ? ` <small>${small}</small>` : ""}</div><div class="s">${s}</div></div>`;
+    const days = state.press ? state.press.settings.retentionDays : 0;
+    const okAt = state.lastOkAt || (state.press && state.press.lastOkPollAt);
+    const total = cases.length;
+    $("kpis").innerHTML = [
+      kp("", t("kp_open"), open.length, "", total === 0 ? t("k_none") : t("k_new7", { n: newWeek, w: newWeek === 1 ? t("k_new_one") : t("k_new_many") })),
+      kp("", t("kp_pickup"), okAt ? shortAgo(Date.now() - okAt) : "—", "", okAt ? ago(okAt) : t("kp_none_yet")),
+      kp("", t("kp_keep"), days > 0 ? days : "∞", days > 0 ? t("unit_days") : "", days > 0 ? t("set_keep_label") : t("kp_forever")),
+      kp("", t("k_closed", { y: year }), closed.length, "", avg === null ? t("k_closed_none") : t("k_avg", { n: avg, u: avg === 1 ? t("unit_day") : t("unit_days") })),
+    ].join("");
+    return;
+  }
   const kpi = (cls, l, v, small, s) => `<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}${small ? ` <small>${small}</small>` : ""}</div><div class="s">${s}</div></div>`;
   $("kpis").innerHTML = [
     kpi("", t("k_open"), open.length, "", cases.length === 0 ? t("k_none") : t("k_new7", { n: newWeek, w: newWeek === 1 ? t("k_new_one") : t("k_new_many") })),
@@ -471,7 +593,7 @@ function hideQr() { $("qrModal").classList.add("hidden"); }
 
 document.addEventListener("click", (e) => {
   const act = e.target.closest("[data-action]");
-  if (act) { if (act.dataset.action === "copyCode") copyCode(); if (act.dataset.action === "showQr") showQr(); }
+  if (act) { if (act.dataset.action === "copyCode") copyCode(); if (act.dataset.action === "showQr") showQr(); if (act.dataset.action === "downloadQr") downloadQr(); if (act.dataset.action === "copyEmbed") copyEmbed(); }
   const tab = e.target.closest("[data-tab]");
   if (tab) { state.tab = tab.dataset.tab; render(); }
   const seg = e.target.closest("#statusSeg button");
@@ -490,6 +612,9 @@ $("search").addEventListener("input", (e) => {
 $("categoryInput").addEventListener("change", (e) => saveCategory(e.target.value).catch((err) => toast(t("cat_fail"), err.message)));
 $("categoryInput").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.blur(); });
 $("sendReplyBtn").addEventListener("click", sendReply);
+$("deleteCaseBtn").addEventListener("click", deleteCurrentCase);
+$("saveSettingsBtn").addEventListener("click", saveSettings);
+$("pickupWarnClose").addEventListener("click", () => { state.dismissedWarn.add($("pickupWarn").dataset.key); $("pickupWarn").classList.add("hidden"); });
 $("replyInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendReply(); } });
 $("addCaseBtn").addEventListener("click", async () => {
   const input = $("pasteInput");
@@ -516,6 +641,7 @@ for (const b of document.querySelectorAll("#langSwitch button")) {
 
 /* ───────── start ───────── */
 (async function start() {
+  await loadEdition();
   applyStaticI18n();
   await Promise.all([loadMe().catch(() => {}), loadCases().catch(() => {}), loadStatus()]);
   // First visit from this browser: cases that already exist are not "new" to the officer.

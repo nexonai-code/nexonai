@@ -27,6 +27,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM19 19h1"/></svg>
       <span data-i18n="nav_code">Codul organizației</span>
     </a>
+    <a class="nav only-press" href="#/setari" data-route="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+      <span data-i18n="nav_settings">Setări</span>
+    </a>
   </nav>
   <div class="sp"></div>
   <div class="lang" id="langSwitch" role="group" aria-label="Limba / Language"><button type="button" data-lang="ro">RO</button><button type="button" data-lang="en">EN</button></div>
@@ -50,6 +54,8 @@
     </div>
   </header>
 
+  <div class="warn hidden" id="pickupWarn" role="alert"><div id="pickupWarnText"></div><button class="btn small" id="pickupWarnClose" type="button" data-i18n="dismiss">Am înțeles</button></div>
+
   <!-- ───────────── Prezentare generală ───────────── -->
   <section id="v-overview" class="view">
     <div class="kpis" id="kpis"></div>
@@ -72,7 +78,7 @@
         <div class="card">
           <div class="ch"><h2 data-i18n="cases">Cazuri</h2><div class="tabs" id="tabsOverview"></div></div>
           <div class="tablewrap"><table class="cases">
-            <thead><tr><th data-i18n="th_nr">Nr. caz</th><th data-i18n="th_state">Stare</th><th data-i18n="th_cat">Categorie</th><th data-i18n="th_opened">Deschis</th><th data-i18n="th_next">Următorul termen</th><th data-i18n="th_activity">Activitate</th></tr></thead>
+            <thead><tr><th data-i18n="th_nr">Nr. caz</th><th data-i18n="th_state">Stare</th><th data-i18n="th_cat">Categorie</th><th data-i18n="th_opened">Deschis</th><th class="col-dl" data-i18n="th_next">Următorul termen</th><th data-i18n="th_activity">Activitate</th></tr></thead>
             <tbody id="casesBodyOverview"></tbody>
           </table></div>
           <div class="foot"><span data-i18n="sorted_by">Sortat după termen, cel mai urgent primul</span><a href="#/cazuri" id="allCasesLink" data-i18n="all_cases">Toate cazurile</a></div>
@@ -83,7 +89,7 @@
         </div>
       </div>
       <div class="right">
-        <div class="card"><div class="ch"><h2 data-i18n="next_h">Termene următoare</h2></div><div id="nextList"></div></div>
+        <div class="card only-compliance"><div class="ch"><h2 data-i18n="next_h">Termene următoare</h2></div><div id="nextList"></div></div>
         <div class="card" id="codeCard">
           <div class="ch"><h2 data-i18n="code_h">Codul organizației</h2></div>
           <div class="qr"><img id="qrSmall" alt="Cod QR al organizației" data-i18n-alt="org_qr_alt" />
@@ -102,7 +108,7 @@
     <div class="card">
       <div class="ch"><h2 data-i18n="cases">Cazuri</h2><div class="tabs" id="tabsCases"></div></div>
       <div class="tablewrap"><table class="cases">
-        <thead><tr><th data-i18n="th_nr">Nr. caz</th><th data-i18n="th_state">Stare</th><th data-i18n="th_cat">Categorie</th><th data-i18n="th_opened">Deschis</th><th data-i18n="th_next">Următorul termen</th><th data-i18n="th_activity">Activitate</th></tr></thead>
+        <thead><tr><th data-i18n="th_nr">Nr. caz</th><th data-i18n="th_state">Stare</th><th data-i18n="th_cat">Categorie</th><th data-i18n="th_opened">Deschis</th><th class="col-dl" data-i18n="th_next">Următorul termen</th><th data-i18n="th_activity">Activitate</th></tr></thead>
         <tbody id="casesBodyAll"></tbody>
       </table></div>
       <p class="empty hidden" id="noCases" data-i18n="no_cases">Niciun caz încă. Cazurile apar aici automat imediat ce cineva scanează codul organizației și trimite o sesizare.</p>
@@ -128,6 +134,11 @@
           <div class="ch"><h2 data-i18n="code_text_h">Codul ca text</h2></div>
           <textarea id="myCode" readonly rows="5" aria-label="Codul organizației ca text" data-i18n-aria="code_text_aria"></textarea>
         </div>
+        <div class="card only-press">
+          <div class="ch"><h2 data-i18n="web_h">Pentru site-ul tău</h2></div>
+          <p class="note" data-i18n="web_note">Pune codul QR pe site-ul tău. Sursa îl scanează cu aplicația unpruuf gratuită și scrie direct.</p>
+          <div class="btns" style="margin-top:10px"><button class="btn primary" type="button" data-action="downloadQr" data-i18n="web_png">Descarcă QR (PNG)</button><button class="btn" type="button" data-action="copyEmbed" data-i18n="web_embed">Copiază codul HTML</button></div>
+        </div>
         <details class="card">
           <summary data-i18n-html="manual_sum"><b>Adăugare manuală</b> — doar pentru aplicații de raportare mai vechi</summary>
           <div class="manual">
@@ -137,6 +148,23 @@
         </details>
       </div>
     </div>
+  </section>
+
+  <!-- ───────────── Setări (safeline Press) ───────────── -->
+  <section id="v-settings" class="view hidden">
+    <div class="card">
+      <div class="ch"><h2 data-i18n="set_keep_h">Cât timp se păstrează mesajele</h2></div>
+      <p class="note" data-i18n="set_keep_note">Mesajele fără activitate mai veche decât perioada aleasă sunt șterse definitiv de pe acest calculator. „Păstrează” înseamnă că rămân până le ștergi tu.</p>
+      <label class="fld"><span data-i18n="set_keep_label">Păstrare</span>
+        <select id="retentionSelect"></select></label>
+    </div>
+    <div class="card">
+      <div class="ch"><h2 data-i18n="set_warn_h">Avertizare la preluare</h2></div>
+      <p class="note" data-i18n="set_warn_note">Mesajele așteaptă pe server cel mult 24 de ore. Dacă aplicația a fost oprită mai mult, un mesaj se poate pierde. Panoul te avertizează înainte.</p>
+      <label class="fld"><span data-i18n="set_warn_label">Avertizează după</span>
+        <select id="warnSelect"></select></label>
+    </div>
+    <div class="btns"><button class="btn primary" id="saveSettingsBtn" type="button" data-i18n="save">Salvează</button><span class="err" id="settingsMsg"></span></div>
   </section>
 
   <!-- ───────────── Un caz ───────────── -->
@@ -162,7 +190,7 @@
           </div>
           <p class="note" id="statusDelivery"></p>
         </div>
-        <div class="card">
+        <div class="card only-compliance">
           <div class="ch"><h2 data-i18n="deadlines_h">Termene</h2></div>
           <div id="detailDeadlines"></div>
           <p class="note small" data-i18n="deadline_note">Confirmarea de primire (7 zile, Directiva UE 2019/1937, Art. 9(1)(b)) pleacă automat cu numărul cazului. Răspuns în 3 luni (Art. 9(1)(f)). Fiecare schimbare de stare apare imediat în aplicația raportorului.</p>
@@ -172,6 +200,11 @@
           <input id="categoryInput" list="categoryList" placeholder="ex. abateri financiare, hărțuire…" data-i18n-ph="category_ph" autocomplete="off" aria-label="Categorie" data-i18n-aria="category_h" />
           <datalist id="categoryList"></datalist>
           <div class="chips" id="categoryChips"></div>
+        </div>
+        <div class="card only-press">
+          <div class="ch"><h2 data-i18n="del_h">Ștergere</h2></div>
+          <p class="note" data-i18n="del_note">Șterge definitiv acest mesaj și toată conversația de pe acest calculator.</p>
+          <div class="btns" style="margin-top:10px"><button class="btn danger" id="deleteCaseBtn" type="button" data-i18n="del_btn">Șterge definitiv</button></div>
         </div>
         <div class="card">
           <div class="ch"><h2 data-i18n="data_h">Date</h2></div>
