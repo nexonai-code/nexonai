@@ -56,3 +56,9 @@ Beispiele:
 - Stand: Compliance und Business sind getestet und funktionieren. Ein unabhängiges Audit steht an. Bis dahin: nicht auditiert, nicht zertifiziert. safeline Press ist eine Pilotversion, nicht mit einer echten Quelle getestet.
 - Folien und Seiten: Briefkastenbild ohne Zahlen (kein 250, kein 100 pro Node), „Was der Server weiß“, „Nur der Kunde hat seine Daten“. Business-App hat heute nur eine englische Oberfläche (Rumänisch nur in safeline und Press). Die Einrichtungsseite des Node-Servers ist deutsch.
 - Telefon-Bilder in Decks sind Nachbauten und so zu kennzeichnen, bis echte Aufnahmen vorliegen.
+
+## Wettbewerb und Aussagen (12.10.2026)
+
+- Nie „als Erste“, „einzigartig“, „sicherer als …“ sagen. Jedes Einzelteil gibt es bei anderen (SimpleX, Session, Briar, Cwtch, Threema OnPrem, Wire, Matrix, SecureDrop, GlobaLeaks, EQS). Wir dürfen sagen: fertige Produkte für Compliance, Presse und Firmen auf einem System, Server immer beim Kunden, keine Identitäten, Tor von Anfang an. Vergleich: `Wettbewerbsvergleich_2026-10-12`.
+- Der Name „SafeLine“ ist bei einer bekannten Open-Source-Firewall (Chaitin) belegt. Vor Veröffentlichung Markenrecherche und Jurist.
+- Rumänien, anonyme Meldungen: Stand ungeklärt (Änderungsantrag zum Gesetz 361/2022). Nie behaupten, anonyme Meldungen seien vorgeschrieben, ohne den aktuellen Text geprüft zu haben.
