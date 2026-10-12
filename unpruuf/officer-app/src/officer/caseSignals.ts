@@ -2,6 +2,7 @@ import { RelayClient } from "../relay/relayClient";
 import { CaseRow, CaseStore } from "../store/caseStore";
 import { generateCaseNumber } from "./caseIntake";
 import { OfficerIdentity } from "./officerIdentity";
+import { isPressEdition } from "../edition";
 import { SendResult, sendRatchetText } from "./sendRatchet";
 
 /**
@@ -19,8 +20,9 @@ export const CASE_SIGNAL_PREFIX = "UNPRUUF_CASE_V1:";
  *  session where the officer is the receiving side gets a sending chain immediately. */
 export const CASE_HELLO_TEXT = "UNPRUUF_CASE_HELLO_V1";
 
-export function caseSignalText(row: CaseRow, caseNumber: string, status: string, now: number = Date.now()): string {
-  return CASE_SIGNAL_PREFIX + JSON.stringify({ n: caseNumber, s: status, o: row.openedAt, a: row.ackDueAt, f: row.feedbackDueAt, t: now });
+export function caseSignalText(row: CaseRow, caseNumber: string, status: string, now: number = Date.now(), withDeadlines: boolean = !isPressEdition()): string {
+  // safeline Press: a journalist owes no legal deadline, so the source's app gets none.
+  return CASE_SIGNAL_PREFIX + JSON.stringify({ n: caseNumber, s: status, o: row.openedAt, a: withDeadlines ? row.ackDueAt : null, f: withDeadlines ? row.feedbackDueAt : null, t: now });
 }
 
 export function ensureCaseNumber(store: CaseStore, row: CaseRow): string {
@@ -34,6 +36,11 @@ const STATUS_LABEL_RO: Record<string, string> = {
   acknowledged: "confirmat",
   in_progress: "în lucru",
   closed: "închis",
+};
+const STATUS_LABEL_EN: Record<string, string> = {
+  acknowledged: "acknowledged",
+  in_progress: "in progress",
+  closed: "closed",
 };
 
 /**
@@ -52,9 +59,13 @@ export async function sendCaseUpdate(identity: OfficerIdentity, store: CaseStore
     store.setSignalPending(caseId, false);
     if (isReceipt) {
       store.setStatus(caseId, "acknowledged");
-      store.appendMessage(caseId, "out", `[sistem] Confirmare de primire trimisă automat raportorului — nr. caz ${caseNumber}.`);
+      store.appendMessage(caseId, "out", isPressEdition()
+        ? `[system] Confirmation of receipt sent automatically to the source — tip no. ${caseNumber}.`
+        : `[sistem] Confirmare de primire trimisă automat raportorului — nr. caz ${caseNumber}.`);
     } else {
-      store.appendMessage(caseId, "out", `[sistem] Starea „${STATUS_LABEL_RO[status] ?? status}” a fost trimisă raportorului.`);
+      store.appendMessage(caseId, "out", isPressEdition()
+        ? `[system] Status "${STATUS_LABEL_EN[status] ?? status}" was sent to the source.`
+        : `[sistem] Starea „${STATUS_LABEL_RO[status] ?? status}” a fost trimisă raportorului.`);
     }
   } else {
     store.setSignalPending(caseId, true);

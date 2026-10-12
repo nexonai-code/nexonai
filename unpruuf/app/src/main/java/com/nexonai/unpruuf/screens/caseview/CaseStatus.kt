@@ -112,7 +112,8 @@ private fun CaseCard(c: Contact) {
             CaseSteps(caseStep(c.caseStatus))
             HorizontalDivider()
             Text(stringResource(R.string.case_opened_at, fmtDate(c.caseOpenedAt)), style = MaterialTheme.typography.bodyMedium)
-            if (c.caseStatus != "closed") {
+            // The press edition sends no deadline (a journalist owes none), so nothing is shown then.
+            if (c.caseStatus != "closed" && c.caseFeedbackDueAt != null) {
                 Text(stringResource(R.string.case_feedback_due, fmtDate(c.caseFeedbackDueAt)), style = MaterialTheme.typography.bodyMedium)
             }
             Text(

@@ -23,8 +23,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 **Not checked**
 
-- Retention and warning over real days; a real source with the Android app; the browser reporter does not use Tor (documented in `README-PRESS.md`).
-- The reporting app still says "reporting office" in places; press wording for the app is not done.
+- Retention and warning over real days; a real source with the Android app on a phone; the browser reporter does not use Tor (documented in `README-PRESS.md`).
+
+**Added the same day: reporting app wording for press**
+
+- New Android build variant `press` (`com.nexonai.unpruuf.press`): same behaviour as `whistleblower` (`AppEdition.isWhistleblower` is true for both), own wording: English in `app/src/press/res/values`, Romanian in `values-ro`. "Reporting office / organisation / case" become "journalist / newsroom / tip".
+- The status screen shows no feedback date when the officer sends none. The press officer sends no deadlines (`a` and `f` are null); the standard officer is unchanged.
+- The officer app accepts pairing codes from the press reporting app. System lines in the tip thread are English in press.
+- Checked: `assemblePressDebug` and `testPressDebugUnitTest` pass, merged resources contain both languages, 15 officer tests pass. Not checked: on a real phone.
 
 ---
 

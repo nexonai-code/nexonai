@@ -22,13 +22,17 @@ object AppEdition {
     const val CLIENT = "client"
     const val WHISTLEBLOWER = "whistleblower"
     const val OFFICER = "officer"
+    /** Press edition of the reporting app (a source writing to a journalist): behaves exactly like
+     *  [WHISTLEBLOWER], only the wording differs (app/src/press/res). */
+    const val PRESS = "press"
 
     val current: String get() = BuildConfig.EDITION
 
     val isStandard: Boolean get() = current == STANDARD
     val isPro: Boolean get() = current == PRO
     val isClient: Boolean get() = current == CLIENT
-    val isWhistleblower: Boolean get() = current == WHISTLEBLOWER
+    /** True for both reporting editions: they share every rule, press only changes the words. */
+    val isWhistleblower: Boolean get() = current == WHISTLEBLOWER || current == PRESS
 
     /** Anzeigename der Edition, z. B. "Pro". */
     val label: String
@@ -36,15 +40,16 @@ object AppEdition {
             PRO -> "Pro"
             CLIENT -> "Client"
             WHISTLEBLOWER -> "Whistleblower"
+            PRESS -> "Press"
             else -> "Standard"
         }
 
     /** Darf diese App einen Kontakt der Edition [theirEdition] per QR hinzufügen? */
     fun canAdd(theirEdition: String): Boolean = when (current) {
-        WHISTLEBLOWER -> theirEdition == OFFICER
-        PRO -> theirEdition != WHISTLEBLOWER && theirEdition != OFFICER
+        WHISTLEBLOWER, PRESS -> theirEdition == OFFICER
+        PRO -> theirEdition != WHISTLEBLOWER && theirEdition != PRESS && theirEdition != OFFICER
         CLIENT -> theirEdition == PRO
-        else -> theirEdition != CLIENT && theirEdition != WHISTLEBLOWER && theirEdition != OFFICER // standard
+        else -> theirEdition != CLIENT && theirEdition != WHISTLEBLOWER && theirEdition != PRESS && theirEdition != OFFICER // standard
     }
 
     /** Erklärtext, warum ein Pairing blockiert wurde. */
@@ -52,7 +57,7 @@ object AppEdition {
         isWhistleblower -> "This app can only connect with a compliance officer's pairing code."
         isClient -> "unpruuf Client can only connect with unpruuf Pro users."
         theirEdition == CLIENT -> "Only unpruuf Pro can add Client users."
-        theirEdition == WHISTLEBLOWER || theirEdition == OFFICER ->
+        theirEdition == WHISTLEBLOWER || theirEdition == PRESS || theirEdition == OFFICER ->
             "This is a whistleblower/compliance pairing code — it can't be added here."
         else -> "This contact can't be added in this edition."
     }

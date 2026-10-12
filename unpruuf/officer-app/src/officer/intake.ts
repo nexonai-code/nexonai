@@ -33,7 +33,7 @@ export function caseFromReporterPayload(
   payload: CrossPlatformPairingPayload,
   wireIdentity: string | null,
 ): { row: CaseRow; created: boolean } {
-  if (payload.appEdition !== "whistleblower") {
+  if (payload.appEdition !== "whistleblower" && payload.appEdition !== "press") {
     throw new InvalidPairingCodeError(
       `Acest cod provine dintr-o aplicație "${payload.appEdition}", nu din ediția Whistleblower — refuz să amestec liniile de produse.`,
     );

@@ -6,7 +6,7 @@ Status: pilot. Not audited by an independent party, not tested against real Tor 
 
 ## How it works for a source
 
-1. The source installs the free unpruuf reporting app (Android).
+1. The source installs the free reporting app of the press edition (Android, build variant `press`; see below).
 2. Scans your QR code (on your website, in an article, on a card) and writes. No name, no phone number, no account.
 3. The tip appears in your dashboard with a number. The source gets a confirmation automatically. You can answer in the conversation.
 
@@ -33,6 +33,7 @@ Linux/macOS: `OFFICER_EDITION=press npm start`.
 
 - **The app must stay running.** Packets wait on the server for 24 hours at most. If the app is off for longer, a tip can be lost. The dashboard shows a warning after the chosen number of hours and again after a restart. A small always-on server or an always-on newsroom computer solves it.
 - **Retention deletes for good.** With a period set, tips with no activity for that long are removed from this computer without asking again.
+- **The reporting app for sources** is the `press` build variant of the Android project: `./gradlew assemblePressDebug` (or in Android Studio: Build Variants → pressDebug). It looks like the normal unpruuf app on the phone (neutral name), behaves like the whistleblower reporting app and speaks English or Romanian by phone language. It shows no deadline, because a journalist owes none: the status screen says there is no deadline for an answer. Not tested on a real phone yet.
 - **Source in a browser.** The browser version of the reporter does not go through Tor by itself. A source who writes from a normal browser shows their IP address to the relay. Point sources to the app, or tell them to use Tor Browser.
 - **Password.** There is no recovery. Losing it means losing every tip.
 - **No server of ours.** The relay is run by you or your newsroom, never by NexonAI.
