@@ -61,15 +61,16 @@ object AppEdition {
         else -> theirEdition != CLIENT && theirEdition != WHISTLEBLOWER && theirEdition != PRESS && theirEdition != OFFICER && theirEdition != GROUP // standard
     }
 
-    /** Erklärtext, warum ein Pairing blockiert wurde. */
-    fun blockReason(theirEdition: String): String = when {
-        isGroup -> "unpruuf Pro Groups can only connect with other unpruuf Pro Groups users."
-        theirEdition == GROUP -> "This is an unpruuf Pro Groups pairing code — it can only be added in the Pro Groups app."
-        isWhistleblower -> "This app can only connect with a compliance officer's pairing code."
-        isClient -> "unpruuf Client can only connect with unpruuf Pro users."
-        theirEdition == CLIENT -> "Only unpruuf Pro can add Client users."
-        theirEdition == WHISTLEBLOWER || theirEdition == PRESS || theirEdition == OFFICER ->
-            "This is a whistleblower/compliance pairing code — it can't be added here."
-        else -> "This contact can't be added in this edition."
-    }
+    /** Why a pairing was blocked — text from the resources (English / Romanian). */
+    fun blockReason(context: android.content.Context, theirEdition: String): String = context.getString(
+        when {
+            isGroup -> com.nexonai.unpruuf.R.string.msg_edition_group_only
+            theirEdition == GROUP -> com.nexonai.unpruuf.R.string.msg_edition_group_code
+            isWhistleblower -> com.nexonai.unpruuf.R.string.msg_edition_wb_only
+            isClient -> com.nexonai.unpruuf.R.string.msg_edition_client_only
+            theirEdition == CLIENT -> com.nexonai.unpruuf.R.string.msg_edition_pro_adds_client
+            theirEdition == WHISTLEBLOWER || theirEdition == PRESS || theirEdition == OFFICER -> com.nexonai.unpruuf.R.string.msg_edition_wb_code
+            else -> com.nexonai.unpruuf.R.string.msg_edition_other
+        }
+    )
 }

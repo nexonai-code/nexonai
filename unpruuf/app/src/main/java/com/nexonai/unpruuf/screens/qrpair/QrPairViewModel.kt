@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.screens.qrpair
 
+import com.nexonai.unpruuf.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexonai.unpruuf.data.db.ContactDao
@@ -49,6 +51,7 @@ private const val RELAY_STRING_PREFIX = "unpruuf-relay:v1:"
 
 @HiltViewModel
 class QrPairViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val contactDao: ContactDao,
     private val identityManager: IdentityManager,
     private val torManager: TorManager,
@@ -58,6 +61,8 @@ class QrPairViewModel @Inject constructor(
     private val p2pNetworkManager: P2PNetworkManager,
     private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
 ) : ViewModel() {
+    private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
 
     private val _errorState = MutableStateFlow<String?>(null)
     val errorState = _errorState.asStateFlow()
@@ -135,20 +140,20 @@ class QrPairViewModel @Inject constructor(
         viewModelScope.launch {
             // Edition-Pairing-Regeln durchsetzen (Pro/Standard/Client).
             if (!AppEdition.canAdd(payload.appEdition)) {
-                _errorState.value = AppEdition.blockReason(payload.appEdition)
+                _errorState.value = AppEdition.blockReason(context, payload.appEdition)
                 return@launch
             }
 
             // Invalid onion address → contact would be permanently unreachable
             if (payload.onionAddress == "pending.onion" || !payload.onionAddress.endsWith(".onion")) {
-                _errorState.value = "Invalid QR code: Tor wasn't ready on the other device. Reopen the QR screen there and scan again."
+                _errorState.value = str(R.string.msg_qr_tor_not_ready)
                 return@launch
             }
 
             // Older app versions didn't include a ratchet key — reject rather
             // than silently create a contact that can never receive messages.
             if (payload.x25519RatchetPublicKeyBase64.isBlank()) {
-                _errorState.value = "This QR code is from an older app version. Update both devices and scan again."
+                _errorState.value = str(R.string.msg_qr_old_version)
                 return@launch
             }
 
@@ -162,11 +167,9 @@ class QrPairViewModel @Inject constructor(
                 if (existing.publicKey != payload.publicKeyBase64 ||
                     existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64
                 ) {
-                    _errorState.value = "This contact's key has changed since you last paired " +
-                        "with them. If they reinstalled or reset the app, re-verify their safety " +
-                        "number before trusting this. To replace them, delete the old contact first."
+                    _errorState.value = str(R.string.msg_qr_key_changed)
                 } else {
-                    _successState.value = "$displayName is already a contact."
+                    _successState.value = str(R.string.msg_contact_exists, displayName)
                 }
                 return@launch
             }
@@ -197,7 +200,7 @@ class QrPairViewModel @Inject constructor(
             // P2PNetworkManager.sendNewIdentitySignal()'s doc comments.
             p2pNetworkManager.sendNewIdentitySignal(contact.id)
             // Onion pro Gerät (Haupt-Onion) → kein per-Kontakt-confirmPairing nötig.
-            _successState.value = "$displayName added."
+            _successState.value = str(R.string.msg_contact_added, displayName)
         }
     }
 
@@ -240,8 +243,8 @@ class QrPairViewModel @Inject constructor(
             // (WhistleblowerCases), never the global ones used below.
             if (AppEdition.isWhistleblower && payload.appEdition == AppEdition.OFFICER) {
                 when (whistleblowerCases.connectOrganization(crossPlatformPayloadToJson(payload))) {
-                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Ok -> _successState.value = "$displayName added."
-                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Invalid -> _errorState.value = AppEdition.blockReason(payload.appEdition)
+                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Ok -> _successState.value = str(R.string.msg_contact_added, displayName)
+                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Invalid -> _errorState.value = AppEdition.blockReason(context, payload.appEdition)
                 }
                 return@launch
             }
@@ -252,7 +255,7 @@ class QrPairViewModel @Inject constructor(
             // Mandatory is the reason this format is in use; the deliberate manual "iOS /
             // cross-platform" toggle on Standard/Client still requires Pro as before.
             if (!AppEdition.isPro && !relayManager.isMandatory()) {
-                _errorState.value = "Cross-platform (iOS) pairing is a Pro feature."
+                _errorState.value = str(R.string.msg_qr_ios_pro)
                 return@launch
             }
             // The payload carries no edition field from iOS (defaults to STANDARD — see
@@ -260,15 +263,15 @@ class QrPairViewModel @Inject constructor(
             // Android editions pairing this way under Mandatory still need the normal
             // Client-can-only-add-Pro rule enforced, same as the onion-based flow below.
             if (!AppEdition.canAdd(payload.appEdition)) {
-                _errorState.value = AppEdition.blockReason(payload.appEdition)
+                _errorState.value = AppEdition.blockReason(context, payload.appEdition)
                 return@launch
             }
             if (payload.relayConnectionStrings.none { RelayManager.parseConnectionString(it) != null }) {
-                _errorState.value = "This QR code's relay address looks invalid. Ask them to check their relay setup and try again."
+                _errorState.value = str(R.string.msg_qr_relay_invalid)
                 return@launch
             }
             if (payload.x25519RatchetPublicKeyBase64.isBlank()) {
-                _errorState.value = "This QR code is from an older app version. Update both devices and scan again."
+                _errorState.value = str(R.string.msg_qr_old_version)
                 return@launch
             }
 
@@ -277,11 +280,9 @@ class QrPairViewModel @Inject constructor(
                 if (existing.publicKey != payload.messageKeyBase64 ||
                     existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64
                 ) {
-                    _errorState.value = "This contact's key has changed since you last paired " +
-                        "with them. If they reinstalled or reset the app, re-verify their safety " +
-                        "number before trusting this. To replace them, delete the old contact first."
+                    _errorState.value = str(R.string.msg_qr_key_changed)
                 } else {
-                    _successState.value = "$displayName is already a contact."
+                    _successState.value = str(R.string.msg_contact_exists, displayName)
                 }
                 return@launch
             }
@@ -310,7 +311,7 @@ class QrPairViewModel @Inject constructor(
             contactDao.insert(contact)
             ratchetSessionManager.createSession(contact)
             p2pNetworkManager.sendNewIdentitySignal(contact.id)
-            _successState.value = "$displayName added."
+            _successState.value = str(R.string.msg_contact_added, displayName)
         }
     }
 
@@ -411,19 +412,19 @@ class QrPairViewModel @Inject constructor(
     fun handleScannedNodeMeshQr(payload: NodeMeshPairingPayload, displayName: String) {
         viewModelScope.launch {
             if (!AppEdition.canAdd(payload.appEdition)) {
-                _errorState.value = AppEdition.blockReason(payload.appEdition)
+                _errorState.value = AppEdition.blockReason(context, payload.appEdition)
                 return@launch
             }
             if (payload.nodeAddresses.isEmpty()) {
-                _errorState.value = "This QR code's node address looks invalid. Ask them to check their node setup and try again."
+                _errorState.value = str(R.string.msg_qr_node_invalid)
                 return@launch
             }
             if (payload.x25519RatchetPublicKeyBase64.isBlank() || payload.nodeMeshRoutingSeedBase64.isBlank()) {
-                _errorState.value = "This QR code is from an older app version. Update both devices and scan again."
+                _errorState.value = str(R.string.msg_qr_old_version)
                 return@launch
             }
             if (!nodeMeshManager.isUsable()) {
-                _errorState.value = "Set up your own node first (Settings → Business Node-Mesh) — without it, this contact's messages would have nowhere to reach you."
+                _errorState.value = str(R.string.msg_qr_own_node_first)
                 return@launch
             }
 
@@ -432,24 +433,22 @@ class QrPairViewModel @Inject constructor(
             val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
             if (existing != null) {
                 if (existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64) {
-                    _errorState.value = "This contact's key has changed since you last paired " +
-                        "with them. If they reinstalled or reset the app, re-verify their safety " +
-                        "number before trusting this. To replace them, delete the old contact first."
+                    _errorState.value = str(R.string.msg_qr_key_changed)
                 } else {
-                    _successState.value = "$displayName is already a contact."
+                    _successState.value = str(R.string.msg_contact_exists, displayName)
                 }
                 return@launch
             }
 
             if (nodeMeshPairingBound) {
-                _errorState.value = "This code was already used for one contact. Close and reopen this screen to pair the next one — every contact gets its own keys and nodes."
+                _errorState.value = str(R.string.msg_qr_code_used)
                 return@launch
             }
             val mine = currentNodeMeshPairing() ?: run {
                 _errorState.value = if (nodeMeshManager.isUsable())
-                    "Choose a node list for this contact first — the QR you show carries three nodes from it."
+                    str(R.string.msg_qr_choose_list)
                 else
-                    "Set up your own node first (Settings → Business Node-Mesh) — without it, this contact's messages would have nowhere to reach you."
+                    str(R.string.msg_qr_own_node_first)
                 return@launch
             }
             val contact = Contact(
@@ -478,7 +477,7 @@ class QrPairViewModel @Inject constructor(
             // identity component to announce (see IdentityManager.nodeMeshRoutingTag's doc
             // comment), so myWireIdentity stays null for this contact and sendNewIdentitySignal
             // would have nothing correct to send.
-            _successState.value = "$displayName added."
+            _successState.value = str(R.string.msg_contact_added, displayName)
         }
     }
 
@@ -487,7 +486,7 @@ class QrPairViewModel @Inject constructor(
     /** Scanned content wasn't a valid unpruuf QR code — usually an older app
      *  version on the other device (v3 changed the QR's wire format). */
     fun showUnreadableQrError() {
-        _errorState.value = "Couldn't read this code. Make sure both devices are updated to the latest version, then scan again."
+        _errorState.value = str(R.string.msg_qr_unreadable)
     }
 
     fun clearSuccess() { _successState.value = null }

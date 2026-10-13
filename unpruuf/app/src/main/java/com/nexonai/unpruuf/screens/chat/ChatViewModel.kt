@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.screens.chat
 
+import com.nexonai.unpruuf.R
+
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -34,6 +36,7 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ChatViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val messageStore: InMemoryMessageStore,
     private val contactDao: ContactDao,
     private val p2pNetworkManager: P2PNetworkManager,
@@ -41,6 +44,8 @@ class ChatViewModel @Inject constructor(
     private val relayManager: RelayManager,
     private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
 ) : ViewModel() {
+    private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
 
     // Read fresh each time (cheap SharedPreferences check) rather than cached — the whole point
     // is that StillConnectingHint reflects whatever the user just changed in Settings, without
@@ -127,8 +132,8 @@ class ChatViewModel @Inject constructor(
             val payload = if (isImage) prepareImage(bytes) else bytes
             val limit = if (isImage) MAX_IMAGE_BYTES else MAX_FILE_BYTES
             if (payload.size > limit) {
-                _sendError.value = if (isImage) "Photo too large (max ${MAX_IMAGE_BYTES / 1024 / 1024} MB)."
-                else "File too large (max ${MAX_FILE_BYTES / 1024 / 1024} MB)."
+                _sendError.value = if (isImage) str(R.string.msg_photo_too_large, MAX_IMAGE_BYTES / 1024 / 1024)
+                else str(R.string.msg_file_too_large, MAX_FILE_BYTES / 1024 / 1024)
                 return@launch
             }
             val messageId = UUID.randomUUID().toString()
@@ -238,7 +243,7 @@ class ChatViewModel @Inject constructor(
         val contact = _contact.value ?: return
         viewModelScope.launch {
             p2pNetworkManager.sendMainOnionUpdate(contact.id)
-            _sendError.value = "Updated connection info sent."
+            _sendError.value = str(R.string.contacts_updated_sent)
         }
     }
 
@@ -249,7 +254,7 @@ class ChatViewModel @Inject constructor(
         if (!contact.crossPlatform) return
         viewModelScope.launch {
             p2pNetworkManager.wechsel(contact.id)
-            _sendError.value = "Wechsel sent."
+            _sendError.value = str(R.string.msg_wechsel_sent)
         }
     }
 
@@ -270,7 +275,7 @@ class ChatViewModel @Inject constructor(
         val contact = _contact.value ?: return false
         val parsed = NodeMeshManager.parseOwnerConnectionString(raw.trim())
         if (parsed == null) {
-            _tempNodeError.value = "That doesn't look like a node connection string."
+            _tempNodeError.value = str(R.string.msg_temp_node_invalid)
             return false
         }
         viewModelScope.launch {

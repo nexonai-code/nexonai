@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.services
 
+import com.nexonai.unpruuf.R
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -42,7 +44,7 @@ class P2PListenerService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("unpruuf")
-            .setContentText("Ready to receive")
+            .setContentText(getString(R.string.msg_ready_to_receive))
             .setSmallIcon(android.R.drawable.ic_menu_send)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.domain.group
 
+import com.nexonai.unpruuf.R
+
 import com.nexonai.unpruuf.data.db.ContactDao
 import com.nexonai.unpruuf.data.db.GroupDao
 import com.nexonai.unpruuf.data.model.GroupEntity
@@ -33,11 +35,14 @@ import javax.inject.Singleton
  */
 @Singleton
 class GroupManager @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val groupDao: GroupDao,
     private val contactDao: ContactDao,
     private val p2p: P2PNetworkManager,
     private val messageStore: InMemoryMessageStore
 ) {
+    private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
     companion object {
         const val MAX_GROUP_SIZE = 10
         const val MAX_NAME_LENGTH = 40
@@ -64,21 +69,21 @@ class GroupManager @Inject constructor(
 
     suspend fun create(name: String, rawCode: String, memberIds: List<String>): Result {
         val cleanName = name.trim()
-        if (cleanName.isEmpty()) return Result.Error("Give the group a name.")
-        if (cleanName.length > MAX_NAME_LENGTH) return Result.Error("The name is too long (max $MAX_NAME_LENGTH characters).")
-        val code = GroupCode.canonical(rawCode) ?: return Result.Error("This code is not valid. Check it for typing mistakes.")
-        val members = validMembers(memberIds) ?: return Result.Error("Choose between 1 and ${MAX_GROUP_SIZE - 1} members from your contacts.")
+        if (cleanName.isEmpty()) return Result.Error(str(R.string.msg_group_name_needed))
+        if (cleanName.length > MAX_NAME_LENGTH) return Result.Error(str(R.string.msg_group_name_long, MAX_NAME_LENGTH))
+        val code = GroupCode.canonical(rawCode) ?: return Result.Error(str(R.string.msg_group_code_bad))
+        val members = validMembers(memberIds) ?: return Result.Error(str(R.string.msg_group_members_range, MAX_GROUP_SIZE - 1))
         val id = GroupCode.groupIdHex(code)
-        if (groupDao.getById(id) != null) return Result.Error("You already have a group with this code.")
+        if (groupDao.getById(id) != null) return Result.Error(str(R.string.msg_group_exists))
         groupDao.upsert(GroupEntity(id = id, name = cleanName, code = code, memberIds = members.joinToString(",")))
         return Result.Ok(id)
     }
 
     suspend fun update(groupId: String, name: String, memberIds: List<String>): Result {
-        val g = groupDao.getById(groupId) ?: return Result.Error("This group no longer exists.")
+        val g = groupDao.getById(groupId) ?: return Result.Error(str(R.string.msg_group_gone))
         val cleanName = name.trim()
-        if (cleanName.isEmpty() || cleanName.length > MAX_NAME_LENGTH) return Result.Error("Give the group a name (max $MAX_NAME_LENGTH characters).")
-        val members = validMembers(memberIds) ?: return Result.Error("Choose between 1 and ${MAX_GROUP_SIZE - 1} members from your contacts.")
+        if (cleanName.isEmpty() || cleanName.length > MAX_NAME_LENGTH) return Result.Error(str(R.string.msg_group_name_range, MAX_NAME_LENGTH))
+        val members = validMembers(memberIds) ?: return Result.Error(str(R.string.msg_group_members_range, MAX_GROUP_SIZE - 1))
         groupDao.upsert(g.copy(name = cleanName, memberIds = members.joinToString(",")))
         return Result.Ok(groupId)
     }

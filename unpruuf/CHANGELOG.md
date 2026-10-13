@@ -5,6 +5,24 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑13 · Remaining English messages moved into the resource files
+
+**What was done**
+
+- 64 messages that were written directly in code (status lines in Settings and node lists, QR pairing errors, chat errors, group form errors, licence messages, the reason a pairing code is rejected, two notification texts) are now in `values/strings.xml` (English) and `values-ro/strings.xml` (Romanian). `AppEdition.blockReason` now takes a context.
+- ViewModels that show such messages receive the application context (Hilt) and read them with one helper.
+
+**Checked**
+
+- All variants compile and package; unit tests of all variants pass.
+
+**Not checked**
+
+- The messages on a real device. The whistleblower and press editions fall back to the main file for these keys (English, or Romanian on a Romanian phone).
+- Messages from the network layer that are not shown to the user (log lines) stay English on purpose.
+
+---
+
 ## 2026‑10‑13 · Romanian interface for Pro / Pro Groups (and Standard, Client)
 
 **What was done**

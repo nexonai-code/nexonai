@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.services
 
+import com.nexonai.unpruuf.R
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -125,7 +127,7 @@ class TorForegroundService : Service() {
             "unpruuf Tor Connection",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Shows the Tor connection status"
+            description = getString(R.string.msg_tor_channel_desc)
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)

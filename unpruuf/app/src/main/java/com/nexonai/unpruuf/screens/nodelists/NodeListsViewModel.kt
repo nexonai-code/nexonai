@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.screens.nodelists
 
+import com.nexonai.unpruuf.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexonai.unpruuf.data.db.ContactDao
@@ -29,11 +31,14 @@ data class PendingListImport(val file: NodeListFile.Parsed, val newCount: Int)
 
 @HiltViewModel
 class NodeListsViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val nodeMeshManager: NodeMeshManager,
     private val contactDao: ContactDao,
     private val p2pNetworkManager: P2PNetworkManager,
     private val bridgeManager: BridgeManager
 ) : ViewModel() {
+    private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
 
     private val _lists = MutableStateFlow<List<NodeListRow>>(emptyList())
     val lists = _lists.asStateFlow()
@@ -57,11 +62,11 @@ class NodeListsViewModel @Inject constructor(
 
     fun addFeed(code: String) {
         if (nodeMeshManager.addFeedSource(code) == null) {
-            _status.value = "That is not a valid feed code, or this feed is already added."
+            _status.value = str(R.string.msg_feed_invalid)
             return
         }
         _feeds.value = nodeMeshManager.getFeedSources()
-        _status.value = "Feed added. Fetching the current lists…"
+        _status.value = str(R.string.msg_feed_added)
         updateFeedsNow()
     }
 
@@ -69,7 +74,7 @@ class NodeListsViewModel @Inject constructor(
         nodeMeshManager.removeFeedSource(id)
         _feeds.value = nodeMeshManager.getFeedSources()
         refresh()
-        _status.value = "Feed removed. The lists it filled stay until you delete them."
+        _status.value = str(R.string.msg_feed_removed)
     }
 
     fun updateFeedsNow() {
@@ -104,7 +109,7 @@ class NodeListsViewModel @Inject constructor(
     fun previewImport(text: String) {
         val file = NodeListFile.parse(text.trim())
         if (file == null) {
-            _status.value = "That is not a node list. Use the file from the server's setup page (\"Liste als Datei speichern\")."
+            _status.value = str(R.string.msg_list_invalid)
             return
         }
         val known = nodeMeshManager.getMyNodePool().map { it.address }.toSet()
@@ -124,12 +129,11 @@ class NodeListsViewModel @Inject constructor(
                 _pending.value = null
             }
             is NodeMeshManager.ImportResult.NoRoom -> {
-                _status.value = "Not imported: needs room for ${r.needed} more nodes, only ${r.free} free " +
-                    "(limit ${NodeMeshManager.OWN_NODES_MAX}). Delete a list you no longer use first."
+                _status.value = str(R.string.msg_list_no_room, r.needed, r.free, NodeMeshManager.OWN_NODES_MAX)
                 _pending.value = null
             }
             NodeMeshManager.ImportResult.UnknownList -> {
-                _status.value = "That list no longer exists."
+                _status.value = str(R.string.msg_list_gone)
                 _pending.value = null
             }
         }
@@ -144,7 +148,7 @@ class NodeListsViewModel @Inject constructor(
     /** Removes the list and its nodes from this device. */
     fun delete(listId: String) {
         val removed = nodeMeshManager.deleteNodeList(listId)
-        _status.value = "List deleted, $removed node(s) removed from this device."
+        _status.value = str(R.string.msg_list_deleted, removed)
         refresh()
     }
 

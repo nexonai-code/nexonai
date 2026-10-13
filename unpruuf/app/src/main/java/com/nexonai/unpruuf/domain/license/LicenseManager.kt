@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.domain.license
 
+import com.nexonai.unpruuf.R
+
 import android.content.Context
 import android.provider.Settings
 import android.util.Base64
@@ -72,11 +74,11 @@ class LicenseManager @Inject constructor(
      * check only ever rejects a code arriving already bound to a DIFFERENT device.
      */
     fun applyLicenseCode(code: String): String? {
-        if (parseAndVerify(code) == null) return "This license code isn't valid."
+        if (parseAndVerify(code) == null) return context.getString(R.string.msg_license_invalid)
         val boundHash = prefs.getString(KEY_DEVICE_HASH, null)
         val thisHash = deviceFingerprint()
         if (boundHash != null && boundHash != thisHash) {
-            return "This license is already activated on a different device."
+            return context.getString(R.string.msg_license_other_device)
         }
         prefs.edit()
             .putString(KEY_CODE, code)
@@ -93,10 +95,10 @@ class LicenseManager @Inject constructor(
     private fun computeState(): LicenseState {
         val code = prefs.getString(KEY_CODE, null) ?: return LicenseState.NotConfigured
         val info = parseAndVerify(code)
-            ?: return LicenseState.Invalid("The stored license failed re-verification.")
+            ?: return LicenseState.Invalid(context.getString(R.string.msg_license_reverify))
         val boundHash = prefs.getString(KEY_DEVICE_HASH, null)
         if (boundHash != null && boundHash != deviceFingerprint()) {
-            return LicenseState.Invalid("This license is activated on a different device.")
+            return LicenseState.Invalid(context.getString(R.string.msg_license_other_device2))
         }
         val now = trustedNowMs()
         val daysLeft = (info.expiresAtMs - now) / MS_PER_DAY
