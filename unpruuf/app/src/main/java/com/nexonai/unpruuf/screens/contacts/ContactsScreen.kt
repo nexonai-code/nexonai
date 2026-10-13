@@ -39,6 +39,7 @@ fun ContactsScreen(
     onAddContact: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onVerifyContact: (Contact) -> Unit,
+    onOpenGroups: () -> Unit = {},
     viewModel: ContactsViewModel = hiltViewModel()
 ) {
     val updatedSentText = stringResource(R.string.contacts_updated_sent)
@@ -72,6 +73,14 @@ fun ContactsScreen(
                     // Tor state, promoted from a buried notification to a live pill.
                     TorStatusPill(active = torActive, selfReachable = selfReachable)
                     Spacer(Modifier.width(6.dp))
+                    // Pro Groups edition only: local groups.
+                    if (com.nexonai.unpruuf.domain.AppEdition.isGroup) {
+                        IconButton(onClick = onOpenGroups) {
+                            BadgedBox(badge = { if (unreadContactIds.any { it.startsWith("g:") }) Badge(containerColor = UnreadDotColor) }) {
+                                Icon(Icons.Default.Groups, stringResource(R.string.contacts_cd_groups))
+                            }
+                        }
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, stringResource(R.string.contacts_cd_settings))
                     }

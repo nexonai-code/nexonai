@@ -15,6 +15,9 @@ import com.nexonai.unpruuf.screens.cases.CasesScreen
 import com.nexonai.unpruuf.screens.chat.ChatScreen
 import com.nexonai.unpruuf.screens.contactdetail.ContactDetailScreen
 import com.nexonai.unpruuf.screens.contacts.ContactsScreen
+import com.nexonai.unpruuf.screens.groups.GroupChatScreen
+import com.nexonai.unpruuf.screens.groups.GroupEditScreen
+import com.nexonai.unpruuf.screens.groups.GroupsScreen
 import com.nexonai.unpruuf.screens.home.HomeScreen
 import com.nexonai.unpruuf.screens.home.HomeViewModel
 import com.nexonai.unpruuf.screens.qrpair.QrPairScreen
@@ -30,7 +33,13 @@ object Routes {
     const val NODE_LISTS = "node_lists"
     const val CONTACT_DETAIL = "contact_detail/{contactId}"
     const val CASES = "cases"
+    const val GROUPS = "groups"
+    /** groupId "new" = create. */
+    const val GROUP_EDIT = "group_edit/{groupId}"
+    const val GROUP_CHAT = "group_chat/{groupId}"
 
+    fun groupEditRoute(groupId: String) = "group_edit/$groupId"
+    fun groupChatRoute(groupId: String) = "group_chat/$groupId"
     fun chatRoute(contactId: String) = "chat/$contactId"
     fun contactDetailRoute(contactId: String) = "contact_detail/$contactId"
 
@@ -72,7 +81,41 @@ fun AppNavigation(
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
                 onVerifyContact = { contact ->
                     navController.navigate(Routes.contactDetailRoute(contact.id))
-                }
+                },
+                onOpenGroups = { navController.navigate(Routes.GROUPS) }
+            )
+        }
+        composable(Routes.GROUPS) {
+            GroupsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenGroup = { id -> navController.navigate(Routes.groupChatRoute(id)) },
+                onNewGroup = { navController.navigate(Routes.groupEditRoute("new")) }
+            )
+        }
+        composable(
+            route = Routes.GROUP_CHAT,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) { backStack ->
+            val groupId = backStack.arguments?.getString("groupId") ?: return@composable
+            GroupChatScreen(
+                groupId = groupId,
+                onNavigateBack = { navController.popBackStack() },
+                onEdit = { navController.navigate(Routes.groupEditRoute(groupId)) }
+            )
+        }
+        composable(
+            route = Routes.GROUP_EDIT,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) { backStack ->
+            val groupId = backStack.arguments?.getString("groupId") ?: return@composable
+            GroupEditScreen(
+                groupId = groupId.takeIf { it != "new" },
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = { id ->
+                    navController.popBackStack(Routes.GROUPS, inclusive = false)
+                    navController.navigate(Routes.groupChatRoute(id))
+                },
+                onDeleted = { navController.popBackStack(Routes.GROUPS, inclusive = false) }
             )
         }
         composable(Routes.HOME) {

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.nexonai.unpruuf.data.db.AppDatabase
 import com.nexonai.unpruuf.data.db.ContactDao
+import com.nexonai.unpruuf.data.db.GroupDao
 import com.nexonai.unpruuf.data.db.RatchetStateDao
 import dagger.Module
 import dagger.Provides
@@ -30,13 +31,16 @@ object AppModule {
             "unpruuf_contacts.db"
         )
             .openHelperFactory(factory)
-            .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12)
+            .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12, com.nexonai.unpruuf.data.db.MIGRATION_12_13)
             .fallbackToDestructiveMigration()
             .build()
     }
 
     @Provides
     fun provideContactDao(db: AppDatabase): ContactDao = db.contactDao()
+
+    @Provides
+    fun provideGroupDao(db: AppDatabase): GroupDao = db.groupDao()
 
     @Provides
     fun provideRatchetStateDao(db: AppDatabase): RatchetStateDao = db.ratchetStateDao()

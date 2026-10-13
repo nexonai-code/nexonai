@@ -17,8 +17,8 @@ android {
         // Bump both fields together on every delivery — versionCode must strictly
         // increase for Play/internal distribution, versionName is what's shown in
         // Settings (see SettingsScreen's "App version" row). See STATUS.md "Versioning".
-        versionCode = 16
-        versionName = "1.15"
+        versionCode = 17
+        versionName = "1.16"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -90,6 +90,16 @@ android {
             versionNameSuffix = "-client"
             buildConfigField("String", "EDITION", "\"client\"")
             resValue("string", "app_name", "unpruuf Client")
+        }
+        // unpruuf Pro Groups: the Pro (Business) app plus local groups (a group message is sent as
+        // one ordinary 1:1 message per member; see domain/group/ and EDITIONS.md). Own install id
+        // so it sits next to Pro; pairs only with other Groups installs (AppEdition.canAdd).
+        create("group") {
+            dimension = "edition"
+            applicationIdSuffix = ".group"
+            versionNameSuffix = "-group"
+            buildConfigField("String", "EDITION", "\"group\"")
+            resValue("string", "app_name", "unpruuf Pro Groups")
         }
         // Compliance/whistleblower product line (separate from Standard/Pro/Client — see
         // CROSS_PLATFORM_PLAN.md "Two separate product lines" and AppEdition.kt). Deliberately

@@ -124,7 +124,7 @@ class LicenseManager @Inject constructor(
         val fields = String(payload, Charsets.UTF_8).split("|")
         if (fields.size != 6 || fields[0] != "1") return null
         val edition = fields[1]
-        if (edition != AppEdition.STANDARD && edition != AppEdition.PRO && edition != AppEdition.CLIENT) return null
+        if (edition != AppEdition.STANDARD && edition != AppEdition.PRO && edition != AppEdition.CLIENT && edition != AppEdition.GROUP) return null
         // A genuinely-signed license for one edition must not unlock a build of another —
         // otherwise a cheaper Standard code activates the Pro build just as well, since
         // nothing else here is edition-gated. license-tool/issue.js's own --edition flag

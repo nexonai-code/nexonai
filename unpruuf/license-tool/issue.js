@@ -15,7 +15,7 @@ const {
 function usage(msg) {
   if (msg) console.error(msg + '\n');
   console.error(`Usage:
-  node issue.js --edition <standard|pro|client> --customer "<name>" --count <N>
+  node issue.js --edition <standard|pro|client|group> --customer "<name>" --count <N>
                  [--years <N=1>] [--serial-prefix <PREFIX=NX>] [--start-at <N=1>]
                  [--out <manifest.csv>]
 

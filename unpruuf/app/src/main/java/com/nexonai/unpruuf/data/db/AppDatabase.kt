@@ -3,9 +3,10 @@ package com.nexonai.unpruuf.data.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.nexonai.unpruuf.data.model.Contact
+import com.nexonai.unpruuf.data.model.GroupEntity
 
 @Database(
-    entities = [Contact::class, RatchetStateEntity::class],
+    entities = [Contact::class, RatchetStateEntity::class, GroupEntity::class],
     // v3: Contact.ratchetPublicKey (EC, one-time-ECIES) replaced by
     // Contact.x25519RatchetPublicKey (X25519, full Double Ratchet) + new
     // ratchet_state table. Destructive migration wipes contacts on update —
@@ -40,12 +41,15 @@ import com.nexonai.unpruuf.data.model.Contact
     // REAL migration (MIGRATION_10_11, plain ADD COLUMNs) — contacts survive this update.
     // v12: Contact.messageTtlHours (per-chat packet lifetime on the nodes: 1 / 6 / 24 h). Plain
     // nullable ADD COLUMN (MIGRATION_11_12) — contacts survive.
-    version = 12,
+    // v13: new table "chat_groups" for the Pro Groups edition (local groups, see GroupEntity). A plain
+    // CREATE TABLE (MIGRATION_12_13) — contacts and everything else survive.
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
     abstract fun ratchetStateDao(): RatchetStateDao
+    abstract fun groupDao(): GroupDao
 }
 
 /** v10 → v11: only nullable columns added, so existing contacts are kept (no re-pairing). */
@@ -62,5 +66,15 @@ val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
 val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
     override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE contacts ADD COLUMN messageTtlHours INTEGER")
+    }
+}
+
+/** v12 → v13: the local groups table (Pro Groups). */
+val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `chat_groups` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`code` TEXT NOT NULL, `memberIds` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))"
+        )
     }
 }

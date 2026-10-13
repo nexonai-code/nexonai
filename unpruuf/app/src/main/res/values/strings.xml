@@ -369,4 +369,45 @@ and wiped when the screen locks</string>
     <string name="node_feeds_secret_warning">The feed code is a secret from your company. Do not pass it on.</string>
     <string name="node_feeds_remove_title">Remove \"%1$s\"?</string>
     <string name="node_feeds_remove_body">The app stops following this feed. The lists it filled stay on this device until you delete them.</string>
+
+    <!-- Pro Groups edition: local groups (no group server; one 1:1 message per member) -->
+    <string name="contacts_cd_groups">Groups</string>
+    <string name="groups_title">Groups</string>
+    <string name="groups_cd_back">Back</string>
+    <string name="groups_new">New group</string>
+    <string name="groups_cancel">Cancel</string>
+    <string name="groups_empty_title">No groups yet</string>
+    <string name="groups_empty_body">A group exists only on your phone and on the phones of its members. Agree on a group with your team, then everyone creates it with the same code.</string>
+    <string name="groups_no_members">No members</string>
+    <string name="groups_unknown_contact">Unknown contact</string>
+    <string name="groups_notices_title">Group messages that were not shown</string>
+    <string name="groups_notice_unknown">%1$s wrote to a group you have not created on this phone.</string>
+    <string name="groups_notice_not_member">%1$s wrote to one of your groups but is not a member in your list.</string>
+    <string name="groups_notices_dismiss">Dismiss</string>
+    <string name="group_new_title">New group</string>
+    <string name="group_edit_title">Edit group</string>
+    <string name="group_name_label">Group name (only you see it)</string>
+    <string name="group_code_label">Group code</string>
+    <string name="group_code_ok">Code is valid</string>
+    <string name="group_code_bad">Not a valid code. Check for typing mistakes.</string>
+    <string name="group_code_fixed">The code cannot be changed. It is what makes this the same group on every phone.</string>
+    <string name="group_code_copy">Copy code</string>
+    <string name="group_code_suggest">New code</string>
+    <string name="group_how_it_works">One person creates the code and tells the others (read it out or send it in an existing chat). Everybody creates the group with the same code and picks the same people from their own contacts.</string>
+    <string name="group_members_label">Members (%1$d of max %2$d)</string>
+    <string name="group_no_contacts">You have no contacts yet. Add the group members first.</string>
+    <string name="group_same_people">Every member must know every other member. Only people who also picked this group with the same code will see your messages here.</string>
+    <string name="group_create">Create group</string>
+    <string name="group_save">Save</string>
+    <string name="group_delete">Delete group</string>
+    <string name="group_delete_title">Delete this group?</string>
+    <string name="group_delete_body">The group and its messages are removed from this phone only. The other members keep theirs until they remove it too.</string>
+    <string name="group_chat_members">%1$d members: you, %2$s</string>
+    <string name="group_chat_empty">No messages. Messages disappear from this phone a few minutes after they are shown, like in every chat.</string>
+    <string name="group_message_hint">Message to the group</string>
+    <string name="group_cd_edit">Edit group</string>
+    <string name="group_cd_send">Send</string>
+    <string name="group_delivery">delivered to %1$d of %2$d</string>
+    <string name="group_mismatch_title">Your group and theirs differ</string>
+    <string name="group_mismatch_line">%1$s has %2$d people in this group, you have %3$d. Messages may not reach everyone. Compare the member lists.</string>
 </resources>

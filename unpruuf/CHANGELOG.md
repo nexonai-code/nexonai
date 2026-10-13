@@ -5,6 +5,34 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑13 · unpruuf Pro Groups (new edition: Pro plus local groups)
+
+**What was done**
+
+- New Gradle flavor `group` (`com.nexonai.unpruuf.group`, name "unpruuf Pro Groups", violet). Own install id: it sits next to Pro, Pro itself is not changed in behaviour. It pairs only with other Pro Groups installs (`AppEdition.canAdd`); Pro, Standard and Client now also reject a Groups code, so a contact that cannot read group messages can never be added.
+- Groups exist only on the phones. No group server, no group key. A group message is one ordinary end-to-end encrypted 1:1 message per member, over that member's own nodes and keys.
+- **Group code** (`GroupCode`): the members agree on one code (12 random characters of a 32-letter alphabet plus 2 check characters; every wrong or swapped character is caught). Each member creates the group with the same code and picks the people from their own contacts. On the wire only an 8-byte one-way hash of the code travels, inside the encrypted message.
+- Receiving (`GroupInbox`): a message is shown in the group chat only if the group id matches one of my groups and the sender (known from the channel) is a member in MY list; the name shown is from my address book. Otherwise it is listed as a notice ("X wrote to a group you have not created"), without text. If the sender's member count differs from mine, the chat shows a warning.
+- Sending (`GroupManager`): maximum 10 people including me; sends are spread over a few seconds in random order so a watcher of my nodes does not see N packets at the same instant; delivery shows "delivered to 2 of 4". Text only.
+- Screens: Groups list (icon in the contacts bar, unread dot), create/edit group (name, code with copy and suggest, member checklist), group chat.
+- Database v13 (`chat_groups`, plain CREATE TABLE migration, contacts survive). Licence: `group` is an accepted licence edition (`license-tool` `--edition group`).
+- Wire format: new payload type 3 (`[3][group id 8][member count 1][text]`); other editions ACK and drop it.
+
+**Checked**
+
+- Unit tests for the code (generation, every single wrong character, swapped neighbours, typing style, one-way id), payload round trip and truncation, receive decisions. All flavors: unit tests and `assembleDebug`.
+
+**Not checked**
+
+- A real group of phones over real nodes (two or more devices); the random send spread against a real observer; delivery counts over days.
+
+**Known limits (by design)**
+
+- Member lists can differ between phones (nobody enforces them); the warning only covers the member count. Leaving or removing someone is local.
+- Everyone sees messages in the order they pick them up. A member offline longer than the chosen packet lifetime (at most 24 hours) misses messages. Text only. Interface English only (same as Pro).
+
+---
+
 ## 2026‑10‑12 · safeline Press (journalist version of the officer app)
 
 **What was done**

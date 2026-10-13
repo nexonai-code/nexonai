@@ -23,5 +23,8 @@ val StandardAccent = Color(0xFF45D0BB)
 val StandardAccentDark = Color(0xFF123B35)
 val ProAccent = Color(0xFFE3B341)
 val ProAccentDark = Color(0xFF3A2E14)
+// Pro Groups: violet, so it is told apart from Pro (gold) at a glance.
+val GroupAccent = Color(0xFFA78BFA)
+val GroupAccentDark = Color(0xFF2A1F4D)
 val ClientAccent = Color(0xFF64A9EE)
 val ClientAccentDark = Color(0xFF122C44)

@@ -58,6 +58,11 @@ class InMemoryMessageStore @Inject constructor() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    // Other RAM-only state (the Groups edition's notices) that must be wiped together with the
+    // messages when the app locks or goes to the background.
+    private val wipeListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+    fun addWipeListener(listener: () -> Unit) { wipeListeners.add(listener) }
+
     init {
         scope.launch {
             while (isActive) {
@@ -100,6 +105,7 @@ class InMemoryMessageStore @Inject constructor() {
         _messages.value.values.flatten().forEach { it.zeroize() }
         _messages.value = emptyMap()
         _unreadContactIds.value = emptySet()
+        wipeListeners.forEach { runCatching { it() } }
     }
 
     fun zeroizeContact(contactId: String) {

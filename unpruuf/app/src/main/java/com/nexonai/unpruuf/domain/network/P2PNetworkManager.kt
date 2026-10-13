@@ -58,7 +58,8 @@ class P2PNetworkManager @Inject constructor(
     private val relayClient: RelayClient,
     private val nodeMeshManager: NodeMeshManager,
     private val nodeMeshClient: NodeMeshClient,
-    private val feedUpdater: FeedUpdater
+    private val feedUpdater: FeedUpdater,
+    private val groupInbox: com.nexonai.unpruuf.domain.group.GroupInbox
 ) {
     companion object {
         // LAN discovery on/off + hourly name rotation is re-checked this often.
@@ -74,6 +75,7 @@ class P2PNetworkManager @Inject constructor(
         val LOCAL_PORT: Int = 54321 + when (AppEdition.current) {
             AppEdition.PRO -> 1
             AppEdition.CLIENT -> 2
+            AppEdition.GROUP -> 3
             else -> 0
         }
         val REVOKE_SIGNAL: ByteArray = "UNPRUUF_REVOKE_V1".toByteArray(Charsets.UTF_8)
@@ -1519,6 +1521,16 @@ class P2PNetworkManager @Inject constructor(
         }.getOrNull() ?: return false
 
         val content = MessagePayload.decode(realPlaintext) ?: return false
+        // Pro Groups: a message to a group, sent to us as an ordinary 1:1 message by one member.
+        // Other editions never receive one (they pair only with their own kind) but still ACK and
+        // drop it rather than let the sender retry forever.
+        if (content is MessagePayload.Content.Group) {
+            if (AppEdition.isGroup) {
+                groupInbox.receive(senderId, content.groupId, content.memberCount, content.text)
+                showMessageNotification()
+            }
+            return true
+        }
         // Whistleblower: the officer's case receipt / status update — stored on the contact for
         // the "My case" screen, never shown as a chat line. The hello is our own kind; a peer
         // never sends it to us, but it must not surface as text if one ever arrives.
@@ -1552,6 +1564,7 @@ class P2PNetworkManager @Inject constructor(
                 type = if (content.isImage) MessageType.IMAGE else MessageType.FILE,
                 fileName = content.name
             )
+            is MessagePayload.Content.Group -> return true // handled above
         }
         messageStore.addMessage(senderId, msg)
         messageStore.markUnread(senderId)

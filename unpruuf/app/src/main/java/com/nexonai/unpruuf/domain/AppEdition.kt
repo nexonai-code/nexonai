@@ -25,11 +25,18 @@ object AppEdition {
     /** Press edition of the reporting app (a source writing to a journalist): behaves exactly like
      *  [WHISTLEBLOWER], only the wording differs (app/src/press/res). */
     const val PRESS = "press"
+    /** unpruuf Pro Groups: Pro (Business) plus local groups. Own install id, pairs only with other
+     *  Groups installs, so every contact of a group member is guaranteed to understand group
+     *  messages. Pro/Standard/Client never see it as a contact and vice versa. */
+    const val GROUP = "group"
 
     val current: String get() = BuildConfig.EDITION
 
     val isStandard: Boolean get() = current == STANDARD
-    val isPro: Boolean get() = current == PRO
+    /** True for Pro and for Pro Groups: the Groups edition is Pro with local groups on top, so
+     *  every "behaves like Pro" check (Node-Mesh only, licence, pairing UI) includes it. */
+    val isPro: Boolean get() = current == PRO || current == GROUP
+    val isGroup: Boolean get() = current == GROUP
     val isClient: Boolean get() = current == CLIENT
     /** True for both reporting editions: they share every rule, press only changes the words. */
     val isWhistleblower: Boolean get() = current == WHISTLEBLOWER || current == PRESS
@@ -41,19 +48,23 @@ object AppEdition {
             CLIENT -> "Client"
             WHISTLEBLOWER -> "Whistleblower"
             PRESS -> "Press"
+            GROUP -> "Pro Groups"
             else -> "Standard"
         }
 
     /** Darf diese App einen Kontakt der Edition [theirEdition] per QR hinzufügen? */
     fun canAdd(theirEdition: String): Boolean = when (current) {
         WHISTLEBLOWER, PRESS -> theirEdition == OFFICER
-        PRO -> theirEdition != WHISTLEBLOWER && theirEdition != PRESS && theirEdition != OFFICER
+        GROUP -> theirEdition == GROUP
+        PRO -> theirEdition != WHISTLEBLOWER && theirEdition != PRESS && theirEdition != OFFICER && theirEdition != GROUP
         CLIENT -> theirEdition == PRO
-        else -> theirEdition != CLIENT && theirEdition != WHISTLEBLOWER && theirEdition != PRESS && theirEdition != OFFICER // standard
+        else -> theirEdition != CLIENT && theirEdition != WHISTLEBLOWER && theirEdition != PRESS && theirEdition != OFFICER && theirEdition != GROUP // standard
     }
 
     /** Erklärtext, warum ein Pairing blockiert wurde. */
     fun blockReason(theirEdition: String): String = when {
+        isGroup -> "unpruuf Pro Groups can only connect with other unpruuf Pro Groups users."
+        theirEdition == GROUP -> "This is an unpruuf Pro Groups pairing code — it can only be added in the Pro Groups app."
         isWhistleblower -> "This app can only connect with a compliance officer's pairing code."
         isClient -> "unpruuf Client can only connect with unpruuf Pro users."
         theirEdition == CLIENT -> "Only unpruuf Pro can add Client users."

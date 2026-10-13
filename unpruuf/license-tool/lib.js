@@ -6,7 +6,7 @@
 const crypto = require('crypto');
 
 const LICENSE_PREFIX = 'unpruuf-license:v1:';
-const EDITIONS = ['standard', 'pro', 'client'];
+const EDITIONS = ['standard', 'pro', 'client', 'group'];
 
 // One license year is defined as exactly 365 days (not calendar years) so expiry math is
 // unambiguous regardless of leap years — matches how TOR_CONNECT_TIMEOUT_MS-style constants
