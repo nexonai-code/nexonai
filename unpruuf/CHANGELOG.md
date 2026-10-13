@@ -5,6 +5,35 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑13 · Temp Node on this phone (Pro Groups)
+
+**What was done**
+
+- In a chat's Temp Node dialog (Pro Groups only) there is now **"Start on this phone"**. The app starts a Temp Node for this one chat on the phone itself: a new onion address that exists only while it runs (the key is never kept), a small node server on 127.0.0.1, packets in memory only. Nothing else is needed: no second device, no QR.
+- It speaks the same node contract as the servers and the Android relay (`/health`, owner-only `/deposit`, `/fetch`, `/fetchMany` with `waitMs` and cursor, `/pool`), so the contact's app, including iOS, cannot tell it from another node and needs no change. The contact learns the address through the normal Temp Node announcement.
+- Routing, heartbeat and fallback are the existing ones. Differences for a phone-hosted node: messages are put into it directly (no Tor round trip to itself); a local deposit does not count as "confirmed", only the heartbeat's real reachability check does, so until then every message also goes to the normal servers; if the phone cannot be reached three checks in a row the chat falls back to the normal servers by itself.
+- Stop (or deleting the contact) removes the address and every waiting packet. One phone Temp Node at a time. A registration left over from a closed or killed app is found at the next start, cleared, and the contact is told.
+- The Tor notification says "Temp Node active for one chat" while it runs.
+- Database v14: `tempNodeOnPhone` (plain ADD COLUMN). New texts in English and Romanian.
+
+**Checked**
+
+- 25 unit tests with a real HTTP server on loopback and a fake onion host: start and stop (address removed, port closed, nothing survives a restart), owner-only deposit, validation and size limits, fetch never deletes, cursor, long-poll wake-up and timeout, release on stop, expiry (a deposit can only shorten the lifetime, 24 h at most), per-tag and total caps, read rate limit, garbage input, loopback-only listening, and the app's own `NodeMeshClient` parsers run on the node's real answers.
+- All variants build; unit tests of all variants pass.
+
+**Not checked**
+
+- A real phone: the onion address being published and reached by a contact over Tor, battery and background behaviour, the dialog on screen. The heartbeat, deposit routing and orphan clean-up changes sit inside `P2PNetworkManager` and have no unit test of their own.
+- Whether Tor lets a phone reach its own onion address on every network. If not, the node stays in the "registered, not confirmed" state: it still works, because every message also goes to the normal servers.
+
+**Known limits (by design)**
+
+- The contact can pick up only while this phone is on, awake, online and the app is running. Android may end the app in the background.
+- The address is online when the phone is online, so anyone who knows the address could see those times. Only you and the contact know it.
+- No proof-of-work flood protection, as with every Android node.
+
+---
+
 ## 2026‑10‑13 · unpruuf Control (new component: the customer's console for servers and licences)
 
 **What was done**

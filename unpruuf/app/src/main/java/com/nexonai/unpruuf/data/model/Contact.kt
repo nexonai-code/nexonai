@@ -158,5 +158,8 @@ data class Contact(
     /** How long my packets for this contact may wait on a Node-Mesh node: 1, 6 or 24 hours
      *  (null = 24, the node's maximum). Sent as the deposit's ttl; a node never keeps a packet
      *  longer than its own profile allows, whatever is asked. See [MessageTtl]. */
-    val messageTtlHours: Int? = null
+    val messageTtlHours: Int? = null,
+    /** The registered Temp Node is the one running on THIS phone (Pro Groups, see PhoneTempNode):
+     *  it vanishes with the app process, so a start finds and clears it. */
+    val tempNodeOnPhone: Boolean = false
 )

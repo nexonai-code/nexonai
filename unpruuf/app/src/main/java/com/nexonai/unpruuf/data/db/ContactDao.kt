@@ -82,13 +82,17 @@ interface ContactDao {
 
     /** Registers a freshly scanned/pasted temp node for this one chat — always starts
      *  unconfirmed (see P2PNetworkManager's dual-deposit-until-first-success handling). */
-    @Query("UPDATE contacts SET tempNodeAddress = :address, tempNodeOwnerSecret = :ownerSecret, tempNodeActive = 0 WHERE id = :id")
+    @Query("UPDATE contacts SET tempNodeAddress = :address, tempNodeOwnerSecret = :ownerSecret, tempNodeActive = 0, tempNodeOnPhone = 0 WHERE id = :id")
     suspend fun updateTempNode(id: String, address: String, ownerSecret: String)
+
+    /** The same registration for a Temp Node that runs on this phone (see PhoneTempNode). */
+    @Query("UPDATE contacts SET tempNodeAddress = :address, tempNodeOwnerSecret = :ownerSecret, tempNodeActive = 0, tempNodeOnPhone = 1 WHERE id = :id")
+    suspend fun updatePhoneTempNode(id: String, address: String, ownerSecret: String)
 
     /** Explicit deactivation (§7 step 8's "sauberer Übergang zurück auf Standard-Nodes") —
      *  unlike the automatic heartbeat-timeout fallback in [setTempNodeActive], this drops the
      *  registration entirely rather than leaving it around to retry. */
-    @Query("UPDATE contacts SET tempNodeAddress = NULL, tempNodeOwnerSecret = NULL, tempNodeActive = 0 WHERE id = :id")
+    @Query("UPDATE contacts SET tempNodeAddress = NULL, tempNodeOwnerSecret = NULL, tempNodeActive = 0, tempNodeOnPhone = 0 WHERE id = :id")
     suspend fun clearTempNode(id: String)
 
     /** Flips the confirmed/active state — see Contact.tempNodeActive's doc comment for the

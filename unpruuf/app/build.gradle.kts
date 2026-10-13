@@ -17,8 +17,8 @@ android {
         // Bump both fields together on every delivery — versionCode must strictly
         // increase for Play/internal distribution, versionName is what's shown in
         // Settings (see SettingsScreen's "App version" row). See STATUS.md "Versioning".
-        versionCode = 17
-        versionName = "1.16"
+        versionCode = 18
+        versionName = "1.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -157,3 +157,7 @@ message is shown only if the sender is a member in the receiver's list. Member l
 if a sender's member count differs from the receiver's, the chat shows a warning.
 
 Licence: `node license-tool/issue.js --edition group ...`.
+
+Temp Node on the phone (added 2026-10-13): in a chat's Temp Node dialog, Pro Groups can start the Temp Node on
+the phone itself for that chat (new address, memory only, removed on stop). The contact needs no change. It works
+only while the phone is on and online; see `CHANGELOG.md` for the exact behaviour and limits.

@@ -43,6 +43,9 @@ class TorForegroundService : Service() {
     @Inject
     lateinit var torManager: TorManager
 
+    @Inject
+    lateinit var phoneTempNode: com.nexonai.unpruuf.domain.network.PhoneTempNode
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -81,10 +84,21 @@ class TorForegroundService : Service() {
     }
 
     private fun observeTorStatus() {
+        // While this phone is a Temp Node the notification says so: the owner must know the phone
+        // is serving, and that stopping the app ends it.
+        serviceScope.launch {
+            phoneTempNode.state.collect { st ->
+                if (torManager.isReady.value) {
+                    updateNotification(
+                        if (st is com.nexonai.unpruuf.domain.network.PhoneTempNode.State.Running) getString(R.string.tor_notif_temp_node) else "Tor active"
+                    )
+                }
+            }
+        }
         serviceScope.launch {
             torManager.isReady.collect { ready ->
                 if (ready) {
-                    updateNotification("Tor active")
+                    updateNotification(if (phoneTempNode.isRunning()) getString(R.string.tor_notif_temp_node) else "Tor active")
                     scheduleDummyTraffic()
                 } else {
                     updateNotification("Connecting to Tor…")

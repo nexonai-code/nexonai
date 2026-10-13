@@ -42,7 +42,8 @@ class ChatViewModel @Inject constructor(
     private val p2pNetworkManager: P2PNetworkManager,
     private val appLockManager: AppLockManager,
     private val relayManager: RelayManager,
-    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
+    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases,
+    private val phoneTempNode: com.nexonai.unpruuf.domain.network.PhoneTempNode
 ) : ViewModel() {
     private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
 
@@ -294,6 +295,51 @@ class ChatViewModel @Inject constructor(
             contactDao.clearTempNode(contact.id)
             _contact.value = contactDao.getContactById(contact.id)
             p2pNetworkManager.sendTempNodeDeactivate(contact.id)
+            // When the Temp Node is this phone, ending it also removes its address and every waiting packet.
+            if (contact.tempNodeOnPhone) phoneTempNode.stop()
+        }
+    }
+
+    // ─── Temp Node on this phone (Pro Groups) ────────────────────────────────────────────────
+
+    /** State of the phone-hosted Temp Node (one at a time, for one chat). */
+    val phoneTempNodeState = phoneTempNode.state
+
+    /** Whether this build offers the phone as a Temp Node. */
+    val phoneTempNodeSupported: Boolean = com.nexonai.unpruuf.domain.AppEdition.isGroup
+
+    /** True if the phone's Temp Node runs for ANOTHER chat than this one. */
+    fun phoneTempNodeBusyElsewhere(): Boolean {
+        val running = phoneTempNode.runningFor()
+        return running != null && running != _contact.value?.id
+    }
+
+    /**
+     * Starts a Temp Node on this phone for this chat: a fresh onion address, memory only. Registered
+     * like any Temp Node (so the existing routing, heartbeat and fallback apply) and announced to the
+     * contact through the normal servers. Errors go to [tempNodeError].
+     */
+    fun startPhoneTempNode() {
+        val contact = _contact.value ?: return
+        if (!phoneTempNodeSupported || !contact.nodeMesh) return
+        viewModelScope.launch {
+            when (val r = phoneTempNode.start(contact.id)) {
+                is com.nexonai.unpruuf.domain.network.PhoneTempNode.StartResult.Started -> {
+                    _tempNodeError.value = null
+                    contactDao.updatePhoneTempNode(contact.id, r.address, r.ownerSecret)
+                    _contact.value = contactDao.getContactById(contact.id)
+                    p2pNetworkManager.sendTempNodeAnnouncement(contact.id, r.address)
+                }
+                is com.nexonai.unpruuf.domain.network.PhoneTempNode.StartResult.Failed -> {
+                    _tempNodeError.value = str(
+                        when (r.reason) {
+                            com.nexonai.unpruuf.domain.network.PhoneTempNode.Reason.TOR_NOT_READY -> R.string.msg_phone_tn_tor
+                            com.nexonai.unpruuf.domain.network.PhoneTempNode.Reason.ALREADY_RUNNING -> R.string.msg_phone_tn_busy
+                            else -> R.string.msg_phone_tn_failed
+                        }
+                    )
+                }
+            }
         }
     }
 

@@ -43,7 +43,9 @@ import com.nexonai.unpruuf.data.model.GroupEntity
     // nullable ADD COLUMN (MIGRATION_11_12) — contacts survive.
     // v13: new table "chat_groups" for the Pro Groups edition (local groups, see GroupEntity). A plain
     // CREATE TABLE (MIGRATION_12_13) — contacts and everything else survive.
-    version = 13,
+    // v14: Contact.tempNodeOnPhone (the Temp Node of this chat runs on this phone, Pro Groups).
+    // Plain ADD COLUMN with a default (MIGRATION_13_14) — contacts survive.
+    version = 14,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -76,5 +78,12 @@ val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
             "CREATE TABLE IF NOT EXISTS `chat_groups` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
                 "`code` TEXT NOT NULL, `memberIds` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))"
         )
+    }
+}
+
+/** v13 → v14: one flag column, existing contacts are kept. */
+val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE contacts ADD COLUMN tempNodeOnPhone INTEGER NOT NULL DEFAULT 0")
     }
 }

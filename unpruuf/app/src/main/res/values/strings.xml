@@ -476,4 +476,16 @@ and wiped when the screen locks</string>
     <string name="msg_group_name_range">Give the group a name (max %1$d characters).</string>
     <string name="msg_tor_channel_desc">Shows the Tor connection status</string>
     <string name="msg_ready_to_receive">Ready to receive</string>
+
+    <!-- Temp Node on this phone (Pro Groups) -->
+    <string name="chat_temp_node_phone_title">Use this phone as the Temp Node</string>
+    <string name="chat_temp_node_phone_body">This phone becomes the Temp Node for this chat only, with a new address that exists only while it runs. Your contact can pick up your messages only while this phone is on, awake and online. When you stop it, the address and everything still waiting on it are gone, and the chat uses your normal servers again.</string>
+    <string name="chat_temp_node_phone_start">Start on this phone</string>
+    <string name="chat_temp_node_phone_starting">Starting…</string>
+    <string name="chat_temp_node_phone_running">Running on this phone</string>
+    <string name="chat_temp_node_phone_warning">Keep the app open and the phone online. If the app is closed or the phone goes off, nothing waits for your contact.</string>
+    <string name="msg_phone_tn_tor">Tor is not ready yet. Wait a moment and try again.</string>
+    <string name="msg_phone_tn_busy">A Temp Node already runs on this phone for another chat. Stop it there first.</string>
+    <string name="msg_phone_tn_failed">The Temp Node could not be started.</string>
+    <string name="tor_notif_temp_node">Temp Node active for one chat</string>
 </resources>

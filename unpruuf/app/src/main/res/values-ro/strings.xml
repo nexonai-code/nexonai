@@ -453,4 +453,16 @@ Această acțiune nu poate fi anulată.</string>
     <string name="msg_group_name_range">Dă grupului un nume (maximum %1$d caractere).</string>
     <string name="msg_tor_channel_desc">Afișează starea conexiunii Tor</string>
     <string name="msg_ready_to_receive">Gata de primire</string>
+
+    <!-- Temp Node on this phone (Pro Groups) -->
+    <string name="chat_temp_node_phone_title">Folosește acest telefon ca Temp Node</string>
+    <string name="chat_temp_node_phone_body">Acest telefon devine Temp Node doar pentru această conversație, cu o adresă nouă care există doar cât rulează. Contactul tău poate ridica mesajele tale doar cât timp acest telefon este pornit, treaz și online. Când îl oprești, adresa și tot ce mai aștepta pe ea dispar, iar conversația folosește din nou serverele tale obișnuite.</string>
+    <string name="chat_temp_node_phone_start">Pornește pe acest telefon</string>
+    <string name="chat_temp_node_phone_starting">Se pornește…</string>
+    <string name="chat_temp_node_phone_running">Rulează pe acest telefon</string>
+    <string name="chat_temp_node_phone_warning">Ține aplicația deschisă și telefonul online. Dacă aplicația este închisă sau telefonul se oprește, nimic nu mai așteaptă contactul tău.</string>
+    <string name="msg_phone_tn_tor">Tor nu este încă pregătit. Așteaptă puțin și încearcă din nou.</string>
+    <string name="msg_phone_tn_busy">Un Temp Node rulează deja pe acest telefon pentru altă conversație. Oprește-l mai întâi acolo.</string>
+    <string name="msg_phone_tn_failed">Temp Node nu a putut fi pornit.</string>
+    <string name="tor_notif_temp_node">Temp Node activ pentru o conversație</string>
 </resources>

@@ -59,7 +59,8 @@ class P2PNetworkManager @Inject constructor(
     private val nodeMeshManager: NodeMeshManager,
     private val nodeMeshClient: NodeMeshClient,
     private val feedUpdater: FeedUpdater,
-    private val groupInbox: com.nexonai.unpruuf.domain.group.GroupInbox
+    private val groupInbox: com.nexonai.unpruuf.domain.group.GroupInbox,
+    private val phoneTempNode: PhoneTempNode
 ) {
     companion object {
         // LAN discovery on/off + hourly name rotation is re-checked this often.
@@ -403,6 +404,7 @@ class P2PNetworkManager @Inject constructor(
         started = true
         startServer()
         startLanDiscoveryLoop()
+        clearOrphanPhoneTempNodes()
 
         // Sobald Tor (wieder) bereit ist: Warteschlange sofort abarbeiten
         scope.launch {
@@ -655,7 +657,24 @@ class P2PNetworkManager @Inject constructor(
 
     /** Drops everything this manager still holds for a contact removed locally (queued packets,
      *  half-received chunk trains). Sends nothing. */
+    /**
+     * A Temp Node that runs on this phone ends with the app process. A registration left from
+     * before (the app was closed or killed while it ran) points at an address nobody serves any
+     * more: every message would first try it, and time out. Clear it and tell the contact.
+     */
+    private fun clearOrphanPhoneTempNodes() {
+        scope.launch {
+            val orphans = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+                .filter { it.tempNodeOnPhone && !phoneTempNode.isOwn(it.tempNodeAddress) }
+            for (c in orphans) {
+                contactDao.clearTempNode(c.id)
+                sendTempNodeDeactivate(c.id)
+            }
+        }
+    }
+
     fun forgetContactLocally(contactId: String) {
+        if (phoneTempNode.runningFor() == contactId) phoneTempNode.stop()
         deliveryQueue.removeAll { it.contactId == contactId }
         chunkReassembly.remove(contactId)
         sendLocks.remove(contactId)
@@ -2169,7 +2188,9 @@ class P2PNetworkManager @Inject constructor(
                     .filter { it.nodeMesh && it.tempNodeAddress != null }
                 for (c in contacts) {
                     val address = c.tempNodeAddress ?: continue
-                    val alive = runCatching { nodeMeshClient.healthCheck(address) }.getOrDefault(false)
+                    // A phone-hosted Temp Node that is no longer running (app restarted) is never "alive".
+                    val alive = if (c.tempNodeOnPhone && !phoneTempNode.isOwn(address)) false
+                        else runCatching { nodeMeshClient.healthCheck(address) }.getOrDefault(false)
                     if (alive) {
                         consecutiveFailures.remove(c.id)
                         if (!c.tempNodeActive) contactDao.setTempNodeActive(c.id, true)
@@ -2250,6 +2271,7 @@ class P2PNetworkManager @Inject constructor(
      * make fail, forever, by design (that's what "delete" does).
      */
     fun sendDeleteContact(toContactId: String) {
+        if (phoneTempNode.runningFor() == toContactId) phoneTempNode.stop()
         scope.launch {
             val contact = contactDao.getContactById(toContactId) ?: return@launch
             val onion = contact.onionAddress
@@ -2581,8 +2603,13 @@ class P2PNetworkManager @Inject constructor(
         if (contact == null || tempAddress == null || tempSecret == null) {
             return depositToOwnNodes(nodes, routingTag, padded, ttlMs)
         }
-        val tempSucceeded = nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded, ttlMs)
-        if (tempSucceeded && !contact.tempNodeActive) {
+        // A Temp Node that runs on THIS phone is filled directly (no Tor round trip to ourselves).
+        // Such a deposit always works, so it proves nothing about the contact being able to reach
+        // it: "confirmed" comes only from the heartbeat's real reachability check (below).
+        val onThisPhone = phoneTempNode.isOwn(tempAddress)
+        val tempSucceeded = if (onThisPhone) phoneTempNode.localDeposit(routingTag, padded, ttlMs)
+            else nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded, ttlMs)
+        if (tempSucceeded && !onThisPhone && !contact.tempNodeActive) {
             // First successful deposit via the Temp Node — §7 step 6's confirmation ("erste
             // erfolgreiche eigene Nachricht über den Temp Node in diese Richtung"). From here on
             // this contact's outgoing traffic uses the Temp Node exclusively (see the ACTIVE

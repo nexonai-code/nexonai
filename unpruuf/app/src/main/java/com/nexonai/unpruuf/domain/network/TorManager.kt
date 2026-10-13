@@ -593,6 +593,25 @@ class TorManager @Inject constructor(
         }.getOrNull()
     }
 
+    /**
+     * A short-lived onion service for a phone-hosted Temp Node (see [PhoneTempNode]): [virtualPort]
+     * forwards to 127.0.0.1:[localPort]. The key Tor hands back is dropped on purpose, so the address
+     * cannot be brought back after [removeEphemeralOnion] or when Tor stops. Null if Tor is not ready.
+     */
+    suspend fun addEphemeralOnion(virtualPort: Int, localPort: Int): String? {
+        val ctrl = awaitControlConnection() ?: return null
+        return runCatching {
+            val result = ctrl.addOnion(mapOf(virtualPort to "127.0.0.1:$localPort"))
+            val id = result[TorControlCommands.HS_ADDRESS] ?: return null
+            "$id.onion"
+        }.getOrNull()
+    }
+
+    fun removeEphemeralOnion(address: String) {
+        val ctrl = torService?.torControlConnection ?: return
+        runCatching { ctrl.delOnion(address.removeSuffix(".onion")) }
+    }
+
     /** Alle eigenen veröffentlichten Onion-Adressen (Haupt- + je Kontakt + Verified). */
     fun getMyOnionAddresses(): List<String> =
         (contactOnionAddresses.values + listOfNotNull(_onionAddress.value, _verifiedOnionAddress.value))

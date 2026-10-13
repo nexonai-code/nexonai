@@ -94,6 +94,7 @@ fun ChatScreen(
     var fullscreenImage by remember { mutableStateOf<RamMessage?>(null) }
     var showTempNodeDialog by remember { mutableStateOf(false) }
     val tempNodeError by viewModel.tempNodeError.collectAsState()
+    val phoneNodeState by viewModel.phoneTempNodeState.collectAsState()
     val tempNodeScanPrompt = stringResource(R.string.chat_temp_node_scan_prompt)
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -309,6 +310,10 @@ fun ChatScreen(
                 }
             },
             onPaste = { raw -> viewModel.activateTempNode(raw) },
+            phoneSupported = viewModel.phoneTempNodeSupported,
+            phoneState = phoneNodeState,
+            phoneBusyElsewhere = viewModel.phoneTempNodeBusyElsewhere(),
+            onStartPhone = { viewModel.startPhoneTempNode() },
             onDeactivate = {
                 viewModel.deactivateTempNode()
                 showTempNodeDialog = false
@@ -661,6 +666,10 @@ private fun TempNodeDialog(
     error: String?,
     onScan: () -> Unit,
     onPaste: (String) -> Boolean,
+    phoneSupported: Boolean,
+    phoneState: com.nexonai.unpruuf.domain.network.PhoneTempNode.State,
+    phoneBusyElsewhere: Boolean,
+    onStartPhone: () -> Unit,
     onDeactivate: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -673,6 +682,20 @@ private fun TempNodeDialog(
         text = {
             Column {
                 if (contact.tempNodeAddress != null) {
+                    if (contact.tempNodeOnPhone) {
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_running),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
                     Text(
                         if (contact.tempNodeActive) stringResource(R.string.chat_temp_node_active)
                         else stringResource(R.string.chat_temp_node_pending),
@@ -685,6 +708,38 @@ private fun TempNodeDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
+                    if (phoneSupported) {
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_title),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        val starting = phoneState is com.nexonai.unpruuf.domain.network.PhoneTempNode.State.Starting
+                        Button(
+                            onClick = onStartPhone,
+                            enabled = !starting && !phoneBusyElsewhere,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(if (starting) R.string.chat_temp_node_phone_starting else R.string.chat_temp_node_phone_start))
+                        }
+                        if (phoneBusyElsewhere) {
+                            Text(
+                                stringResource(R.string.msg_phone_tn_busy),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(12.dp))
+                    }
                     Text(
                         stringResource(R.string.chat_temp_node_intro),
                         style = MaterialTheme.typography.bodyMedium
