@@ -5,6 +5,21 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑13 · Romanian interface for Pro / Pro Groups (and Standard, Client)
+
+**What was done**
+
+- New `app/src/main/res/values-ro/strings.xml`: every string of the main app in Romanian (387 lines, including node lists, company feeds, per-chat lifetime and all Pro Groups texts). The 297 strings shared with the reporting editions reuse the Romanian already shipped there; the 84 new ones were written for this file. The app follows the phone's language: Romanian phone shows Romanian, anything else English.
+- `whistleblower` flavor now carries its own `values-ro` copy of its Romanian wording, so a Romanian phone does not replace the reporter wording ("case", "reporting office") with the Business wording. `press` already had its own.
+- Placeholder parity (`%1$s`, `%2$d`) checked for all 387 strings. All variants compile and package.
+
+**Not checked**
+
+- Not looked at on a real device or emulator (none here): line breaks, long words in buttons, and whether the Romanian reads naturally to a native speaker (a Romanian speaker should read it once).
+- A few messages are still English because they are written in code, not in the resource files: the group form's error messages ("Give the group a name." and similar), the pairing block reasons and a few status lines.
+
+---
+
 ## 2026‑10‑13 · unpruuf Pro Groups (new edition: Pro plus local groups)
 
 **What was done**
