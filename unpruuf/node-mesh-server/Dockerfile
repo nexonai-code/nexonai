@@ -17,7 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/tor-bin ./tor-bin
-COPY package.json ./
+# release-manifest.txt (signed list of the program files) is copied when the release was signed; the
+# bracket pattern keeps the build working without it (an unsigned development build).
+COPY package.json release-manifest.tx[t] ./
 RUN mkdir -p /app/data && chown -R unpruuf /app/data
 USER unpruuf
 ENV NODE_MESH_DATA_DIR=/app/data \

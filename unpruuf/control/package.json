@@ -1,0 +1,26 @@
+{
+  "name": "unpruuf-control",
+  "version": "1.0.0",
+  "private": true,
+  "description": "unpruuf Control: the customer's own console for their node servers and licences. Runs on the customer's admin PC (local web page), reaches the customer's servers over SSH, keeps an inventory of licence codes. NexonAI runs nothing and sees nothing.",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-public.js",
+    "start": "node dist/index.js",
+    "bundle": "node scripts/build-bundle.js",
+    "test": "tsc -p tsconfig.json && node scripts/copy-public.js && node --test --test-force-exit --test-timeout=120000 dist/test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode": "^1.5.4",
+    "ssh2": "^1.16.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.9",
+    "@types/qrcode": "^1.5.5",
+    "@types/ssh2": "^1.15.1",
+    "typescript": "^5.5.3"
+  }
+}

@@ -5,6 +5,19 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑13 · unpruuf Control (new component: the customer's console for servers and licences)
+
+**What was done**
+
+- New folder `control/`: a local web page (Node, English and Romanian) that the customer runs on their own admin PC. It adds servers over SSH (own key per server, host key pinned), installs the node server in Docker, shows the state of all servers, unlocks them after a restart, updates them, hands out licence codes from an inventory (server codes to servers, app codes to named devices) and warns about the common mistakes. Details, tests and limits: `control/README.md` and `control/CHANGELOG.md`.
+- Licence model unchanged: no pool, no certificate chain. The customer receives a batch of ordinary codes (`license-tool --count N`) and Control keeps the books. Decision of 13.10.2026.
+- `node-mesh-server/Dockerfile` copies `release-manifest.txt` when it exists.
+
+**Checked**: 60 automated tests (simulated SSH server), and the page in a real browser.
+**Not checked**: a real VPS (Docker build, apt, sshd), Windows scripts.
+
+---
+
 ## 2026‑10‑13 · Remaining English messages moved into the resource files
 
 **What was done**
