@@ -1,5 +1,8 @@
 # unpruuf — iOS (cross-platform "GRAL" mode)
 
+> **Next step for iOS (13.10.2026):** `IOS_BUSINESS_BUILD_SPEC.md` describes how to bring this app to unpruuf Business (Node-Mesh client) so it pairs with the Android Pro app. Read it first; this README describes the older relay mode.
+
+
 This is the first iOS build of unpruuf, implementing the relay-mandatory
 "cross-platform mode" designed in `../CROSS_PLATFORM_PLAN.md`. It is a
 **separate mode** from Android's `unpruuf Pro` (direct P2P over Tor hidden
