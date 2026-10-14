@@ -4,6 +4,12 @@
 
 Diese Datei wird in jeder neuen Sitzung geladen. Sie hält fest, was Gabriel ausdrücklich verlangt hat.
 
+## Antwortstil (von Gabriel festgelegt, 14.10.2026)
+
+- **Nie mehr eine Antwort mit „Gabriel, “ beginnen.** Gleich die Antwort. Den Namen sonst sparsam, nie als Anrede am Anfang.
+- **Alles beantworten, was er fragt, mit allen Daten, die er für seine Entscheidung braucht.** Nichts weglassen und nichts verkürzen, damit er auf besserer Grundlage entscheiden kann.
+- **Zuerst genau das tun, was er verlangt hat.** Hält man es für unpassend, zu viel oder falsch, trotzdem zuerst genau so liefern und die Meinung erst am Ende sagen.
+
 ## Wenn Gabriel etwas sagt, das so nicht gesagt werden kann
 
 Nie einfach weglassen und nie einfach abschwächen. Immer die bestmögliche Formulierung liefern, die genau das Gefühl und die Absicht seiner Aussage trägt und dabei wahr und belegbar bleibt.
@@ -25,7 +31,7 @@ Beispiele:
 - Business ist das Hauptprodukt. Compliance nur auf Anfrage.
 - Vor größeren Umbauten an dem, was schon funktioniert, sagen, wie es werden soll, und auf sein Ja warten. Der Kern bleibt klein und einfach: ein Knopf, 250 Briefkästen, Liste exportieren, in der App importieren.
 - Lieferungen mit mehreren Dateien als ZIP mit CHANGELOG.md, Namensschema `unpruuf_<Datum>_v<N>.zip`, bei Sondereditionen mit dem Editionsnamen im Dateinamen (zum Beispiel `unpruuf_TorClientEdition_<Datum>_v<N>.zip`). Branch `android` für die Hauptlinie. Die Tor Client Edition liegt auf dem Branch `tor-client-edition` und wird nur auf ausdrücklichen Wunsch gepusht.
-- Dokumente im Chat nur als Text anzeigen, ohne Erklärungen drumherum. Kurze Antworten, Du-Ansprache, Gabriel beim Namen nennen.
+- Dokumente im Chat nur als Text anzeigen, ohne Erklärungen drumherum. Kurze Antworten (aber vollständig bei Entscheidungsfragen), Du-Ansprache.
 - Ehrlichkeit zuerst: nicht auditiert, Pilot, nicht gegen echtes Tor getestet, solange das stimmt. Nie „zertifiziert“, „unknackbar“ oder „DSGVO-konform“ behaupten.
 - Protokolldetails nicht öffentlich nennen (Patentprüfung läuft).
 - Floretta (Marketing) spricht nur Englisch. Alles, was für Floretta bestimmt ist oder an dem sie beteiligt ist (Erklärungen, Texte, Briefings, Kampagnen, Seiten), automatisch auf Englisch liefern, ohne Nachfrage. Für Gabriel selbst bleibt die Antwort im Chat auf Deutsch.
