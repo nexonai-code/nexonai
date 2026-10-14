@@ -348,6 +348,7 @@ After each package: `swift test`, an Xcode build of all three targets, and a sho
 4. **Pro Groups on iOS:** now, after Business works on a device, or later.
 5. **iOS licence binding** (Keychain install id as proposed in 4.15).
 6. **Company bridge / Snowflake on iOS** (phase C3) — now or later.
+7. **Packet length (evidence finding F1, 14.10.2026).** The first 8 bytes of a padded packet carry the payload length in the clear, so a node operator can read message lengths. Closing it changes the wire format (pad first, then encrypt) in every client. Build iOS exactly as 4.5 describes (same as Android today) and expect that format to change; do not change it on iOS alone. Details: `evidence/CLAIMS_TO_EVIDENCE.md` row C5.
 
 ---
 
