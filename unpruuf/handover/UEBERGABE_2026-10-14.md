@@ -43,6 +43,7 @@ Abgeschlossene Lieferungen als Dateien und Artefakt-Links: `LIEFERUNGEN.md`.
 - Feature-Tabelle als Artefakt, EN und RO, auf Stand 14.10.
 - **Beleg-Paket** (`evidence/`): neun Prüfskripte, 99 Prüfungen bestanden, ein Befund (F1). Dabei: Tor-Download wird jetzt gegen feste SHA-256-Werte geprüft, vier bekannte Lücken in Server-Bibliotheken behoben (eine kritische), Server sendet kein `X-Powered-By` mehr.
 - **„unpruuf in plain words“**: erklärende Seite (nicht technisch, EN + RO, hell, Rumänisch automatisch für Besucher aus Rumänien) als Artefakt und als Webseiten-ZIP.
+- **„Your own courier service“**: dieselbe Erklärung im Bild eines eigenen Kurierdienstes (250 Automaten, ca. 100 Fächer, Abholcode, zweiter Schlüssel, mehrere Dienste gleichzeitig), Artefakt und Webseiten-ZIP.
 
 ## 4. Befund F1 — wichtig, noch offen
 
@@ -59,7 +60,8 @@ Die ersten 8 Bytes jedes gespeicherten 4096-Byte-Pakets nennen die Länge des In
 3. **iOS** (steht auch im Bauauftrag, Abschnitt 9): dritter Xcode-Target `UnpruufBusiness`, Vertrieb (TestFlight / Apple Business Manager / App Store, und ob Lizenzcode in der App erlaubt ist), Empfang nur bei offener App, Pro Groups auf iOS, Lizenzbindung per Keychain-ID, Bridges auf iOS.
 4. **Pro Groups freigeben?** Solange nicht, sagen die Kundendokumente 1, 4, 5 noch „keine Gruppen“.
 5. **Landing Page und Event-Deck** erwähnen Pro Groups und Control noch nicht.
-6. **Impressum und Datenschutz** sind nur Deutsch; Englisch und Rumänisch fehlen. Der Newsletter (Mail an unpruuf@nexonai.ro) muss in der Datenschutzerklärung stehen.
+6. **Bildsprache Kurierdienst** (14.10.): Die Seite „Your own courier service“ ist fertig. Noch auf Briefkasten/Postamt: „plain words“, Event-Deck, Business- und Press-Pitch, Landing Page, Lösungsbeschreibungen, Story-Dokumente. Umstellen?
+7. **Impressum und Datenschutz** sind nur Deutsch; Englisch und Rumänisch fehlen. Der Newsletter (Mail an unpruuf@nexonai.ro) muss in der Datenschutzerklärung stehen.
 
 ## 6. Was nie getestet wurde (ehrlich sagen)
 

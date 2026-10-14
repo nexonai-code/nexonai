@@ -53,9 +53,9 @@ def svg_flow(lang):
 <marker id="ah-{lang}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
 </defs>
 <!-- no direct line -->
-<path d="M95 62 C 95 10, 765 10, 765 62" fill="none" stroke="var(--warm)" stroke-width="2" stroke-dasharray="6 6"/>
-<g transform="translate(430 22)"><circle r="14" fill="var(--bg)" stroke="var(--warm)" stroke-width="2"/><path d="M-6 -6 L6 6 M6 -6 L-6 6" stroke="var(--warm)" stroke-width="2.5" stroke-linecap="round"/></g>
-<text x="430" y="62" text-anchor="middle" font-size="14" fill="var(--warm)" font-weight="600">{E(L['none'])}</text>
+<path d="M95 146 C 95 -10, 765 -10, 765 146" fill="none" stroke="var(--warm)" stroke-width="2" stroke-dasharray="6 6"/>
+<g transform="translate(430 29)"><circle r="14" fill="var(--bg)" stroke="var(--warm)" stroke-width="2"/><path d="M-6 -6 L6 6 M6 -6 L-6 6" stroke="var(--warm)" stroke-width="2.5" stroke-linecap="round"/></g>
+<text x="430" y="72" text-anchor="middle" font-size="14" fill="var(--warm)" font-weight="600">{E(L['none'])}</text>
 <!-- phones -->
 <g>
 <rect x="30" y="150" width="130" height="110" rx="16" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>

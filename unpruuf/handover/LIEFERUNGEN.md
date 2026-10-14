@@ -10,7 +10,8 @@ Die ZIP-Dateien hat Gabriel im Chat bekommen. Sie liegen nicht im Repo (zu groß
 | `unpruuf_Control_2026-10-13_v1.zip` | unpruuf Control (Kunden-Konsole) | 13.10. |
 | `unpruuf_Beleg-Paket_2026-10-14_v1.zip` | Prüfskripte, Tabelle Aussage → Beweis, Prüfauftrag, Patch | 14.10. |
 | `unpruuf_Landing_2026-10-14_v4.zip` | Landing Page als Webseite, RO/EN, mit GDPR-Seiten | 14.10. |
-| `unpruuf_PlainWords_2026-10-14_v1.zip` | „unpruuf in plain words“ als Webseite, hell, RO/EN | 14.10. |
+| `unpruuf_PlainWords_2026-10-14_v2.zip` | „unpruuf in plain words“ als Webseite, hell, RO/EN (Postamt-Bild) | 14.10. |
+| `unpruuf_Courier_2026-10-14_v1.zip` | „Your own courier service“ als Webseite, hell, RO/EN (Kurier-Bild) | 14.10. |
 | `unpruuf_UAB-Pitch-Kurz_2026-10-14_v11.zip` | Event-Präsentation EN + RO (PPTX + PDF) | 13.10. |
 | `unpruuf_Business-Pitch_2026-10-13_v2.zip` | Business-Pitch, EN + RO, Sprechtexte | 13.10. |
 | `unpruuf_SafelinePress-Pitch_2026-10-13_v2.zip` | Press-Pitch, EN + RO, Sprechtexte | 13.10. |
@@ -25,7 +26,8 @@ Bis 11.10.: `unpruuf_2026-10-11_v28.zip` ist die letzte Hauptlieferung vor Pro G
 
 | Name | Link | Stand |
 |---|---|---|
-| unpruuf in plain words (RO/EN, hell) | https://claude.ai/artifact/Lo8tByz9KQzoAE2kyTtXLq | 14.10. |
+| Your own courier service (RO/EN, hell, Kurier-Bild) | https://claude.ai/artifact/Y9BqJfVbTDwcoefosisYSG | 14.10. |
+| unpruuf in plain words (RO/EN, hell, Postamt-Bild) | https://claude.ai/artifact/Lo8tByz9KQzoAE2kyTtXLq | 14.10. |
 | unpruuf Feature Table (EN) | https://claude.ai/artifact/7WZiifds6Z7oULfTvwCcNg | 14.10. |
 | unpruuf Tabel de funcții (RO) | https://claude.ai/artifact/EwU5ecHEFMvU5GabkAk9Th | 14.10. |
 | unpruuf Landing Page RO/EN (Design-Canvas, Quelle der Landing-Seite) | https://claude.ai/artifact/41wh67aKcpBbmeP4c3bptZ | 12.10. |
