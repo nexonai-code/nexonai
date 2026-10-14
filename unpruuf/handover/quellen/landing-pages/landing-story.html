@@ -1,0 +1,180 @@
+<title>unpruuf Postamt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one dark opening statement, then a calm light reading column: two parts, a three-step path with a two-lane drawing, three reasons, contact. */
+:root{
+  --bg:#F2F5F4; --surface:#FFFFFF; --ink:#12201E; --dim:#4A5A56; --line:#D5DEDB;
+  --accent:#0F6B62; --accent-soft:#DDEFEC; --warm:#B95A16; --warm-soft:#F8E7D6;
+  --hero:#0E2A2E; --hero-ink:#EAF3F1; --hero-dim:#9FC0C0;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif; --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1719; --surface:#12262A; --ink:#E6F0EE; --dim:#9DB5B2; --line:#25403F;
+  --accent:#5CC3B6; --accent-soft:#17363A; --warm:#F0A56B; --warm-soft:#3A2A1C;
+  --hero:#071113; --hero-ink:#EAF3F1; --hero-dim:#8FB3B3; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1719; --surface:#12262A; --ink:#E6F0EE; --dim:#9DB5B2; --line:#25403F;
+  --accent:#5CC3B6; --accent-soft:#17363A; --warm:#F0A56B; --warm-soft:#3A2A1C;
+  --hero:#071113; --hero-ink:#EAF3F1; --hero-dim:#8FB3B3; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--body)}
+.in{max-width:900px;margin-inline:auto;padding-inline:20px}
+.bar{position:absolute;top:0;left:0;right:0;z-index:2;padding-top:max(16px,env(safe-area-inset-top,0px))}
+.bar .in{display:flex;justify-content:space-between;align-items:center}
+.mark{display:flex;align-items:center;gap:10px;color:var(--hero-ink);font:700 1.05rem var(--display)}
+.sw{display:flex;gap:4px;background:rgba(255,255,255,.08);border-radius:10px;padding:3px}
+.sw button{border:0;background:transparent;color:var(--hero-dim);font:600 .8rem var(--body);letter-spacing:.06em;padding:6px 12px;border-radius:8px;cursor:pointer}
+.sw button[aria-pressed="true"]{background:var(--hero-ink);color:#0E2A2E}
+.sw button:focus-visible{outline:2px solid var(--hero-ink);outline-offset:2px}
+.hero{background:var(--hero);color:var(--hero-ink);padding-block:104px 72px}
+.eyebrow{font:600 .8rem var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--hero-dim)}
+h1{font:800 clamp(2.3rem,7.2vw,4.4rem)/1.04 var(--display);letter-spacing:-.02em;margin:14px 0 0;text-wrap:balance;max-width:16ch}
+.sub{font-size:clamp(1.1rem,2.6vw,1.4rem);color:var(--hero-dim);max-width:34em;margin:22px 0 0}
+h2{font:700 clamp(1.5rem,4vw,2rem)/1.15 var(--display);margin:0 0 18px;text-wrap:balance}
+h3{font:600 1.08rem/1.3 var(--body);margin:0 0 4px}
+p{margin:0}
+main section{margin-top:64px}
+.parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.part{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+.part p{color:var(--dim)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:18px}
+.steps li{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start}
+.n{width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--surface);display:grid;place-items:center;font:700 1.1rem var(--display)}
+.steps p{color:var(--dim)}
+.fig{margin:30px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto}
+.fig svg{display:block;width:100%;min-width:560px;height:auto}
+.fig figcaption{color:var(--dim);font-size:.95rem;margin-top:6px;padding-inline:4px}
+.pp{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.6}
+.pt{fill:var(--ink);font:600 15px var(--body)}
+.mb{stroke-width:1.6}
+.mb.ma{fill:var(--accent-soft);stroke:var(--accent)}
+.mb.mb2{fill:var(--warm-soft);stroke:var(--warm)}
+.mbl{stroke:var(--dim);stroke-width:1.4;fill:none;stroke-linecap:round}
+.bl{fill:var(--dim);font:500 13px var(--body)}
+.ar{stroke:var(--accent);stroke-width:2.2;fill:none}
+.ar.d{stroke-dasharray:6 5}
+.mk{fill:var(--accent)}
+.al{fill:var(--dim);font:600 12.5px var(--body);letter-spacing:.04em}
+.whys{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.why{border-top:3px solid var(--warm);padding-top:12px;min-width:0}
+.why p{color:var(--dim)}
+.cta{background:var(--hero);color:var(--hero-ink);border-radius:14px;padding:28px;margin-bottom:56px}
+.cta h2{margin-bottom:8px}
+.cta p{color:var(--hero-dim)}
+.contact{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:14px;color:var(--hero-ink)!important;font:600 1.1rem var(--body)}
+.contact span{user-select:all;overflow-wrap:anywhere}
+footer{color:var(--dim);font-size:.9rem;padding-block:0 40px}
+[hidden]{display:none!important}
+</style>
+<div class="bar"><div class="in"><div class="mark"><svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="14" fill="#EAF3F1"/><circle cx="19" cy="13" r="10" fill="#0E2A2E"/></svg>unpruuf</div>
+<div class="sw" role="group" aria-label="Language"><button type="button" data-set="de" aria-pressed="true">DE</button><button type="button" data-set="en" aria-pressed="false">EN</button><button type="button" data-set="ro" aria-pressed="false">RO</button></div></div></div>
+<div class="lang" data-l="de" lang="de">
+<section class="hero"><div class="in"><div class="eyebrow">unpruuf Business</div><h1>Dein eigenes Postamt.</h1><p class="sub">Sicher kommunizieren geht nur mit einem eigenen System. Jeder Kunde bekommt seins: sicher, anonym, und nur er verwaltet es.</p></div></section>
+<main class="in">
+<section><h2>Zwei Geräte</h2><div class="parts"><div class="part"><h3>Das Telefon</h3><p>Zum Schreiben und Lesen. Der Inhalt wird auf dem Telefon verschlüsselt.</p></div><div class="part"><h3>Das Postamt</h3><p>Ein PC, Laptop oder besser ein Server. Darauf liegen 250 anonyme Briefkästen. Sie gehören dir.</p></div></div></section>
+<section><h2>So funktioniert es</h2>
+<ol class="steps"><li><span class="n">1</span><div><h3>250 Briefkästen</h3><p>Auf jedem deiner Postämter hast du 250 Briefkästen.</p></div></li><li><span class="n">2</span><div><h3>3 für jeden Kontakt</h3><p>Für jeden Kontakt wählst du 3 davon und gibst deinem Gegenüber diese 3 Adressen samt den Codes dafür. Das machen alle Nutzer so.</p></div></li><li><span class="n">3</span><div><h3>Du adressierst niemals andere</h3><p>Du stellst etwas auf deine eigenen Geräte und sagst jemandem, wo es liegt und welche Schlüssel er braucht. In Business gibt es keine direkte Kommunikation.</p></div></li></ol>
+<figure class="fig"><svg viewBox="0 0 706 250" role="img" aria-label="Anna schreibt in ihre drei Briefkästen, Ben holt dort ab. Ben schreibt in seine drei Briefkästen, Anna holt dort ab."><defs><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="mk"/></marker></defs>
+
+<g>
+  <rect class="pp" x="14" y="34" width="104" height="52" rx="10"/><text class="pt" x="66" y="66" text-anchor="middle">Anna</text>
+  <path class="ar" d="M120 60 H292" marker-end="url(#h)"/><text class="al" x="206" y="50" text-anchor="middle">schreibt</text>
+  <rect class="mb ma" x="300" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M306 54h24M306 62h16"/><rect class="mb ma" x="344" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M350 54h24M350 62h16"/><rect class="mb ma" x="388" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M394 54h24M394 62h16"/>
+  <text class="bl" x="354" y="100" text-anchor="middle">Annas Briefkästen</text>
+  <path class="ar d" d="M586 60 H446" marker-end="url(#h)"/><text class="al" x="516" y="50" text-anchor="middle">holt ab</text>
+  <rect class="pp" x="588" y="34" width="104" height="52" rx="10"/><text class="pt" x="640" y="66" text-anchor="middle">Ben</text>
+</g>
+
+<g>
+  <rect class="pp" x="14" y="162" width="104" height="52" rx="10"/><text class="pt" x="66" y="194" text-anchor="middle">Ben</text>
+  <path class="ar" d="M120 188 H292" marker-end="url(#h)"/><text class="al" x="206" y="178" text-anchor="middle">schreibt</text>
+  <rect class="mb mb2" x="300" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M306 182h24M306 190h16"/><rect class="mb mb2" x="344" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M350 182h24M350 190h16"/><rect class="mb mb2" x="388" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M394 182h24M394 190h16"/>
+  <text class="bl" x="354" y="228" text-anchor="middle">Bens Briefkästen</text>
+  <path class="ar d" d="M586 188 H446" marker-end="url(#h)"/><text class="al" x="516" y="178" text-anchor="middle">holt ab</text>
+  <rect class="pp" x="588" y="162" width="104" height="52" rx="10"/><text class="pt" x="640" y="194" text-anchor="middle">Anna</text>
+</g>
+</svg><figcaption>Jeder schreibt nur in seine eigenen Briefkästen. Der andere holt ab.</figcaption></figure></section>
+<section><h2>Der große Unterschied</h2><div class="whys"><div class="why"><h3>Datenmüll statt Tresor</h3><p>Wir haben das System so gebaut, dass sich ein Einbruch nicht lohnt. Wer einbricht, findet Datenmüll, höchstens 24 Stunden alt.</p></div><div class="why"><h3>Auch du als Betreiber bist blind</h3><p>Der Server hat keinen Schlüssel und keine Namen oder Adressen von Personen. Bei einer Vorladung gibt es nichts Lesbares herauszugeben.</p></div><div class="why"><h3>Die Intelligenz steckt auf den Geräten</h3><p>Ganz gleich, wer Zugriff auf die Infrastruktur hat: Er findet nichts Brauchbares.</p></div></div></section>
+<section class="cta"><h2>Mehr erfahren</h2><p>Schreib uns oder ruf an.</p><p class="contact"><span>gabriel@nexonai.ro</span><span>+40 773 829 646</span></p></section>
+</main>
+<footer class="in">NexonAI Consulting SRL · Alba Iulia</footer>
+</div>
+<div class="lang" data-l="en" lang="en" hidden>
+<section class="hero"><div class="in"><div class="eyebrow">unpruuf Business</div><h1>Your own post office.</h1><p class="sub">Secure communication only works with a system of your own. Every customer gets theirs: secure, anonymous, and managed only by them.</p></div></section>
+<main class="in">
+<section><h2>Two devices</h2><div class="parts"><div class="part"><h3>The phone</h3><p>For writing and reading. The content is encrypted on the phone.</p></div><div class="part"><h3>The post office</h3><p>A PC, laptop or, better, a server. It holds 250 anonymous mailboxes. They belong to you.</p></div></div></section>
+<section><h2>How it works</h2>
+<ol class="steps"><li><span class="n">1</span><div><h3>250 mailboxes</h3><p>On each of your post offices you have 250 mailboxes.</p></div></li><li><span class="n">2</span><div><h3>3 for every contact</h3><p>For every contact you pick 3 of them and give the other person those 3 addresses, along with the codes for them. Every user does the same.</p></div></li><li><span class="n">3</span><div><h3>You never address anyone else</h3><p>You put something on your own devices and tell someone where it is and which keys they need. In Business, there is no direct communication.</p></div></li></ol>
+<figure class="fig"><svg viewBox="0 0 706 250" role="img" aria-label="Anna writes into her three mailboxes, Ben picks up there. Ben writes into his three mailboxes, Anna picks up there."><defs><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="mk"/></marker></defs>
+
+<g>
+  <rect class="pp" x="14" y="34" width="104" height="52" rx="10"/><text class="pt" x="66" y="66" text-anchor="middle">Anna</text>
+  <path class="ar" d="M120 60 H292" marker-end="url(#h)"/><text class="al" x="206" y="50" text-anchor="middle">writes</text>
+  <rect class="mb ma" x="300" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M306 54h24M306 62h16"/><rect class="mb ma" x="344" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M350 54h24M350 62h16"/><rect class="mb ma" x="388" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M394 54h24M394 62h16"/>
+  <text class="bl" x="354" y="100" text-anchor="middle">Anna's mailboxes</text>
+  <path class="ar d" d="M586 60 H446" marker-end="url(#h)"/><text class="al" x="516" y="50" text-anchor="middle">picks up</text>
+  <rect class="pp" x="588" y="34" width="104" height="52" rx="10"/><text class="pt" x="640" y="66" text-anchor="middle">Ben</text>
+</g>
+
+<g>
+  <rect class="pp" x="14" y="162" width="104" height="52" rx="10"/><text class="pt" x="66" y="194" text-anchor="middle">Ben</text>
+  <path class="ar" d="M120 188 H292" marker-end="url(#h)"/><text class="al" x="206" y="178" text-anchor="middle">writes</text>
+  <rect class="mb mb2" x="300" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M306 182h24M306 190h16"/><rect class="mb mb2" x="344" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M350 182h24M350 190h16"/><rect class="mb mb2" x="388" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M394 182h24M394 190h16"/>
+  <text class="bl" x="354" y="228" text-anchor="middle">Ben's mailboxes</text>
+  <path class="ar d" d="M586 188 H446" marker-end="url(#h)"/><text class="al" x="516" y="178" text-anchor="middle">picks up</text>
+  <rect class="pp" x="588" y="162" width="104" height="52" rx="10"/><text class="pt" x="640" y="194" text-anchor="middle">Anna</text>
+</g>
+</svg><figcaption>Everyone writes only into their own mailboxes. The other person picks up.</figcaption></figure></section>
+<section><h2>The big difference</h2><div class="whys"><div class="why"><h3>Junk instead of a vault</h3><p>We built the system so that breaking in is not worth it. Whoever breaks in finds junk, at most 24 hours old.</p></div><div class="why"><h3>Even you, the operator, are blind</h3><p>The server holds no key and no names or addresses of people. If you receive a subpoena, there is nothing readable to hand over.</p></div><div class="why"><h3>The intelligence is on the devices</h3><p>No matter who gets access to the infrastructure, they find nothing useful.</p></div></div></section>
+<section class="cta"><h2>Learn more</h2><p>Write to us or call.</p><p class="contact"><span>gabriel@nexonai.ro</span><span>+40 773 829 646</span></p></section>
+</main>
+<footer class="in">NexonAI Consulting SRL · Alba Iulia</footer>
+</div>
+<div class="lang" data-l="ro" lang="ro" hidden>
+<section class="hero"><div class="in"><div class="eyebrow">unpruuf Business</div><h1>Propria ta poștă.</h1><p class="sub">Comunicarea sigură merge doar cu un sistem propriu. Fiecare client îl primește pe al lui: sigur, anonim și administrat doar de el.</p></div></section>
+<main class="in">
+<section><h2>Două dispozitive</h2><div class="parts"><div class="part"><h3>Telefonul</h3><p>Pentru scris și citit. Conținutul este criptat pe telefon.</p></div><div class="part"><h3>Oficiul poștal</h3><p>Un PC, un laptop sau, mai bine, un server. Pe el se află 250 de cutii poștale anonime. Ele îți aparțin.</p></div></div></section>
+<section><h2>Cum funcționează</h2>
+<ol class="steps"><li><span class="n">1</span><div><h3>250 de cutii poștale</h3><p>Pe fiecare dintre oficiile tale poștale ai 250 de cutii poștale.</p></div></li><li><span class="n">2</span><div><h3>3 pentru fiecare contact</h3><p>Pentru fiecare contact alegi 3 dintre ele și îi dai celeilalte persoane cele 3 adrese, împreună cu codurile lor. Toți utilizatorii fac la fel.</p></div></li><li><span class="n">3</span><div><h3>Nu adresezi niciodată pe altcineva</h3><p>Pui ceva pe propriile tale dispozitive și îi spui cuiva unde se află și ce chei îi trebuie. În Business nu există comunicare directă.</p></div></li></ol>
+<figure class="fig"><svg viewBox="0 0 706 250" role="img" aria-label="Anna scrie în cele trei cutii ale ei, Ben ridică de acolo. Ben scrie în cele trei cutii ale lui, Anna ridică de acolo."><defs><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="mk"/></marker></defs>
+
+<g>
+  <rect class="pp" x="14" y="34" width="104" height="52" rx="10"/><text class="pt" x="66" y="66" text-anchor="middle">Anna</text>
+  <path class="ar" d="M120 60 H292" marker-end="url(#h)"/><text class="al" x="206" y="50" text-anchor="middle">scrie</text>
+  <rect class="mb ma" x="300" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M306 54h24M306 62h16"/><rect class="mb ma" x="344" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M350 54h24M350 62h16"/><rect class="mb ma" x="388" y="40" width="36" height="40" rx="5"/><path class="mbl" d="M394 54h24M394 62h16"/>
+  <text class="bl" x="354" y="100" text-anchor="middle">Cutiile Annei</text>
+  <path class="ar d" d="M586 60 H446" marker-end="url(#h)"/><text class="al" x="516" y="50" text-anchor="middle">ridică</text>
+  <rect class="pp" x="588" y="34" width="104" height="52" rx="10"/><text class="pt" x="640" y="66" text-anchor="middle">Ben</text>
+</g>
+
+<g>
+  <rect class="pp" x="14" y="162" width="104" height="52" rx="10"/><text class="pt" x="66" y="194" text-anchor="middle">Ben</text>
+  <path class="ar" d="M120 188 H292" marker-end="url(#h)"/><text class="al" x="206" y="178" text-anchor="middle">scrie</text>
+  <rect class="mb mb2" x="300" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M306 182h24M306 190h16"/><rect class="mb mb2" x="344" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M350 182h24M350 190h16"/><rect class="mb mb2" x="388" y="168" width="36" height="40" rx="5"/><path class="mbl" d="M394 182h24M394 190h16"/>
+  <text class="bl" x="354" y="228" text-anchor="middle">Cutiile lui Ben</text>
+  <path class="ar d" d="M586 188 H446" marker-end="url(#h)"/><text class="al" x="516" y="178" text-anchor="middle">ridică</text>
+  <rect class="pp" x="588" y="162" width="104" height="52" rx="10"/><text class="pt" x="640" y="194" text-anchor="middle">Anna</text>
+</g>
+</svg><figcaption>Fiecare scrie doar în propriile cutii. Celălalt ridică.</figcaption></figure></section>
+<section><h2>Marea diferență</h2><div class="whys"><div class="why"><h3>Gunoi în loc de seif</h3><p>Am construit sistemul astfel încât să nu merite să spargi. Cine sparge găsește gunoi, vechi de cel mult 24 de ore.</p></div><div class="why"><h3>Nici tu, ca administrator, nu vezi</h3><p>Serverul nu are nicio cheie și nici nume ori adrese de persoane. Dacă primești o citație, nu există nimic lizibil de predat.</p></div><div class="why"><h3>Inteligența se află pe dispozitive</h3><p>Indiferent cine ajunge la infrastructură, nu găsește nimic util.</p></div></div></section>
+<section class="cta"><h2>Aflați mai mult</h2><p>Scrieți-ne sau sunați.</p><p class="contact"><span>gabriel@nexonai.ro</span><span>+40 773 829 646</span></p></section>
+</main>
+<footer class="in">NexonAI Consulting SRL · Alba Iulia</footer>
+</div>
+<script>
+(function(){
+  var sets=[].slice.call(document.querySelectorAll('.lang')),btns=[].slice.call(document.querySelectorAll('[data-set]'));
+  function show(k){
+    sets.forEach(function(b){b.hidden=b.getAttribute('data-l')!==k});
+    btns.forEach(function(b){b.setAttribute('aria-pressed',b.getAttribute('data-set')===k?'true':'false')});
+    document.documentElement.setAttribute('lang',k);
+    try{localStorage.setItem('lp-lang',k)}catch(e){}
+  }
+  btns.forEach(function(b){b.addEventListener('click',function(){show(b.getAttribute('data-set'))})});
+  var k=null;
+  try{k=localStorage.getItem('lp-lang')}catch(e){}
+  if(!k){var n=(navigator.language||'de').slice(0,2).toLowerCase();k=(n==='ro'||n==='en'||n==='de')?n:'en'}
+  if(k!=='de')show(k);
+})();
+</script>

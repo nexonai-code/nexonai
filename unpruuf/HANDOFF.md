@@ -1,5 +1,7 @@
 # unpruuf — Session Handoff Briefing
 
+> **Neuerer Stand: `handover/UEBERGABE_2026-10-14.md`.** Diese Datei beschreibt den Stand von Anfang September; sie bleibt für den Hintergrund (Personen, iOS-Setup bei Norbert, Fehlersuche) nützlich.
+
 **Read this file first in a new chat.** It captures the working context, decisions, and open
 threads that aren't fully captured by `STATUS.md`/`CHANGELOG.md` alone — those two are the
 authoritative *project state* record; this file is the *how we work together and where things

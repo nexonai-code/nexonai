@@ -1,0 +1,83 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: ein ruhiges Berichtsdokument, schmale Lesespalte, Übersichtstabelle vorn, Tor-Erklärung als eigener Block mit Schichtendiagramm */
+:root{
+  --bg:#f3f5f6; --surface:#ffffff; --ink:#14232b; --dim:#56666e; --line:#d9e0e3;
+  --accent:#0d6b73; --accent-soft:#dcedee; --ok:#1d7a4a; --ok-soft:#dff1e6; --warn:#9a5b00; --warn-soft:#faedd3; --stop:#a63a2e; --stop-soft:#f6dfdb;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1a1f; --surface:#17262d; --ink:#e6eef1; --dim:#9db0b8; --line:#2b3d46;
+  --accent:#5cc1c9; --accent-soft:#1b3a40; --ok:#6fd09a; --ok-soft:#173a29; --warn:#f0b955; --warn-soft:#3d2f12; --stop:#f08a7e; --stop-soft:#43201c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1a1f; --surface:#17262d; --ink:#e6eef1; --dim:#9db0b8; --line:#2b3d46;
+  --accent:#5cc1c9; --accent-soft:#1b3a40; --ok:#6fd09a; --ok-soft:#173a29; --warn:#f0b955; --warn-soft:#3d2f12; --stop:#f08a7e; --stop-soft:#43201c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6;padding-inline:16px;padding-block:32px 64px}
+.wrap{max-width:860px;margin-inline:auto;display:flex;flex-direction:column;gap:40px}
+h1{font-size:clamp(1.9rem,5vw,2.6rem);line-height:1.1;margin:0;font-weight:600;letter-spacing:-0.01em;text-wrap:balance}
+h2{font-size:1.45rem;line-height:1.2;margin:0 0 12px;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:0 0 6px;font-weight:600}
+p{margin:0 0 12px;max-width:68ch}
+p:last-child{margin-bottom:0}
+.eyebrow{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.lede{font-size:1.1rem;color:var(--dim);max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{font-family:var(--font-mono);font-size:.78rem;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--dim)}
+.chip.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.chip.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.chip.stop{background:var(--stop-soft);color:var(--stop);border-color:transparent}
+section{min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.change{display:grid;grid-template-columns:1fr;gap:10px;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.change header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;justify-content:space-between}
+.change h3{margin:0;font-size:1.1rem}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.cols>div{min-width:0}
+.label{font-family:var(--font-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+ul{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:6px}
+li{max-width:66ch}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--accent-soft);color:var(--ink);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.93rem}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:500}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--font-mono);white-space:nowrap}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.who{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.who>div{padding:14px 16px;border-radius:8px;border:1px solid var(--line);min-width:0}
+.who .yes{background:var(--ok-soft)}
+.who .no{background:var(--stop-soft)}
+.who .part{background:var(--warn-soft)}
+.who h4{margin:0 0 4px;font-size:.98rem}
+.who p{font-size:.92rem;margin:0}
+.callout{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 16px;border-radius:0 8px 8px 0;max-width:68ch}
+.callout.ok{border-color:var(--ok);background:var(--ok-soft)}
+.callout.stop{border-color:var(--stop);background:var(--stop-soft)}
+.vs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.vs figure{margin:0;padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);min-width:0}
+.vs figcaption{font-size:.9rem;color:var(--dim);margin-top:8px}
+.vs svg{width:100%;height:auto;display:block}
+.vs .n{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.vs .c{fill:var(--bg);stroke:var(--dim);stroke-width:1.5}
+.vs .l{stroke:var(--accent);stroke-width:1.4;fill:none;opacity:.85}
+.vs text{fill:var(--ink);font-family:var(--font-mono);font-size:11px}
+.grp{display:flex;flex-direction:column;gap:12px}
+.grp h3{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.feat{display:grid;grid-template-columns:1fr;gap:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.feat .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:baseline}
+.feat .row:last-child{border-bottom:0}
+.feat .row b{font-weight:600}
+.feat .row span.d{grid-column:1;color:var(--dim);font-size:.9rem;max-width:70ch}
+.feat .row .chip{grid-column:2;grid-row:1}
+.toc{display:flex;flex-wrap:wrap;gap:8px}
+.toc a{font-family:var(--font-mono);font-size:.78rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none}
+.toc a:hover{border-color:var(--accent)}
+footer{color:var(--dim);font-size:.88rem}
+@media (prefers-reduced-motion:no-preference){a{transition:color .15s}}
+</style>

@@ -1,5 +1,7 @@
 # Arbeitsregeln für dieses Projekt (Gabriel Hategan, NexonAI Consulting SRL)
 
+**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-14.md` lesen** (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
+
 Diese Datei wird in jeder neuen Sitzung geladen. Sie hält fest, was Gabriel ausdrücklich verlangt hat.
 
 ## Wenn Gabriel etwas sagt, das so nicht gesagt werden kann
