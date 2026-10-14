@@ -48,7 +48,18 @@ inefficiency.
   from 2²⁵⁶ to roughly 2¹²⁸ — still astronomically infeasible (2¹²⁸ ≈
   3.4 × 10³⁸), but worth stating precisely rather than ignoring.
 
-### 1.2 Packet size leaks exactly zero bits of message length
+### 1.2 Packets are always 4096 bytes on the wire (limit: a stored packet shows its payload length)
+
+> **Correction, 14 October 2026 (evidence finding F1).** This section used to say that packet size leaks
+> zero bits of message length. That holds for someone who only watches the network (the Tor stream shows
+> 4096-byte packets). It does **not** hold for whoever can read a stored packet: `padPacket` writes the
+> payload length and the payload position into the first 8 bytes of the 4096-byte packet **in the clear**,
+> and a node or relay stores the packet exactly as received. A node operator can therefore read each
+> packet's encrypted length, which follows the message length, and a cover packet (44 bytes) can be told
+> from any real message by that number. Shown by `evidence/08-packet-header.js` and pinned by
+> `PacketMetadataTest.kt`. Closing it means putting the length inside the encrypted part, a change of the
+> wire format in every client; until then do not claim that message length is hidden from a node.
+
 
 Every packet sent — regardless of whether it holds "hi" or a long paragraph
 — is padded to exactly **4096 bytes** before transmission (`NetworkObfuscation.padPacket`).
@@ -56,8 +67,9 @@ This is not "hard to tell apart" — it is a deterministic function: two
 different plaintexts of different length produce **bit-identical packet
 sizes**. A passive observer watching packet sizes on the wire learns nothing
 about message length: the mutual information between "packet size" and
-"message length" is exactly 0 bits, for any message up to the maximum
-payload (4088 bytes).
+"message length" is exactly 0 bits for an observer of the network, for any
+message up to the maximum payload (4088 bytes). (Not for the reader of a
+stored packet, see the correction above.)
 
 **This depends on:** the message fitting within the fixed packet size. It does
 for text and control signals, which are exactly what this guarantee still
@@ -361,8 +373,8 @@ limits. These are known, real gaps — not hidden ones.
 ## One-line honest summary
 
 **unpruuf can prove, with math or with code, that there is no server to
-attack, that message length and per-contact identity leak no information to
-a passive observer, that its core encryption is unbreakable by brute force in
+attack, that per-contact identity leaks no information to a passive observer
+of the network (and that message length does not, with the limit of finding F1), that its core encryption is unbreakable by brute force in
 any physically realizable sense, and that a later compromise of either your
 own device or your contact's device cannot unlock messages already sent or
 received between you — provided the device it runs on is not itself

@@ -137,8 +137,9 @@ Three tiers — get this distinction right, it's the entire credibility model:
 - AES-256-GCM brute force is physically infeasible (bounded by the Landauer
   limit — more energy than the Sun will radiate in its lifetime), assuming
   no implementation bug and a real random key.
-- Fixed 4096-byte padding leaks **zero bits** of message length for
-  single-packet messages (multi-packet file/photo transfers leak
+- Fixed 4096-byte padding leaks **zero bits** of message length to an observer of the
+  network for single-packet messages; a node or relay operator can read the length inside
+  a stored packet (finding F1, `SECURITY_CLAIMS.md` §1.2). For single-packet messages (multi-packet file/photo transfers leak
   *approximate* size via packet count, not exact length — stated precisely
   in `SECURITY_CLAIMS.md` §1.2, don't round this up to "hidden").
 - The per-contact wire ID is computationally indistinguishable from random

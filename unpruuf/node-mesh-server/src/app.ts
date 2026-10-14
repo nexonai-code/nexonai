@@ -14,6 +14,8 @@ export function createApp(
   depositBlocked?: () => string | null,
 ): Express {
   const app = express();
+  // Do not announce the web framework to anyone who asks.
+  app.disable("x-powered-by");
   // 16kb comfortably covers a base64'd 4096-byte ciphertext (~5.5kb) plus JSON/tag overhead,
   // same reasoning as the consumer relay's own app.ts.
   app.use(express.json({ limit: "16kb" }));

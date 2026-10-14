@@ -128,7 +128,7 @@ PIN lock to open the app. A second, panic PIN that instantly and irreversibly
 wipes every contact. Screenshot and screen-recording blocked system-wide.
 
 **Your traffic can't be analyzed, even by someone watching the network.**
-Fixed-size encrypted packets hide message length. Randomized decoy traffic
+Fixed-size encrypted packets hide message length from anyone watching the network (not from a node operator, see finding F1). Randomized decoy traffic
 obscures communication timing. Tor bridge support for people in countries
 that block Tor outright.
 
@@ -173,7 +173,7 @@ collaborators — without any of them having to pay to talk securely.
 | Panic wipe (duress PIN) | **Yes** | No | No | No |
 | Per-contact identity rotation | **Yes, hourly** | No | No | No |
 | Notification hides sender & content | **Yes, always** | Optional | Optional | Optional |
-| Message length hidden on the wire | **Yes (fixed padding)** | No | No | No |
+| Message length hidden on the wire (network observer) | **Yes (fixed padding)** | No | No | No |
 
 *(Comparisons reflect each app's publicly documented, standard behavior as of
 this writing. WhatsApp and Signal both use the Signal Protocol for content

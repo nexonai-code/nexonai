@@ -5,6 +5,33 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑14 · Evidence package (`evidence/`), Tor download check, library fixes, finding F1
+
+**What was done**
+
+- New folder `evidence/`: nine scripts that test what can be tested by script, a table that links every claim to its proof (`CLAIMS_TO_EVIDENCE.md`), a proposed scope for an independent review (`AUDITOR_SCOPE.md`) and a one-click runner (`run-evidence.bat` / `.sh`) that writes `REPORT.md`. It checks: the node server's whole surface and that strangers and contacts cannot write or delete; what the server stores (one table, five columns, no address, name or secret in any file, bytes overwritten after expiry); what the server code does about callers, network and logs; the app's permissions, libraries and sockets; the routing tags (fixed values, 300 contacts, randomness); what a pairing code and a packet carry; the pinned Tor hashes (and, online, the Tor Project's PGP signature); known vulnerabilities in libraries.
+- **Tor download is now checked.** `node-mesh-server`, `server` and `officer-app` compare the downloaded Tor Expert Bundle with pinned SHA-256 values (from the Tor Project's signed list for 15.0.19, signature verified, key EF6E 286D DA85 EA2A 4BA7 DE68 4E2C 6E87 9329 8290) before extracting it; a platform without a pinned value is refused. Before this the download was not checked.
+- **Library fixes.** `npm audit` found four known vulnerabilities in the node server and the relay (one critical in `proxy-addr`, three moderate in `qs`). Fixed with `npm audit fix` (lock files only); tests pass.
+- The node server no longer sends `X-Powered-By: Express`.
+- New unit test `PacketMetadataTest` (real ratchet, framing and padding classes).
+
+**Finding F1 (a claim the evidence does not support)**
+
+- The first 8 bytes of every stored 4096-byte packet are the payload length and the position of the payload, **not encrypted** (`NetworkObfuscation.padPacket`). A node or relay stores the packet as received. So an operator can read each packet's encrypted length (which follows the message length) and tell a cover packet (44 bytes) from any real message. A network observer sees only 4096-byte packets; that part of the old claim holds.
+- Claims corrected in `SECURITY_CLAIMS.md` §1.2, `STATUS.md`, `PRODUCT_CONTEXT.md`, `MARKETING.md` and the feature table artifacts (English, Romanian). **Not changed: the wire format.** Closing it means putting the length inside the encrypted part, which touches Android, iOS, officer app, web reporter and relay; it needs the team's decision.
+
+**Checked**
+
+- 99 checks in the evidence scripts pass, 1 finding; node server suite 106 passed, 1 skipped; relay suite 70 passed; `PacketMetadataTest` 4 tests pass (Android unit test, standard variant).
+
+**Not checked**
+
+- A capture of a running server or phone, a forensic image of a phone, the cryptographic design itself, cover-traffic effectiveness, load. See `evidence/AUDITOR_SCOPE.md`.
+- The Tor hashes were compared with the Tor Project's signed list on 14 October 2026; the signing key's fingerprint was taken from the key server and should be compared with torproject.org by a person.
+- Other older documents (whitepaper, blueprint, decks, other artifacts) may still say message length is hidden; only the files named above were corrected.
+
+---
+
 ## 2026‑10‑13 · Temp Node on this phone (Pro Groups)
 
 **What was done**
