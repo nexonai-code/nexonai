@@ -47,6 +47,7 @@ Beispiele:
 - Die Basistexte stehen in `unpruuf_Story_DE/EN/RO.docx` und in der Landing-Page-Story (Postamt). Neue Materialien übernehmen sie unverändert oder gekürzt, nicht neu erfunden. Protokolldetails bleiben draußen (Patent).
 - Die Hinweisgeber-Lösung heißt **safeline** (seit 10.10.2026). In neuem Kundenmaterial so nennen, nicht mehr „unpruuf Compliance“ oder „Whistleblower“. Das Grundsystem heißt weiter unpruuf („Wie unpruuf funktioniert“). Deck: `unpruuf/presentations/safeline.py` (EN und RO), Export in `presentations/export/safeline_EN/RO.pdf/.pptx`. App-Namen, Docs und ältere Compliance-Decks sind noch nicht umbenannt.
 - Newsletter-Anmeldungen und Newsletter-Anfragen gehen an **unpruuf@nexonai.ro** (Festlegung vom 11.10.2026). Die Landing Page hat dafür einen Abo-Knopf als E-Mail an diese Adresse, ohne Server-Formular. Der Datenschutztext muss den Newsletter nennen (Einwilligung, Abmeldung per E-Mail), sobald klar ist, womit versendet wird.
+- Kontakt und Anfragen (Entscheidung vom 15.10.2026): Die Landing Page hat keinen Formular-Server. Kontakt läuft über einen Knopf, der eine E-Mail an **unpruuf@nexonai.ro** öffnet, und die Adresse steht zusätzlich als Text auf der Seite. Ein Formular mit Auftragsverarbeitung (EU-Dienst) wird später nur nach Prüfung durch einen Anwalt eingeführt.
 
 ## GDPR (11.10.2026)
 
