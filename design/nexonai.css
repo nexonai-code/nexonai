@@ -26,7 +26,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--primary);outline-of
 .nx-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(247,250,249,.9);backdrop-filter:blur(18px);border-bottom:1px solid var(--surface-high);box-shadow:0 2px 6px #12201e04}
 .nx-header-in{max-width:1480px;margin:0 auto;height:76px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
 .nx-logo{display:block;position:relative;width:155px;aspect-ratio:1485/600;overflow:hidden;flex-shrink:0}
-.nx-logo img{position:absolute;max-width:none;width:119.461279%;height:auto;left:-10.10101%;top:-30%}
+.nx-logo img{position:absolute;max-width:none;width:119.461279%;height:auto;left:-10.10101%;top:-30%;mix-blend-mode:multiply}
 .nx-nav{display:flex;align-items:center;gap:0;overflow-x:auto}
 .nx-nav a{padding:10px 9px;font-size:12px;white-space:nowrap;color:var(--on-variant);border-radius:8px;transition:color .2s,background-color .2s}
 .nx-nav a:hover{background:var(--surface-mid);color:var(--on-surface)}
