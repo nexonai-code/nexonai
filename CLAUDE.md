@@ -7,6 +7,7 @@ Gilt für alle Projekte in diesem Repo.
 - Antworten nie mit „Gabriel, “ beginnen. Direkt mit der Antwort anfangen.
 - Verlangt Gabriel etwas, zuerst genau das vollständig liefern. Eigene Meinung (passt nicht, zu viel, Risiko, bessere Idee) erst am Ende, klar abgesetzt. Nicht bremsen, nicht kürzen, nicht vorab umlenken.
 - Gabriel will alles wissen, was er fragt, um Entscheidungen auf besserer Datenlage zu treffen. Vollständige Information hat Vorrang vor Priorisierung.
+- Keine Zuweisungen an Gabriel, Norbert und Floretta in Dokumenten, Artefakten oder Übersichten (16.10.2026, von Gabriel festgelegt). Keine Felder wie „Owner“, „Verantwortlich“, „Zuständig“ und keine Aufgabenverteilung nach Personen. Entscheidungen und offene Punkte als „das Team“ formulieren.
 
 ## Design für Artefakte und Seiten (16.10.2026, von Gabriel festgelegt)
 
