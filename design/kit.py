@@ -45,9 +45,9 @@ def page(title, status, nav, body, footer_note=None):
     footer_note = footer_note or ("© 2026 NexonAI Consulting SRL. Not audited, not certified.", "© 2026 NexonAI Consulting SRL. Neauditat, necertificat.")
     js = """(function(){
   function setLang(l){document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l;
-    document.querySelectorAll('.nx-lang button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.l===l?'true':'false');});
+    document.querySelectorAll('.nx-lang button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.set===l?'true':'false');});
     try{localStorage.setItem('nx-lang',l);}catch(e){}}
-  document.querySelectorAll('.nx-lang button').forEach(function(b){b.addEventListener('click',function(){setLang(b.dataset.l);});});
+  document.querySelectorAll('.nx-lang button').forEach(function(b){b.addEventListener('click',function(){setLang(b.dataset.set);});});
   var l=null;try{l=localStorage.getItem('nx-lang');}catch(e){}
   if(l!=='en'&&l!=='ro'){l=(navigator.language||'').toLowerCase().indexOf('ro')===0?'ro':'en';}
   setLang(l);})();"""
@@ -57,7 +57,7 @@ def page(title, status, nav, body, footer_note=None):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap">
 <style>@font-face{{font-family:"DejaVu Sans Mono";src:url("data:font/woff2;base64,{font}") format("woff2");font-weight:400 700;font-display:swap}}
 {css}</style>
-<header class="nx-header"><div class="nx-header-in">{logo}<nav class="nx-nav" aria-label="Navigation">{nav_html}</nav><div class="nx-lang" role="group" aria-label="Language"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="ro" aria-pressed="false">RO</button></div></div></header>
+<header class="nx-header"><div class="nx-header-in">{logo}<nav class="nx-nav" aria-label="Navigation">{nav_html}</nav><div class="nx-lang" role="group" aria-label="Language"><button type="button" data-set="en" aria-pressed="true">EN</button><button type="button" data-set="ro" aria-pressed="false">RO</button></div></div></header>
 <div class="nx-status"><div class="nx-status-in"><span class="nx-status-brand"><i></i>{brand}</span><span>{E(en, ro)}</span><span>EN / RO</span></div></div>
 <main>{body}</main>
 <footer class="nx-footer"><div class="nx-footer-in">
