@@ -21,6 +21,15 @@
       "token": "Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU"
     },
     {
+      "name": "slot-scope",
+      "grantIdHex": "00112233445566778899aabbccddeeff",
+      "notAfterMs": 1893456000000,
+      "depositsPerHour": 60,
+      "bytesPerHour": 1048576,
+      "scopeHex": "0000000900f90063",
+      "token": "AQARIjNEVWZ3iJmqu8zd7v8AAAG42sW0AAA8ABAAAAgAAAAJAPkAYw.wAXP0a6VQKQzGz9j-UPFL2ddHxYprASJD72dTkFsbkE"
+    },
+    {
       "name": "short-limits",
       "grantIdHex": "a1a2a3a4a5a6a7a8a9aaabacadaeafb0",
       "notAfterMs": 1800000000000,

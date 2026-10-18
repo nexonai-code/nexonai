@@ -1,6 +1,6 @@
 # Guest lockers: build spec for a free, invite-only Client app
 
-Status 18 October 2026. **Built so far (see section 15):** reference server change with tests, shared format and test vectors, Android core and client plumbing. Not built: apps' screens, Control, iOS, evidence scripts. **Internal. Names protocol details; do not give to customers or the public (patent check still running).**
+Status 18 October 2026. **Built so far (see section 15):** reference server change with tests (including slot scope for the 250 x 100 server), shared format and test vectors, Android core, client plumbing and the owner's invite screen. Not built: Client import and storage, renewal, Control, iOS, evidence scripts. **Internal. Names protocol details; do not give to customers or the public (patent check still running).**
 
 ## 0. Read this first
 
@@ -164,10 +164,10 @@ Real world: mobile data, doze, server restart, unlock after restart.
 
 | Work package | State |
 |---|---|
-| 1 Server | **Done in the node-mesh-server of this repository** (older single-node server). `PUT /deposit` takes `Bearer <owner>` or `Guest <token>`; guests off by default (`NODE_MESH_GUEST_GRANTS=1`); stateless MAC check; quota per grant in memory; no grant data on disk. 35 server tests pass, 9 of them new. **Still to do: port the same change to the current multi-slot server** (VERIFY slot addressing; use `scope` for slot ranges). |
+| 1 Server | **Done in the node-mesh-server of this repository** (older single-node server). `PUT /deposit` takes `Bearer <owner>` or `Guest <token>`; guests off by default (`NODE_MESH_GUEST_GRANTS=1`); stateless MAC check; quota per grant in memory; no grant data on disk. **Slot scope for the multi-slot server is implemented as a module** (`guestScope.ts`: entries node u16 0..249, slotFrom/slotTo 0..99; options `requireScope` and `resolveTarget`; empty scope fails closed there, a deposit outside the granted slots is 403). 37 server tests pass. **Still to do: plug the module into the current multi-slot server.** It needs two things from that server: set `requireScope: true` and supply `resolveTarget(body)` returning the (virtual node, slot) a deposit lands in. Everything else is already in `src/guest/` and `src/middleware/depositAuth.ts`. |
 | 2 Evidence | Not done. The evidence scripts are not in this repository. Update checks 01, 02, 03, 06 and add check 10 as listed in 12.2 once the multi-slot server has the change. The new server test "storage stays blind" is the model for check 02. |
-| 3 Pro app | Not done (screens, renewal). `GuestGrant.issue` is ready to call. |
-| 4 Client app | Core done: `GuestGrant.kt` (issue, parse, renewal check, header), `NodeMeshClient.depositAsGuest`, pairing field `g`. JVM tests for `GuestGrant` pass against the shared vectors (8 tests). **The two Android files that touch Android classes (`NodeMeshClient.kt`, `NodeMeshPairing.kt`) were not compiled here: no Android SDK in this environment.** Screens, storage and `GRANT_RENEW` handling still to do. |
+| 3 Pro app | **Invite screen built** (`GuestInviteScreen`, `GuestInviteViewModel`, route `guest_invite`, button in the Business pairing screen, Pro only): validity 7/14/28 days, quota Light/Normal/High, one QR with the pairing code plus one grant per own node, code shown only on request and cleared on leaving the screen. Grant building is pure and unit-tested (`GuestInvite.kt`, 15 JVM tests with `GuestGrant`). **Not compiled here (no Android SDK).** Still to do: automatic renewal (`GRANT_RENEW`), list of guests, stop renewing. |
+| 4 Client app | Core done (also `GuestScope.kt`): `GuestGrant.kt` (issue, parse, renewal check, header), `NodeMeshClient.depositAsGuest`, pairing field `g`. JVM tests pass against the shared vectors. **The two Android files that touch Android classes (`NodeMeshClient.kt`, `NodeMeshPairing.kt`) were not compiled here: no Android SDK in this environment.** Screens, storage and `GRANT_RENEW` handling still to do. |
 | 5 Control | Not done (not in this repository). |
 | 6 Docs | This spec, `guest-grants/FORMAT.md`, `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`. Whitepaper and website sentence still to do. |
 | 7 iOS | Build order written: `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`. |

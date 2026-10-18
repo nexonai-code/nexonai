@@ -9,6 +9,7 @@ import { createApp } from "../app";
 import { NodeStore } from "../store/nodeStore";
 import { issueGuestGrant, deriveGuestKey, verifyGuestGrant } from "./guestGrant";
 import { buildVectors } from "./vectors";
+import { decodeScope, encodeScope, scopeAllows } from "./guestScope";
 
 const OWNER = "test-owner-secret-abc123";
 const DAY = 86_400_000;
@@ -159,5 +160,54 @@ test("test vectors in guest-grants/vectors.json match the implementation and ver
   for (const c of onDisk.cases) {
     const r = verifyGuestGrant(c.token, key, c.notAfterMs - 1000, 365 * DAY * 50);
     assert.equal(r.ok, true, c.name);
+  }
+});
+
+test("scope: encode/decode round-trip, range checks, and the slot-scope vector decodes", () => {
+  const entries = [{ node: 0, slotFrom: 0, slotTo: 9 }, { node: 249, slotFrom: 0, slotTo: 99 }];
+  const bytes = encodeScope(entries);
+  assert.equal(bytes.toString("hex"), "0000000900f90063");
+  assert.deepEqual(decodeScope(bytes), entries);
+  assert.equal(scopeAllows(entries, 0, 9), true);
+  assert.equal(scopeAllows(entries, 0, 10), false);
+  assert.equal(scopeAllows(entries, 1, 0), false);
+  assert.equal(scopeAllows(entries, 249, 99), true);
+  assert.throws(() => encodeScope([{ node: 250, slotFrom: 0, slotTo: 0 }]));
+  assert.throws(() => encodeScope([{ node: 0, slotFrom: 5, slotTo: 4 }]));
+  assert.throws(() => encodeScope([{ node: 0, slotFrom: 0, slotTo: 100 }]));
+  assert.equal(decodeScope(Buffer.from("000000", "hex")), null, "length not a multiple of 4");
+  assert.equal(decodeScope(Buffer.from("00fa0000", "hex")), null, "node 250 does not exist");
+  assert.equal(decodeScope(Buffer.from("00000a09", "hex")), null, "slotTo below slotFrom");
+});
+
+async function startMulti(resolve: (body: unknown) => { node: number; slot: number } | null) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-scope-test-"));
+  const store = new NodeStore(path.join(dir, "node-mesh.sqlite"));
+  const app = createApp(store, OWNER, { enabled: true, maxValidityMs: 30 * DAY, requireScope: true, resolveTarget: resolve });
+  const server = app.listen(0);
+  const { port } = server.address() as AddressInfo;
+  return { server, store, base: `http://127.0.0.1:${port}` };
+}
+
+test("multi-slot mode: empty scope fails closed, deposits outside the granted slots are 403, inside are 201", async () => {
+  // test host mapping: tag "n<node>s<slot>" lands in that node and slot
+  const resolve = (body: unknown) => {
+    const m = /^n(\d+)s(\d+)$/.exec(String((body as { routing_tag?: string })?.routing_tag ?? ""));
+    return m ? { node: Number(m[1]), slot: Number(m[2]) } : null;
+  };
+  const s = await startMulti(resolve);
+  try {
+    const scoped = `Guest ${grant({ scope: encodeScope([{ node: 3, slotFrom: 10, slotTo: 12 }]) }).token}`;
+    assert.equal((await deposit(s.base, scoped, "n3s10")).status, 201);
+    assert.equal((await deposit(s.base, scoped, "n3s12")).status, 201);
+    assert.equal((await deposit(s.base, scoped, "n3s13")).status, 403, "slot outside range");
+    assert.equal((await deposit(s.base, scoped, "n4s10")).status, 403, "other node");
+    assert.equal((await deposit(s.base, scoped, "unmapped")).status, 403, "target cannot be resolved");
+    assert.equal((await deposit(s.base, `Guest ${grant().token}`, "n3s10")).status, 401, "empty scope fails closed");
+    assert.equal((await deposit(s.base, `Guest ${grant({ scope: Buffer.from("0102", "hex") }).token}`, "n3s10")).status, 401, "malformed scope");
+    assert.equal((await deposit(s.base, `Bearer ${OWNER}`, "n9s9")).status, 201, "owner is not limited by scope");
+  } finally {
+    s.server.close();
+    s.store.close();
   }
 });

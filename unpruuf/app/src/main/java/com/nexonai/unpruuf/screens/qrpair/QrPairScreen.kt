@@ -37,6 +37,7 @@ import com.nexonai.unpruuf.domain.AppEdition
 @Composable
 fun QrPairScreen(
     onNavigateBack: () -> Unit,
+    onInviteGuest: (() -> Unit)? = null,
     viewModel: QrPairViewModel = hiltViewModel()
 ) {
     val errorState by viewModel.errorState.collectAsState()
@@ -292,6 +293,15 @@ fun QrPairScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            }
+
+            // Pro only: invite a free Client app user who has no servers of their own. Shown next to
+            // the Business Node-Mesh code because the invitation is built on it.
+            if (nodeMeshMode && AppEdition.isPro && onInviteGuest != null) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(onClick = onInviteGuest, modifier = Modifier.fillMaxWidth()) {
+                    Text("Invite a guest (free Client app)")
+                }
             }
 
             // Debug-build only: a remote tester can't scan a QR code in person. Copy the exact
@@ -578,7 +588,7 @@ fun QrPairScreen(
     }
 }
 
-private fun generateQrBitmap(content: String, size: Int = 512): Bitmap? {
+internal fun generateQrBitmap(content: String, size: Int = 512): Bitmap? {
     return try {
         val matrix: BitMatrix = MultiFormatWriter().encode(
             content, BarcodeFormat.QR_CODE, size, size

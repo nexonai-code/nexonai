@@ -14,7 +14,7 @@ grant, big-endian:
 | 25 | 2 | depositsPerHour |
 | 27 | 4 | bytesPerHour |
 | 31 | 1 | scopeLen, 0 to 64 |
-| 32 | scopeLen | scope, opaque (reserved for slot ranges of the multi-slot server) |
+| 32 | scopeLen | scope. Empty = this node (single-node server). On the multi-slot server a list of 4-byte entries: node u16 (0..249), slotFrom u8, slotTo u8 (0..99, slotTo >= slotFrom). Empty fails closed there. |
 
 mac = HMAC-SHA256(key, `"unpruuf-guest-grant-v1\0"` || grant)
 key = HKDF-SHA256(ikm = UTF-8(ownerSecret), salt = empty, info = `"unpruuf guest grant v1"`, 32 bytes)
