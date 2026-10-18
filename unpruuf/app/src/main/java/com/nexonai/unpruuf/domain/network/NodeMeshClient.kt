@@ -62,6 +62,36 @@ class NodeMeshClient @Inject constructor(
         return response != null && response.status in 200..299
     }
 
+    /** Result of a guest deposit, so the Client app can say something useful instead of a bare
+     *  failure (GUEST_LOCKERS_BUILD_SPEC.md §7.2). There is deliberately no fallback to any other
+     *  node or path on any of these. */
+    enum class GuestDepositResult { OK, GRANT_REFUSED, QUOTA_REACHED, FAILED }
+
+    /**
+     * Deposits one already-encrypted blob for a GUEST (free Client app, no server of their own)
+     * on the inviter's node at [nodeAddress], authenticated with a [GuestGrant] token the owner
+     * issued — never the owner secret. A refused grant (expired, forged, guests switched off on
+     * that node) comes back as [GuestDepositResult.GRANT_REFUSED]; the app then asks the owner
+     * for a renewal. A reached quota comes back as [GuestDepositResult.QUOTA_REACHED].
+     */
+    fun depositAsGuest(nodeAddress: String, grantToken: String, routingTag: String, ciphertext: ByteArray, ttlMs: Long? = null): GuestDepositResult {
+        val blob = android.util.Base64.encodeToString(ciphertext, android.util.Base64.NO_WRAP)
+        val body = if (ttlMs != null) {
+            """{"routing_tag":"$routingTag","ciphertext":"$blob","ttl":$ttlMs}"""
+        } else {
+            """{"routing_tag":"$routingTag","ciphertext":"$blob"}"""
+        }
+        val response = runCatching {
+            request(nodeAddress, "PUT", "/deposit", body, authorization = GuestGrant.authorizationHeader(grantToken))
+        }.getOrNull() ?: return GuestDepositResult.FAILED
+        return when {
+            response.status in 200..299 -> GuestDepositResult.OK
+            response.status == 401 -> GuestDepositResult.GRANT_REFUSED
+            response.status == 429 -> GuestDepositResult.QUOTA_REACHED
+            else -> GuestDepositResult.FAILED
+        }
+    }
+
     /** Pulls (without deleting — NODE_MESH_SPEC.md §4) every blob currently queued for
      *  [routingTag] on a CONTACT's node at [nodeAddress]. No auth: the tag itself is the
      *  credential (see node-mesh-server/README.md's API table). */
@@ -154,7 +184,8 @@ class NodeMeshClient @Inject constructor(
         path: String,
         body: String?,
         ownerSecret: String? = null,
-        socketTimeoutMs: Int = SOCKET_TIMEOUT_MS
+        socketTimeoutMs: Int = SOCKET_TIMEOUT_MS,
+        authorization: String? = null
     ): HttpResponse {
         val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", torManager.socksPort))
         Socket(proxy).use { socket ->
@@ -169,6 +200,7 @@ class NodeMeshClient @Inject constructor(
             // Only /deposit needs this — /fetch and /fetchMany are unauthenticated by design
             // (NODE_MESH_SPEC.md §8), so callers simply pass no ownerSecret for those.
             if (ownerSecret != null) head.append("Authorization: Bearer $ownerSecret\r\n")
+            else if (authorization != null) head.append("Authorization: $authorization\r\n")
             head.append("Connection: close\r\n")
             if (bodyBytes != null) {
                 head.append("Content-Type: application/json\r\n")

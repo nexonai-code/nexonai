@@ -43,3 +43,12 @@ export const PORT = Number(process.env.PORT ?? 8788);
 export const DATA_DIR = process.env.NODE_MESH_DATA_DIR ?? path.join(__dirname, "..");
 export const DB_PATH = process.env.NODE_MESH_DB_PATH ?? path.join(DATA_DIR, "node-mesh.sqlite");
 export const IDENTITY_PATH = path.join(DATA_DIR, "node-mesh-identity.json");
+
+// Guest grants (GUEST_LOCKERS_BUILD_SPEC.md): lets a free Client app user without servers of their
+// own deposit with a signed, expiring token issued by the owner. OFF by default; with the switch
+// off, a `Guest` credential is refused like any wrong credential. The caps below are the node
+// operator's ceiling; a grant may ask for less, never more.
+export const GUEST_GRANTS_ENABLED = process.env.NODE_MESH_GUEST_GRANTS === "1";
+export const GUEST_MAX_VALIDITY_MS = Number(process.env.NODE_MESH_GUEST_MAX_VALIDITY_DAYS ?? 30) * 24 * 60 * 60 * 1000;
+export const GUEST_MAX_DEPOSITS_PER_HOUR = Number(process.env.NODE_MESH_GUEST_MAX_DEPOSITS_PER_HOUR ?? 120);
+export const GUEST_MAX_BYTES_PER_HOUR = Number(process.env.NODE_MESH_GUEST_MAX_BYTES_PER_HOUR ?? 2 * 1024 * 1024);

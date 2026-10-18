@@ -5,6 +5,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑18 · Guest lockers for a free, invite-only Client app (first build)
+
+**What was done.** Guest grants: a signed, expiring token that lets a Client app user without servers deposit on the inviter's node. Server (`node-mesh-server`): `PUT /deposit` accepts `Guest <token>` besides the owner bearer, off by default (`NODE_MESH_GUEST_GRANTS=1`), stateless MAC check, in-memory quota per grant, no grant data on disk; 9 new tests, 35 pass. Shared format and test vectors in `guest-grants/`. Android: `GuestGrant.kt` (issue, parse, renewal check) with 8 JVM tests against the vectors, `NodeMeshClient.depositAsGuest`, pairing field `g`. Specs: `GUEST_LOCKERS_BUILD_SPEC.md`, `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`.
+
+**Open / not verified.** The two Android files that touch Android classes were not compiled (no SDK here). No screens, Control, evidence scripts or iOS yet. The server change is in the older single-node server of this repository and must be ported to the current multi-slot server. Packet-length finding F1 is still open in this snapshot.
+
+---
+
 ## 2026‑09‑24 · node-mesh-server: standalone Windows binary (NODE_MESH_SPEC.md §8, last open piece — spec now fully built)
 
 **What was done**

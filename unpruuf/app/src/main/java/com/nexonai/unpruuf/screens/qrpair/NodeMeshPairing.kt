@@ -1,6 +1,7 @@
 package com.nexonai.unpruuf.screens.qrpair
 
 import com.nexonai.unpruuf.domain.AppEdition
+import com.nexonai.unpruuf.domain.network.GuestGrant
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
 
 /**
@@ -25,7 +26,12 @@ data class NodeMeshPairingPayload(
     val x25519RatchetPublicKeyBase64: String,
     val nodeMeshRoutingSeedBase64: String,
     val nodeAddresses: List<String>,
-    val appEdition: String = AppEdition.STANDARD
+    val appEdition: String = AppEdition.STANDARD,
+    /** Guest grants (GUEST_LOCKERS_BUILD_SPEC.md §6), index-aligned with [nodeAddresses]; an
+     *  empty string means "no grant for this node". Empty list for every normal pairing, so the
+     *  format stays identical for existing users. Only an owner inviting a free Client app user
+     *  fills it. Treat as a secret: show once, never log. */
+    val guestGrants: List<String> = emptyList()
 )
 
 private const val NODE_ADDRESS_PREFIX = NodeMeshManager.NODE_ADDRESS_PREFIX
@@ -33,7 +39,10 @@ private const val NODE_ADDRESS_PREFIX = NodeMeshManager.NODE_ADDRESS_PREFIX
 fun nodeMeshPayloadToJson(payload: NodeMeshPairingPayload): String {
     val compact = compactUserId(payload.userId) ?: payload.userId
     val n = escapeNodeMesh(payload.nodeAddresses.joinToString(";") { it.removePrefix(NODE_ADDRESS_PREFIX) })
-    return """{"v":${payload.version},"u":"$compact","p":"${payload.messageKeyBase64}","k":"${payload.x25519RatchetPublicKeyBase64}","s":"${payload.nodeMeshRoutingSeedBase64}","n":"$n","e":"${payload.appEdition}"}"""
+    val g = if (payload.guestGrants.any { it.isNotEmpty() }) {
+        ",\"g\":\"" + escapeNodeMesh(GuestGrant.encodeList(payload.guestGrants)) + "\""
+    } else ""
+    return """{"v":${payload.version},"u":"$compact","p":"${payload.messageKeyBase64}","k":"${payload.x25519RatchetPublicKeyBase64}","s":"${payload.nodeMeshRoutingSeedBase64}","n":"$n","e":"${payload.appEdition}"$g}"""
 }
 
 /** Returns null if [json] isn't a Node-Mesh payload at all (no "s" key — the routing seed is
@@ -59,7 +68,8 @@ fun jsonToNodeMeshPayload(json: String): NodeMeshPairingPayload? {
             x25519RatchetPublicKeyBase64 = map["k"] ?: return null,
             nodeMeshRoutingSeedBase64 = seed,
             nodeAddresses = addresses,
-            appEdition = map["e"] ?: AppEdition.STANDARD
+            appEdition = map["e"] ?: AppEdition.STANDARD,
+            guestGrants = map["g"]?.let { GuestGrant.decodeList(unescapeNodeMesh(it), addresses.size) } ?: emptyList()
         )
     } catch (e: Exception) {
         null

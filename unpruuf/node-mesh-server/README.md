@@ -76,3 +76,8 @@ npm run dev # ts-node, plain HTTP on 127.0.0.1:8788 — no Tor, no auth wrapper 
   (`EPHEMERAL=1`, above) from a second Windows machine without installing anything on it first.
 - Docker/macOS packaging: not yet built out for this package — `../server/`'s scripts are the
   reference to adapt once this reaches that phase.
+
+
+## Guest grants (optional, off by default)
+
+Lets a free Client app user without servers deposit on this node with a signed, expiring token issued by the owner. Switch on with `NODE_MESH_GUEST_GRANTS=1`. Format and limits: `../guest-grants/FORMAT.md`; design: `../GUEST_LOCKERS_BUILD_SPEC.md`. A guest can only `PUT /deposit`; nothing else changes, and no grant or grant id is ever stored.

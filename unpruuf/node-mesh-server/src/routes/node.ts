@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { NodeStore } from "../store/nodeStore";
 import { MAX_BLOB_BYTES, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
-import { requireOwner } from "../middleware/ownerAuth";
+import { GuestOptions, requireOwnerOrGuest } from "../middleware/depositAuth";
+import { GuestQuota } from "../guest/guestQuota";
 import { rateLimited, TokenBucket } from "../middleware/rateLimit";
 
 const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
@@ -12,13 +13,14 @@ const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
  * that already speaks that format needs no new parsing logic, only a different auth/delete
  * contract per endpoint (see each route's own comment for what changed and why).
  */
-export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
+export function nodeRouter(store: NodeStore, ownerSecret: string, guest: GuestOptions, quota: GuestQuota): Router {
   const router = Router();
   const fetchRateLimit = new TokenBucket(30, 5); // burst of 30, refills 5/sec
 
-  // Owner-only — see ownerAuth.ts's doc comment. No contact, no stranger who merely learns this
-  // node's address can ever write here, regardless of whether they know a valid routing_tag.
-  router.put("/deposit", requireOwner(ownerSecret), (req, res) => {
+  // Owner, or a guest with a valid grant (only if guests are enabled) — see depositAuth.ts. No
+  // contact and no stranger who merely learns this node's address can write here, regardless of
+  // whether they know a valid routing_tag.
+  router.put("/deposit", requireOwnerOrGuest(ownerSecret, guest), (req, res) => {
     const { routing_tag, ciphertext, ttl } = req.body ?? {};
     if (typeof routing_tag !== "string" || !TAG_RE.test(routing_tag)) {
       return res.status(400).json({ error: "invalid routing_tag" });
@@ -34,6 +36,9 @@ export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
     }
     if (decodedLength === 0 || decodedLength > MAX_BLOB_BYTES) {
       return res.status(413).json({ error: `ciphertext must be 1..${MAX_BLOB_BYTES} bytes` });
+    }
+    if (req.guestGrant && !quota.tryTake(req.guestGrant, decodedLength)) {
+      return res.status(429).json({ error: "guest quota reached" });
     }
     let ttlMs: number | undefined;
     if (ttl !== undefined) {

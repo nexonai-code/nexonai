@@ -1,6 +1,6 @@
 import { createApp } from "./app";
 import { NodeStore } from "./store/nodeStore";
-import { DB_PATH, IDENTITY_PATH, PORT, RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS } from "./config";
+import { DB_PATH, GUEST_GRANTS_ENABLED, GUEST_MAX_VALIDITY_MS, IDENTITY_PATH, PORT, RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS } from "./config";
 import { createEphemeralIdentity, loadOrCreateIdentity, NodeIdentity } from "./nodeIdentity";
 
 // unpruuf Business Temp Node (NODE_MESH_SPEC.md §7 step 8): EPHEMERAL=1 starts this process as a
@@ -31,7 +31,8 @@ if (ephemeral) {
 }
 
 const store = new NodeStore(ephemeral ? ":memory:" : DB_PATH, identity.ttlHours);
-const app = createApp(store, identity.ownerSecret);
+const app = createApp(store, identity.ownerSecret, { enabled: GUEST_GRANTS_ENABLED, maxValidityMs: GUEST_MAX_VALIDITY_MS });
+console.log(`[guests] guest grants ${GUEST_GRANTS_ENABLED ? "ENABLED" : "off"}`);
 
 // The only deletion path (NODE_MESH_SPEC.md §4) — Reset below never touches message data.
 setInterval(() => {
