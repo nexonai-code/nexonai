@@ -50,7 +50,22 @@ android {
         if (f.exists()) f.inputStream().use { load(it) }
     }
     val testKeystoreFile = testKeystoreProps.getProperty("storeFile")?.let { file("../keystore.properties").resolveSibling(it) }
+    // Release-Schluessel fuer Kunden-Builds: release.properties + unpruuf-release.jks in unpruuf/ (nie im
+    // Repository). Fehlen sie, bleibt der Release-Build UNSIGNIERT, er faellt nie auf einen Test-Schluessel zurueck.
+    val releaseKeystoreProps = Properties().apply {
+        val f = file("../release.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val releaseKeystoreFile = releaseKeystoreProps.getProperty("storeFile")?.let { file("../release.properties").resolveSibling(it) }
     signingConfigs {
+        if (releaseKeystoreFile != null && releaseKeystoreFile.exists()) {
+            create("nexonaiRelease") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystoreProps.getProperty("storePassword")
+                keyAlias = releaseKeystoreProps.getProperty("keyAlias")
+                keyPassword = releaseKeystoreProps.getProperty("keyPassword")
+            }
+        }
         if (testKeystoreFile != null && testKeystoreFile.exists()) {
             create("nexonaiTest") {
                 storeFile = testKeystoreFile
@@ -66,6 +81,7 @@ android {
             signingConfigs.findByName("nexonaiTest")?.let { signingConfig = it }
         }
         release {
+            signingConfigs.findByName("nexonaiRelease")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

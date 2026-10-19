@@ -24,3 +24,15 @@ Prüfen, womit eine APK signiert ist: `apksigner verify --print-certs datei.apk`
 ## Einmalig nötig
 
 Wer vorher eine unpruuf mit anderem Schlüssel auf dem Telefon hat, deinstalliert sie einmal. Danach laufen alle Updates mit diesem Schlüssel durch.
+
+---
+
+# Release-Schlüssel (Kunden-Builds), seit 19.10.2026
+
+Getrennt vom Testschlüssel. Fingerabdruck SHA-256: `9E:E8:5E:91:16:9F:62:50:09:5D:4F:36:E6:A6:EA:D5:CB:42:DC:C7:B7:26:36:CB:4B:99:B7:D3:A0:D1:4E:7E` (Alias `nexonai-release`, RSA 4096, gültig bis 2061).
+
+- Dateien `unpruuf-release.jks` und `release.properties` in `unpruuf/` (beide in `.gitignore`). Ohne sie bleibt ein Release-Build **unsigniert**, er fällt nie auf den Testschlüssel zurück.
+- Das Startpasswort wurde in einer Cloud-Sitzung erzeugt. **Sofort mit `passwort-aendern.bat` ändern** (liegt in der Schlüssel-ZIP), danach an zwei getrennten Orten sichern.
+- Verlust = kein Kunde kann mehr aktualisieren (alle müssten deinstallieren). Fremder Zugriff = gefälschte Updates möglich.
+- Release-Build: Build Variant `proRelease` (oder andere `...Release`), nicht debuggable, Root-Check aktiv, R8-verkleinert.
+- Lint-Vital-Prüfung beim Release konnte in der Cloud-Umgebung nicht laufen (offline); in Android Studio läuft sie.

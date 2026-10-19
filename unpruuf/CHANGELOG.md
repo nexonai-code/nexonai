@@ -5,6 +5,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑19 · Release signing key and first working release build
+
+- `app/build.gradle.kts`, `relay-android/app/build.gradle.kts`: release builds are signed with `unpruuf-release.jks` when `release.properties` is present (both in `.gitignore`), otherwise left unsigned. Description: `SIGNING_TEST_KEY.md`.
+- **Fix:** `app/src/main/res/drawable/logo_unpruuf.png` was a JPEG with a `.png` name. Debug builds accepted it, **every release build failed** at resource compilation. Converted to a real PNG.
+- A release build (R8 on, not debuggable) of Pro was built and signed with the release key in the cloud.
+
+---
+
 ## 2026‑10‑19 · Security review of the apps: four small fixes
 
 - Received images: size read first, absurd sizes refused, rest decoded reduced (`SafeImage`, `SafeImageTest`).
