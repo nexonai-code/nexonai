@@ -101,3 +101,9 @@ Die ersten 8 Bytes jedes gespeicherten 4096-Byte-Pakets nennen die Länge des In
 **Claude Code im Repo:** neue Sitzung im Repo öffnen (`CLAUDE.md` wird geladen), dann `NEUER_CHAT_PROMPT.md` einfügen.
 
 **Normaler Chat (claude.ai):** `NEUER_CHAT_PROMPT.md` einfügen und diese Datei, `CLAUDE.md` und je nach Thema `STATUS.md`, `SECURITY_CLAIMS.md`, `evidence/CLAIMS_TO_EVIDENCE.md` oder `ios/IOS_BUSINESS_BUILD_SPEC.md` anhängen. Alles liegt im ZIP `unpruuf_Uebergabe_2026-10-14_v1.zip`.
+
+## Nachtrag 19.10.2026
+
+- Offen, Team-Entscheidung: **F1** (Länge im Klartext im gespeicherten Paket). Gabriel: „noch nicht“. Empfehlung und Plan: `F1_ENTSCHEIDUNG.md`.
+- Neu seit 16.10.: Fixes aus dem Abgleich Aussagen gegen Code (21 Punkte), fester Testschlüssel und Release-Schlüssel (Dateien nur bei Gabriel, nie im Git; Anleitung `../SIGNING_TEST_KEY.md`), Release-Build läuft (Logo-Datei war ein JPEG), Besitzer-Geheimnisse verschlüsselt gespeichert, Sicherheits-Review der Apps mit vier Fixes.
+- Vor dem Audit sinnvoll: F1 entscheiden, Zwei-Telefone-Durchlauf mit eigenem VPS, fester Tag im Git mit Fingerabdruck des Release-Builds.
