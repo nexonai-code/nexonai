@@ -98,8 +98,7 @@ fun GroupEditScreen(
                 )
                 Row {
                     TextButton(onClick = {
-                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        cm.setPrimaryClip(ClipData.newPlainText("code", code))
+                        com.nexonai.unpruuf.ui.SensitiveClipboard.copy(context, "code", code)
                     }) { Icon(Icons.Default.ContentCopy, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.group_code_copy)) }
                     if (!editing) {
                         TextButton(onClick = { code = viewModel.suggestedCode }) {

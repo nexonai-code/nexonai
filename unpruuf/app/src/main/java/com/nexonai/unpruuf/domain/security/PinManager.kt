@@ -9,8 +9,10 @@ import javax.crypto.spec.PBEKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** LOCKED: too many wrong tries in a row — the PIN was not even compared; see [PinManager.lockRemainingMs]. */
-enum class PinResult { NORMAL, PANIC, WRONG, LOCKED }
+/** LOCKED: too many wrong tries in a row — the PIN was not even compared; see [PinManager.lockRemainingMs].
+ *  STORE_LOST: the stored PIN hashes are encrypted under a phone key that no longer exists (phone restored,
+ *  lock screen reset on some devices). No PIN can match any more; the user must clear the app's data. */
+enum class PinResult { NORMAL, PANIC, WRONG, LOCKED, STORE_LOST }
 
 /**
  * Speichert gesalzene PBKDF2-Hashes der normalen PIN und der Panik-PIN.
@@ -66,6 +68,7 @@ class PinManager @Inject constructor(
         val candidate = hash(input, salt)
         val stored = prefs.getString("pin_hash", null)
         val panic = prefs.getString("panic_hash", null)
+        if (stored != null && stored.startsWith(SEALED) && open(stored) == null) return PinResult.STORE_LOST
         val result = when {
             constantTimeEquals(candidate, open(stored)) -> PinResult.NORMAL
             constantTimeEquals(candidate, open(panic)) -> PinResult.PANIC

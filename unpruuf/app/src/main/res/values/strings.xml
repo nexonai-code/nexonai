@@ -17,6 +17,7 @@
     <string name="lock_err_wrong_pin">Wrong PIN.</string>
     <string name="lock_err_locked">Too many wrong tries. Try again in %1$d s.</string>
     <string name="lock_err_locked_min">Too many wrong tries. Try again in %1$d min.</string>
+    <string name="lock_err_store_lost">The PIN can no longer be read on this phone (its key is gone). Clear the app data in Android Settings and set up again.</string>
     <string name="lock_err_pins_mismatch">PINs do not match.</string>
     <string name="lock_save_pin">Save PIN</string>
     <string name="lock_setup_title">Set up PIN · B2</string>

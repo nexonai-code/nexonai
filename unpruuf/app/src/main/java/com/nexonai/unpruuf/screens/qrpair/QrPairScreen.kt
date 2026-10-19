@@ -55,7 +55,7 @@ fun QrPairScreen(
     // Debug-build-only fallback for testers who can't be scanned in person (see the copy/paste
     // UI below) — the same JSON string the QR encodes, just also offered as text.
     var pastedCode by remember { mutableStateOf("") }
-    val clipboardManager = LocalClipboardManager.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     // Settings → Relay set to Mandatory means this device's traffic never uses an onion anyway
     // (see RelayManager.RelayMode) — so it defaults to the no-onion cross-platform-format QR
     // automatically, for Android↔Android pairing too, not just genuine iOS interop. See
@@ -366,7 +366,7 @@ fun QrPairScreen(
                 debugCode?.let { code ->
                     Spacer(Modifier.height(10.dp))
                     OutlinedButton(
-                        onClick = { clipboardManager.setText(AnnotatedString(code)) },
+                        onClick = { com.nexonai.unpruuf.ui.SensitiveClipboard.copy(context, "code", code) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.ContentCopy, null)

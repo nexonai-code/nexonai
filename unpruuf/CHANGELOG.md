@@ -5,6 +5,17 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑19 · Security review of the apps: four small fixes
+
+- Received images: size read first, absurd sizes refused, rest decoded reduced (`SafeImage`, `SafeImageTest`).
+- PIN: a lost phone key now gives a clear message instead of endless "wrong PIN".
+- Clipboard: codes are marked sensitive and cleared after 60 s (`SensitiveClipboard`).
+- Control: unlock lock-out doubles with every round of five wrong passphrases (30 s up to 15 min), test added.
+- Reviewed and clean: manifest (only `MainActivity` exported, no deep links, backup and clear text off), randomness, logging, pairing overwrite protection, node-list parsing, Control's loopback/CSRF/token. Not reviewed: Tor integration, feed crypto, Double Ratchet (audit scope).
+- Open: debug builds are debuggable (test only); node lists are trusted by whoever hands them over.
+
+---
+
 ## 2026‑10‑19 · Fixed test signing key for debug builds
 
 - `app/build.gradle.kts` and `relay-android/app/build.gradle.kts` sign debug builds with a fixed NexonAI test key when `unpruuf-test.jks` and `keystore.properties` are in `unpruuf/`; without them nothing changes. Both files are in `.gitignore`. Description and fingerprint: `SIGNING_TEST_KEY.md`.

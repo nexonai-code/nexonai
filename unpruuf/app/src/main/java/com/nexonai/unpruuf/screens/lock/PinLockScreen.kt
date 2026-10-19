@@ -109,7 +109,7 @@ fun PinLockScreen(viewModel: LockViewModel) {
         Spacer(Modifier.height(14.dp))
 
         // Fixed-height error slot so the pad never jumps when a message appears.
-        Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
             error?.let {
                 val secs by viewModel.lockSeconds.collectAsState()
                 Text(if (it == LockError.PIN_LOCKED) lockedText(secs) else stringResource(it.toStringRes()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -188,6 +188,7 @@ private fun LockError.toStringRes(): Int = when (this) {
     LockError.PANIC_SAME_AS_PIN -> R.string.lock_err_panic_same_as_pin
     LockError.WRONG_PIN -> R.string.lock_err_wrong_pin
     LockError.PIN_LOCKED -> R.string.lock_err_locked
+    LockError.PIN_STORE_LOST -> R.string.lock_err_store_lost
 }
 
 @Composable

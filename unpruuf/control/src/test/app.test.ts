@@ -298,3 +298,13 @@ test("unknown server ids are 404", async () => {
   }
   c.stop();
 });
+
+test("five wrong passphrases lock the unlock; the wait is reported and a right passphrase does not get through while locked", async () => {
+  const c = await boot();
+  await c.call("POST", "/api/vault/create", { passphrase: "a long passphrase", company: "Acme SRL" });
+  for (let i = 0; i < 5; i++) assert.equal((await c.call("POST", "/api/vault/unlock", { passphrase: "nope nope nope" })).status, 401);
+  const locked = await c.call("POST", "/api/vault/unlock", { passphrase: "a long passphrase" });
+  assert.equal(locked.status, 429);
+  assert.ok(locked.json.seconds > 0 && locked.json.seconds <= 30, `first lock is at most 30 s, got ${locked.json.seconds}`);
+  c.stop();
+});

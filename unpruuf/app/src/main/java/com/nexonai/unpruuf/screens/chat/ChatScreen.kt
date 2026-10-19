@@ -791,8 +791,7 @@ private fun TempNodeDialog(
     )
 }
 
-private fun decodeImage(body: ByteArray) =
-    runCatching { BitmapFactory.decodeByteArray(body, 0, body.size)?.asImageBitmap() }.getOrNull()
+private fun decodeImage(body: ByteArray) = com.nexonai.unpruuf.ui.SafeImage.decode(body)
 
 @Composable
 private fun FullscreenImageDialog(message: RamMessage, onDismiss: () -> Unit) {

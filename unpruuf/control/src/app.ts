@@ -40,6 +40,7 @@ export function createControlApp(opts: AppOptions) {
   let lastActivity = Date.now();
   let failures = 0;
   let lockedUntil = 0;
+  let lockRounds = 0; // how many times in a row the pad has locked; each round doubles the wait
   const statuses: Record<string, prov.ServerStatus> = {};
   const busy = new Set<string>();
   let bundle: LoadedBundle | null = loadBundle(opts.bundleDir);
@@ -125,10 +126,12 @@ export function createControlApp(opts: AppOptions) {
     const v = Vault.open(opts.dataDir, passphrase);
     if (!v) {
       failures++;
-      if (failures >= 5) { lockedUntil = Date.now() + 30_000; failures = 0; }
+      // 5 wrong tries lock the unlock for 30 s; every further round doubles it, up to 15 min.
+      if (failures >= 5) { lockedUntil = Date.now() + Math.min(30_000 * 2 ** lockRounds, 15 * 60_000); lockRounds = Math.min(lockRounds + 1, 10); failures = 0; }
       return res.status(401).json({ error: "wrong-passphrase" });
     }
     failures = 0;
+    lockRounds = 0;
     bundle = loadBundle(opts.bundleDir);
     res.json({ token: unlockWith(v) });
   });

@@ -190,6 +190,20 @@ between a proof and a strong mitigation.
   alone does not allow guessing the PIN offline. The counter lives in the app
   storage and the device clock; someone with root can reset it, and then the
   PIN's own entropy is the limit (see the math in the Limitations section).
+  If the phone's key is lost (restore, lock-screen reset on some devices), the
+  PIN hashes cannot be opened and the app says so; the only way out is
+  clearing the app data.
+- **Received images** are decoded only after their size was read; sizes above
+  50 million pixels or 20 000 px per side are refused, the rest is decoded at
+  reduced size (`SafeImage`). Before 2026‑10‑19 a contact with a modified app
+  could crash the app with a tiny file that claimed a huge picture.
+- **Clipboard.** Group codes, case numbers and (debug/whistleblower) pairing
+  codes are copied marked sensitive and removed after 60 s if still ours.
+  Android 12 and older cannot hide a clip from other foreground apps; the
+  automatic removal is the only protection there.
+- **Debug builds are not for customers.** They are debuggable (data readable
+  with `adb run-as` on a phone with USB debugging) and skip the root check.
+  Customer builds need the release type with a release key (not created yet).
 - **Outgoing messages are not queued on disk.** A message that cannot be sent
   yet (no Tor, node unreachable) waits in memory and is retried; if the app
   is killed first, it is gone, and the sender's own chat view is RAM-only too.

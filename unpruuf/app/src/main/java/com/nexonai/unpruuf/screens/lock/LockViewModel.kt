@@ -20,7 +20,7 @@ import javax.inject.Inject
 /** Kept as a code, not a string — the message shown lives in the UI layer (stringResource), so
  *  each build flavor (e.g. whistleblower) can localize it without this ViewModel knowing about
  *  Android resources. */
-enum class LockError { PIN_TOO_SHORT, PANIC_SAME_AS_PIN, WRONG_PIN, PIN_LOCKED }
+enum class LockError { PIN_TOO_SHORT, PANIC_SAME_AS_PIN, WRONG_PIN, PIN_LOCKED, PIN_STORE_LOST }
 
 @HiltViewModel
 class LockViewModel @Inject constructor(
@@ -61,6 +61,7 @@ class LockViewModel @Inject constructor(
         _lockSeconds.value = ((pinManager.lockRemainingMs() + 999) / 1000).toInt()
         when (result) {
             PinResult.LOCKED -> _error.value = LockError.PIN_LOCKED
+            PinResult.STORE_LOST -> _error.value = LockError.PIN_STORE_LOST
             PinResult.NORMAL -> {
                 _error.value = null
                 appLockManager.unlock()

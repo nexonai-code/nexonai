@@ -15,6 +15,7 @@
     <string name="lock_err_wrong_pin">Cod PIN greșit.</string>
     <string name="lock_err_locked">Prea multe încercări greșite. Încearcă din nou peste %1$d s.</string>
     <string name="lock_err_locked_min">Prea multe încercări greșite. Încearcă din nou peste %1$d min.</string>
+    <string name="lock_err_store_lost">PIN-ul nu mai poate fi citit pe acest telefon (cheia lui a dispărut). Șterge datele aplicației din Setările Android și configurează din nou.</string>
     <string name="lock_err_pins_mismatch">Codurile PIN nu coincid.</string>
     <string name="lock_save_pin">Salvează codul PIN</string>
     <string name="lock_setup_title">Configurează codul PIN · B2</string>

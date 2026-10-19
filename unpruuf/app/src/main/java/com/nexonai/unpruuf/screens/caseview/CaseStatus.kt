@@ -80,7 +80,7 @@ private fun PendingCard() {
 
 @Composable
 private fun CaseCard(c: Contact) {
-    val clipboard = LocalClipboardManager.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
@@ -97,7 +97,7 @@ private fun CaseCard(c: Contact) {
                     fontSize = 28.sp,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { clipboard.setText(AnnotatedString(c.caseNumber ?: "")) }) {
+                IconButton(onClick = { com.nexonai.unpruuf.ui.SensitiveClipboard.copy(context, "case", c.caseNumber ?: "") }) {
                     Icon(Icons.Default.ContentCopy, stringResource(R.string.case_cd_copy))
                 }
             }
