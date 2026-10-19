@@ -5,6 +5,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑19 · Owner secrets of own nodes are stored encrypted
+
+- `SealedStrings` (+ `SealedStringsTest`): the app's own-node list with owner secrets, node lists, feed sources (with keys), control addresses, relay address, token and backup relays are stored as `k1:<encrypted>` under the phone-bound key. Plain values from older versions are read and rewritten encrypted on first use.
+- Found in the audit preparation: before, the owner secret (the write key for a server) lay in plain text in the app settings. The panic PIN already wipes these values.
+- Not covered: bridge lines, the remembered organisation QR (not write credentials). The Android node (`relay-android`) keeps its own storage and was not changed.
+
+---
+
 ## 2026‑10‑19 · Release signing key and first working release build
 
 - `app/build.gradle.kts`, `relay-android/app/build.gradle.kts`: release builds are signed with `unpruuf-release.jks` when `release.properties` is present (both in `.gitignore`), otherwise left unsigned. Description: `SIGNING_TEST_KEY.md`.

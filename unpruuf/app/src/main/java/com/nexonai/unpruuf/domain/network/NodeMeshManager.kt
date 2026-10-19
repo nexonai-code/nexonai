@@ -18,9 +18,16 @@ import javax.inject.Singleton
  */
 @Singleton
 class NodeMeshManager @Inject constructor(
-    @ApplicationContext context: Context
+    @ApplicationContext context: Context,
+    crypto: CryptoManager
 ) {
     private val prefs = context.getSharedPreferences("node_mesh", Context.MODE_PRIVATE)
+    // Everything below (owner secrets of own nodes, node lists, feed keys, control addresses) is stored
+    // encrypted under the phone-bound key; plain values from older versions are upgraded on first read.
+    private val sealed = com.nexonai.unpruuf.domain.security.SealedStrings(
+        com.nexonai.unpruuf.domain.security.SharedPrefsStore(prefs),
+        { crypto.encrypt(it) }, { crypto.decrypt(it) }
+    )
 
     /** Panic PIN: forgets every own node with its owner secret, all node lists, feed sources and pool sources. */
     fun wipeAll() {
@@ -32,12 +39,12 @@ class NodeMeshManager @Inject constructor(
      *  (typically by scanning/pasting the string a Node-Mesh server prints on first start,
      *  analogous to [RelayManager]'s relay setup flow). */
     fun getMyNodePool(): List<ParsedNodeConnection> =
-        parseNodeConnectionStringList(prefs.getString("my_nodes", "") ?: "")
+        parseNodeConnectionStringList(sealed.get("my_nodes"))
             .mapNotNull { parseOwnerConnectionString(it) }
             .take(OWN_NODES_MAX)
 
     private fun getMyNodeConnectionStrings(): List<String> =
-        parseNodeConnectionStringList(prefs.getString("my_nodes", "") ?: "")
+        parseNodeConnectionStringList(sealed.get("my_nodes"))
 
     /**
      * Adds one of this device's own nodes from a scanned/pasted `unpruuf-node-owner:v1:...`
@@ -52,7 +59,7 @@ class NodeMeshManager @Inject constructor(
         val parsed = parseOwnerConnectionString(raw) ?: return false
         if (!addMyNodes(listOf(parsed.address), parsed.ownerSecret)) return false
         val sources = getPoolSources().filter { it.address != parsed.address } + parsed
-        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+        sealed.put("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) })
         return true
     }
 
@@ -68,7 +75,7 @@ class NodeMeshManager @Inject constructor(
         val added = incoming.take(room)
         val updated = (kept + added.map { ParsedNodeConnection(it, ownerSecret) })
             .map { buildOwnerConnectionString(it) }
-        prefs.edit().putString("my_nodes", updated.joinToString(";")).apply()
+        sealed.put("my_nodes", updated.joinToString(";"))
         // Nodes that came along with an existing list (siblings of a known server) stay in it.
         if (listId != null) saveNodeLists(NodeLists.assign(loadNodeLists(), added, listId, NodeLists.DEFAULT_NAME))
         return true
@@ -76,7 +83,7 @@ class NodeMeshManager @Inject constructor(
 
     /** The node strings scanned from servers' setup pages — each one can list its siblings. */
     fun getPoolSources(): List<ParsedNodeConnection> =
-        parseNodeConnectionStringList(prefs.getString("pool_sources", "") ?: "")
+        parseNodeConnectionStringList(sealed.get("pool_sources"))
             .mapNotNull { parseOwnerConnectionString(it) }
 
     /** Asks each pool source for every node its server runs and adds the ones not known yet.
@@ -101,13 +108,13 @@ class NodeMeshManager @Inject constructor(
     data class LockedServer(val sourceAddress: String, val controlAddress: String, val nodeCount: Int)
 
     fun getControlAddresses(): Map<String, String> =
-        (prefs.getString("control_addresses", "") ?: "").split(";")
+        (sealed.get("control_addresses")).split(";")
             .mapNotNull { e -> e.split("=").takeIf { it.size == 2 && it[0].isNotBlank() && it[1].isNotBlank() }?.let { it[0] to it[1] } }
             .toMap()
 
     private fun setControlAddress(sourceAddress: String, controlAddress: String) {
         val updated = getControlAddresses() + (sourceAddress to controlAddress)
-        prefs.edit().putString("control_addresses", updated.entries.joinToString(";") { "${it.key}=${it.value}" }).apply()
+        sealed.put("control_addresses", updated.entries.joinToString(";") { "${it.key}=${it.value}" })
     }
 
     /** Asks every known control address whether its server is locked. Sends nothing secret. */
@@ -146,10 +153,10 @@ class NodeMeshManager @Inject constructor(
     // Stored beside the flat pool, never instead of it: the pool (address + owner secret) is what
     // deposits use, the lists only decide which nodes a NEW contact is given.
 
-    private fun loadNodeLists(): List<NodeList> = NodeLists.parse(prefs.getString("node_lists", "") ?: "")
+    private fun loadNodeLists(): List<NodeList> = NodeLists.parse(sealed.get("node_lists"))
 
     private fun saveNodeLists(lists: List<NodeList>) {
-        prefs.edit().putString("node_lists", NodeLists.serialize(lists)).apply()
+        sealed.put("node_lists", NodeLists.serialize(lists))
     }
 
     private fun newListId(): String = java.util.UUID.randomUUID().toString()
@@ -172,10 +179,10 @@ class NodeMeshManager @Inject constructor(
     // ─── Company list feeds (FeedCrypto.kt, FeedSources.kt) ──────────────────────────────────────
     // A feed keeps lists up to date: each list in the feed becomes a managed list on this device.
 
-    fun getFeedSources(): List<FeedSource> = FeedSource.parse(prefs.getString("feed_sources", "") ?: "")
+    fun getFeedSources(): List<FeedSource> = FeedSource.parse(sealed.get("feed_sources"))
 
     private fun saveFeedSources(list: List<FeedSource>) {
-        prefs.edit().putString("feed_sources", FeedSource.serialize(list)).apply()
+        sealed.put("feed_sources", FeedSource.serialize(list))
     }
 
     /** Adds the feed a pasted feed code describes. Null if the code is not valid or already added. */
@@ -198,13 +205,13 @@ class NodeMeshManager @Inject constructor(
     }
 
     private fun getManaged(): List<FeedApply.Managed> =
-        (prefs.getString("feed_lists", "") ?: "").split("\n").mapNotNull { line ->
+        (sealed.get("feed_lists")).split("\n").mapNotNull { line ->
             val p = line.split("\t")
             if (p.size == 3) FeedApply.Managed(p[0], p[1], p[2]) else null
         }
 
     private fun saveManaged(list: List<FeedApply.Managed>) {
-        prefs.edit().putString("feed_lists", list.joinToString("\n") { "${it.listId}\t${it.sourceId}\t${it.feedName}" }).apply()
+        sealed.put("feed_lists", list.joinToString("\n") { "${it.listId}\t${it.sourceId}\t${it.feedName}" })
     }
 
     sealed class FeedApplyResult {
@@ -231,7 +238,7 @@ class NodeMeshManager @Inject constructor(
             saveNodeLists(NodeLists.assign(getNodeLists(), c.file.addresses, c.listId, c.feedName))
             val first = c.file.addresses.first()
             val sources = getPoolSources().filter { it.address !in c.file.addresses } + ParsedNodeConnection(first, c.file.ownerSecret)
-            prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+            sealed.put("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) })
             c.file.control?.let { setControlAddress(first, it) }
             if (managed.none { it.listId == c.listId }) managed += FeedApply.Managed(c.listId, sourceId, c.feedName)
         }
@@ -269,7 +276,7 @@ class NodeMeshManager @Inject constructor(
 
         val first = file.addresses.first()
         val sources = getPoolSources().filter { it.address !in file.addresses } + ParsedNodeConnection(first, file.ownerSecret)
-        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+        sealed.put("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) })
         file.control?.let { setControlAddress(first, it) }
 
         val finalList = getNodeLists().first { it.id == listId }
@@ -304,11 +311,11 @@ class NodeMeshManager @Inject constructor(
         val updated = existing.map {
             if (it.address == oldAddress) ParsedNodeConnection(newAddress, match.ownerSecret) else it
         }
-        prefs.edit().putString("my_nodes", updated.map { buildOwnerConnectionString(it) }.joinToString(";")).apply()
+        sealed.put("my_nodes", updated.map { buildOwnerConnectionString(it) }.joinToString(";"))
         val sources = getPoolSources().map {
             if (it.address == oldAddress) ParsedNodeConnection(newAddress, it.ownerSecret) else it
         }
-        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+        sealed.put("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) })
         saveNodeLists(NodeLists.replaceAddress(loadNodeLists(), oldAddress, newAddress))
         return true
     }
@@ -320,9 +327,9 @@ class NodeMeshManager @Inject constructor(
             .mapNotNull { parseOwnerConnectionString(it) }
             .filter { it.address != address }
             .map { buildOwnerConnectionString(it) }
-        prefs.edit().putString("my_nodes", remaining.joinToString(";")).apply()
+        sealed.put("my_nodes", remaining.joinToString(";"))
         val sources = getPoolSources().filter { it.address != address }
-        prefs.edit().putString("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) }).apply()
+        sealed.put("pool_sources", sources.joinToString(";") { buildOwnerConnectionString(it) })
     }
 
     /** The address-only list this device advertises to a new contact at pairing time — never

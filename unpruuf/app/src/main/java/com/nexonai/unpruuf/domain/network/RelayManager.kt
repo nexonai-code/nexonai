@@ -37,9 +37,16 @@ data class ParsedConnection(val address: String, val authToken: String)
  */
 @Singleton
 class RelayManager @Inject constructor(
-    @ApplicationContext context: Context
+    @ApplicationContext context: Context,
+    crypto: CryptoManager
 ) {
     private val prefs = context.getSharedPreferences("relay", Context.MODE_PRIVATE)
+    // Relay address, access token and backup relays are stored encrypted under the phone-bound key;
+    // plain values from older versions are upgraded on first read. The mode is not secret.
+    private val sealed = com.nexonai.unpruuf.domain.security.SealedStrings(
+        com.nexonai.unpruuf.domain.security.SharedPrefsStore(prefs),
+        { crypto.encrypt(it) }, { crypto.decrypt(it) }
+    )
 
     enum class RelayMode { OFF, AUTO, MANDATORY }
 
@@ -56,8 +63,8 @@ class RelayManager @Inject constructor(
         prefs.edit().clear().commit()
     }
 
-    fun getRelayOnion(): String = prefs.getString("onion", "") ?: ""
-    fun getAuthToken(): String = prefs.getString("auth_token", "") ?: ""
+    fun getRelayOnion(): String = sealed.get("onion")
+    fun getAuthToken(): String = sealed.get("auth_token")
 
     /**
      * Parses a scanned or pasted connection string (`unpruuf-relay:v1:<address>:<token>`) and
@@ -66,10 +73,8 @@ class RelayManager @Inject constructor(
      */
     fun applyConnectionString(raw: String): Boolean {
         val parsed = parseConnectionString(raw) ?: return false
-        prefs.edit()
-            .putString("onion", parsed.address)
-            .putString("auth_token", parsed.authToken)
-            .apply()
+        sealed.put("onion", parsed.address)
+        sealed.put("auth_token", parsed.authToken)
         return true
     }
 
@@ -100,10 +105,10 @@ class RelayManager @Inject constructor(
      *  as one `;`-joined string, same trick used for a contact's own relay pool
      *  (`Contact.theirRelayConnectionString`, reinterpreted) and for the wire format itself. */
     fun getExtraConnectionStrings(): List<String> =
-        parseConnectionStringList(prefs.getString("extra_connection_strings", "") ?: "")
+        parseConnectionStringList(sealed.get("extra_connection_strings"))
 
     fun setExtraConnectionStrings(list: List<String>) {
-        prefs.edit().putString("extra_connection_strings", buildConnectionStringList(list)).apply()
+        sealed.put("extra_connection_strings", buildConnectionStringList(list))
     }
 
     /** The full pool a new pairing QR advertises: my primary relay first (if usable), then
