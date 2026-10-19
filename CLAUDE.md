@@ -12,7 +12,7 @@ Gilt für alle Projekte in diesem Repo.
 ## Design für Artefakte und Seiten (16.10.2026, von Gabriel festgelegt)
 
 - Alle Artefakte und Webseiten werden im NexonAI-Design gebaut. Das Design stammt aus der NexonAI-Consulting-Website und liegt als Kit in `design/` (`nexonai.css`, `kit.py`, `assets/`, `README.md`).
-- Aufbau eines Artefakts: Kopfleiste mit Logo und Sprachwahl, grauer Statusstreifen, Abschnitte im Wechsel `--surface` und `--surface-low`, weiße Karten mit 16 px Radius, Fußzeile mit Logo. Schrift: Open Sans, Beschriftungen in DejaVu Sans Mono. Akzent: Türkis `#0f6b62`, Warnungen und Pilot in `#a8500f`. Nur helle Darstellung.
+- Aufbau eines Artefakts: Kopfleiste mit Logo und Sprachwahl, grauer Statusstreifen, Abschnitte im Wechsel `--surface` und `--surface-low`, weiße Karten mit 16 px Radius, Fußzeile mit Logo. Schrift: Open Sans, Beschriftungen in DejaVu Sans Mono. Akzent: Logo-Blau `#307098` (hell auf Dunkel: `#90c8e8`, dunkle Flächen: `#0f2a3a`), Warnungen und Pilot in `#a8500f`. Seit 19.10.2026 Blau statt Türkis, passend zum CI-Paket. Nur helle Darstellung.
 - Neue Artefakte mit `design/kit.py` bauen (`page`, `hero`, `section`, `card`, `E`). Ältere Artefakte im alten Stil werden auf Wunsch umgestellt.
 
 ## Geltungsbereich
