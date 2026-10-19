@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -38,7 +40,31 @@ android {
         )
     }
 
+    // Fester NexonAI-Testschluessel fuer Debug-Builds: Wer die zwei Dateien unpruuf-test.jks und
+    // keystore.properties in den Ordner unpruuf/ legt, baut Debug-APKs mit demselben Schluessel wie
+    // jeder andere Build mit diesen Dateien (Updates ohne Deinstallieren, auch zwischen PC und
+    // Cloud-Builds). Ohne die Dateien: normaler Android-Studio-Debug-Schluessel, nichts bricht.
+    // Die Dateien stehen in .gitignore und gehoeren nie ins Repository. Nur fuer Tests, nie fuer Kunden.
+    val testKeystoreProps = Properties().apply {
+        val f = file("../keystore.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val testKeystoreFile = testKeystoreProps.getProperty("storeFile")?.let { file("../keystore.properties").resolveSibling(it) }
+    signingConfigs {
+        if (testKeystoreFile != null && testKeystoreFile.exists()) {
+            create("nexonaiTest") {
+                storeFile = testKeystoreFile
+                storePassword = testKeystoreProps.getProperty("storePassword")
+                keyAlias = testKeystoreProps.getProperty("keyAlias")
+                keyPassword = testKeystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfigs.findByName("nexonaiTest")?.let { signingConfig = it }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

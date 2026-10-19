@@ -3,3 +3,7 @@ build/
 *.iml
 local.properties
 .idea/
+# Fester Testschluessel (nur lokal, nie ins Repository)
+*.jks
+*.keystore
+keystore.properties

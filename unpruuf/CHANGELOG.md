@@ -5,6 +5,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑19 · Fixed test signing key for debug builds
+
+- `app/build.gradle.kts` and `relay-android/app/build.gradle.kts` sign debug builds with a fixed NexonAI test key when `unpruuf-test.jks` and `keystore.properties` are in `unpruuf/`; without them nothing changes. Both files are in `.gitignore`. Description and fingerprint: `SIGNING_TEST_KEY.md`.
+- Reason: APKs built in the cloud and in Android Studio carried different debug keys, so the phone refused the update ("App not installed"). Test key only, never for customers.
+
+---
+
 ## 2026‑10‑19 · Fixes from the claims-against-code review (21 findings)
 
 **What was done**
