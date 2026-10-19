@@ -174,6 +174,7 @@ fun ChatScreen(
 
     if (showRevokeDialog) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { showRevokeDialog = false },
             icon = {
                 Icon(
@@ -216,6 +217,7 @@ fun ChatScreen(
     if (showTtlDialog) {
         val current = MessageTtl.normalize(contact?.messageTtlHours)
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { showTtlDialog = false },
             title = { Text(stringResource(R.string.chat_ttl_title)) },
             text = {
@@ -250,6 +252,7 @@ fun ChatScreen(
 
     if (showRenameDialog) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { showRenameDialog = false },
             title = { Text(stringResource(R.string.chat_rename_contact_title)) },
             text = {
@@ -278,6 +281,7 @@ fun ChatScreen(
 
     if (cameraPermissionDenied) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { cameraPermissionDenied = false },
             title = { Text(stringResource(R.string.chat_camera_permission_title)) },
             text = { Text(stringResource(R.string.chat_camera_permission_body)) },
@@ -580,6 +584,7 @@ fun ChatScreen(
 
     if (showRemoveCaseDialog) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { showRemoveCaseDialog = false },
             title = { Text(stringResource(R.string.case_remove_title)) },
             text = { Text(stringResource(R.string.case_remove_body)) },
@@ -676,6 +681,7 @@ private fun TempNodeDialog(
     var pasteInput by remember { mutableStateOf("") }
 
     AlertDialog(
+        properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Router, contentDescription = null) },
         title = { Text(stringResource(R.string.chat_temp_node_title)) },
@@ -792,7 +798,7 @@ private fun decodeImage(body: ByteArray) =
 private fun FullscreenImageDialog(message: RamMessage, onDismiss: () -> Unit) {
     val body = message.content ?: return
     val bitmap = remember(message.id) { decodeImage(body) }
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss, properties = com.nexonai.unpruuf.ui.SecureDialogProperties) {
         Box(
             modifier = Modifier
                 .fillMaxSize()

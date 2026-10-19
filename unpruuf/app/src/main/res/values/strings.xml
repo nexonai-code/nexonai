@@ -15,6 +15,8 @@
     <string name="lock_err_pin_too_short">PIN must be at least 4 digits.</string>
     <string name="lock_err_panic_same_as_pin">Panic PIN must differ from the PIN.</string>
     <string name="lock_err_wrong_pin">Wrong PIN.</string>
+    <string name="lock_err_locked">Too many wrong tries. Try again in %1$d s.</string>
+    <string name="lock_err_locked_min">Too many wrong tries. Try again in %1$d min.</string>
     <string name="lock_err_pins_mismatch">PINs do not match.</string>
     <string name="lock_save_pin">Save PIN</string>
     <string name="lock_setup_title">Set up PIN · B2</string>

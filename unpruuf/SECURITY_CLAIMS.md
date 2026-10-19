@@ -153,9 +153,9 @@ strong, checkable claim precisely because it's an absence, not a defense.
 
 | Claim | Why it's provable |
 |---|---|
-| **There is no server that can be subpoenaed, hacked, or seized to obtain messages.** | The codebase contains zero backend API calls for messaging — only direct Tor/LAN sockets between two devices. There is no infrastructure to compromise because none exists. |
+| **NexonAI runs no server, and no server holds readable messages.** | Messaging goes either directly between two devices (Tor/LAN sockets) or, in Business and Pro Groups, through a node server that the *customer* runs (`node-mesh-server`, the relay, an Android or phone Temp Node). That server holds end-to-end encrypted 4096-byte packets for at most 24 hours (unreadable to everyone after the lifetime, physically overwritten within about a minute after) and stores no name, no IP address and no key. It cannot read a message, but it exists and can be seized: an operator or whoever seizes it sees packet counts, timing and — finding F1 — the payload length of each stored packet. There is no NexonAI-operated infrastructure to compromise. |
 | **unpruuf itself never writes message content to disk.** | Messages live only in `InMemoryMessageStore`, a Kotlin `Map` in process RAM. There is no file I/O, no database table, no cache path for message bytes anywhere in the send/receive/store code. (Only *contacts* — not messages — are persisted, and that store is SQLCipher-encrypted.) |
-| **Deleting a chat overwrites the RAM buffer with zeros before dropping the reference.** | `RamMessage.zeroize()` explicitly writes `0` into every byte of the content array before nulling it, rather than just dereferencing it and hoping the garbage collector clears it. |
+| **Deleting a chat overwrites the RAM buffer with zeros before dropping the reference.** | `RamMessage.zeroize()` explicitly writes `0` into every byte of the content array before nulling it, rather than just dereferencing it and hoping the garbage collector clears it. It clears that one byte array only: a `String` made from it for the screen (Compose) is a separate copy that the runtime frees later and that cannot be zeroed. |
 | **The app never learns or stores a self-chosen username.** | There is no username field, model, or UI for it — a contact is identified only by a key pair and a name *they* assign locally. |
 | **Every edition presents a different on-wire ID to every contact.** | The identity sent over the socket is derived per-(contact, hour), not the same for all contacts — verifiable in `IdentityManager.myWireId()` and its call sites. |
 | **Private key material is never stored in plaintext at rest.** | The ratchet identity private key, Tor hidden-service private keys, per-contact onion private keys, and our message-decryption key are encrypted before being written to disk. iOS has always done this via the hardware-backed Keychain (`KeychainStore.swift`). Android closed the same gap on 2026-08-27: these values are now encrypted with `CryptoManager`'s Android Keystore-backed AEAD before being written to `SharedPreferences` — see `IdentityManager.kt`. Before this date, Android stored these values in plain `SharedPreferences`, readable via root or an `adb backup`; this row was not yet true for Android. |
@@ -180,12 +180,21 @@ between a proof and a strong mitigation.
   recent-apps thumbnail. It does not stop a second camera photographing the
   screen, and there have been OEM-specific `FLAG_SECURE` bypass bugs on some
   Android skins over the years (patched over time, but the flag is an OS
-  contract, not a law of physics).
-- **PIN lock.** Protects against casual/opportunistic access to an unlocked
-  or found device. It does **not** resist offline brute force to the same
-  degree as the crypto above — see the explicit math in the Limitations
-  section, because the PIN's own entropy is the limiting factor, not the
-  hashing.
+  contract, not a law of physics). Every dialog sets the flag on its own
+  window as well (`SecureDialogProperties`), not only the main window.
+  Still to be confirmed on a device.
+- **PIN lock.** Protects against casual/opportunistic access to a found
+  device. Since 2026‑10‑19: from the 5th wrong try in a row the PIN pad locks
+  for 30 s, doubling per further wrong try up to 1 h, and the stored hashes
+  are encrypted under the phone's Keystore key, so a copy of the app files
+  alone does not allow guessing the PIN offline. The counter lives in the app
+  storage and the device clock; someone with root can reset it, and then the
+  PIN's own entropy is the limit (see the math in the Limitations section).
+- **Outgoing messages are not queued on disk.** A message that cannot be sent
+  yet (no Tor, node unreachable) waits in memory and is retried; if the app
+  is killed first, it is gone, and the sender's own chat view is RAM-only too.
+  That follows from "no message content on disk". The app does not tell the
+  user about a message that never left.
 - **Battery-optimization exemption + hidden-service keep-alive.** These
   measurably improve message delivery reliability under Android Doze and on
   mobile data, but reliability still depends on the OS, the carrier network,
@@ -292,6 +301,11 @@ limits. These are known, real gaps — not hidden ones.
    or otherwise prevent the wipe from completing (e.g., by keeping the
    device powered and imaging it before unlock). This is a known, general
    limitation of duress mechanisms, not something unique to unpruuf.
+   What the wipe removes (since 2026‑10‑19): contacts, ratchet sessions,
+   per-contact onion keys, Pro Groups, own nodes with their owner secrets,
+   node lists, feed sources, the relay setup and the remembered organisation
+   QR. What stays: the PINs, the licence and the app's own identity keys.
+   Not yet confirmed on a device.
 6. **Edition pairing rules (Standard/Pro/Client) are policy, not cryptography.**
    The rule "Client can only pair with Pro" is enforced by app logic
    (`AppEdition.canAdd()`), checked at scan time. It is not backed by a

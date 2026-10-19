@@ -107,7 +107,10 @@ The app finds a way to Tor by itself (direct, then the company bridge, obfs4, Sn
 Override with `PORT` / `ADMIN_PORT`. Other env vars: `NODE_MESH_DATA_DIR`, `TOR_EXE_PATH` (use an
 existing Tor binary instead of downloading), `ADMIN_BIND` (Docker only), `NODE_MESH_TOR=0` +
 `NODE_MESH_PUBLIC_ADDRESS` (only if you run your own hidden service in front of `PORT` — never a
-LAN shortcut; the app always reaches nodes through Tor).
+LAN shortcut; the app always reaches nodes through Tor). Since 19 October 2026 also: `NODE_MESH_MAX_BLOBS`
+(total packets the node holds, default 200 000, about 1.1 GB; beyond it deposits get 507) and
+`NODE_MESH_PRINT_OWNER_CODE=1` (the owner code is printed on first start only in an interactive terminal,
+never into a log such as `docker logs`; this forces it into the log, and the setup page always shows it).
 
 ## API (identical on the Android node — `../relay-android`, Business Node mode)
 

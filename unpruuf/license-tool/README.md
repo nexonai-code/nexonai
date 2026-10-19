@@ -84,6 +84,7 @@ One code per Business Node server, signed with the SAME key pair:
 
 ```bash
 node issue-server.js --customer "Acme GmbH" --years 1 --serial ACME-SRV-01 --out servers.csv   # 250 nodes
+node issue-server.js --customer "Acme GmbH" --count 10 --out servers.csv   # ten servers: SRV-0001 ... SRV-0010, one run
 ```
 
 The code (`unpruuf-server-license:v1:…`) carries the number of nodes (default and maximum 250) and the expiry. The server runs exactly that many; nobody can choose a different number. The customer

@@ -30,7 +30,7 @@ Abgeschlossene Lieferungen als Dateien und Artefakt-Links: `LIEFERUNGEN.md`.
 
 **13. Oktober**
 - Sechs Lösungsbeschreibungen (System, safeline, Press, Business, Sicherheitsfunktionen, Pro Groups), v3.
-- **Pro Groups** als eigene Edition: lokale Gruppen mit Gruppencode, jede Nachricht geht einzeln an jedes Mitglied. Bis zu 10 Mitglieder, nur Text, kein Gruppenserver. Paart nur mit anderen Pro-Groups-Installationen.
+- **Pro Groups** als eigene Edition: lokale Gruppen mit Gruppencode, jede Nachricht geht einzeln an jedes Mitglied. Bis zu 10 Mitglieder (inklusive dir, also 9 andere), nur Text, kein Gruppenserver. Paart nur mit anderen Pro-Groups-Installationen.
 - **Rumänische Oberfläche** der Haupt-App, alle Meldungen in Ressourcen (EN + RO, je 445 Texte).
 - **Temp Node auf dem Telefon** (nur Pro Groups): das Telefon startet für einen Chat selbst einen Node.
 - **unpruuf Control** v1: Konsole des Kunden auf seinem Admin-PC. Fügt Server per SSH hinzu, installiert den Node-Server in Docker, zeigt den Zustand, entsperrt nach Neustart, verteilt Lizenzcodes aus einem Vorrat. Buchführung, kein Kopierschutz.
@@ -72,7 +72,7 @@ Die ersten 8 Bytes jedes gespeicherten 4096-Byte-Pakets nennen die Länge des In
 - Press: Pilot, nie mit einer echten Quelle.
 - Snowflake und öffentliche Bridges: nie in einem Netz, das Tor wirklich blockiert.
 - Kein unabhängiges Audit, nicht zertifiziert. Nie „zertifiziert“, „unknackbar“, „DSGVO-konform“, „als Erste“ sagen.
-- Das Officer-Dashboard kann einen einzelnen Fall noch nicht löschen oder exportieren (offen nennen).
+- Officer-Dashboard: Einzelfall löschen und exportieren gibt es seit 19.10.2026. Offen: Export über alle Fälle.
 
 ## 7. Nächste Schritte (Vorschlag, nach Wirkung)
 

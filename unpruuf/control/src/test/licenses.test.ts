@@ -118,3 +118,10 @@ test("states, summary and CSV", () => {
   assert.ok(!without.includes("unpruuf-server-license:v1:"));
   assert.ok(without.split("\n")[0].includes("serial"));
 });
+
+test("import warns about server codes that allow fewer than 250 node addresses", () => {
+  const { inv: i } = inv();
+  const r = i.importText(serverCode(keys, "SRV-0100", { nodes: 50 }) + "\n" + serverCode(keys, "SRV-0101"));
+  assert.equal(r.added, 2);
+  assert.equal(r.smallServers, 1);
+});

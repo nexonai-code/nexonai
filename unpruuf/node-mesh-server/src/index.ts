@@ -182,7 +182,16 @@ const adminServer: Server = adminApp.listen(ADMIN_PORT, adminBind, () => {
   console.log(`[setup] open http://localhost:${ADMIN_PORT} on THIS computer to connect your app (owner QR)`);
 });
 
+// The owner code is the write credential for every node, so it goes to the console only when a
+// person is looking at one (an interactive terminal), never into a log stream: `docker logs`, a
+// service journal or a redirected file would keep it. Without a terminal the setup page shows it.
+// NODE_MESH_PRINT_OWNER_CODE=1 forces printing for an operator who really wants it in the log.
 async function printOwnerCode(address: string): Promise<void> {
+  if (!process.stdout.isTTY && process.env.NODE_MESH_PRINT_OWNER_CODE !== "1") {
+    console.log("[owner] new owner code created — not printed here because this output is not a terminal.");
+    console.log(`[owner] open the setup page on this computer (http://localhost:${ADMIN_PORT}) to scan it with your own app.`);
+    return;
+  }
   const code = ownerConnectionString(address, identity.ownerSecret);
   const qr = await QRCode.toString(code, { type: "terminal", small: true });
   console.log("\n================ OWNER CODE — scan with YOUR OWN app only, never share ================");

@@ -5,6 +5,29 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑19 · Fixes from the claims-against-code review (21 findings)
+
+**What was done**
+
+- **Licence tool:** `issue-server.js --count N` (with `--serial-prefix`, `--start-at`). A single code without `--serial` gets a random suffix, so two runs in the same second can no longer produce the same serial (Control would have taken the second as a renewal of the first and the customer would have received one server fewer than bought). The GUI does the same. Control warns on import about server codes that allow fewer than 250 nodes.
+- **Node server:** errors come back as short JSON (no stack trace, no file paths); the owner code is printed on first start only in an interactive terminal (not into `docker logs`); read limit per node address instead of one for the whole server; ciphertext must be strict base64; total ceiling of 200 000 packets (507 beyond); sweep every 60 s (was 5 min), `<=` instead of `<`, and the write-ahead log is truncated after every sweep that removed rows (before: once a day, so expired ciphertext could stay readable in the log for up to a day); setup page also checks the connection's source address (this computer or a private network).
+- **Officer app:** delete one case and export one case as a file, in both editions (before: delete only in Press, no export).
+- **Android app:** panic PIN also wipes Pro Groups, own nodes with owner secrets, node lists, feed sources, the relay setup (before: only contacts, sessions, onion keys; the organisation-QR wipe even ran only when onion keys existed). PIN lock-out from the 5th wrong try (30 s, doubling, at most 1 h) and PIN hashes sealed under the Keystore key. Every dialog sets the secure flag itself.
+- **Documents:** `COMPLIANCE.md` (F1), `SECURITY_CLAIMS.md` (Tier 2 row about servers, RAM clearing, PIN lock, outbox, panic wipe), `STATUS.md`, `evidence/CLAIMS_TO_EVIDENCE.md` (A9, A15–A20, B10, D3, D3a, E4), `CLAUDE.md` (app licences are device-bound; group size 10 includes you; courier image is a picture, the 250 addresses share one store; exact wording for deletion times; unsent messages).
+
+**Not changed on purpose**
+
+- F1 (payload length in the clear) needs a wire-format change in every client: team decision.
+- Unsent messages are not written to disk: that would contradict "no message content on disk". Documented instead.
+- `/unlock` keeps one shared limit; the control address is not public.
+- The setup page still trusts the host-loopback port mapping of docker-compose and Control; source-address and Host checks are added on top.
+
+**Checked**
+
+Node server 112 tests, officer app 15, Control 61, evidence 97 (0 failed, 1 finding F1), Android unit tests (standard variant, incl. PinLockoutTest) pass, and all six variants compile.
+
+---
+
 ## 2026‑10‑14 · Evidence package (`evidence/`), Tor download check, library fixes, finding F1
 
 **What was done**

@@ -109,6 +109,21 @@ function routes(app) {
   run.check('an oversized request is refused', big.status === 413 || big.status === 400, `status ${big.status}`);
   run.check('a negative or zero lifetime is refused (400)', (await dep(owner, { ttl: -1 })).status === 400 && (await dep(owner, { ttl: 0 })).status === 400);
 
+  // 6b. Errors say nothing about the program; garbage is refused; the store has a ceiling (added 19 October 2026).
+  const broken = await call('POST', '/fetchMany', { headers: { 'content-type': 'application/json' }, body: '{bad' });
+  run.check('broken JSON gets a short error without stack trace, file path or library name', broken.status === 400 && !/node_modules|body-parser|SyntaxError|\.js:|\bat \w+/.test(broken.text), broken.text.slice(0, 80));
+  const hugeBody = await call('POST', '/fetchMany', { headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tags: ['a'.repeat(40000)] }) });
+  run.check('an oversized body is refused (413) with a short error', hugeBody.status === 413 && !/node_modules|body-parser|\bat \w+/.test(hugeBody.text), `status ${hugeBody.status}`);
+  run.check('a ciphertext that is not base64 is refused (400)', (await dep(owner, { ciphertext: '!!!!' + 'AAAA'.repeat(100) })).status === 400);
+  const small = new NodeStore(path.join(dir, 'small.sqlite'), 6, 1);
+  const app2 = createApp(small, SECRET);
+  const srv2 = app2.listen(0, '127.0.0.1');
+  await new Promise((r) => srv2.once('listening', r));
+  const put2 = (tag) => fetch(`http://127.0.0.1:${srv2.address().port}/deposit`, { method: 'PUT', headers: owner, body: JSON.stringify({ routing_tag: tag, ciphertext: Buffer.from('x').toString('base64') }) }).then((r) => r.status);
+  const s1 = await put2('first'); const s2 = await put2('second');
+  run.check('a node that holds its total ceiling refuses further deposits (507)', s1 === 201 && s2 === 507, `statuses ${s1}, ${s2}`);
+  srv2.close(); small.close();
+
   // 7. Observations that are not failures.
   const px = (await call('GET', '/health')).headers.get('x-powered-by');
   if (px) run.note(`the server announces "X-Powered-By: ${px}". It reveals the web framework only; it should be switched off (hardening item, not a leak of user data).`);

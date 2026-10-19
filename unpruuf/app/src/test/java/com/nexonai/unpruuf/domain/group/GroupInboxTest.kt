@@ -18,6 +18,7 @@ private class FakeGroupDao : GroupDao {
     override fun observeById(id: String): Flow<GroupEntity?> = all.map { l -> l.firstOrNull { it.id == id } }
     override suspend fun upsert(group: GroupEntity) { all.value = all.value.filter { it.id != group.id } + group }
     override suspend fun deleteById(id: String) { all.value = all.value.filter { it.id != id } }
+    override suspend fun deleteAll() { all.value = emptyList() }
 }
 
 class GroupInboxTest {

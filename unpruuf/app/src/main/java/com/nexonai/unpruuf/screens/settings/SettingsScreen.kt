@@ -754,6 +754,7 @@ fun SettingsScreen(
 
     unlockCandidate?.let { server ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { unlockCandidate = null },
             title = { Text(stringResource(R.string.settings_unlock_confirm_title)) },
             text = { Text(stringResource(R.string.settings_unlock_confirm_body)) },
@@ -771,6 +772,7 @@ fun SettingsScreen(
 
     if (showRegenerateIdentityDialog) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { showRegenerateIdentityDialog = false },
             title = { Text(stringResource(R.string.settings_renew_identity_title)) },
             text = {

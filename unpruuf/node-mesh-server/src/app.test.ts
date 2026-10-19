@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as http from "http";
 import type { AddressInfo } from "net";
 import { createApp } from "./app";
 import { NodeStore } from "./store/nodeStore";
@@ -430,6 +431,76 @@ test("an expired or missing server license refuses new deposits (402) but never 
     assert.equal((await fetch(`${base}/health`)).status, 200);
     blocked = null; // a renewal takes effect without a restart
     assert.equal((await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body })).status, 201);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("broken JSON gets a short JSON error, no stack trace, no file paths", async () => {
+  const { server, store, base } = startServer();
+  try {
+    const res = await fetch(`${base}/fetchMany`, { method: "POST", headers: { "content-type": "application/json" }, body: "{bad" });
+    assert.equal(res.status, 400);
+    const text = await res.text();
+    assert.deepEqual(JSON.parse(text), { error: "bad request" });
+    assert.ok(!/node_modules|body-parser|SyntaxError|\.js:/.test(text));
+    const big = await fetch(`${base}/fetchMany`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: ["a".repeat(40000)] }) });
+    assert.equal(big.status, 413);
+    assert.ok(!/node_modules|body-parser|at /.test(await big.text()));
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("PUT /deposit refuses ciphertext that is not strict base64, accepts padded base64", async () => {
+  const { server, store, base } = startServer();
+  try {
+    const put = (ciphertext: string) => fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "abcDEF123", ciphertext }) });
+    assert.equal((await put("!!!!" + "AAAA".repeat(100))).status, 400);
+    assert.equal((await put("aGVsbG8")).status, 400); // missing padding
+    assert.equal((await put("aGVs bG8=")).status, 400);
+    assert.equal((await put("aGVsbG8=")).status, 201);
+    assert.equal((await put(Buffer.alloc(4096, 7).toString("base64"))).status, 201);
+    assert.equal((await put(Buffer.alloc(4097, 7).toString("base64"))).status, 413);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("a node that holds its total ceiling refuses more deposits (507) but still serves reads", async () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-full-test-")), "node-mesh.sqlite");
+  const store = new NodeStore(file, 6, 2);
+  const server = createApp(store, OWNER_SECRET).listen(0);
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const put = (tag: string) => fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: tag, ciphertext: "aGVsbG8=" }) });
+    assert.equal((await put("t1")).status, 201);
+    assert.equal((await put("t2")).status, 201);
+    assert.equal((await put("t3")).status, 507);
+    assert.deepEqual((await (await fetch(`${base}/fetch?tag=t1`)).json()), { blobs: ["aGVsbG8="] });
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("read rate limit is per node address: draining one address leaves the others working", async () => {
+  const { server, store, base } = startServer();
+  try {
+    // fetch() does not let a caller set Host, so go through node:http.
+    const get = (host: string) => new Promise<number>((resolve, reject) => {
+      const u = new URL(`${base}/fetch?tag=abc`);
+      const r = http.request({ hostname: u.hostname, port: u.port, path: u.pathname + u.search, headers: { host } }, (res) => { res.resume(); resolve(res.statusCode ?? 0); });
+      r.on("error", reject);
+      r.end();
+    });
+    let limited = false;
+    for (let i = 0; i < 60; i++) if ((await get("nodeaaaaaaaaaaaaaaaa.onion")) === 429) { limited = true; break; }
+    assert.equal(limited, true);
+    assert.equal(await get("nodebbbbbbbbbbbbbbbb.onion"), 200);
   } finally {
     server.close();
     store.close();

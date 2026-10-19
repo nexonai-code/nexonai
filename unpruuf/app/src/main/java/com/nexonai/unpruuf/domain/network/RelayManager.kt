@@ -51,6 +51,11 @@ class RelayManager @Inject constructor(
         prefs.edit().putString("mode", mode.name).apply()
     }
 
+    /** Panic PIN: forgets the relay (address, token, extra relays) and its mode. */
+    fun wipeAll() {
+        prefs.edit().clear().commit()
+    }
+
     fun getRelayOnion(): String = prefs.getString("onion", "") ?: ""
     fun getAuthToken(): String = prefs.getString("auth_token", "") ?: ""
 

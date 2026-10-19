@@ -76,6 +76,8 @@ export interface ImportReport {
   duplicates: number;
   invalid: string[];
   expired: number;
+  /** Server codes that allow fewer than 250 node addresses (trial or reduced licence). A server runs exactly the licensed number. */
+  smallServers: number;
 }
 
 export type LicenseState = "valid" | "expiring" | "expired";
@@ -99,7 +101,7 @@ export class LicenseInventory {
 
   /** Finds every code in pasted text or in the CSV the licence tool writes. */
   importText(text: string): ImportReport {
-    const report: ImportReport = { added: 0, renewed: 0, duplicates: 0, invalid: [], expired: 0 };
+    const report: ImportReport = { added: 0, renewed: 0, duplicates: 0, invalid: [], expired: 0, smallServers: 0 };
     const found = text.match(CODE_RE) ?? [];
     const seen = new Set<string>();
     for (const raw of found) {
@@ -119,6 +121,7 @@ export class LicenseInventory {
       }
       this.licenses.push({ ...p, importedAt: this.now(), assigned: null });
       report.added++;
+      if (p.kind === "server" && p.maxNodes !== null && p.maxNodes < 250) report.smallServers++;
       if (this.now() >= p.expiresAtMs) report.expired++;
     }
     // A pasted text with no code-looking token at all is one invalid entry, so the admin sees why nothing happened.

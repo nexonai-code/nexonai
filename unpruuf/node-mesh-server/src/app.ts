@@ -1,4 +1,4 @@
-import express, { Express } from "express";
+import express, { Express, NextFunction, Request, Response } from "express";
 import { NodeStore } from "./store/nodeStore";
 import { LockControl, nodeRouter } from "./routes/node";
 import { OwnerSecretSource } from "./middleware/ownerAuth";
@@ -44,5 +44,13 @@ export function createApp(
   // the owner secret, and it reveals nothing (no tags, no blobs, no auth-guessing surface).
   app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
   app.use(nodeRouter(store, ownerSecret, addresses, lock));
+  // Anything that goes wrong before or inside a route (broken JSON, a body over the limit) gets a
+  // short JSON error and nothing else — Express's default handler would send a stack trace with
+  // the framework's and the program's file paths to any caller.
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    const status = typeof (err as { status?: unknown })?.status === "number" ? (err as { status: number }).status : 500;
+    const code = status >= 400 && status < 500 ? status : 500;
+    res.status(code).json({ error: code === 413 ? "request too large" : code === 400 ? "bad request" : code === 500 ? "internal error" : "request refused" });
+  });
   return app;
 }

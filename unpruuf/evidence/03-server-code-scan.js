@@ -15,7 +15,17 @@ const lines = (f) => stripComments(fs.readFileSync(f, 'utf8')).split('\n').map((
 // 1. The server never reads who is connecting.
 const WHO = /req\.ip\b|req\.ips\b|remoteAddress|remotePort|x-forwarded|user-agent|req\.socket|req\.connection|req\.hostname|req\.get\(\s*['"]host/i;
 const whoHits = [];
-for (const f of files) for (const { t, n } of lines(f)) if (WHO.test(t)) whoHits.push(`${rel(f)}:${n}  ${t.trim().slice(0, 90)}`);
+// One exception, on purpose: the setup page (loopback only, never reachable through Tor) checks that a
+// connection comes from this computer or a private network, and keeps nothing. Listed as a note.
+const LOCAL_CHECK = /isLocalPeer\(req\.socket\.remoteAddress\)/;
+for (const f of files) for (const { t, n } of lines(f)) {
+  if (!WHO.test(t)) continue;
+  if (rel(f) === 'node-mesh-server/src/admin/adminApp.ts' && LOCAL_CHECK.test(t)) {
+    run.note(`${rel(f)}:${n}  the setup page checks the connection comes from this computer or a private network (not stored, not logged)`);
+    continue;
+  }
+  whoHits.push(`${rel(f)}:${n}  ${t.trim().slice(0, 90)}`);
+}
 run.check('no code reads the caller\'s address, port, user agent or forwarded-for header', whoHits.length === 0, whoHits.join(' | '));
 
 // 2. Network modules: who may open connections, and where to.

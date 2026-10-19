@@ -1,11 +1,10 @@
 # Evidence report
 
-- Run: 2026-10-14T12:43:42.479Z
-- Source: git 2123e0341ad63e316c75380d01645eda3e5e4f87
+- Run: 2026-10-19T13:28:33.772Z
+- Source: git b48cf18e071bbf765d8336cb7b67499f6393d721 (with uncommitted changes)
 - Node.js v22.22.2, linux x64
-- Checks: 99 passed, 0 failed. Findings (claims the evidence does not support): 1.
-- Node server test suite: 106 passed, 0 failed, 1 skipped, of 107.
-- Online comparison of the Tor hashes: yes.
+- Checks: 97 passed, 0 failed. Findings (claims the evidence does not support): 1.
+- Online comparison of the Tor hashes: no.
 
 This report shows what these scripts could check on this source and this machine. It is not a security audit and not a certificate. Anything marked "needs an auditor" in CLAIMS_TO_EVIDENCE.md is not covered here.
 
@@ -15,7 +14,7 @@ This report shows what these scripts could check on this source and this machine
 
 ## 01 What the node server can do (its whole surface)
 
-23 passed, 0 failed
+27 passed, 0 failed
 
 - PASS registered routes are exactly the documented ones (GET /fetch, GET /health, GET /lock-status, GET /pool, POST /fetchMany, POST /unlock, PUT /deposit)
 - PASS there is no route that deletes, wipes, lists or exports
@@ -40,6 +39,10 @@ This report shows what these scripts could check on this source and this machine
 - PASS an invalid routing tag is refused (400)
 - PASS an oversized request is refused (status 413)
 - PASS a negative or zero lifetime is refused (400)
+- PASS broken JSON gets a short error without stack trace, file path or library name ({"error":"bad request"})
+- PASS an oversized body is refused (413) with a short error (status 413)
+- PASS a ciphertext that is not base64 is refused (400)
+- PASS a node that holds its total ceiling refuses further deposits (507) (statuses 201, 507)
 
 ## 02 What the node server keeps on disk
 
@@ -71,6 +74,7 @@ Notes:
 - PASS the server has exactly three runtime dependencies: better-sqlite3, express, qrcode (better-sqlite3, express, qrcode)
 
 Notes:
+- node-mesh-server/src/admin/adminApp.ts:89  the setup page checks the connection comes from this computer or a private network (not stored, not logged)
 - network imports found: index.ts (http), tor/torControl.ts (net), tor/torDownload.ts (https)
 - production packages in package-lock.json (including nested): 133. An auditor should review these or ask for an SBOM.
 
@@ -118,7 +122,7 @@ Notes:
 - PASS 300 contacts get 300 different tags in the same hour
 - PASS the 26 tags of the receive window of one contact are all different
 - PASS a different seed for the same epoch gives a different tag (an outsider without the seeds cannot compute it)
-- PASS tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005 (share 0.5001)
+- PASS tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005 (share 0.5008)
 
 Notes:
 - What this does not show: that no structure exists (that rests on HMAC-SHA256 being a pseudo-random function), or anything about traffic timing and volume, which the next scripts and the auditor scope list as open.
@@ -144,7 +148,7 @@ Notes:
 
 ## 07 The downloaded Tor program is checked against pinned SHA-256 values
 
-13 passed, 0 failed
+7 passed, 0 failed
 
 - PASS node-mesh-server/src/tor/torDownload.ts: four pinned values (Windows, Linux, macOS Intel, macOS Apple Silicon) (windows-x86_64, linux-x86_64, macos-x86_64, macos-aarch64)
 - PASS node-mesh-server/src/tor/torDownload.ts: the download is hashed and compared before it is extracted
@@ -153,15 +157,10 @@ Notes:
 - PASS officer-app/src/tor/torDownload.ts: four pinned values (Windows, Linux, macOS Intel, macOS Apple Silicon) (windows-x86_64, linux-x86_64, macos-x86_64, macos-aarch64)
 - PASS officer-app/src/tor/torDownload.ts: the download is hashed and compared before it is extracted
 - PASS all three copies pin the same version and the same values (15.0.19, 15.0.19, 15.0.19)
-- PASS the Tor Project's list of hashes carries a good PGP signature
-- PASS the signing key's primary fingerprint is EF6E 286D DA85 EA2A 4BA7 DE68 4E2C 6E87 9329 8290 (compare this fingerprint with torproject.org)
-- PASS pinned windows-x86_64 equals the signed list
-- PASS pinned linux-x86_64 equals the signed list
-- PASS pinned macos-x86_64 equals the signed list
-- PASS pinned macos-aarch64 equals the signed list
 
 Notes:
 - pinned version: 15.0.19. The Android app does not download Tor: it carries the library tor-android (checked as a dependency, see 04).
+- offline run. Add --online to compare with the Tor Project's signed list (needs network and gpg).
 
 ## 08 What a stored packet shows without a key (finding F1)
 

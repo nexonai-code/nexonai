@@ -363,7 +363,7 @@
       });
       case 'lic-import': return api('POST', '/api/licenses/import', { text: v('lic-text') }).then(function (r) {
         if (!r.ok) return (document.getElementById('lic-msg').innerHTML = '<p class="err">' + errText(r.json && r.json.error) + '</p>');
-        var j = r.json; document.getElementById('lic-msg').innerHTML = '<p class="okmsg">' + t('lic.imported', { a: j.added, r: j.renewed, d: j.duplicates, i: j.invalid.length }) + '</p>';
+        var j = r.json; document.getElementById('lic-msg').innerHTML = '<p class="okmsg">' + t('lic.imported', { a: j.added, r: j.renewed, d: j.duplicates, i: j.invalid.length }) + '</p>' + (j.smallServers ? '<p class="warnmsg">' + t('lic.smallserver', { n: j.smallServers }) + '</p>' : '');
         return loadOverview().then(function () { var m = document.getElementById('lic-msg').innerHTML; rerender(); document.getElementById('lic-msg').innerHTML = m; });
       });
       case 'lic-show': return showCode(el.getAttribute('data-kind'), el.getAttribute('data-serial'));

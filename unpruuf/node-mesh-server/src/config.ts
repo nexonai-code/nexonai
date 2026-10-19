@@ -20,8 +20,17 @@ export const DEFAULT_TTL_HOURS = NODE_PROFILE.ttlHours;
 export { MAX_TTL_HOURS };
 
 // Expired rows are already invisible to /fetch (nodeStore filters on expires_at); the sweep
-// bounds how long they physically linger on disk after that.
-export const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+// bounds how long they physically linger on disk after that. After a sweep that removed rows the
+// WAL file is truncated too (nodeStore.sweepExpired), so expired ciphertext is gone from the files,
+// not only from the table.
+export const SWEEP_INTERVAL_MS = 60 * 1000;
+
+// Hard ceiling for everything waiting on this node, over all tags. The per-tag cap bounds one tag,
+// but tags rotate every hour and the owner's app picks them, so without a total a buggy or hijacked
+// owner client could fill the disk inside the TTL window. 200 000 packets of 4 KB is about 1.1 GB
+// as stored (base64 text). NODE_MESH_MAX_BLOBS overrides it.
+const maxBlobsEnv = Number(process.env.NODE_MESH_MAX_BLOBS);
+export const MAX_BLOBS_TOTAL = Number.isInteger(maxBlobsEnv) && maxBlobsEnv > 0 ? maxBlobsEnv : 200_000;
 
 // 64 tags covers the clients' 25-epoch tolerance window (profiles.ts) with headroom; 55s stays
 // under typical reverse-proxy idle timeouts. Same values as the consumer relay.

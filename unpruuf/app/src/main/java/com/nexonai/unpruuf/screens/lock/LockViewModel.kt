@@ -20,7 +20,7 @@ import javax.inject.Inject
 /** Kept as a code, not a string — the message shown lives in the UI layer (stringResource), so
  *  each build flavor (e.g. whistleblower) can localize it without this ViewModel knowing about
  *  Android resources. */
-enum class LockError { PIN_TOO_SHORT, PANIC_SAME_AS_PIN, WRONG_PIN }
+enum class LockError { PIN_TOO_SHORT, PANIC_SAME_AS_PIN, WRONG_PIN, PIN_LOCKED }
 
 @HiltViewModel
 class LockViewModel @Inject constructor(
@@ -30,7 +30,10 @@ class LockViewModel @Inject constructor(
     private val messageStore: InMemoryMessageStore,
     private val identityManager: IdentityManager,
     private val ratchetSessionManager: RatchetSessionManager,
-    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
+    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases,
+    private val groupDao: com.nexonai.unpruuf.data.db.GroupDao,
+    private val nodeMeshManager: com.nexonai.unpruuf.domain.network.NodeMeshManager,
+    private val relayManager: com.nexonai.unpruuf.domain.network.RelayManager
 ) : ViewModel() {
 
     val isPinSet: Boolean get() = pinManager.isPinSet()
@@ -38,6 +41,10 @@ class LockViewModel @Inject constructor(
 
     private val _error = MutableStateFlow<LockError?>(null)
     val error = _error.asStateFlow()
+
+    /** Seconds the PIN pad is locked for after too many wrong tries; 0 when it is free. The UI shows it with [LockError.PIN_LOCKED]. */
+    private val _lockSeconds = MutableStateFlow(0)
+    val lockSeconds = _lockSeconds.asStateFlow()
 
     /** Ersteinrichtung: normale PIN + Panik-PIN festlegen. */
     fun setupPins(pin: String, panicPin: String): Boolean {
@@ -50,7 +57,10 @@ class LockViewModel @Inject constructor(
 
     /** Entsperren. Panik-PIN löscht alle Kontakte und öffnet die App leer. */
     fun submitPin(input: String) {
-        when (pinManager.check(input)) {
+        val result = pinManager.check(input)
+        _lockSeconds.value = ((pinManager.lockRemainingMs() + 999) / 1000).toInt()
+        when (result) {
+            PinResult.LOCKED -> _error.value = LockError.PIN_LOCKED
             PinResult.NORMAL -> {
                 _error.value = null
                 appLockManager.unlock()
@@ -63,7 +73,8 @@ class LockViewModel @Inject constructor(
                 }
             }
             PinResult.WRONG -> {
-                _error.value = LockError.WRONG_PIN
+                // The try that just tripped the lock: say so straight away instead of "wrong PIN".
+                _error.value = if (_lockSeconds.value > 0) LockError.PIN_LOCKED else LockError.WRONG_PIN
             }
         }
     }
@@ -79,6 +90,13 @@ class LockViewModel @Inject constructor(
 
     fun clearError() { _error.value = null }
 
+    /**
+     * Panic PIN: afterwards the app opens as if it had just been set up. Gone are the contacts and
+     * their ratchet sessions and onion keys, the Pro Groups (codes and members), the own nodes with
+     * their owner secrets, node lists, feed sources and pool sources, the relay setup, and the
+     * remembered organisation QR (whistleblower). Kept: the PINs themselves, the licence and the
+     * app's own identity keys (they say nothing about whom the user talks to).
+     */
     private suspend fun wipeEverything() {
         messageStore.zeroizeAll()
         withContext(Dispatchers.IO) {
@@ -88,9 +106,12 @@ class LockViewModel @Inject constructor(
             }
             identityManager.getAllContactOnionKeys().keys.forEach {
                 identityManager.removeContactOnionPrivKey(it)
-                // Whistleblower: the remembered organisation QR goes too — no trace of where to report.
+            }
+            groupDao.deleteAll()
+            nodeMeshManager.wipeAll()
+            relayManager.wipeAll()
+            // Whistleblower: the remembered organisation QR goes too — no trace of where to report.
             whistleblowerCases.forgetOrganization()
-        }
         }
     }
 }

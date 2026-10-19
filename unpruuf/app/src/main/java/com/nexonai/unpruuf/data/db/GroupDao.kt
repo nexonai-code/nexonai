@@ -26,4 +26,8 @@ interface GroupDao {
 
     @Query("DELETE FROM chat_groups WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    /** Panic PIN: every group, with its code and members. */
+    @Query("DELETE FROM chat_groups")
+    suspend fun deleteAll()
 }

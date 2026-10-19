@@ -526,6 +526,7 @@ fun QrPairScreen(
 
     pendingPayload?.let { payload ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { pendingPayload = null },
             title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
@@ -563,6 +564,7 @@ fun QrPairScreen(
 
     pendingCrossPlatformPayload?.let { payload ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { pendingCrossPlatformPayload = null },
             title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
@@ -600,6 +602,7 @@ fun QrPairScreen(
 
     pendingNodeMeshPayload?.let { payload ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { pendingNodeMeshPayload = null },
             title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {

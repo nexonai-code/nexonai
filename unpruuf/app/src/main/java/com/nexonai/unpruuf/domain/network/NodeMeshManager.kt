@@ -22,6 +22,11 @@ class NodeMeshManager @Inject constructor(
 ) {
     private val prefs = context.getSharedPreferences("node_mesh", Context.MODE_PRIVATE)
 
+    /** Panic PIN: forgets every own node with its owner secret, all node lists, feed sources and pool sources. */
+    fun wipeAll() {
+        prefs.edit().clear().commit()
+    }
+
     /** Every own-node connection this device is configured with (address + owner secret),
      *  `;`-joined in the `NODE_OWNER_PREFIX` form — set up once per node via [addMyNode]
      *  (typically by scanning/pasting the string a Node-Mesh server prints on first start,

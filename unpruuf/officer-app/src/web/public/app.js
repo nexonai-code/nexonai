@@ -271,7 +271,7 @@ async function saveSettings() {
 }
 async function deleteCurrentCase() {
   const c = state.detail;
-  if (!c || !confirm(t("del_confirm"))) return;
+  if (!c || !confirm(EDITION === "press" ? t("del_confirm") : t("del_confirm_c", { n: c.caseNumber || "" }))) return;
   try {
     await api(`/api/cases/${encodeURIComponent(c.id)}`, { method: "DELETE" });
     state.detail = null;
@@ -281,6 +281,17 @@ async function deleteCurrentCase() {
   } catch (err) {
     toast(t("open_fail"), err.message);
   }
+}
+function exportCurrentCase() {
+  const c = state.detail;
+  if (!c) return;
+  const a = document.createElement("a");
+  a.href = `/api/cases/${encodeURIComponent(c.id)}/export`;
+  a.download = "";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  toast(t("exp_done"), c.caseNumber || "");
 }
 function downloadQr() {
   if (!state.me) return;
@@ -613,6 +624,7 @@ $("categoryInput").addEventListener("change", (e) => saveCategory(e.target.value
 $("categoryInput").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.blur(); });
 $("sendReplyBtn").addEventListener("click", sendReply);
 $("deleteCaseBtn").addEventListener("click", deleteCurrentCase);
+$("exportCaseBtn").addEventListener("click", exportCurrentCase);
 $("saveSettingsBtn").addEventListener("click", saveSettings);
 $("pickupWarnClose").addEventListener("click", () => { state.dismissedWarn.add($("pickupWarn").dataset.key); $("pickupWarn").classList.add("hidden"); });
 $("replyInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendReply(); } });

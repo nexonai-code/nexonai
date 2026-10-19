@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as http from "http";
 import type { AddressInfo } from "net";
-import { createAdminApp, isLoopbackHost, ownerConnectionString, ownerSecretFromCode } from "./adminApp";
+import { createAdminApp, isLocalPeer, isLoopbackHost, ownerConnectionString, ownerSecretFromCode } from "./adminApp";
 import { PROFILES } from "../profiles";
 
 function request(port: number, host: string, path: string): Promise<{ status: number; body: string }> {
@@ -405,4 +405,9 @@ test("the setup page saves the company's Tor bridge, shows it, puts it into the 
   } finally {
     listener.close();
   }
+});
+
+test("the setup page only accepts connections from this computer or a private network, not a public address", () => {
+  for (const ok of ["127.0.0.1", "::1", "::ffff:127.0.0.1", "172.17.0.1", "10.0.0.5", "192.168.1.20", "::ffff:172.18.0.1"]) assert.equal(isLocalPeer(ok), true, ok);
+  for (const bad of ["8.8.8.8", "172.32.0.1", "11.0.0.1", "2001:db8::1", "", undefined]) assert.equal(isLocalPeer(bad as string | undefined), false, String(bad));
 });

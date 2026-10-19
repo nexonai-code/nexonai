@@ -2,9 +2,12 @@ import { Router } from "express";
 import { NodeStore } from "../store/nodeStore";
 import { MAX_BLOB_BYTES, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
 import { OwnerSecretSource, requireOwner } from "../middleware/ownerAuth";
-import { rateLimited, TokenBucket } from "../middleware/rateLimit";
+import { KeyedTokenBuckets, rateLimited, rateLimitedPerHost, TokenBucket } from "../middleware/rateLimit";
 
 const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
+// Standard base64 with padding, nothing else. Buffer.from(x, "base64") never throws and silently
+// skips illegal characters, so the shape has to be checked by hand (the Android Temp Node does the same).
+const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 /**
  * NODE_MESH_SPEC.md §8's API surface — deliberately just these three routes, mirroring the
@@ -28,7 +31,8 @@ export function nodeRouter(
   lock?: LockControl,
 ): Router {
   const router = Router();
-  const fetchRateLimit = new TokenBucket(30, 5); // burst of 30, refills 5/sec
+  // Per node address (see KeyedTokenBuckets): burst of 30, refills 5/sec for each.
+  const fetchRateLimit = new KeyedTokenBuckets(30, 5);
   const poolRateLimit = new TokenBucket(5, 1);
   const unlockRateLimit = new TokenBucket(5, 0.2);
 
@@ -67,12 +71,14 @@ export function nodeRouter(
     if (typeof ciphertext !== "string" || ciphertext.length === 0) {
       return res.status(400).json({ error: "invalid ciphertext" });
     }
-    let decodedLength: number;
-    try {
-      decodedLength = Buffer.from(ciphertext, "base64").length;
-    } catch {
+    // Longest legal value is the base64 of MAX_BLOB_BYTES; test the length first so the regex never runs on a huge string.
+    if (ciphertext.length > Math.ceil(MAX_BLOB_BYTES / 3) * 4) {
+      return res.status(413).json({ error: `ciphertext must be 1..${MAX_BLOB_BYTES} bytes` });
+    }
+    if (!BASE64_RE.test(ciphertext)) {
       return res.status(400).json({ error: "ciphertext is not valid base64" });
     }
+    const decodedLength = Buffer.from(ciphertext, "base64").length;
     if (decodedLength === 0 || decodedLength > MAX_BLOB_BYTES) {
       return res.status(413).json({ error: `ciphertext must be 1..${MAX_BLOB_BYTES} bytes` });
     }
@@ -82,6 +88,9 @@ export function nodeRouter(
         return res.status(400).json({ error: "invalid ttl" });
       }
       ttlMs = ttl;
+    }
+    if (store.isFull()) {
+      return res.status(507).json({ error: "node store full" });
     }
     const stored = store.put(routing_tag, ciphertext, ttlMs);
     if (!stored) {
@@ -94,7 +103,7 @@ export function nodeRouter(
   // NODE_MESH_SPEC.md §2): it's HKDF-derived from the pairing secret, so knowing a valid one
   // already proves the caller was paired. Never deletes what it returns (§4) — only the TTL
   // sweep (nodeStore.ts) ever removes a row.
-  router.get("/fetch", rateLimited(fetchRateLimit), (req, res) => {
+  router.get("/fetch", rateLimitedPerHost(fetchRateLimit), (req, res) => {
     const tag = req.query.tag;
     if (typeof tag !== "string" || !TAG_RE.test(tag)) {
       return res.status(400).json({ error: "invalid tag" });
@@ -106,7 +115,7 @@ export function nodeRouter(
   // Batched + optionally long-polling sibling of GET /fetch — same contract as the consumer
   // relay's POST /v1/fetchMany (server/src/routes/relay.ts), reused deliberately so a client
   // already speaking that format needs no new parsing. Read-only here too — see GET /fetch above.
-  router.post("/fetchMany", rateLimited(fetchRateLimit), async (req, res) => {
+  router.post("/fetchMany", rateLimitedPerHost(fetchRateLimit), async (req, res) => {
     const { tags, waitMs, since } = req.body ?? {};
     if (!Array.isArray(tags) || tags.length === 0 || tags.length > MAX_FETCH_MANY_TAGS) {
       return res.status(400).json({ error: `tags must be a non-empty array of at most ${MAX_FETCH_MANY_TAGS}` });

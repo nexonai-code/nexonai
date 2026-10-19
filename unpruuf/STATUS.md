@@ -146,7 +146,8 @@ checklist, not a one-off.
 | Feature | Status | Notes |
 |---|---|---|
 | PIN lock | ✅ | Opens only after PIN (PBKDF2-salted hash, never stored in clear). |
-| Panic PIN | ✅ | Separate PIN instantly wipes all contacts + keys, opens the app empty. |
+| Panic PIN | ✅ | Separate PIN instantly wipes contacts, ratchet sessions, per-contact onion keys, Pro Groups, own nodes with owner secrets, node lists, feed sources, relay setup and the organisation QR; opens the app empty (identity keys, licence and PINs stay). Widened 2026‑10‑19; device test open. |
+| PIN lock-out | ✅ (2026‑10‑19) | From the 5th wrong try the pad locks 30 s, doubling to 1 h; PIN hashes sealed under the Keystore key. Root can reset the counter. |
 | Re-lock on background/lock | ✅ | PIN required again after leaving app or screen-off. |
 | Delete chat (revoke) | ✅ | Wipes messages on both sides, keeps the contact. |
 | Bidirectional contact deletion | ✅ | Deleting a contact deletes it on the other phone too (queued, retried). |

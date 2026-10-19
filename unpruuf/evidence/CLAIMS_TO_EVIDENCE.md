@@ -35,13 +35,18 @@ building the node server once (`run-evidence.bat` / `run-evidence.sh`).
 | A6 | The server keeps no sender address, no user agent, no owner secret. | `02`: those strings (127.0.0.1, two other addresses, a user agent, the secret) are searched in every byte of the database files: not found. `03`: no code reads the caller's address, port, user agent or forwarded-for header. | PROVEN HERE |
 | A7 | Expired packets are overwritten, not just unlinked. | `02`: after expiry the packet bytes are absent from database and write-ahead log (`secure_delete`). | PROVEN HERE |
 | A8 | The server makes no outbound connection except the one-time download of Tor; no telemetry. | `03`: only one `https.get` in the code (`torDownload.ts`); every URL in the code is the Tor archive or localhost; every `fetch(` is a relative address inside the local setup pages. This is **code**, not a capture of a running server. | PROVEN HERE (code); AUDIT (capture) |
-| A9 | The server never logs a tag, a packet or a secret. | `03`: no logging call prints such a value in request handling or storage. The setup tools are listed for hand review. | PROVEN HERE (code) |
+| A9 | The server never logs a tag, a packet or a secret. | `03`: no logging call prints such a value in request handling or storage. The owner code (the write credential) is shown on first start only in an interactive terminal; without a terminal (Docker, service, redirected output) it is not printed and the setup page shows it (changed 19 October 2026; `NODE_MESH_PRINT_OWNER_CODE=1` forces it into the log). The setup tools are listed for hand review. | PROVEN HERE (code) |
 | A10 | The settings an operator can change do not give the server more capabilities. | Settings found in the code: `NODE_PROFILE` (1/6/24 h), `NODE_MESH_STORE` (disk/ram), `NODE_MESH_KEY_STORAGE` (sealed/disk), `NODE_SLOT`, `NODE_MESH_NODES`, ports, `NODE_MESH_REQUIRE_SIGNED`, `NODE_MESH_TOR`, bridge and feed settings. None adds a route (`01`). Two settings **lower** protection: `KEY_STORAGE=disk` (keys readable on disk, no lock after restart) and `NODE_MESH_TOR=0` (for tests only). The auditor should walk every variable in `config.ts` and `index.ts`. | READ |
 | A11 | The server a customer runs is the one NexonAI released, unchanged. | Signed list of file hashes, checked at start and hourly; `verify-release` checks a copy from outside; tests in `integrity.test.ts`. The audit report should name the **release fingerprint** it covers so that a customer can compare. Limit: a server already compromised can lie about itself; real remote proof needs hardware and is not built. | TEST; AUDIT (fingerprint binding) |
 | A12 | The Tor program the server downloads is the genuine one. | `07`: the three programs that download Tor pin SHA-256 values and compare them before extracting; `--online` compares them with the Tor Project's signed list and verifies the PGP signature (primary fingerprint EF6E 286D DA85 EA2A 4BA7 DE68 4E2C 6E87 9329 8290 — compare with torproject.org). Closed on 14 October 2026; before that the download was not checked. | PROVEN HERE |
 | A13 | The server's libraries have no known vulnerability at release time. | `09`: `npm audit` of production libraries. On 14 October 2026 four were found in the node server and the relay (one critical in `proxy-addr`, three moderate in `qs`) and fixed; now 0. A clean result is valid for the day it is run. | PROVEN HERE (today) |
 | A14 | The server has three direct libraries: express, better-sqlite3, qrcode. | `03`. 133 production packages including nested; an auditor should review them or ask for a software bill of materials. | PROVEN HERE; READ |
-| A15 | The server does not announce its web framework. | `app.disable("x-powered-by")`, `01` sees no header (added 14 October 2026). | PROVEN HERE |
+| A15 | The server does not announce its web framework. | `app.disable("x-powered-by")`, `01` sees no header (added 14 October 2026). Since 19 October 2026 errors (broken JSON, oversized body) also come back as short JSON, without stack trace or file paths (`01`). | PROVEN HERE |
+| A16 | A packet is unreadable from its expiry on and removed from the files within about a minute: the sweep runs every 60 s and truncates the write-ahead log after a sweep that removed rows. | `02` (bytes absent after expiry), `nodeStore.test.ts` (WAL truncated after a sweep). Before 19 October 2026 the sweep ran every 5 minutes and the log was cleaned once a day. | PROVEN HERE |
+| A17 | The store cannot be filled without limit: 1 500 packets per tag and 200 000 packets (about 1.1 GB) in total; beyond that deposits get 507. Only the owner can deposit. | `01`, `app.test.ts`. The 250 nodes of one server are addresses on one store, not 250 separate stores. | PROVEN HERE |
+| A18 | Garbage cannot be stored: the ciphertext must be strict base64 of at most 4096 bytes. | `01`, `app.test.ts`. | PROVEN HERE |
+| A19 | One caller cannot stop reading for all nodes: the read limit is per node address (burst 30, 5/s). Whoever knows an address can still use up that node's limit. `/unlock` keeps one shared limit. | `app.test.ts`. | TEST |
+| A20 | The setup page answers only to this computer or a private network address, and only with a local Host header. | `adminApp.test.ts`. Safe only while the port is published to the host's loopback (docker-compose and Control do this). | TEST; READ |
 
 ## B. "There are no identities"
 
@@ -56,7 +61,7 @@ building the node server once (`run-evidence.bat` / `run-evidence.sh`).
 | B7 | The app opens network connections only through Tor, except a same-Wi-Fi shortcut that exists only while a direct (onion) contact exists: never in the whistleblower edition, never for Business contacts. | `04`: every client socket goes through the Tor SOCKS proxy except one; the one open listening socket exists only behind `lanDiscoveryNeeded()`, which returns false for whistleblower and ignores Node-Mesh contacts. No ready-made HTTP client, no WebView. **Static.** A capture on a running phone is the runtime proof. | PROVEN HERE (code); AUDIT (capture) |
 | B8 | The Android device id is read once, hashed, and used only for the local licence check. | `04`. | PROVEN HERE |
 | B9 | On a network that blocks Tor, the app can use bridges. The Snowflake path then contacts a broker through a CDN front and STUN servers. | `04` note. This is third-party contact; "the app talks only to Tor" is true for the direct path and must be worded carefully for the fallback. | NOTE |
-| B10 | Notifications show "New message" only; the app is hidden from screenshots and the app switcher; backup and clear-text traffic are off. | `04` (manifest, `FLAG_SECURE`). Notification text: read `showMessageNotification`. On a device: take a screenshot, open the app switcher. | PROVEN HERE (settings); READ |
+| B10 | Notifications show "New message" only; the app is hidden from screenshots and the app switcher; backup and clear-text traffic are off. | `04` (manifest, `FLAG_SECURE`). Notification text: read `showMessageNotification`. Every dialog sets the secure flag itself (`SecureDialogProperties`, since 19 October 2026). On a device: take a screenshot with a dialog open, open the app switcher. | PROVEN HERE (settings); READ (dialogs: device test open) |
 | B11 | There is no address book in the system and nothing like a user directory on any server. | `02` (what the server holds), `06` (what the contact record holds). | PROVEN HERE |
 
 ## C. Cryptography and packets
@@ -83,7 +88,8 @@ Corrected already in `SECURITY_CLAIMS.md`, `STATUS.md`, `PRODUCT_CONTEXT.md`, `M
 |---|---|---|---|
 | D1 | Messages are kept in memory only, never on disk. | Design (`InMemoryMessageStore`); `SECURITY_CLAIMS.md` Tier 2. An auditor takes a forensic image of a phone after use. | READ; AUDIT |
 | D2 | Contacts are stored in an encrypted database (SQLCipher, AES-256). | Dependency present (`04`). How the key is kept (Android Keystore) needs review. | READ; AUDIT |
-| D3 | The panic PIN wipes contacts and keys and opens an empty app. | Device test. | AUDIT |
+| D3 | The panic PIN wipes contacts, groups, own nodes, node lists, feed sources, relay setup and organisation QR, and opens an empty app (widened 19 October 2026; before, only contacts, sessions, onion keys and the organisation QR). | Device test. | AUDIT |
+| D3a | Wrong PINs lock the pad (5th wrong try: 30 s, doubling, at most 1 h). | `PinLockoutTest` (the schedule). The counter itself: device test. Root can reset it. | TEST (schedule); AUDIT |
 
 ## E. What a node or a network observer learns (metadata)
 
@@ -92,7 +98,7 @@ Corrected already in `SECURITY_CLAIMS.md`, `STATUS.md`, `PRODUCT_CONTEXT.md`, `M
 | E1 | A node sees: an encrypted packet, a routing tag that changes every hour, the requested life, the times of deposit and pick-up, the number of requests, **and the payload length (F1)**. It does not see content, names, contact lists or user IP addresses (everything goes through Tor). | `02`, `03`, `08`. | PROVEN HERE |
 | E2 | Someone who watches both sides of the network at once can still correlate timing. | Stated limit, not solved (every Tor service). | NOT CLAIMED |
 | E3 | Cover packets hide when real messages are sent. | Not measured. Against a node operator F1 weakens it. | MEASURE; FINDING F1 |
-| E4 | About 100 active users per node. | Calculated from the code (5 reads/s, one request per 20 s). Never loaded in a test. | MEASURE |
+| E4 | About 100 active users per node. | Calculated from the code (5 reads/s per node address since 19 October 2026, one request per 20 s). Never loaded in a test. The 250 nodes of one server share one store and one disk ceiling (200 000 packets); nodes are addresses, not separate machines. | MEASURE |
 
 ## F. Operation
 

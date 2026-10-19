@@ -155,6 +155,7 @@ fun GroupEditScreen(
 
     if (confirmDelete) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { confirmDelete = false },
             title = { Text(stringResource(R.string.group_delete_title)) },
             text = { Text(stringResource(R.string.group_delete_body)) },

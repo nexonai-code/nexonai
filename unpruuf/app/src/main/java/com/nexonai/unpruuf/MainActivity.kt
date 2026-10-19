@@ -262,6 +262,7 @@ class MainActivity : FragmentActivity() {
 @androidx.compose.runtime.Composable
 private fun BetaNoticeDialog(onDismiss: () -> Unit) {
     AlertDialog(
+        properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
         onDismissRequest = onDismiss,
         title = { Text("Beta version") },
         text = {

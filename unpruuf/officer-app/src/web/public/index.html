@@ -201,10 +201,14 @@
           <datalist id="categoryList"></datalist>
           <div class="chips" id="categoryChips"></div>
         </div>
-        <div class="card only-press">
+        <div class="card">
           <div class="ch"><h2 data-i18n="del_h">Ștergere</h2></div>
-          <p class="note" data-i18n="del_note">Șterge definitiv acest mesaj și toată conversația de pe acest calculator.</p>
-          <div class="btns" style="margin-top:10px"><button class="btn danger" id="deleteCaseBtn" type="button" data-i18n="del_btn">Șterge definitiv</button></div>
+          <p class="note only-press" data-i18n="del_note">Șterge definitiv acest mesaj și toată conversația de pe acest calculator.</p>
+          <p class="note only-compliance" data-i18n="del_note_c">Descarcă cazul ca fișier sau șterge-l definitiv de pe acest calculator, cu toată conversația. Păstrează cazul cât timp este necesar (Directiva 2019/1937, Art. 18); ștergerea nu se poate anula.</p>
+          <div class="btns" style="margin-top:10px">
+            <button class="btn" id="exportCaseBtn" type="button" data-i18n="exp_btn">Descarcă cazul (fișier)</button>
+            <button class="btn danger" id="deleteCaseBtn" type="button" data-i18n="del_btn">Șterge definitiv</button>
+          </div>
         </div>
         <div class="card">
           <div class="ch"><h2 data-i18n="data_h">Date</h2></div>

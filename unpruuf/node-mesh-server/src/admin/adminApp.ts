@@ -71,9 +71,22 @@ export function isLoopbackHost(hostHeader: string | undefined, port: number): bo
   return allowed.includes(hostHeader.toLowerCase());
 }
 
+/** Where a connection may come from: this computer itself, or (the Docker case, where the port is
+ *  published to the host's loopback and arrives from the container network's gateway) a private
+ *  address. A public address never reaches the setup page, whatever Host header it sends. */
+export function isLocalPeer(remote: string | undefined): boolean {
+  if (!remote) return false;
+  const a = remote.startsWith("::ffff:") ? remote.slice(7) : remote;
+  if (a === "::1" || a === "127.0.0.1" || a.startsWith("127.")) return true;
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(a);
+  if (!m) return false;
+  const [o1, o2] = [Number(m[1]), Number(m[2])];
+  return o1 === 10 || (o1 === 172 && o2 >= 16 && o2 <= 31) || (o1 === 192 && o2 === 168);
+}
+
 export function loopbackOnly(port: number) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!isLoopbackHost(req.headers.host, port)) {
+    if (!isLoopbackHost(req.headers.host, port) || !isLocalPeer(req.socket.remoteAddress)) {
       return res.status(403).send("forbidden");
     }
     res.setHeader("Cache-Control", "no-store");

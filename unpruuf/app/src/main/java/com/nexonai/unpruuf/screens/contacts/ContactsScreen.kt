@@ -174,6 +174,7 @@ fun ContactsScreen(
 
     contactToRename?.let { contact ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { contactToRename = null },
             title = { Text(stringResource(R.string.contacts_rename_title)) },
             text = {
@@ -202,6 +203,7 @@ fun ContactsScreen(
 
     contactToRevoke?.let { contact ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { contactToRevoke = null },
             title = { Text(stringResource(R.string.contacts_delete_title)) },
             text = {

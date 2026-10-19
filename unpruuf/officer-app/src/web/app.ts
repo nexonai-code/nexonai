@@ -77,10 +77,36 @@ export function createDashboardApp(
     }
   });
 
+  // Deleting one case for good (Directive 2019/1937 Art. 17/18, GDPR Art. 17): the case row, every
+  // message and the case keys go (CaseStore.deleteCase). Both editions.
   app.delete("/api/cases/:id", (req, res) => {
-    if (edition !== "press") return res.status(404).json({ error: "nu a fost găsit" });
     if (!store.deleteCase(req.params.id)) return res.status(404).json({ error: "nu a fost găsit" });
     return res.json({ deleted: true });
+  });
+
+  // One case as a file (GDPR Art. 15/20 and the officer's own records): what the dashboard shows —
+  // number, status, category, dates and the whole conversation — and none of the cryptographic keys.
+  app.get("/api/cases/:id/export", (req, res) => {
+    const row = store.getCase(req.params.id);
+    if (!row) return res.status(404).json({ error: "nu a fost găsit" });
+    const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
+    const body = {
+      exportedAt: new Date().toISOString(),
+      caseNumber: row.caseNumber,
+      status: row.status,
+      category: row.category,
+      openedAt: iso(row.openedAt),
+      acknowledgementDueAt: iso(row.ackDueAt),
+      acknowledgedAt: iso(row.acknowledgedAt),
+      feedbackDueAt: iso(row.feedbackDueAt),
+      closedAt: iso(row.closedAt),
+      lastActivityAt: iso(row.lastActivityAt),
+      messages: store.listMessages(row.id).map((m) => ({ at: iso(m.createdAt), from: m.direction === "in" ? "reporter" : "officer", text: m.text })),
+    };
+    const name = `case-${(row.caseNumber ?? row.id).replace(/[^A-Za-z0-9-]/g, "_")}.json`;
+    res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+    res.setHeader("Cache-Control", "no-store");
+    return res.type("application/json").send(JSON.stringify(body, null, 2));
   });
 
   app.get("/api/cases", (_req, res) => {

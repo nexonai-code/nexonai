@@ -111,7 +111,8 @@ fun PinLockScreen(viewModel: LockViewModel) {
         // Fixed-height error slot so the pad never jumps when a message appears.
         Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
             error?.let {
-                Text(stringResource(it.toStringRes()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                val secs by viewModel.lockSeconds.collectAsState()
+                Text(if (it == LockError.PIN_LOCKED) lockedText(secs) else stringResource(it.toStringRes()), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -186,7 +187,12 @@ private fun LockError.toStringRes(): Int = when (this) {
     LockError.PIN_TOO_SHORT -> R.string.lock_err_pin_too_short
     LockError.PANIC_SAME_AS_PIN -> R.string.lock_err_panic_same_as_pin
     LockError.WRONG_PIN -> R.string.lock_err_wrong_pin
+    LockError.PIN_LOCKED -> R.string.lock_err_locked
 }
+
+@Composable
+private fun lockedText(seconds: Int): String =
+    if (seconds >= 120) stringResource(R.string.lock_err_locked_min, (seconds + 59) / 60) else stringResource(R.string.lock_err_locked, seconds)
 
 // Biometric-only, no device-credential fallback: unpruuf already has its own separate PIN —
 // falling back to the PHONE's lock-screen credential here would be a different, weaker secret

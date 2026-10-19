@@ -193,6 +193,7 @@ fun NodeListsScreen(
         var name by remember(p) { mutableStateOf(p.file.name) }
         var targetId by remember(p) { mutableStateOf<String?>(null) }
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { viewModel.cancelImport() },
             title = { Text(stringResource(R.string.node_lists_confirm_title)) },
             text = {
@@ -231,6 +232,7 @@ fun NodeListsScreen(
     renaming?.let { row ->
         var newName by remember(row) { mutableStateOf(row.name) }
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { renaming = null },
             title = { Text(stringResource(R.string.node_lists_rename)) },
             text = {
@@ -252,6 +254,7 @@ fun NodeListsScreen(
 
     removingFeed?.let { f ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { removingFeed = null },
             title = { Text(stringResource(R.string.node_feeds_remove_title, f.name)) },
             text = { Text(stringResource(R.string.node_feeds_remove_body)) },
@@ -266,6 +269,7 @@ fun NodeListsScreen(
 
     deleting?.let { row ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { deleting = null },
             title = { Text(stringResource(R.string.node_lists_delete_title, row.name)) },
             text = {

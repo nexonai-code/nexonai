@@ -99,7 +99,7 @@ app.post('/api/issue-server', (req, res) => {
   const maxNodes = parseInt(body.maxNodes, 10);
   const years = parseFloat(body.years);
   const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-  const serial = (typeof body.serial === 'string' && body.serial.trim()) || `SRV-${stamp.slice(0, 8)}-${stamp.slice(8)}`;
+  const serial = (typeof body.serial === 'string' && body.serial.trim()) || `SRV-${stamp.slice(0, 8)}-${stamp.slice(8)}-${require('crypto').randomBytes(2).toString('hex').toUpperCase()}`;
 
   if (!customer) return res.status(400).json({ error: 'Customer name is required.' });
   if (customer.includes('|') || serial.includes('|')) {

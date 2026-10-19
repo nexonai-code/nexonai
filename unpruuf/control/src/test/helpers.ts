@@ -26,9 +26,9 @@ export function newKeys(): TestKeys {
   return { publicKeyB64: jwk.x, privateKey };
 }
 const DAY = 86_400_000;
-export function serverCode(k: TestKeys, serial: string, opts: { days?: number; customer?: string; issued?: number } = {}): string {
+export function serverCode(k: TestKeys, serial: string, opts: { days?: number; customer?: string; issued?: number; nodes?: number } = {}): string {
   const issued = opts.issued ?? Date.now() - DAY;
-  const payload = `1|${serial}|${opts.customer ?? "Acme SRL"}|250|${issued}|${issued + (opts.days ?? 365) * DAY + DAY}`;
+  const payload = `1|${serial}|${opts.customer ?? "Acme SRL"}|${opts.nodes ?? 250}|${issued}|${issued + (opts.days ?? 365) * DAY + DAY}`;
   const sig = crypto.sign(null, Buffer.from("unpruuf-server-license-v1\n" + payload), k.privateKey);
   return `unpruuf-server-license:v1:${Buffer.from(payload).toString("base64url")}:${sig.toString("base64url")}`;
 }

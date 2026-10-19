@@ -134,12 +134,24 @@ async function withPressApp(run: (base: string, store: CaseStore, settings: Pres
   }
 }
 
-test("the standard dashboard reports itself as compliance and cannot delete or change settings", async () => {
+test("the standard dashboard reports itself as compliance, exports and deletes a single case, and has no press settings", async () => {
   await withApp(async (base, store) => {
     assert.deepEqual(await (await fetch(`${base}/api/edition`)).json(), { edition: "compliance" });
     const row = store.createCase(SECRETS, "HW-DEL-0001");
+    store.appendMessage(row.id, "in", "report text");
+    store.appendMessage(row.id, "out", "officer reply");
+    const exp = await fetch(`${base}/api/cases/${row.id}/export`);
+    assert.equal(exp.status, 200);
+    assert.match(exp.headers.get("content-disposition") ?? "", /attachment; filename="case-HW-DEL-0001\.json"/);
+    const doc = (await exp.json()) as any;
+    assert.equal(doc.caseNumber, "HW-DEL-0001");
+    assert.deepEqual(doc.messages.map((m: any) => [m.from, m.text]), [["reporter", "report text"], ["officer", "officer reply"]]);
+    assert.ok(!JSON.stringify(doc).toLowerCase().includes("secret"), "no key material in the export");
+    assert.equal((await fetch(`${base}/api/cases/nope/export`)).status, 404);
+    assert.equal((await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" })).status, 200);
+    assert.equal(store.getCase(row.id), null, "the case is gone");
+    assert.deepEqual(store.listMessages(row.id), []);
     assert.equal((await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" })).status, 404);
-    assert.ok(store.getCase(row.id), "the case is still there");
     const res = await fetch(`${base}/api/settings`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ retentionDays: 5, pickupWarnHours: 6 }) });
     assert.equal(res.status, 404);
   });

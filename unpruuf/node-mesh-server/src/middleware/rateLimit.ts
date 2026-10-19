@@ -32,6 +32,42 @@ export class TokenBucket {
   }
 }
 
+/**
+ * One token bucket per key (the node address a request came in through, i.e. its Host header).
+ * Somebody who knows only one of a server's 250 onion addresses can then drain that node's bucket,
+ * not the reads of the other 249. The number of keys is capped: beyond it (or without a Host
+ * header) requests share one overflow bucket, so memory cannot be grown by sending random hosts.
+ */
+export class KeyedTokenBuckets {
+  private readonly buckets = new Map<string, TokenBucket>();
+  private readonly overflow: TokenBucket;
+
+  constructor(private readonly capacity: number, private readonly refillPerSecond: number, private readonly maxKeys = 512) {
+    this.overflow = new TokenBucket(capacity, refillPerSecond);
+  }
+
+  tryTake(key: string | undefined): boolean {
+    if (!key) return this.overflow.tryTake();
+    let bucket = this.buckets.get(key);
+    if (!bucket) {
+      if (this.buckets.size >= this.maxKeys) return this.overflow.tryTake();
+      bucket = new TokenBucket(this.capacity, this.refillPerSecond);
+      this.buckets.set(key, bucket);
+    }
+    return bucket.tryTake();
+  }
+}
+
+export function rateLimitedPerHost(buckets: KeyedTokenBuckets) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const host = req.headers.host?.toLowerCase().slice(0, 100);
+    if (!buckets.tryTake(host)) {
+      return res.status(429).json({ error: "rate limit exceeded" });
+    }
+    next();
+  };
+}
+
 export function rateLimited(bucket: TokenBucket) {
   return (_req: Request, res: Response, next: NextFunction) => {
     if (!bucket.tryTake()) {
