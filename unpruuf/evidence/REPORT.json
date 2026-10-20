@@ -1,7 +1,7 @@
 {
-  "run": "2026-10-19T13:28:33.774Z",
-  "commit": "b48cf18e071bbf765d8336cb7b67499f6393d721 (with uncommitted changes)",
-  "passed": 97,
+  "run": "2026-10-20T12:57:03.752Z",
+  "commit": "9ec18097f8dc3bd6c3b4d1f9fdbfdc9ca1d6b28e",
+  "passed": 96,
   "failed": 0,
   "findings": [
     {
@@ -10,7 +10,12 @@
       "script": "08-packet-header.js"
     }
   ],
-  "suite": null,
+  "suite": {
+    "tests": 113,
+    "pass": 112,
+    "fail": 0,
+    "skipped": 1
+  },
   "results": [
     {
       "script": "01-server-surface.js",
@@ -436,7 +441,7 @@
         {
           "name": "tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005",
           "ok": true,
-          "detail": "share 0.5008"
+          "detail": "share 0.5002"
         }
       ],
       "notes": [
@@ -565,7 +570,7 @@
       "exit": 0,
       "id": "08",
       "title": "What a stored packet shows without a key (finding F1)",
-      "passed": 5,
+      "passed": 4,
       "failed": 0,
       "checks": [
         {
@@ -587,14 +592,11 @@
           "name": "different message lengths show as different numbers",
           "ok": true,
           "detail": "31, 329, 3029"
-        },
-        {
-          "name": "PacketMetadataTest (real app classes) ran and passed: it pins that the leak exists today",
-          "ok": true,
-          "detail": "4 tests, 0 failures"
         }
       ],
-      "notes": [],
+      "notes": [
+        "PacketMetadataTest has not been run here (needs Gradle and the Android SDK): ./gradlew :app:testStandardDebugUnitTest --tests \"*PacketMetadataTest*\""
+      ],
       "findings": [
         {
           "id": "F1",
