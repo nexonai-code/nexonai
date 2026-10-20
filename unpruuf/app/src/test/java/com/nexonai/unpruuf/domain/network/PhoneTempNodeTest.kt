@@ -49,8 +49,8 @@ class PhoneTempNodeTest {
     private fun b64(n: Int, fill: Int = 7) = Base64.getEncoder().encodeToString(ByteArray(n) { fill.toByte() })
     private fun depositBody(tag: String, ct: String = b64(100), ttl: Long? = null) =
         """{"routing_tag":"$tag","ciphertext":"$ct"${if (ttl != null) ""","ttl":$ttl""" else ""}}"""
-    private fun deposit(st: PhoneTempNode.StartResult.Started, tag: String, ct: String = b64(100), ttl: Long? = null) =
-        call("PUT", "/deposit", depositBody(tag, ct, ttl), "Bearer ${st.ownerSecret}")
+    private fun deposit(st: PhoneTempNode.StartResult.Started, tag: String, ct: String = b64(100), ttl: Long? = null, port: Int = node.localPort()) =
+        call("PUT", "/deposit", depositBody(tag, ct, ttl), "Bearer ${st.ownerSecret}", port)
 
     // ── start / stop ──
     @Test fun startNeedsTor() = runBlocking {
@@ -84,7 +84,12 @@ class PhoneTempNodeTest {
         assertEquals(PhoneTempNode.State.Off, node.state.value)
         assertFalse(node.isOwn(st.address))
         assertNull(node.runningFor())
-        assertTrue("the server is closed", runCatching { call("GET", "/health", port = port) }.isFailure)
+        assertEquals(-1, node.localPort())
+        assertFalse("nothing is accepted locally after stop", node.localDeposit("tag2", ByteArray(10) { 1 }, null))
+        // The OS may hand the freed port to another listener while the whole suite runs, so a connection
+        // alone proves nothing. What must hold: this node's owner secret no longer gets a deposit through.
+        val after = runCatching { deposit(st, "tag3", port = port) }.getOrNull()
+        assertTrue("the old secret deposits nothing after stop", after == null || after.status != 201)
         node.stop() // twice is fine
     }
 
