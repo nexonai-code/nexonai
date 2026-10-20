@@ -14,7 +14,7 @@ NexonAI baut **unpruuf**: Kommunikation ohne Identitäten, ohne Dritte, ohne dir
 
 | Was | Wo |
 |---|---|
-| Code, Dokumente, Skripte | GitHub `nexonai-code/nexonai`, Branch **`android`** (Hauptlinie). Alles ist gepusht. Letzte Commits: Audit-Briefs (`412caa2`), dann diese Übergabe. |
+| Code, Dokumente, Skripte | GitHub `nexonai-code/nexonai`, Branch **`android`** (Hauptlinie); `main` (Standard-Branch) wird nach jedem Push mit `git push origin android:main` vorgespult und ist seit 20.10. gleich. Alles ist gepusht. Letzte Commits: Audit-Briefs (`412caa2`), dann diese Übergabe. |
 | Tor Client Edition | Branch `tor-client-edition`, nur lokal, **nicht gepusht**, nur auf ausdrücklichen Wunsch. |
 | Alter Branch | `apk-releases` (Debug-APKs vom 26.9., veraltet, nicht anfassen). |
 | Android-App | `unpruuf/app`, Version **1.17 (Code 18)**, Varianten: standard, pro (= Business), client, whistleblower, press, group (= Pro Groups). |
