@@ -1,6 +1,20 @@
-# Lieferungen und Artefakte — Stand 14. Oktober 2026
+# Lieferungen und Artefakte — Stand 20. Oktober 2026
 
 Die ZIP-Dateien hat Gabriel im Chat bekommen. Sie liegen nicht im Repo (zu groß). Was daraus neu gebaut werden kann, steht in `quellen/`.
+
+## Seit 16.10. (im Chat an Gabriel geschickt, nicht im Repo)
+
+| Datei | Inhalt | Stand |
+|---|---|---|
+| `unpruuf_2026-10-16_v29.zip` | Gesamtes Projekt (Hauptlinie, Branch `android`, Stand b48cf18) | 16.10. |
+| `unpruuf-<variante>-arm64_2026-10-19_v3.apk` (sechs Dateien) | Debug-APKs mit Testschlüssel, mit den Sicherheits-Fixes, **ohne** verschlüsselte Besitzer-Geheimnisse. Die Dateien ohne `_v2`/`_v3` (16.10.) und die ersten vom 19.10. tragen `testOnly` und lassen sich nicht installieren. | 19.10. |
+| `unpruuf-node-android-arm64_2026-10-19_v2.apk` | Android-Node, Debug | 19.10. |
+| `unpruuf-pro-RELEASE-arm64_2026-10-19.apk` | Pro als Release (R8, Release-Schlüssel). Die anderen Release-Varianten wurden gebaut, aber nicht geschickt. | 19.10. |
+| `unpruuf_Testschluessel_2026-10-19.zip` | Testschlüssel + Anleitung | 19.10. |
+| `unpruuf_Release-Schluessel_2026-10-19.zip` | Release-Schlüssel, `passwort-aendern.bat`, Anleitung. **Vertraulich.** | 19.10. |
+| `unpruuf_AuditBriefs_2026-10-19_v1.zip` | Audit-Briefs Server und App, Englisch, .docx und .md | 19.10. |
+
+Neues Artefakt: Audit briefs: node server and Android app (Doc, zwei Tabs, privat): https://claude.ai/artifact/TYwYRrCDA4d1YZFDNpD8q6
 
 ## Aktuelle ZIPs (jeweils neueste Version)
 

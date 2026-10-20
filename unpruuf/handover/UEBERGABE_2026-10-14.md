@@ -1,5 +1,7 @@
 # Übergabe für einen neuen Chat — Stand 14. Oktober 2026
 
+> **Abgelöst durch `UEBERGABE_2026-10-20.md`.** Abschnitt 1 (Produkt), 3 (13. und 14.10.) und 8 (Technik) bleiben als Hintergrund gültig; Stand, offene Entscheidungen und nächste Schritte stehen in der neuen Datei.
+
 Für Gabriel und für jede neue Claude-Sitzung. Lies zuerst `CLAUDE.md` (Arbeitsregeln, wird in Claude Code automatisch geladen), dann diese Datei. Die Tiefe steht in `STATUS.md`, `CHANGELOG.md`, `SECURITY_CLAIMS.md`, `NODE_MESH_SPEC.md`.
 
 ---
