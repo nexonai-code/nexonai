@@ -1,6 +1,6 @@
 {
-  "run": "2026-10-19T13:28:33.774Z",
-  "commit": "b48cf18e071bbf765d8336cb7b67499f6393d721 (with uncommitted changes)",
+  "run": "2026-10-20T12:46:50.783Z",
+  "commit": "9ec18097f8dc3bd6c3b4d1f9fdbfdc9ca1d6b28e (with uncommitted changes)",
   "passed": 97,
   "failed": 0,
   "findings": [
@@ -10,7 +10,12 @@
       "script": "08-packet-header.js"
     }
   ],
-  "suite": null,
+  "suite": {
+    "tests": 113,
+    "pass": 112,
+    "fail": 0,
+    "skipped": 1
+  },
   "results": [
     {
       "script": "01-server-surface.js",
@@ -436,7 +441,7 @@
         {
           "name": "tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005",
           "ok": true,
-          "detail": "share 0.5008"
+          "detail": "share 0.4993"
         }
       ],
       "notes": [

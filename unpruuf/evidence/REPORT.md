@@ -1,9 +1,10 @@
 # Evidence report
 
-- Run: 2026-10-19T13:28:33.772Z
-- Source: git b48cf18e071bbf765d8336cb7b67499f6393d721 (with uncommitted changes)
+- Run: 2026-10-20T12:46:50.782Z
+- Source: git 9ec18097f8dc3bd6c3b4d1f9fdbfdc9ca1d6b28e (with uncommitted changes)
 - Node.js v22.22.2, linux x64
 - Checks: 97 passed, 0 failed. Findings (claims the evidence does not support): 1.
+- Node server test suite: 112 passed, 0 failed, 1 skipped, of 113.
 - Online comparison of the Tor hashes: no.
 
 This report shows what these scripts could check on this source and this machine. It is not a security audit and not a certificate. Anything marked "needs an auditor" in CLAIMS_TO_EVIDENCE.md is not covered here.
@@ -122,7 +123,7 @@ Notes:
 - PASS 300 contacts get 300 different tags in the same hour
 - PASS the 26 tags of the receive window of one contact are all different
 - PASS a different seed for the same epoch gives a different tag (an outsider without the seeds cannot compute it)
-- PASS tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005 (share 0.5008)
+- PASS tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005 (share 0.4993)
 
 Notes:
 - What this does not show: that no structure exists (that rests on HMAC-SHA256 being a pseudo-random function), or anything about traffic timing and volume, which the next scripts and the auditor scope list as open.
