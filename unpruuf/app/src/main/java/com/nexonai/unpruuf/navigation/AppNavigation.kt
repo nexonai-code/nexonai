@@ -20,6 +20,7 @@ import com.nexonai.unpruuf.screens.groups.GroupEditScreen
 import com.nexonai.unpruuf.screens.groups.GroupsScreen
 import com.nexonai.unpruuf.screens.home.HomeScreen
 import com.nexonai.unpruuf.screens.home.HomeViewModel
+import com.nexonai.unpruuf.screens.qrpair.GuestInviteScreen
 import com.nexonai.unpruuf.screens.qrpair.QrPairScreen
 import com.nexonai.unpruuf.screens.nodelists.NodeListsScreen
 import com.nexonai.unpruuf.screens.settings.SettingsScreen
@@ -29,6 +30,7 @@ object Routes {
     const val CONTACTS = "contacts"
     const val CHAT = "chat/{contactId}"
     const val QR_PAIR = "qr_pair"
+    const val GUEST_INVITE = "guest_invite"
     const val SETTINGS = "settings"
     const val NODE_LISTS = "node_lists"
     const val CONTACT_DETAIL = "contact_detail/{contactId}"
@@ -138,7 +140,13 @@ fun AppNavigation(
             )
         }
         composable(Routes.QR_PAIR) {
-            QrPairScreen(onNavigateBack = { navController.popBackStack() })
+            QrPairScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onInviteGuest = { navController.navigate(Routes.GUEST_INVITE) }
+            )
+        }
+        composable(Routes.GUEST_INVITE) {
+            GuestInviteScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(
             route = Routes.CONTACT_DETAIL,

@@ -173,3 +173,8 @@ not the limit, and one process with N nodes costs about a tenth of N separate pr
   normal internet connection.
 - A real Windows run of `start.bat` / the `.exe`, and the Docker image (the sandbox's Docker
   build couldn't reach the npm registry). `docker compose up` on a normal machine is the check.
+
+
+## Guest grants (optional, off by default)
+
+Lets a free Client app user without servers deposit on this node with a signed, expiring token issued by the owner. Switch on with `NODE_MESH_GUEST_GRANTS=1`. Format and limits: `../guest-grants/FORMAT.md`; design: `../GUEST_LOCKERS_BUILD_SPEC.md`. A guest can only `PUT /deposit`; nothing else changes, and no grant or grant id is ever stored.

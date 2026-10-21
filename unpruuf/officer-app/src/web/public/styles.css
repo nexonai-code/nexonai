@@ -218,3 +218,19 @@ body[data-edition="press"] .only-compliance, body[data-edition="press"] .col-dl 
 .btn.danger { border-color: #c9473a; color: #a3291d; }
 .btn.danger:hover { background: #fbe4e1; }
 label.fld { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--dim); max-width: 320px; }
+
+/* safeline Press: a code per research */
+.newrech { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.newrech input { flex: 1; min-width: 240px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; color: var(--ink); }
+.rech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; margin-top: 16px; }
+.rech { display: flex; flex-direction: column; gap: 10px; }
+.rech .top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.rech h3 { margin: 0; font-size: 15px; word-break: break-word; }
+.rech .body { display: flex; gap: 14px; align-items: flex-start; }
+.rech img { width: 150px; height: 150px; flex: 0 0 auto; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: zoom-in; }
+.rech .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.rech.off { opacity: .8; }
+.pill.active { background: var(--accent-soft); color: var(--accent); }
+.pill.paused { background: var(--grey-soft); color: var(--grey); }
+.rtag { display: inline-block; font-size: 11.5px; border-radius: 6px; padding: 1px 7px; background: var(--blue-soft); color: var(--blue); margin-right: 6px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+a.btn { text-decoration: none; display: inline-block; }

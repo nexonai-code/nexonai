@@ -127,8 +127,14 @@ routes every relay request through its local SOCKS port — this process reaches
   bodies and crypto secrets are (see `caseStore.ts`'s doc comment). Someone with read access to
   `data/cases.sqlite` (but not the password) learns "N cases exist, opened on these dates,"
   nothing more.
-- **The dashboard has no login of its own.** `OFFICER_PASSWORD` protects data at rest, not the
-  HTTP server — don't expose `PORT` (default 3000) beyond localhost/a trusted LAN.
+- **Dashboard access.** The dashboard answers on this computer only (127.0.0.1); other host
+  names are refused (DNS rebinding), changing requests need the header the page itself sends,
+  and no CORS answer is ever given. To use it from another machine on purpose, set
+  `OFFICER_BIND_HOST` (the address to listen on), `OFFICER_ALLOWED_HOSTS` (names it may be called
+  by) and `OFFICER_DASHBOARD_PASSWORD` (at least 12 characters, HTTP Basic); without the password
+  it refuses to start. This is hardening, not an audit result; plain HTTP on a LAN still shows
+  the password and the reports to anyone on that network, so prefer an SSH tunnel to the loopback
+  address. `OFFICER_PASSWORD` protects the data at rest.
 - **No "Wechsel" (relay-rotation) UI** — a case's generation counter stays 0 unless the reporter's
   own app rotates it, which the poll loop tolerates (small generation window) but the officer
   side can't trigger.

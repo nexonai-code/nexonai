@@ -5,6 +5,15 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑21 · Press line merged into `android`; officer dashboard access hardened
+
+- **Merge:** branch `ccr-9a899f8d-xrqsp0` (guest lockers, design kit, safeline Press with one contact code per research, split `CLAUDE.md`) merged into `android`. `officer-app` taken from the Press branch (it had been copied unchanged from `android`). Guest grants ported onto the current node server (licence, sealed keys, per-address limits kept): `depositAuth.ts` follows the rotating owner secret and answers 423 while a sealed server is locked. Android: pairing code carries the optional guest grants, invite button next to the Business code. Node server tests 123 passed; officer app 28 passed.
+- **`CLAUDE.md`:** left as on `android`; the split file `unpruuf/CLAUDE.md` from the Press branch is now also present. The team merges the two rule sets by hand (not done automatically).
+- **Officer dashboard (internal security test, finding on listening address and missing login):** now answers on `127.0.0.1` only; requests for any other host name are refused; changing requests need the header the page itself sends and a matching Origin; no CORS answer; optional HTTP Basic password. Listening on another address needs `OFFICER_BIND_HOST`, `OFFICER_ALLOWED_HOSTS` and `OFFICER_DASHBOARD_PASSWORD` (12+ characters), otherwise the program does not start. Identity file written with mode 0600. Hardening, not an audit result. New `accessGuard.test.ts`.
+- **Not done:** the tip page with real codes (needs the code list from a running Press officer app), the Press one-pager update (sources are not in the repo), a test with a real phone, real Tor.
+
+---
+
 ## 2026‑10‑19 · Owner secrets of own nodes are stored encrypted
 
 - `SealedStrings` (+ `SealedStringsTest`): the app's own-node list with owner secrets, node lists, feed sources (with keys), control addresses, relay address, token and backup relays are stored as `k1:<encrypted>` under the phone-bound key. Plain values from older versions are read and rewritten encrypted on first use.
@@ -1327,6 +1336,13 @@ changes (no Android SDK here, same as always); Windows execution of any of the
 new `.bat` scripts (written on Linux, structurally reviewed only — see each
 new folder's README "Known gaps" section, and `unpruuf/WHISTLEBLOWER_DEMO.md`
 for the full demo runbook and setup steps).
+## 2026‑10‑18 · Guest lockers for a free, invite-only Client app (first build)
+
+**What was done.** Guest grants: a signed, expiring token that lets a Client app user without servers deposit on the inviter's node. Server (`node-mesh-server`): `PUT /deposit` accepts `Guest <token>` besides the owner bearer, off by default (`NODE_MESH_GUEST_GRANTS=1`), stateless MAC check, in-memory quota per grant, no grant data on disk; 9 new tests, 35 pass. Shared format and test vectors in `guest-grants/`. Android: `GuestGrant.kt` (issue, parse, renewal check) with 8 JVM tests against the vectors, `NodeMeshClient.depositAsGuest`, pairing field `g`. Specs: `GUEST_LOCKERS_BUILD_SPEC.md`, `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`.
+
+**Added later the same day.** Slot scope module for the 250 x 100 server (`guestScope.ts`, Kotlin `GuestScope.kt`, vector `slot-scope`), owner invite screen (`GuestInviteScreen`, `GuestInviteViewModel`, `GuestInvite.kt`), navigation and a button in the Business pairing screen. 37 server tests and 15 JVM tests pass.
+
+**Open / not verified.** The two Android files that touch Android classes were not compiled (no SDK here). No screens, Control, evidence scripts or iOS yet. The server change is in the older single-node server of this repository and must be ported to the current multi-slot server. Packet-length finding F1 is still open in this snapshot.
 
 ---
 

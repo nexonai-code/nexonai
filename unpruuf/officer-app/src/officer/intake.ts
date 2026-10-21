@@ -32,13 +32,14 @@ export function caseFromReporterPayload(
   store: CaseStore,
   payload: CrossPlatformPairingPayload,
   wireIdentity: string | null,
+  rechercheId: string | null = null,
 ): { row: CaseRow; created: boolean } {
   if (payload.appEdition !== "whistleblower" && payload.appEdition !== "press") {
     throw new InvalidPairingCodeError(
       `Acest cod provine dintr-o aplicație "${payload.appEdition}", nu din ediția Whistleblower — refuz să amestec liniile de produse.`,
     );
   }
-  const existing = store.findCaseByReporter(payload.userId);
+  const existing = store.findCaseByReporter(payload.userId, rechercheId);
   if (existing) {
     if (wireIdentity) {
       const secrets = store.getCaseSecrets(existing.id);
@@ -61,7 +62,7 @@ export function caseFromReporterPayload(
     theirGeneration: 0,
     ratchet: ratchetStateToSecrets(ratchetState),
   };
-  return { row: store.createCase(secrets, generateCaseNumber()), created: true };
+  return { row: store.createCase(secrets, generateCaseNumber(), rechercheId), created: true };
 }
 
 /**

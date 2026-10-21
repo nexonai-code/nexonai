@@ -108,7 +108,8 @@ export function saveOfficerIdentity(identityPath: string, identity: OfficerIdent
     encryptedB64: encrypted.toString("base64"),
   };
   fs.mkdirSync(path.dirname(identityPath), { recursive: true });
-  fs.writeFileSync(identityPath, JSON.stringify(stored, null, 2), "utf8");
+  fs.writeFileSync(identityPath, JSON.stringify(stored, null, 2), { encoding: "utf8", mode: 0o600 });
+  try { fs.chmodSync(identityPath, 0o600); } catch { /* not supported on this file system (Windows) */ }
 }
 
 /**

@@ -62,6 +62,19 @@ export interface CaseRow {
   acknowledgedAt: number | null;
   closedAt: number | null;
   lastActivityAt: number;
+  /** safeline Press: the research (own code) this tip came in through. Null = the general code. */
+  rechercheId: string | null;
+}
+
+/** safeline Press: one research (an article, a topic) with its own contact code. Each has its
+ *  own officer identity, so the code differs, the letterbox differs and two researches cannot be
+ *  tied together from the code alone. */
+export interface RechercheRow {
+  id: string;
+  name: string;
+  /** Paused = new tips through this code are ignored; tips already received stay fully usable. */
+  active: boolean;
+  createdAt: number;
 }
 
 export interface CaseMessage {
@@ -140,6 +153,15 @@ export class CaseStore {
         generation INTEGER NOT NULL,
         PRIMARY KEY (case_id, identity, generation)
       );
+      -- safeline Press: researches with their own contact code. The officer identity of each
+      -- research (its private key and message key) is stored encrypted like every other secret.
+      CREATE TABLE IF NOT EXISTS recherchen (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        identity_blob TEXT NOT NULL
+      );
     `);
     // Columns added with the organisation-wide QR / case numbers (2026-10-03). Older databases
     // get them on first start; existing cases receive a case number the first time one is needed.
@@ -147,17 +169,22 @@ export class CaseStore {
     if (!columns.has("case_number")) this.db.exec(`ALTER TABLE cases ADD COLUMN case_number TEXT`);
     if (!columns.has("reporter_ref")) this.db.exec(`ALTER TABLE cases ADD COLUMN reporter_ref TEXT`);
     if (!columns.has("signal_pending")) this.db.exec(`ALTER TABLE cases ADD COLUMN signal_pending INTEGER NOT NULL DEFAULT 0`);
+    // Column added with the per-research codes of safeline Press. Older databases get it on first start.
+    if (!columns.has("recherche_id")) this.db.exec(`ALTER TABLE cases ADD COLUMN recherche_id TEXT`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_reporter_ref ON cases(reporter_ref)`);
   }
 
   /** Keyed hash of the reporter's id — finds an existing case for a repeated intake without
    *  storing the id itself in a searchable plaintext column. */
-  reporterRef(reporterUserId: string): string {
-    return Buffer.from(hmacSha256(this.dbKey, new TextEncoder().encode(`reporter:${reporterUserId}`))).toString("hex");
+  reporterRef(reporterUserId: string, rechercheId: string | null = null): string {
+    // The same reporter can scan several research codes: one case per (reporter, research). For
+    // the general code the input is unchanged, so existing databases keep working.
+    const input = rechercheId ? `reporter:${reporterUserId}:recherche:${rechercheId}` : `reporter:${reporterUserId}`;
+    return Buffer.from(hmacSha256(this.dbKey, new TextEncoder().encode(input))).toString("hex");
   }
 
-  findCaseByReporter(reporterUserId: string): CaseRow | null {
-    const row = this.db.prepare(`SELECT * FROM cases WHERE reporter_ref = ?`).get(this.reporterRef(reporterUserId)) as any;
+  findCaseByReporter(reporterUserId: string, rechercheId: string | null = null): CaseRow | null {
+    const row = this.db.prepare(`SELECT * FROM cases WHERE reporter_ref = ?`).get(this.reporterRef(reporterUserId, rechercheId)) as any;
     return row ? mapCaseRow(row) : null;
   }
 
@@ -180,7 +207,7 @@ export class CaseStore {
    * queued on the relay already) as a normal ratchet-encrypted message, ingested by the poll
    * loop exactly like every later message in the case (see officer/pollAndIngest.ts).
    */
-  createCase(secrets: CaseSecrets, caseNumber: string | null = null): CaseRow {
+  createCase(secrets: CaseSecrets, caseNumber: string | null = null, rechercheId: string | null = null): CaseRow {
     const now = Date.now();
     const row: CaseRow = {
       id: randomUUID(),
@@ -194,17 +221,19 @@ export class CaseStore {
       acknowledgedAt: null,
       closedAt: null,
       lastActivityAt: now,
+      rechercheId,
     };
     const secretBlob = encryptJson(this.dbKey, secrets);
     this.db
       .prepare(
-        `INSERT INTO cases (id, case_number, reporter_ref, signal_pending, status, category, opened_at, ack_due_at, feedback_due_at, acknowledged_at, closed_at, last_activity_at, secret_blob)
-         VALUES (@id, @caseNumber, @reporterRef, 0, @status, @category, @openedAt, @ackDueAt, @feedbackDueAt, @acknowledgedAt, @closedAt, @lastActivityAt, @secretBlob)`,
+        `INSERT INTO cases (id, case_number, reporter_ref, signal_pending, status, category, opened_at, ack_due_at, feedback_due_at, acknowledged_at, closed_at, last_activity_at, secret_blob, recherche_id)
+         VALUES (@id, @caseNumber, @reporterRef, 0, @status, @category, @openedAt, @ackDueAt, @feedbackDueAt, @acknowledgedAt, @closedAt, @lastActivityAt, @secretBlob, @rechercheId)`,
       )
       .run({
         id: row.id,
         caseNumber: row.caseNumber,
-        reporterRef: this.reporterRef(secrets.reporterUserId),
+        reporterRef: this.reporterRef(secrets.reporterUserId, rechercheId),
+        rechercheId,
         status: row.status,
         category: row.category,
         openedAt: row.openedAt,
@@ -217,6 +246,61 @@ export class CaseStore {
       });
     this.refreshPollCandidates(row.id, secrets);
     return row;
+  }
+
+  // ───────── safeline Press: researches with their own code ─────────
+
+  createRecherche(name: string, identity: OfficerIdentity): RechercheRow {
+    const row: RechercheRow = { id: randomUUID(), name, active: true, createdAt: Date.now() };
+    const blob = encryptJson(this.dbKey, {
+      userId: identity.userId,
+      messageKeyB64: Buffer.from(identity.messageKey).toString("base64"),
+      x25519PrivateKeyB64: Buffer.from(identity.x25519PrivateKey).toString("base64"),
+      x25519PublicKeyB64: Buffer.from(identity.x25519PublicKey).toString("base64"),
+    });
+    this.db.prepare(`INSERT INTO recherchen (id, name, active, created_at, identity_blob) VALUES (?, ?, 1, ?, ?)`).run(row.id, row.name, row.createdAt, blob);
+    return row;
+  }
+
+  listRecherchen(): RechercheRow[] {
+    const rows = this.db.prepare(`SELECT id, name, active, created_at FROM recherchen ORDER BY created_at ASC`).all() as any[];
+    return rows.map((r) => ({ id: r.id, name: r.name, active: r.active === 1, createdAt: r.created_at }));
+  }
+
+  getRecherche(id: string): RechercheRow | null {
+    const r = this.db.prepare(`SELECT id, name, active, created_at FROM recherchen WHERE id = ?`).get(id) as any;
+    return r ? { id: r.id, name: r.name, active: r.active === 1, createdAt: r.created_at } : null;
+  }
+
+  getRechercheIdentity(id: string): OfficerIdentity | null {
+    const r = this.db.prepare(`SELECT identity_blob FROM recherchen WHERE id = ?`).get(id) as any;
+    if (!r) return null;
+    const v = decryptJson<{ userId: string; messageKeyB64: string; x25519PrivateKeyB64: string; x25519PublicKeyB64: string }>(this.dbKey, r.identity_blob);
+    return {
+      userId: v.userId,
+      messageKey: new Uint8Array(Buffer.from(v.messageKeyB64, "base64")),
+      x25519PrivateKey: new Uint8Array(Buffer.from(v.x25519PrivateKeyB64, "base64")),
+      x25519PublicKey: new Uint8Array(Buffer.from(v.x25519PublicKeyB64, "base64")),
+    };
+  }
+
+  updateRecherche(id: string, patch: { name?: string; active?: boolean }): RechercheRow | null {
+    if (!this.getRecherche(id)) return null;
+    if (patch.name !== undefined) this.db.prepare(`UPDATE recherchen SET name = ? WHERE id = ?`).run(patch.name, id);
+    if (patch.active !== undefined) this.db.prepare(`UPDATE recherchen SET active = ? WHERE id = ?`).run(patch.active ? 1 : 0, id);
+    return this.getRecherche(id);
+  }
+
+  /** Number of tips per research (key "" = the general code). */
+  countCasesByRecherche(): Map<string, number> {
+    const rows = this.db.prepare(`SELECT recherche_id AS rid, COUNT(*) AS n FROM cases GROUP BY recherche_id`).all() as { rid: string | null; n: number }[];
+    return new Map(rows.map((r) => [r.rid ?? "", r.n]));
+  }
+
+  /** Which research each case belongs to, in one query (the poll loop needs it every round). */
+  caseRechercheIds(): Map<string, string | null> {
+    const rows = this.db.prepare(`SELECT id, recherche_id AS rid FROM cases`).all() as { id: string; rid: string | null }[];
+    return new Map(rows.map((r) => [r.id, r.rid]));
   }
 
   listCases(): CaseRow[] {
@@ -349,5 +433,6 @@ function mapCaseRow(row: any): CaseRow {
     acknowledgedAt: row.acknowledged_at,
     closedAt: row.closed_at,
     lastActivityAt: row.last_activity_at,
+    rechercheId: row.recherche_id ?? null,
   };
 }

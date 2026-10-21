@@ -122,6 +122,20 @@ const I18N = {
     p_none_in_tab: "Niciun pont în această categorie.", p_open_fail: "Pontul nu a putut fi deschis", p_added: "Pontul a fost adăugat",
     p_cases_foot: "Se afișează {a} din {b} ponturi · cele mai recente primele", p_shown_of: "Se afișează {a} din {b}. Toate ponturile",
     p_c_ok_t: "Releul răspunde. Ultima verificare: {ago}. Baza de date este criptată.", p_back: "← Înapoi la ponturi",
+    /* safeline Press: a code per research */
+    nav_rech: "Investigații", page_rech: "Investigații", page_rech_sub: "Un cod pentru fiecare articol sau temă",
+    rech_h: "Un cod pentru fiecare investigație",
+    rech_note: "Creează un cod separat pentru un articol sau o temă. Fiecare cod are propriile chei și propria cutie poștală: pontul ajunge deja sortat la investigația potrivită, iar două coduri nu pot fi legate între ele după cod. Codul tău general rămâne neschimbat. <b>Limită:</b> aceeași sursă care scrie la două investigații din aceeași aplicație este recunoscută în redacție ca aceeași aplicație.",
+    rech_name_ph: "Numele investigației, de ex. Proiect de construcții", rech_create: "Creează cod",
+    rech_none: "Nicio investigație încă. Creează prima mai sus.",
+    rech_active: "Activ", rech_paused: "Oprit", rech_tips_1: "1 pont", rech_tips_n: "{n} ponturi",
+    rech_copy: "Copiază codul", rech_show: "Afișează mare", rech_png: "Descarcă QR (PNG)", rech_rename: "Redenumește",
+    rech_rename_prompt: "Noul nume al investigației:", rech_pause: "Oprește codul", rech_resume: "Pornește din nou",
+    rech_pause_note: "Oprit: ponturile noi prin acest cod sunt ignorate; cele primite rămân utilizabile.",
+    rech_export_h: "Pentru pagina de informații", rech_export_note: "Descarcă lista cu toate codurile (cel general și cele pe investigații). O lipești în Generatorul de pagină de informații.",
+    rech_export_btn: "Descarcă lista de coduri", rech_copied: "Codul a fost copiat",
+    rech_err_name: "Scrie un nume.", rech_err_name_long: "Numele este prea lung (cel mult 80 de caractere).", rech_err_count: "Prea multe investigații.", rech_err_active: "Valoare nevalidă.",
+    f_recherche: "Investigație", rech_general: "cod general",
   },
   en: {
     title: "unpruuf Whistleblower — Officer dashboard",
@@ -242,6 +256,20 @@ const I18N = {
     p_none_in_tab: "No tips in this category.", p_open_fail: "The tip could not be opened", p_added: "The tip was added",
     p_cases_foot: "Showing {a} of {b} tips · most recent first", p_shown_of: "Showing {a} of {b}. All tips",
     p_c_ok_t: "The relay answers. Last check: {ago}. The database is encrypted.", p_back: "← Back to tips",
+    /* safeline Press: a code per research */
+    nav_rech: "Researches", page_rech: "Researches", page_rech_sub: "One code for each article or topic",
+    rech_h: "One code for each research",
+    rech_note: "Create a separate code for an article or a topic. Every code has its own keys and its own letterbox: a tip arrives already filed under the right research, and two codes cannot be tied together from the codes alone. Your general code stays unchanged. <b>Limit:</b> the same source writing to two researches from the same app is recognisable in the newsroom as the same app.",
+    rech_name_ph: "Name of the research, e.g. Building project", rech_create: "Create code",
+    rech_none: "No research yet. Create the first one above.",
+    rech_active: "Active", rech_paused: "Paused", rech_tips_1: "1 tip", rech_tips_n: "{n} tips",
+    rech_copy: "Copy code", rech_show: "Show large", rech_png: "Download QR (PNG)", rech_rename: "Rename",
+    rech_rename_prompt: "New name of the research:", rech_pause: "Pause code", rech_resume: "Resume",
+    rech_pause_note: "Paused: new tips through this code are ignored; tips already received stay usable.",
+    rech_export_h: "For the tip page", rech_export_note: "Download the list of all codes (the general one and one per research). Paste it into the tip page builder.",
+    rech_export_btn: "Download code list", rech_copied: "The code was copied",
+    rech_err_name: "Enter a name.", rech_err_name_long: "The name is too long (80 characters at most).", rech_err_count: "Too many researches.", rech_err_active: "Invalid value.",
+    f_recherche: "Research", rech_general: "general code",
   },
 };
 
@@ -269,6 +297,7 @@ function t(key, vars) {
   return s;
 }
 function serverError(msg) {
+  if (/^recherche:/.test(msg)) return t("rech_err_" + msg.slice("recherche:".length));
   if (LANG === "en") {
     if (SERVER_ERRORS_EN[msg]) return SERVER_ERRORS_EN[msg];
     if (/^starea trebuie/.test(msg)) return "The status must be one of: new, acknowledged, in_progress, closed.";

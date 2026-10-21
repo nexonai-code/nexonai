@@ -22,6 +22,11 @@ const SECRETS: CaseSecrets = {
   ratchet: { dhsPrivateKeyB64: "", dhsPublicKeyB64: "", dhrB64: null, rootKeyB64: "", sendChainKeyB64: null, recvChainKeyB64: null, sendCount: 0, recvCount: 0, previousChainLength: 0, skippedKeysB64: {} },
 };
 
+// The dashboard refuses changing requests without the header its own page sends (accessGuard.ts).
+const plainFetch = globalThis.fetch;
+globalThis.fetch = ((url: any, init: any = {}) =>
+  plainFetch(url, { ...init, headers: { "x-officer-ui": "1", ...(init.headers ?? {}) } })) as typeof fetch;
+
 async function withApp(run: (base: string, store: CaseStore) => Promise<void>) {
   const id = identity();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "officer-dash-"));

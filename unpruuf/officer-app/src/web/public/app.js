@@ -19,11 +19,12 @@ const state = {
   detail: null, // the open case incl. messages
   previous: null, // id -> lastActivityAt, for "new case" toasts
   ownTouch: new Set(), // case ids this officer just changed (no toast for those)
+  recherchen: null, // safeline Press: { generalTipCount, recherchen: [...] } with codes and QR images
 };
 
 /* ───────── helpers ───────── */
 async function api(path, options) {
-  const res = await fetch(path, { headers: { "content-type": "application/json" }, ...options });
+  const res = await fetch(path, { headers: { "content-type": "application/json", "x-officer-ui": "1" }, ...options });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ? serverError(body.error) : `HTTP ${res.status}`);
@@ -118,21 +119,23 @@ function parseRoute() {
   if (h === "cazuri") return { name: "cases", id: null };
   if (h === "cod") return { name: "code", id: null };
   if (h === "setari" && EDITION === "press") return { name: "settings", id: null };
+  if (h === "recherchen" && EDITION === "press") return { name: "recherchen", id: null };
   if (h.startsWith("caz/")) return { name: "detail", id: decodeURIComponent(h.slice(4)) };
   return { name: "overview", id: null };
 }
-const titleFor = (r) => ({ overview: t("nav_overview"), cases: t("nav_cases"), code: t("nav_code"), detail: t("page_detail"), settings: t("page_settings") })[r];
+const titleFor = (r) => ({ overview: t("nav_overview"), cases: t("nav_cases"), code: t("nav_code"), detail: t("page_detail"), settings: t("page_settings"), recherchen: t("page_rech") })[r];
 
 async function route() {
   state.route = parseRoute();
   const r = state.route.name;
-  for (const v of ["overview", "cases", "code", "detail", "settings"]) $(`v-${v}`).classList.toggle("hidden", v !== r);
+  for (const v of ["overview", "cases", "code", "detail", "settings", "recherchen"]) $(`v-${v}`).classList.toggle("hidden", v !== r);
   for (const a of document.querySelectorAll(".nav")) a.classList.toggle("on", a.dataset.route === (r === "detail" ? "cases" : r));
   $("pageTitle").textContent = titleFor(r);
-  $("pageSub").textContent = r === "overview" ? todayLong() : r === "code" ? t("page_code_sub") : r === "cases" ? t("page_cases_sub") : r === "settings" ? t("page_settings_sub") : "";
+  $("pageSub").textContent = r === "overview" ? todayLong() : r === "code" ? t("page_code_sub") : r === "cases" ? t("page_cases_sub") : r === "settings" ? t("page_settings_sub") : r === "recherchen" ? t("page_rech_sub") : "";
   state.detail = null;
   if (r === "detail") await openDetail(state.route.id, true);
   else if (r === "settings") renderSettings();
+  else if (r === "recherchen") { await loadRecherchen().catch((err) => toast(t("open_fail"), err.message)); renderRecherchen(); }
   else render();
   window.scrollTo({ top: 0 });
 }
@@ -319,7 +322,7 @@ function render() {
 
 function matchesFilter(c) {
   const f = state.filter.trim().toLowerCase();
-  return !f || (c.caseNumber || "").toLowerCase().includes(f) || (c.category || "").toLowerCase().includes(f);
+  return !f || (c.caseNumber || "").toLowerCase().includes(f) || (c.category || "").toLowerCase().includes(f) || (c.rechercheName || "").toLowerCase().includes(f);
 }
 function tabList(cases) {
   const f = cases.filter(matchesFilter);
@@ -345,7 +348,8 @@ function rowHtml(c) {
   const nd = nextDeadline(c);
   const u = urgency(nd);
   const unread = isUnread(c);
-  const cat = c.category ? esc(c.category) : '<span style="color:var(--dim)">${t("uncategorised_l")}</span>';
+  const rtag = c.rechercheName ? `<span class="rtag" title="${esc(c.rechercheName)}">${esc(c.rechercheName)}</span>` : "";
+  const cat = rtag + (c.category ? esc(c.category) : `<span style="color:var(--dim)">${t("uncategorised_l")}</span>`);
   const deadline = nd.kind === "closed"
     ? `<div class="dl"><span class="dlt none">${t("dl_closed")}</span></div>`
     : `<div class="dl"><span class="dlt ${u.cls}">${esc(u.text)}</span><span class="dll">${nd.label}</span></div><div class="bar"><i class="${u.cls}" style="width:${Math.round(u.progress * 100)}%"></i></div>`;
@@ -522,6 +526,7 @@ function renderDetailSide(c, first) {
     [t("f_opened"), fmtDateTime(c.openedAt)],
     [t("f_last"), fmtDateTime(c.lastActivityAt)],
     [t("f_msgs"), String(c.messages.length)],
+    ...(EDITION === "press" ? [[t("f_recherche"), c.rechercheName ? esc(c.rechercheName) : esc(t("rech_general"))]] : []),
     [t("f_identity"), t("f_unknown")],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
   $("convoNote").textContent = c.messages.length ? `${c.messages.length} ${c.messages.length === 1 ? t("msg_1") : t("msg_n")}` : "";
@@ -599,7 +604,11 @@ async function copyCode() {
   try { await navigator.clipboard.writeText(text); toast(t("copied"), t("copied_sub")); }
   catch { location.hash = "#/cod"; const box = $("myCode"); box.focus(); box.select(); toast(t("selected"), t("selected_sub")); }
 }
-function showQr() { if (state.me) $("qrModal").classList.remove("hidden"); }
+function showQr() {
+  if (!state.me) return;
+  $("qrModalImg").src = state.me.qrDataUrlLarge || state.me.qrDataUrl;
+  $("qrModal").classList.remove("hidden");
+}
 function hideQr() { $("qrModal").classList.add("hidden"); }
 
 document.addEventListener("click", (e) => {
@@ -641,6 +650,89 @@ $("addCaseBtn").addEventListener("click", async () => {
     errorEl.textContent = err.message;
   }
 });
+
+/* ───────── safeline Press: a code per research ───────── */
+async function loadRecherchen() {
+  if (EDITION !== "press") return;
+  state.recherchen = await api("/api/recherchen");
+  $("navRech").textContent = String(state.recherchen.recherchen.length);
+}
+const rechTipCount = (id) => state.cases.filter((c) => c.rechercheId === id).length;
+const rechTipText = (n) => (n === 1 ? t("rech_tips_1") : t("rech_tips_n", { n }));
+function renderRecherchen() {
+  const d = state.recherchen;
+  const box = $("rechList");
+  if (!d) { box.innerHTML = ""; return; }
+  $("rechNone").classList.toggle("hidden", d.recherchen.length > 0);
+  box.innerHTML = d.recherchen.length ? `<div class="rech-grid">${d.recherchen.map((r) => `
+    <div class="card rech${r.active ? "" : " off"}" data-rid="${esc(r.id)}">
+      <div class="top"><h3>${esc(r.name)}</h3><span class="pill ${r.active ? "active" : "paused"}">${esc(r.active ? t("rech_active") : t("rech_paused"))}</span></div>
+      <div class="body">
+        <img src="${r.qrDataUrl}" alt="${esc(r.name)}" data-rshow="${esc(r.id)}" />
+        <div class="acts">
+          <span class="dimn" data-rcount="${esc(r.id)}">${esc(rechTipText(rechTipCount(r.id)))}</span>
+          <button class="btn small" type="button" data-rcopy="${esc(r.id)}">${esc(t("rech_copy"))}</button>
+          <button class="btn small" type="button" data-rshow="${esc(r.id)}">${esc(t("rech_show"))}</button>
+          <button class="btn small" type="button" data-rpng="${esc(r.id)}">${esc(t("rech_png"))}</button>
+          <button class="btn small" type="button" data-rrename="${esc(r.id)}">${esc(t("rech_rename"))}</button>
+          <button class="btn small" type="button" data-rtoggle="${esc(r.id)}">${esc(r.active ? t("rech_pause") : t("rech_resume"))}</button>
+        </div>
+      </div>
+      ${r.active ? "" : `<p class="note small">${esc(t("rech_pause_note"))}</p>`}
+    </div>`).join("")}</div>` : "";
+}
+/** Tip counts change while the page is open: update the text only, so the images do not flicker. */
+function updateRechCounts() {
+  if (state.route.name !== "recherchen") return;
+  for (const el of document.querySelectorAll("[data-rcount]")) el.textContent = rechTipText(rechTipCount(el.dataset.rcount));
+}
+async function createRecherche() {
+  const input = $("rechName"), err = $("rechErr");
+  err.textContent = "";
+  try {
+    await api("/api/recherchen", { method: "POST", body: JSON.stringify({ name: input.value }) });
+    input.value = "";
+    await loadRecherchen();
+    renderRecherchen();
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+async function updateRecherche(id, patch) {
+  try {
+    await api(`/api/recherchen/${encodeURIComponent(id)}`, { method: "POST", body: JSON.stringify(patch) });
+    await loadRecherchen();
+    renderRecherchen();
+  } catch (e) {
+    toast(t("open_fail"), e.message);
+  }
+}
+document.addEventListener("click", async (e) => {
+  const el = e.target.closest("[data-rcopy],[data-rshow],[data-rpng],[data-rrename],[data-rtoggle]");
+  if (!el || !state.recherchen) return;
+  const id = el.dataset.rcopy || el.dataset.rshow || el.dataset.rpng || el.dataset.rrename || el.dataset.rtoggle;
+  const r = state.recherchen.recherchen.find((x) => x.id === id);
+  if (!r) return;
+  if (el.dataset.rcopy) {
+    try { await navigator.clipboard.writeText(r.pairingCode); toast(t("rech_copied"), r.name); }
+    catch { toast(t("selected"), t("selected_sub")); }
+  } else if (el.dataset.rshow) {
+    $("qrModalImg").src = r.qrDataUrlLarge;
+    $("qrModal").classList.remove("hidden");
+  } else if (el.dataset.rpng) {
+    const a = document.createElement("a");
+    a.href = r.qrDataUrlLarge;
+    a.download = "qr-" + (r.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w-]+/g, "_").slice(0, 40) || "recherche") + ".png";
+    document.body.appendChild(a); a.click(); a.remove();
+  } else if (el.dataset.rrename) {
+    const name = prompt(t("rech_rename_prompt"), r.name);
+    if (name !== null && name.trim() && name.trim() !== r.name) await updateRecherche(id, { name });
+  } else if (el.dataset.rtoggle) {
+    await updateRecherche(id, { active: !r.active });
+  }
+});
+$("rechCreateBtn").addEventListener("click", createRecherche);
+$("rechName").addEventListener("keydown", (e) => { if (e.key === "Enter") createRecherche(); });
 window.addEventListener("hashchange", route);
 for (const b of document.querySelectorAll("#langSwitch button")) {
   b.addEventListener("click", async () => {
@@ -655,7 +747,7 @@ for (const b of document.querySelectorAll("#langSwitch button")) {
 (async function start() {
   await loadEdition();
   applyStaticI18n();
-  await Promise.all([loadMe().catch(() => {}), loadCases().catch(() => {}), loadStatus()]);
+  await Promise.all([loadMe().catch(() => {}), loadCases().catch(() => {}), loadStatus(), loadRecherchen().catch(() => {})]);
   // First visit from this browser: cases that already exist are not "new" to the officer.
   try { if (localStorage.getItem("seenAt") === null) { for (const c of state.cases) markSeen(c.id, c.lastActivityAt); localStorage.setItem("seenAt", JSON.stringify(seenMap())); } } catch { /* no storage: skip */ }
   await route();
@@ -663,6 +755,7 @@ for (const b of document.querySelectorAll("#langSwitch button")) {
   setInterval(async () => {
     try {
       await loadCases();
+      updateRechCounts();
       if (state.route.name === "detail" && state.detail) await openDetail(state.route.id, false);
     } catch { /* relay or app briefly busy: next tick */ }
   }, 3000);

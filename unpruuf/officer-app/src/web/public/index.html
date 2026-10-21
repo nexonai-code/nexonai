@@ -27,6 +27,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM19 19h1"/></svg>
       <span data-i18n="nav_code">Codul organizației</span>
     </a>
+    <a class="nav only-press" href="#/recherchen" data-route="recherchen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+      <span data-i18n="nav_rech">Investigații</span> <span class="n" id="navRech">0</span>
+    </a>
     <a class="nav only-press" href="#/setari" data-route="settings">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
       <span data-i18n="nav_settings">Setări</span>
@@ -147,6 +151,26 @@
           </div>
         </details>
       </div>
+    </div>
+  </section>
+
+  <!-- ───────────── Investigații: un cod pe recherche (safeline Press) ───────────── -->
+  <section id="v-recherchen" class="view hidden">
+    <div class="card">
+      <div class="ch"><h2 data-i18n="rech_h">Un cod pentru fiecare investigație</h2></div>
+      <p class="note" data-i18n-html="rech_note"></p>
+      <div class="newrech">
+        <input id="rechName" type="text" maxlength="80" autocomplete="off" placeholder="Numele investigației" data-i18n-ph="rech_name_ph" aria-label="Numele investigației" data-i18n-aria="rech_name_ph" />
+        <button class="btn primary" id="rechCreateBtn" type="button" data-i18n="rech_create">Creează cod</button>
+        <span class="err" id="rechErr"></span>
+      </div>
+    </div>
+    <p class="empty hidden" id="rechNone" data-i18n="rech_none"></p>
+    <div id="rechList"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="ch"><h2 data-i18n="rech_export_h">Pentru pagina de informații</h2></div>
+      <p class="note" data-i18n="rech_export_note"></p>
+      <div class="btns" style="margin-top:10px"><a class="btn" href="/api/recherchen/export" download="tip-page-codes.txt" data-i18n="rech_export_btn">Descarcă lista de coduri</a></div>
     </div>
   </section>
 
