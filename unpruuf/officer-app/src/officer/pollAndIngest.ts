@@ -18,6 +18,7 @@ import { decodeCrossPlatformPayload } from "../pairing/crossPlatformPairing";
 import { currentIntakeTags, openIntake, parseIntakePlaintext } from "./caseIntake";
 import { CASE_HELLO_TEXT, sendCaseUpdate } from "./caseSignals";
 import { caseFromReporterPayload, InvalidPairingCodeError } from "./intake";
+import { IntakeOwner, RechercheService } from "./recherchen";
 
 /**
  * The officer-app's core loop: figure out every wire tag worth polling for right now, fetch
@@ -45,17 +46,37 @@ export class PollAndIngestLoop {
   /** Cases that just got an inbound ratchet message or a fresh intake — a pending receipt or
    *  status update may now be sendable (see caseSignals.ts). */
   private signalCandidates = new Set<string>();
+  /** safeline Press: researches with their own code. Without any research the loop behaves exactly as before. */
+  private recherchen: RechercheService;
+  /** Refreshed at the start of every round. */
+  private caseOwner = new Map<string, string | null>();
+  private identityCache = new Map<string, OfficerIdentity>();
 
   constructor(
     private identity: OfficerIdentity,
     private store: CaseStore,
     private relay: RelayClient,
     private onCaseUpdated: (caseId: string) => void = () => {},
-  ) {}
+  ) {
+    this.recherchen = new RechercheService(store, identity);
+  }
+
+  /** The officer identity a case belongs to (the general one, or that of its research). */
+  private identityOfCase(caseId: string): OfficerIdentity {
+    const rid = this.caseOwner.get(caseId) ?? this.store.getCase(caseId)?.rechercheId ?? null;
+    if (!rid) return this.identity;
+    let id = this.identityCache.get(rid);
+    if (!id) {
+      id = this.recherchen.identityFor(rid);
+      this.identityCache.set(rid, id);
+    }
+    return id;
+  }
 
   /** Runs one poll round. Call this on an interval (see officer-app/src/index.ts). */
   async pollOnce(waitMs = 0): Promise<void> {
     const candidates = this.store.allPollCandidates();
+    this.caseOwner = this.store.caseRechercheIds();
 
     // Group candidates by case so each case's secrets are decrypted at most once per round.
     const byCase = new Map<string, { caseId: string; identity: string; generation: number }[]>();
@@ -69,7 +90,7 @@ export class PollAndIngestLoop {
     for (const [caseId, list] of byCase) {
       const secrets = this.store.getCaseSecrets(caseId);
       if (!secrets) continue;
-      const secret = pairSecret(this.identity.messageKey, secrets.reporterMessageKeyB64);
+      const secret = pairSecret(this.identityOfCase(caseId).messageKey, secrets.reporterMessageKeyB64);
       for (const c of list) {
         const tag = wireTag(secret, c.identity, c.generation);
         tagToCandidate.set(tag, c);
@@ -78,7 +99,12 @@ export class PollAndIngestLoop {
 
     // The organisation-wide letterbox (caseIntake.ts) — polled on every round, also before the
     // first case exists.
-    const intakeTags = new Set(currentIntakeTags(this.identity.messageKey));
+    // One letterbox for the general code and one per active research (safeline Press).
+    const intakeOwnerByTag = new Map<string, IntakeOwner>();
+    for (const owner of this.recherchen.intakeOwners()) {
+      for (const tag of currentIntakeTags(owner.identity.messageKey)) intakeOwnerByTag.set(tag, owner);
+    }
+    const intakeTags = new Set(intakeOwnerByTag.keys());
     const tags = [...tagToCandidate.keys(), ...intakeTags];
     const blobsByTag = await this.relay.fetchMany(tags, waitMs);
 
@@ -87,7 +113,7 @@ export class PollAndIngestLoop {
       if (intakeTags.has(tag)) {
         for (const blobB64 of blobs) {
           try {
-            this.ingestIntake(blobB64);
+            this.ingestIntake(blobB64, intakeOwnerByTag.get(tag)!);
           } catch (err) {
             console.error("[intake] failed to process an intake packet:", err);
           }
@@ -117,7 +143,7 @@ export class PollAndIngestLoop {
     for (const id of this.store.casesWithPendingSignal()) ids.add(id);
     for (const caseId of ids) {
       try {
-        const result = await sendCaseUpdate(this.identity, this.store, this.relay, caseId);
+        const result = await sendCaseUpdate(this.identityOfCase(caseId), this.store, this.relay, caseId);
         if (result === "sent") this.onCaseUpdated(caseId);
       } catch (err) {
         console.error(`[signal] case ${caseId}:`, err);
@@ -126,9 +152,9 @@ export class PollAndIngestLoop {
   }
 
   /** A reporter scanned the organisation QR: create (or find) their case and owe them a receipt. */
-  private ingestIntake(blobB64: string): void {
+  private ingestIntake(blobB64: string, owner: IntakeOwner): void {
     const sealed = unpadPacket(new Uint8Array(Buffer.from(blobB64, "base64")));
-    const plaintext = openIntake(this.identity, sealed);
+    const plaintext = openIntake(owner.identity, sealed);
     if (!plaintext) return; // not addressed to this officer, or damaged — dropped silently
     const content = parseIntakePlaintext(plaintext);
     if (!content) return;
@@ -136,14 +162,20 @@ export class PollAndIngestLoop {
     if (!payload) return;
     let result;
     try {
-      result = caseFromReporterPayload(this.identity, this.store, payload, content.wireIdentity);
+      result = caseFromReporterPayload(owner.identity, this.store, payload, content.wireIdentity, owner.rechercheId);
     } catch (err) {
       if (err instanceof InvalidPairingCodeError) return;
       throw err;
     }
     if (result.created) {
-      console.log(`[intake] new case ${result.row.caseNumber} created from the organisation QR`);
-      this.store.appendMessage(result.row.id, "in", "[sistem] Caz deschis automat prin codul QR al organizației.");
+      if (owner.rechercheId) {
+        const name = this.store.getRecherche(owner.rechercheId)?.name ?? "";
+        console.log(`[intake] new tip ${result.row.caseNumber} through the code of the research "${name}"`);
+        this.store.appendMessage(result.row.id, "in", `[system] Tip opened automatically through the code of the research "${name}".`);
+      } else {
+        console.log(`[intake] new case ${result.row.caseNumber} created from the organisation QR`);
+        this.store.appendMessage(result.row.id, "in", "[sistem] Caz deschis automat prin codul QR al organizației.");
+      }
     }
     // A repeated intake means the reporter hasn't seen a receipt yet — owe them one (again).
     this.store.setSignalPending(result.row.id, true);
@@ -192,7 +224,8 @@ export class PollAndIngestLoop {
     if (!secrets) return;
 
     const packet = unpadPacket(new Uint8Array(Buffer.from(blobB64, "base64")));
-    const framed = decryptWithKey(packet, this.identity.messageKey);
+    const caseIdentity = this.identityOfCase(caseId);
+    const framed = decryptWithKey(packet, caseIdentity.messageKey);
     if (this.handleOuterControl(caseId, framed)) return;
     const frame = decodeFrame(framed);
     if (!frame) return;
@@ -220,7 +253,7 @@ export class PollAndIngestLoop {
     }
 
     const ratchetState = ratchetStateFromSecrets(secrets.ratchet);
-    const secret = pairSecret(this.identity.messageKey, secrets.reporterMessageKeyB64);
+    const secret = pairSecret(caseIdentity.messageKey, secrets.reporterMessageKeyB64);
     const plaintext = ratchetDecrypt(ratchetState, header, ciphertext, secret);
     secrets.ratchet = ratchetStateToSecrets(ratchetState);
     // Receiving gives a fresh session its sending chain — an owed receipt can go out now.
