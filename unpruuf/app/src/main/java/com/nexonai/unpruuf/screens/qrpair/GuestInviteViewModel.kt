@@ -72,7 +72,6 @@ class GuestInviteViewModel @Inject constructor(
             )
         }.getOrElse { _error.value = "Could not create the invitation."; return }
         val payload = NodeMeshPairingPayload(
-            userId = identityManager.userId,
             messageKeyBase64 = android.util.Base64.encodeToString(identityManager.myMessageKey, android.util.Base64.NO_WRAP),
             x25519RatchetPublicKeyBase64 = identityManager.myX25519RatchetPublicKeyBase64,
             nodeMeshRoutingSeedBase64 = identityManager.myNodeMeshRoutingSeedBase64,
