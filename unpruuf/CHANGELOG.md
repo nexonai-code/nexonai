@@ -5,6 +5,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑22 · Business deck: new slide "no phone number" (RO and DE)
+
+- Slide 7 in `unpruuf_Business_RO` and `unpruuf_Business_DE` (after "what does not exist"): a code per contact instead of a phone number, one code per person, delete the contact and there is no way to you any more. States the limit on the slide itself (what someone already received stays with them; other channels are untouched). Source: `presentations/decks2.py`, slide `fara-numar`. Footer numbers of the following slides moved by one (18 slides).
+- English version of the same slide exists separately (`unpruuf_Folie_KeineNummer`); there is no English Business deck yet.
+- Not checked by a native speaker (RO). The online artifact links in `presentations/README.md` still show the old version until they are republished.
+
+---
+
 ## 2026‑10‑21 · Press line merged into `android`; officer dashboard access hardened
 
 - **Merge:** branch `ccr-9a899f8d-xrqsp0` (guest lockers, design kit, safeline Press with one contact code per research, split `CLAUDE.md`) merged into `android`. `officer-app` taken from the Press branch (it had been copied unchanged from `android`). Guest grants ported onto the current node server (licence, sealed keys, per-address limits kept): `depositAuth.ts` follows the rotating owner secret and answers 423 while a sealed server is locked. Android: pairing code carries the optional guest grants, invite button next to the Business code. Node server tests 123 passed; officer app 28 passed.

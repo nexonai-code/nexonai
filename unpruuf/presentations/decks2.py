@@ -112,6 +112,17 @@ def build_business(lang):
 {body(P("Jedes Pairing bekommt neue Schlüssel und eigene Nodes. Zwei Kontakte, die ihre QR-Codes vergleichen, finden nichts Gemeinsames.", "Fiecare asociere primește chei noi și noduri proprii. Două contacte care își compară codurile QR nu găsesc nimic în comun."))}
 {footer(D, k)}''')))
 
+    # 6b no phone number (added 2026-10-22)
+    k = nxt()
+    S.append(("fara-numar", sec("fara-numar", f'''{head(P("So funktioniert es", "Cum funcționează"), P("Nie wieder die Telefonnummer herausgeben", "Fără să vă mai dați numărul de telefon"))}
+{body(P("Sie geben einen Code weiter. Löschen Sie den Kontakt, gibt es keinen Weg mehr zu Ihnen.", "Dați un cod. Ștergeți contactul și nu mai există nicio cale către dumneavoastră."), DARK, 40)}
+{row(big(P("Ein Code, keine Nummer", "Un cod, nu un număr"), P("Jeder Kontakt erhält seinen eigenen Code. Keine Telefonnummer, keine E-Mail, kein WhatsApp, kein gemeinsames Adressbuch.", "Fiecare contact primește propriul cod. Fără număr de telefon, fără e-mail, fără WhatsApp, fără agendă comună."), TEAL),
+     big(P("Ein Code pro Person", "Un cod pentru fiecare persoană"), P("Allein aus den Codes lassen sich zwei Kontakte nicht verknüpfen. Wer einen hält, erfährt nichts über Ihre anderen Kontakte.", "Doar din coduri, două contacte nu pot fi legate între ele. Cine are unul nu află nimic despre ceilalți contacți ai dumneavoastră."), ORANGE),
+     big(P("Löschen, und es ist vorbei", "Ștergeți și s-a terminat"), P("Ihr Telefon holt bei dieser Person nichts mehr ab. Es gibt keinen Weg mehr zu Ihnen, außer Sie geben einen neuen Code.", "Telefonul dumneavoastră nu mai ridică nimic de la acea persoană. Nu mai există nicio cale către dumneavoastră, decât dacă îi dați un cod nou."), TEAL), gap=32)}
+{body(P("Was jemand bereits erhalten hat, bleibt bei ihm. Das schließt den unpruuf-Weg, nicht Ihre anderen Kanäle.", "Ce a primit deja persoana rămâne la ea. Se închide calea unpruuf, nu și celelalte canale ale dumneavoastră."), ORANGE, 28)}
+{footer(D, k)}
+{notes(P("In einem Atemzug: keine Telefonnummer, keine E-Mail. Ein Code pro Person. Kontakt löschen, und die Leitung ist weg. Dann die ehrliche Grenze: Was schon empfangen wurde, bleibt, und andere Kanäle sind unberührt. Nicht sagen, es sei ein Schutz vor allem.", "Dintr-o suflare: fără număr de telefon, fără e-mail. Un cod pentru fiecare persoană. Ștergeți contactul și legătura dispare. Apoi limita onestă: ce s-a primit deja rămâne, iar celelalte canale nu sunt atinse. Nu spuneți că este o protecție împotriva a tot."))}''')))
+
     # 7 scale
     k = nxt()
     S.append(("sute-noduri", sec("sute-noduri", f'''{head(P("Skalierung", "Scalare"), P("250 Nodes je Server, 3 je Kontakt", "250 de noduri pe server, 3 pe contact"))}
