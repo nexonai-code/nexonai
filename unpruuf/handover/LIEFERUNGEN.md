@@ -1,6 +1,22 @@
-# Lieferungen und Artefakte — Stand 20. Oktober 2026
+# Lieferungen und Artefakte — Stand 22. Oktober 2026
 
 Die ZIP-Dateien hat Gabriel im Chat bekommen. Sie liegen nicht im Repo (zu groß). Was daraus neu gebaut werden kann, steht in `quellen/`.
+
+## Seit 21.10. (im Chat an Gabriel geschickt, nicht im Repo)
+
+| Datei | Inhalt | Stand |
+|---|---|---|
+| `unpruuf_2026-10-21_v30.zip` | Gesamtes Projekt (Branch `android`, Stand `3c111f1`), ohne Schlüsseldateien | 21.10. |
+| `unpruuf-<pro,press,standard,client,group,whistleblower,node>-debug-arm64.apk` (sieben Dateien) | Debug-APKs, Testschlüssel, nicht `testOnly`, Stand `3c111f1` (vor dem Temp-Node-Fix `83bbb5a`) | 21.10. |
+| `unpruuf_Folie_KeineNummer_2026-10-22_v1.zip` | Folie „Nie wieder die Telefonnummer herausgeben“, EN + RO, PDF, PPTX, PNG | 22.10. |
+| `unpruuf_Business_2026-10-22_v2.zip` | Business-Deck RO + DE mit neuer Folie 7 | 22.10. |
+| `unpruuf_Business_2026-10-22_v3.zip` | Business-Deck EN + RO | 22.10. |
+| `unpruuf_Decks_2026-10-22_v4.zip` | Business EN + RO, Compliance RO + DE, Testzahlen korrigiert | 22.10. |
+| `unpruuf_Website_2026-10-22_v12.zip` | Website mit NexonAI-Logo, Blau, neuem Abschnitt (liegt auch in `unpruuf/website/`) | 22.10. |
+
+Artefakt: Tagesabschluss 22.10.: https://claude.ai/artifact/JZh8xsHJ7wyLEMsMowipZD
+
+Von Gabriel hochgeladen (nicht von mir erzeugt): `unpruuf_PressOberflaeche_2026-10-21_v1.zip` (Tippseiten-Baukasten v2, ältere Officer-App), `web.zip` (Website, Stand v8), Übergabe der Press-Sitzung vom 21.10.
 
 ## Seit 16.10. (im Chat an Gabriel geschickt, nicht im Repo)
 

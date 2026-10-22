@@ -2,7 +2,7 @@ Hallo, ich bin Gabriel Hategan, NexonAI Consulting SRL, Alba Iulia. Wir arbeiten
 
 Lies zuerst, in dieser Reihenfolge:
 1. `CLAUDE.md` (meine festen Regeln)
-2. `unpruuf/handover/UEBERGABE_2026-10-20.md` (wo wir stehen, offene Entscheidungen, nächste Schritte)
+2. `unpruuf/handover/UEBERGABE_2026-10-22.md` (wo wir stehen, offene Entscheidungen, nächste Schritte; für die Zeit davor `UEBERGABE_2026-10-20.md`)
 3. `unpruuf/handover/LIEFERUNGEN.md` (was geliefert wurde, Artefakt-Links)
 4. `unpruuf/handover/F1_ENTSCHEIDUNG.md` (offene Team-Entscheidung zum Paketformat)
 Bei Bedarf: `unpruuf/STATUS.md`, `unpruuf/SECURITY_CLAIMS.md`, `unpruuf/evidence/CLAIMS_TO_EVIDENCE.md`, die zwei Audit-Briefs in `unpruuf/evidence/`, `unpruuf/ios/IOS_BUSINESS_BUILD_SPEC.md`.
