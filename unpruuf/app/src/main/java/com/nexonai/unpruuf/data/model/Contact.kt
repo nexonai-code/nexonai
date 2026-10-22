@@ -114,6 +114,12 @@ data class Contact(
     // My own nodes assigned to this contact (NODE_ADDRESS_PREFIX entries, ';'-joined): the only
     // ones I deposit to for them and the only ones they ever learn. Null = legacy, whole pool.
     val myNodeAddresses: String? = null,
+    // Free Client app only: the guest grants the inviter (a Pro user) issued for the nodes in
+    // [myNodeAddresses], `;`-joined and index-aligned with them (an empty slot = no grant for that
+    // node). With these the Client deposits on the INVITER's servers instead of its own (it has
+    // none) — see GuestClient and GUEST_LOCKERS_BUILD_SPEC.md. Null for every other contact.
+    // The DB itself is encrypted (see AppModule), same as the temp node owner secret below.
+    val guestGrants: String? = null,
 
     // ─── Temp Node (NODE_MESH_SPEC.md §7, Node-Mesh only) ───────────────────────────────────
     // Exceptional, per-chat, one-off additional own node — e.g. a second device run just for

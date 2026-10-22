@@ -5,6 +5,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑22 · Client import for guest invitations
+
+- unpruuf Client accepts a guest invitation by scan (two-scan key exchange, field `i` in the pairing code), stores the grants (Room v15, `guestGrants`), deposits as guest, shows refused/quota/expiring banners. Pro side issues grants for exactly the chosen nodes with invitation-specific pairing values and binds the guest on the second scan. Panic wipe removes open invitations.
+- Tests: `GuestClientTest` (8), `NodeMeshPairingTest` (+3). All flavours compile, Standard and Client unit tests pass.
+- Not done: `GRANT_RENEW`, guest list, Control, relay-android guest auth, iOS, phone test.
+
+---
+
 ## 2026‑10‑22 · Old deliveries rebuilt with the new names
 
 - Rebuilt from sources: solution descriptions (18 files, DE/EN/RO; also corrected "dashboard cannot yet delete a single case", which is wrong since 19.10.), Control (UI labels, new server bundle, unsigned), officer app (both editions, dashboard hardening), evidence package, whole project, seven APKs (with the Temp Node fix).

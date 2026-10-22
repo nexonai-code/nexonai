@@ -31,7 +31,7 @@ object AppModule {
             "unpruuf_contacts.db"
         )
             .openHelperFactory(factory)
-            .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12, com.nexonai.unpruuf.data.db.MIGRATION_12_13, com.nexonai.unpruuf.data.db.MIGRATION_13_14)
+            .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12, com.nexonai.unpruuf.data.db.MIGRATION_12_13, com.nexonai.unpruuf.data.db.MIGRATION_13_14, com.nexonai.unpruuf.data.db.MIGRATION_14_15)
             .fallbackToDestructiveMigration()
             .build()
     }

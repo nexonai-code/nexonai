@@ -35,9 +35,15 @@ data class NodeMeshPairingPayload(
      *  empty string means "no grant for this node". Empty list for every normal pairing, so the
      *  format stays identical for existing users. Only an owner inviting a free Client app user
      *  fills it. Treat as a secret: show once, never log. */
-    val guestGrants: List<String> = emptyList()
+    val guestGrants: List<String> = emptyList(),
+    /** Guest invitations only (field `i`): a short random id the inviter made up for this one
+     *  invitation. The guest's own code repeats it, so the inviter's app finds the right pending
+     *  invitation when it scans that code. Not a user id: random per invitation, never reused,
+     *  and useless without the inviter's stored values. Empty in every normal pairing. */
+    val guestInviteId: String = ""
 )
 
+private val GUEST_INVITE_ID_RE = Regex("^[A-Za-z0-9_-]{8,24}$")
 private const val NODE_ADDRESS_PREFIX = NodeMeshManager.NODE_ADDRESS_PREFIX
 
 fun nodeMeshPayloadToJson(payload: NodeMeshPairingPayload): String {
@@ -45,7 +51,8 @@ fun nodeMeshPayloadToJson(payload: NodeMeshPairingPayload): String {
     val g = if (payload.guestGrants.any { it.isNotEmpty() }) {
         ",\"g\":\"" + escapeNodeMesh(GuestGrant.encodeList(payload.guestGrants)) + "\""
     } else ""
-    return """{"v":${payload.version},"p":"${payload.messageKeyBase64}","k":"${payload.x25519RatchetPublicKeyBase64}","s":"${payload.nodeMeshRoutingSeedBase64}","n":"$n","e":"${payload.appEdition}"$g}"""
+    val i = if (payload.guestInviteId.isNotEmpty()) ",\"i\":\"" + escapeNodeMesh(payload.guestInviteId) + "\"" else ""
+    return """{"v":${payload.version},"p":"${payload.messageKeyBase64}","k":"${payload.x25519RatchetPublicKeyBase64}","s":"${payload.nodeMeshRoutingSeedBase64}","n":"$n","e":"${payload.appEdition}"$g$i}"""
 }
 
 /** Returns null if [json] isn't a Node-Mesh payload at all (no "s" key — the routing seed is
@@ -70,7 +77,8 @@ fun jsonToNodeMeshPayload(json: String): NodeMeshPairingPayload? {
             nodeMeshRoutingSeedBase64 = seed,
             nodeAddresses = addresses,
             appEdition = map["e"] ?: AppEdition.STANDARD,
-            guestGrants = map["g"]?.let { GuestGrant.decodeList(unescapeNodeMesh(it), addresses.size) } ?: emptyList()
+            guestGrants = map["g"]?.let { GuestGrant.decodeList(unescapeNodeMesh(it), addresses.size) } ?: emptyList(),
+            guestInviteId = map["i"]?.let { unescapeNodeMesh(it) }?.takeIf { GUEST_INVITE_ID_RE.matches(it) } ?: ""
         )
     } catch (e: Exception) {
         null

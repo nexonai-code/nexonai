@@ -63,28 +63,36 @@ class GuestInviteViewModel @Inject constructor(
         val pool = nodeMeshManager.getMyNodePool()
         if (pool.isEmpty()) { _error.value = "No own node configured."; return }
         val now = System.currentTimeMillis()
+        // The guest gets the same few nodes a normal contact would get: spread over as many
+        // servers as possible, one grant per node (index-aligned).
+        val chosen = NodeMeshManager.chooseNodes(pool, NodeMeshManager.NODE_POOL_MAX_SIZE)
+        val secrets = pool.associate { it.address to it.ownerSecret }
         val grants = runCatching {
             GuestInvite.issueGrants(
-                nodes = pool.map { GuestInvite.OwnNode(it.address, it.ownerSecret) },
+                nodes = chosen.map { GuestInvite.OwnNode(it, secrets.getValue(it)) },
                 nowMs = now,
                 validityDays = _validityDays.value,
                 quota = _quota.value
             )
         }.getOrElse { _error.value = "Could not create the invitation."; return }
+        val expiresAt = GuestInvite.expiryMs(now, _validityDays.value)
+        // Fresh pairing values for this guest only, kept encrypted until the guest's own code is
+        // scanned (see IdentityManager.createGuestInvitation): nobody else ever shares them.
+        val invitation = identityManager.createGuestInvitation(chosen, expiresAt)
         val payload = NodeMeshPairingPayload(
-            messageKeyBase64 = android.util.Base64.encodeToString(identityManager.myMessageKey, android.util.Base64.NO_WRAP),
-            x25519RatchetPublicKeyBase64 = identityManager.myX25519RatchetPublicKeyBase64,
-            nodeMeshRoutingSeedBase64 = identityManager.myNodeMeshRoutingSeedBase64,
-            // Same order as the pool, so grant i belongs to address i.
-            nodeAddresses = pool.map { it.address },
+            messageKeyBase64 = invitation.pairing.messageKey,
+            x25519RatchetPublicKeyBase64 = invitation.pairing.ratchetPublicKey,
+            nodeMeshRoutingSeedBase64 = invitation.pairing.routingSeed,
+            nodeAddresses = chosen,
             appEdition = AppEdition.current,
-            guestGrants = grants
+            guestGrants = grants,
+            guestInviteId = invitation.id
         )
         _error.value = null
         _invitation.value = Invitation(
             json = nodeMeshPayloadToJson(payload),
-            expiresAtMs = GuestInvite.expiryMs(now, _validityDays.value),
-            nodeCount = pool.size
+            expiresAtMs = expiresAt,
+            nodeCount = chosen.size
         )
     }
 

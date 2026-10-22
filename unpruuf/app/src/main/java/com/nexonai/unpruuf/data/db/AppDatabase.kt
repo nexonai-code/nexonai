@@ -45,7 +45,9 @@ import com.nexonai.unpruuf.data.model.GroupEntity
     // CREATE TABLE (MIGRATION_12_13) — contacts and everything else survive.
     // v14: Contact.tempNodeOnPhone (the Temp Node of this chat runs on this phone, Pro Groups).
     // Plain ADD COLUMN with a default (MIGRATION_13_14) — contacts survive.
-    version = 14,
+    // v15: Contact.guestGrants (the Client app's guest grants for this inviter, see GuestClient).
+    // One nullable ADD COLUMN (MIGRATION_14_15) — contacts survive.
+    version = 15,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -85,5 +87,12 @@ val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
 val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
     override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE contacts ADD COLUMN tempNodeOnPhone INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/** v14 → v15: one nullable column (guest grants of the free Client app), existing contacts are kept. */
+val MIGRATION_14_15 = object : androidx.room.migration.Migration(14, 15) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE contacts ADD COLUMN guestGrants TEXT")
     }
 }

@@ -110,6 +110,7 @@ class LockViewModel @Inject constructor(
             }
             groupDao.deleteAll()
             nodeMeshManager.wipeAll()
+            identityManager.wipePendingPairings()
             relayManager.wipeAll()
             // Whistleblower: the remembered organisation QR goes too — no trace of where to report.
             whistleblowerCases.forgetOrganization()

@@ -167,10 +167,22 @@ Real world: mobile data, doze, server restart, unlock after restart.
 | 1 Server | **Done in the node-mesh-server of this repository** (older single-node server). `PUT /deposit` takes `Bearer <owner>` or `Guest <token>`; guests off by default (`NODE_MESH_GUEST_GRANTS=1`); stateless MAC check; quota per grant in memory; no grant data on disk. **Slot scope for the multi-slot server is implemented as a module** (`guestScope.ts`: entries node u16 0..249, slotFrom/slotTo 0..99; options `requireScope` and `resolveTarget`; empty scope fails closed there, a deposit outside the granted slots is 403). 37 server tests pass. **Still to do: plug the module into the current multi-slot server.** It needs two things from that server: set `requireScope: true` and supply `resolveTarget(body)` returning the (virtual node, slot) a deposit lands in. Everything else is already in `src/guest/` and `src/middleware/depositAuth.ts`. |
 | 2 Evidence | Not done. The evidence scripts are not in this repository. Update checks 01, 02, 03, 06 and add check 10 as listed in 12.2 once the multi-slot server has the change. The new server test "storage stays blind" is the model for check 02. |
 | 3 Pro app | **Invite screen built** (`GuestInviteScreen`, `GuestInviteViewModel`, route `guest_invite`, button in the Business pairing screen, Pro only): validity 7/14/28 days, quota Light/Normal/High, one QR with the pairing code plus one grant per own node, code shown only on request and cleared on leaving the screen. Grant building is pure and unit-tested (`GuestInvite.kt`, 15 JVM tests with `GuestGrant`). **Not compiled here (no Android SDK).** Still to do: automatic renewal (`GRANT_RENEW`), list of guests, stop renewing. |
-| 4 Client app | Core done (also `GuestScope.kt`): `GuestGrant.kt` (issue, parse, renewal check, header), `NodeMeshClient.depositAsGuest`, pairing field `g`. JVM tests pass against the shared vectors. **The two Android files that touch Android classes (`NodeMeshClient.kt`, `NodeMeshPairing.kt`) were not compiled here: no Android SDK in this environment.** Screens, storage and `GRANT_RENEW` handling still to do. |
+| 4 Client app | **Import built (22 Oct 2026, compiles in all flavours, JVM tests pass, not tried on a phone):** see 15.1. Earlier core:  (also `GuestScope.kt`): `GuestGrant.kt` (issue, parse, renewal check, header), `NodeMeshClient.depositAsGuest`, pairing field `g`. JVM tests pass against the shared vectors. **The two Android files that touch Android classes (`NodeMeshClient.kt`, `NodeMeshPairing.kt`) were not compiled here: no Android SDK in this environment.** Screens, storage and `GRANT_RENEW` handling still to do. |
 | 5 Control | Not done (not in this repository). |
 | 6 Docs | This spec, `guest-grants/FORMAT.md`, `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`. Whitepaper and website sentence still to do. |
 | 7 iOS | Build order written: `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`. |
 | 8 Real test | Not done. |
 
 Shared artefacts: `guest-grants/vectors.json` (server, Android and iOS must all reproduce it) and `guest-grants/FORMAT.md`.
+
+### 15.1 Client import and key exchange (22 October 2026)
+
+Two scans, nothing typed, no phone number or email:
+
+1. **Pro** creates the invitation (`GuestInviteScreen`). The code holds the Pro's nodes, one grant per node (`g`), a fresh set of pairing values made only for this invitation, and an invitation id (`i`, 8 to 24 URL-safe characters). The Pro app stores the invitation (encrypted, at most 10, expired ones dropped, wiped on panic wipe).
+2. **Client** scans it. `GuestClient.check` refuses codes without grants (not an invitation) and codes whose grants have all run out. The Client creates the contact (the inviter's nodes serve as both send and read addresses, grants stored in `Contact.guestGrants`, Room v15) with its own fresh pairing values, and shows **its own code** (keys, the inviter's nodes, the same `i`).
+3. **Pro** scans the Client's code (Add contact, Scan). The Pro app finds the invitation by `i`, checks that the guest names only invited nodes, creates the contact (slot marked as client slot) and removes the invitation.
+
+Client deposits go with `Authorization: Guest <token>` per node that has a grant; no fallback to owner deposit; a locally expired grant is not tried. 401 shows "refused", 429 "quota used up", a grant 2 days from expiry shows a renewal hint (chat banner).
+
+Not built yet: automatic renewal (`GRANT_RENEW`), guest list in the Pro app, Control, relay-android (the Android node does not check guest tokens), iOS. Nodes need `NODE_MESH_GUEST_GRANTS=1`. Format change for iOS: pairing field `i` and the two-scan exchange (Norbert).

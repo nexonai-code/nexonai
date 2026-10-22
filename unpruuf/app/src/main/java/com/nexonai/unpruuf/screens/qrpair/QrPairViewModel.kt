@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.nexonai.unpruuf.data.db.ContactDao
 import com.nexonai.unpruuf.data.model.Contact
 import com.nexonai.unpruuf.domain.AppEdition
+import com.nexonai.unpruuf.domain.network.GuestClient
+import com.nexonai.unpruuf.domain.network.GuestGrant
 import com.nexonai.unpruuf.domain.network.IdentityManager
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
 import com.nexonai.unpruuf.domain.network.P2PNetworkManager
@@ -69,6 +71,14 @@ class QrPairViewModel @Inject constructor(
 
     private val _successState = MutableStateFlow<String?>(null)
     val successState = _successState.asStateFlow()
+
+    /** Client app: after an invitation is accepted, the guest's own code the inviter has to scan
+     *  (GUEST_LOCKERS_BUILD_SPEC.md §4). Shown once; rebuilt from the contact if needed. */
+    data class GuestCode(val json: String, val inviterName: String)
+
+    private val _guestCode = MutableStateFlow<GuestCode?>(null)
+    val guestCode = _guestCode.asStateFlow()
+    fun clearGuestCode() { _guestCode.value = null }
 
     private val _myQrPayload = MutableStateFlow<QrPairingPayload?>(null)
     val myQrPayload = _myQrPayload.asStateFlow()
@@ -415,6 +425,17 @@ class QrPairViewModel @Inject constructor(
                 _errorState.value = AppEdition.blockReason(context, payload.appEdition)
                 return@launch
             }
+            // A guest invitation (Pro → Client): only the free Client app can accept it.
+            if (payload.guestGrants.any { it.isNotEmpty() }) {
+                if (AppEdition.isClient) importGuestInvitation(payload, displayName)
+                else _errorState.value = str(R.string.msg_guest_invite_client_only)
+                return@launch
+            }
+            // The guest's own code answering one of our invitations (Client → Pro).
+            if (payload.guestInviteId.isNotEmpty() && payload.appEdition == AppEdition.CLIENT) {
+                bindGuestInvitation(payload, displayName)
+                return@launch
+            }
             if (payload.nodeAddresses.isEmpty()) {
                 _errorState.value = str(R.string.msg_qr_node_invalid)
                 return@launch
@@ -479,6 +500,126 @@ class QrPairViewModel @Inject constructor(
             // would have nothing correct to send.
             _successState.value = str(R.string.msg_contact_added, displayName)
         }
+    }
+
+    // ─── Guest invitations (GUEST_LOCKERS_BUILD_SPEC.md §4) ───────────────────────────────────
+
+    /**
+     * Client app: accepts a Pro user's invitation. The Client has no servers of its own, so the
+     * contact's "own nodes" are the inviter's nodes, and every deposit there carries the grant
+     * issued for that node. Nothing is sent here; the guest's code (keys and the same nodes) is
+     * shown so the inviter can scan it, which is what gives the inviter the guest's keys.
+     */
+    private suspend fun importGuestInvitation(payload: NodeMeshPairingPayload, displayName: String) {
+        if (payload.x25519RatchetPublicKeyBase64.isBlank() || payload.nodeMeshRoutingSeedBase64.isBlank()) {
+            _errorState.value = str(R.string.msg_qr_old_version)
+            return
+        }
+        val check = GuestClient.check(payload.nodeAddresses, payload.guestGrants, System.currentTimeMillis())
+        val ok = when (check) {
+            is GuestClient.Check.Refused -> {
+                _errorState.value = str(
+                    if (check.problem == GuestClient.Problem.EXPIRED) R.string.msg_guest_invite_expired
+                    else R.string.msg_guest_invite_invalid
+                )
+                return
+            }
+            is GuestClient.Check.Ok -> check
+        }
+        val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
+        if (existing != null) {
+            _successState.value = str(R.string.msg_contact_exists, displayName)
+            return
+        }
+        val mine = identityManager.freshNodeMeshPairing(ok.nodeAddresses)
+        val nodeList = NodeMeshManager.buildNodeConnectionStringList(ok.nodeAddresses)
+        val contact = Contact(
+            id = identityManager.newWireIdentity(),
+            onionAddress = "",
+            publicKey = payload.messageKeyBase64,
+            rotationFactor = "",
+            displayName = displayName,
+            x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
+            nodeMesh = true,
+            myPairMessageKey = mine.messageKey,
+            myPairRatchetPrivateKey = mine.ratchetPrivateKey,
+            myPairRatchetPublicKey = mine.ratchetPublicKey,
+            myPairRoutingSeed = mine.routingSeed,
+            // The inviter's nodes are where this guest writes and reads; no own node exists.
+            myNodeAddresses = nodeList,
+            theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
+            theirNodeAddresses = nodeList,
+            guestGrants = GuestGrant.encodeList(ok.grants)
+        )
+        contactDao.insert(contact)
+        ratchetSessionManager.createSession(contact)
+        _guestCode.value = GuestCode(guestCodeJson(contact, payload.guestInviteId), displayName)
+        _successState.value = str(R.string.msg_guest_invite_accepted, displayName)
+    }
+
+    /** The guest's own code for [contact] (its keys, the inviter's nodes, the invitation id). */
+    private fun guestCodeJson(contact: Contact, inviteId: String): String =
+        nodeMeshPayloadToJson(
+            NodeMeshPairingPayload(
+                messageKeyBase64 = contact.myPairMessageKey ?: "",
+                x25519RatchetPublicKeyBase64 = contact.myPairRatchetPublicKey ?: "",
+                nodeMeshRoutingSeedBase64 = contact.myPairRoutingSeed ?: "",
+                nodeAddresses = NodeMeshManager.parseNodeConnectionStringList(contact.theirNodeAddresses ?: ""),
+                appEdition = AppEdition.CLIENT,
+                guestInviteId = inviteId
+            )
+        )
+
+    /**
+     * Pro app: the guest's own code arrives (scanned in person or pasted). The matching open
+     * invitation supplies this contact's own keys and nodes, the guest's code supplies theirs.
+     * Without an open, unexpired invitation with that id nothing is added.
+     */
+    private suspend fun bindGuestInvitation(payload: NodeMeshPairingPayload, displayName: String) {
+        if (payload.nodeAddresses.isEmpty()) { _errorState.value = str(R.string.msg_qr_node_invalid); return }
+        if (payload.x25519RatchetPublicKeyBase64.isBlank() || payload.nodeMeshRoutingSeedBase64.isBlank()) {
+            _errorState.value = str(R.string.msg_qr_old_version)
+            return
+        }
+        val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
+        if (existing != null) {
+            _successState.value = str(R.string.msg_contact_exists, displayName)
+            return
+        }
+        val invitation = identityManager.guestInvitation(payload.guestInviteId) ?: run {
+            _errorState.value = str(R.string.msg_guest_code_unknown)
+            return
+        }
+        // The guest may only name nodes this invitation gave it: anything else is not our answer.
+        val invitedNodes = invitation.pairing.nodeAddresses.toSet()
+        val answeredNodes = payload.nodeAddresses.mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+        if (answeredNodes.isEmpty() || !invitedNodes.containsAll(answeredNodes)) {
+            _errorState.value = str(R.string.msg_guest_code_unknown)
+            return
+        }
+        val mine = invitation.pairing
+        val contact = Contact(
+            id = identityManager.newWireIdentity(),
+            onionAddress = "",
+            publicKey = payload.messageKeyBase64,
+            rotationFactor = "",
+            displayName = displayName,
+            isClientSlot = true,
+            x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
+            nodeMesh = true,
+            myPairMessageKey = mine.messageKey,
+            myPairRatchetPrivateKey = mine.ratchetPrivateKey,
+            myPairRatchetPublicKey = mine.ratchetPublicKey,
+            myPairRoutingSeed = mine.routingSeed,
+            myNodeAddresses = mine.nodeAddresses.joinToString(";") { NodeMeshManager.buildAddressConnectionString(it) },
+            theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
+            // The guest writes on these (our own) nodes, so we read them there.
+            theirNodeAddresses = NodeMeshManager.buildNodeConnectionStringList(payload.nodeAddresses)
+        )
+        contactDao.insert(contact)
+        identityManager.removeGuestInvitation(invitation.id)
+        ratchetSessionManager.createSession(contact)
+        _successState.value = str(R.string.msg_contact_added, displayName)
     }
 
     fun clearError() { _errorState.value = null }

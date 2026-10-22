@@ -85,6 +85,7 @@ fun ChatScreen(
     val sendError by viewModel.sendError.collectAsState()
     val revoked by viewModel.revoked.collectAsState()
     val deliveredIds by viewModel.deliveredIds.collectAsState()
+    val guestIssues by viewModel.guestIssues.collectAsState()
     var inputText by remember { mutableStateOf("") }
     var showRevokeDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -506,6 +507,30 @@ fun ChatScreen(
             if (caseMode && caseTab != 1) {
                 com.nexonai.unpruuf.screens.caseview.CaseStatusContent(contact, Modifier.weight(1f).fillMaxWidth())
             } else {
+                // Free Client app: say plainly what an invitation problem means (never silent).
+                val guestStatus = com.nexonai.unpruuf.domain.network.GuestClient.status(contact?.guestGrants, System.currentTimeMillis())
+                val guestIssue = contact?.id?.let { guestIssues[it] }
+                val guestHint = when {
+                    guestStatus == com.nexonai.unpruuf.domain.network.GuestClient.Status.EXPIRED -> R.string.guest_status_expired
+                    guestIssue == com.nexonai.unpruuf.domain.network.P2PNetworkManager.GuestIssue.REFUSED -> R.string.guest_status_refused
+                    guestIssue == com.nexonai.unpruuf.domain.network.P2PNetworkManager.GuestIssue.QUOTA -> R.string.guest_status_quota
+                    guestStatus == com.nexonai.unpruuf.domain.network.GuestClient.Status.EXPIRING -> R.string.guest_status_expiring
+                    else -> null
+                }
+                if (guestHint != null) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            stringResource(guestHint),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+                }
                 if (oldestPendingAgeMs != null && oldestPendingAgeMs > STILL_CONNECTING_HINT_MS) {
                     StillConnectingHint(
                         relayConfigured = viewModel.isRelayConfigured(),

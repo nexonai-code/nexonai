@@ -491,4 +491,20 @@ and wiped when the screen locks</string>
     <string name="msg_phone_tn_busy">A Temp Node already runs on this phone for another chat. Stop it there first.</string>
     <string name="msg_phone_tn_failed">The Temp Node could not be started.</string>
     <string name="tor_notif_temp_node">Temp Node active for one chat</string>
+
+    <!-- Free Client app: invitation from a Pro user (GUEST_LOCKERS_BUILD_SPEC.md) -->
+    <string name="msg_guest_invite_client_only">This code is an invitation for the free unpruuf Client app. Install the Client app to accept it.</string>
+    <string name="msg_guest_invite_expired">This invitation has expired. Ask your contact for a new one.</string>
+    <string name="msg_guest_invite_invalid">This code is not a valid invitation. Ask your contact for a new one.</string>
+    <string name="msg_guest_invite_accepted">Invitation from %1$s accepted. Now show your code so %1$s can scan it.</string>
+    <string name="msg_guest_code_unknown">No open invitation matches this code. It may have expired or already been used. Create a new invitation.</string>
+    <string name="guest_code_title">Show this code to %1$s</string>
+    <string name="guest_code_body">Your contact scans this code to finish the connection. Nothing is sent before that. Show it only to this person.</string>
+    <string name="guest_code_done">Done, hide the code</string>
+    <string name="qr_client_scan_invitation">Scan the invitation of your Pro contact</string>
+    <string name="qr_client_scan_invitation_body">The free Client app has no server of its own. Your Pro contact creates an invitation for you; scan it here, then show your own code in return.</string>
+    <string name="guest_status_expiring">Your invitation runs out soon. Ask your contact for a new one.</string>
+    <string name="guest_status_expired">Your invitation has expired. Nothing can be sent until your contact invites you again.</string>
+    <string name="guest_status_refused">The server refused the invitation (expired, or guests are switched off there). Ask your contact for a new one.</string>
+    <string name="guest_status_quota">You have reached the sending limit of your invitation for now. Messages wait and are tried again.</string>
 </resources>

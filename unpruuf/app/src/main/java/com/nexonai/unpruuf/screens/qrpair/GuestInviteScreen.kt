@@ -129,7 +129,7 @@ fun GuestInviteScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Show this code only to the person you invite, once. Anyone who scans it can write on your servers until it expires.",
+                    "Show this code only to the person you invite, once. Anyone who scans it can write on your servers until it expires. Afterwards the guest shows you their own code: Add contact, Scan.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )

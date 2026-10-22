@@ -47,6 +47,8 @@ fun QrPairScreen(
     val errorState by viewModel.errorState.collectAsState()
     val successState by viewModel.successState.collectAsState()
     val myPayload by viewModel.myQrPayload.collectAsState()
+    // Free Client app: after an invitation is accepted, the guest's own code for the inviter to scan.
+    val guestCode by viewModel.guestCode.collectAsState()
     // Business Node-Mesh: which list the contact being added gets its three nodes from.
     val selectedNodeListId by viewModel.selectedNodeListId.collectAsState()
     var pendingPayload by remember { mutableStateOf<QrPairingPayload?>(null) }
@@ -175,6 +177,29 @@ fun QrPairScreen(
                     onClick = { nodeMeshMode = !nodeMeshMode },
                     label = { Text(stringResource(R.string.qr_chip_business_node_mesh)) }
                 )
+            }
+
+            // Free Client app without a server of its own: the way in is the Pro contact's invitation.
+            if (AppEdition.isClient && !viewModel.isNodeMeshUsable()) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            stringResource(R.string.qr_client_scan_invitation),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.qr_client_scan_invitation_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
             }
 
             Text(
@@ -644,6 +669,34 @@ fun QrPairScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingNodeMeshPayload = null }) { Text(stringResource(R.string.qr_cancel)) }
+            }
+        )
+    }
+
+    guestCode?.let { code ->
+        val guestQr = remember(code.json) { generateQrBitmap(code.json) }
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { viewModel.clearGuestCode() },
+            title = { Text(stringResource(R.string.guest_code_title, code.inviterName)) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    guestQr?.let {
+                        Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.size(260.dp)) {
+                            Image(
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = stringResource(R.string.qr_cd_my_node_mesh_qr),
+                                filterQuality = FilterQuality.None,
+                                modifier = Modifier.fillMaxSize().background(Color.White).padding(8.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(stringResource(R.string.guest_code_body), style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearGuestCode() }) { Text(stringResource(R.string.guest_code_done)) }
             }
         )
     }
