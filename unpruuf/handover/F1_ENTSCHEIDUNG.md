@@ -4,7 +4,7 @@
 
 ## Befund
 
-`padPacket` schreibt `[Nutzlastlänge: 4 Bytes][Versatz: 4 Bytes]` im Klartext vor die Zufallsfüllung. Wer ein gespeichertes Paket lesen kann (Betreiber von Node oder Relay, Beschlagnahme des Servers), sieht die ungefähre Nachrichtenlänge und erkennt Füllpakete (44) von echten Nachrichten. Ein Beobachter im Netz sieht nur 4096 Bytes. Bei safeline ist der Betreiber die Firma, vor der ein Hinweisgeber Angst hat: Der Füllverkehr verbirgt dort den Zeitpunkt einer Meldung nicht. Belege: `evidence/08-packet-header.js`, `PacketMetadataTest.kt`, `CLAIMS_TO_EVIDENCE.md` C5, C6, E1, E3.
+`padPacket` schreibt `[Nutzlastlänge: 4 Bytes][Versatz: 4 Bytes]` im Klartext vor die Zufallsfüllung. Wer ein gespeichertes Paket lesen kann (Betreiber von Node oder Relay, Beschlagnahme des Servers), sieht die ungefähre Nachrichtenlänge und erkennt Füllpakete (44) von echten Nachrichten. Ein Beobachter im Netz sieht nur 4096 Bytes. Bei unpruuf Compliance ist der Betreiber die Firma, vor der ein Hinweisgeber Angst hat: Der Füllverkehr verbirgt dort den Zeitpunkt einer Meldung nicht. Belege: `evidence/08-packet-header.js`, `PacketMetadataTest.kt`, `CLAIMS_TO_EVIDENCE.md` C5, C6, E1, E3.
 
 ## Empfehlung (Variante A)
 

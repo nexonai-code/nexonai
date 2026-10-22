@@ -79,7 +79,7 @@ async function main() {
 
   const status: DashboardStatus = { viaTor: Boolean(torClient), lastPollAt: null, lastPollOk: true };
   const press = config.edition === "press" ? new PressSettingsStore(config.settingsPath) : undefined;
-  if (press) console.log("[startup] safeline Press: fără termene legale, păstrare reglabilă, ștergere pe caz.");
+  if (press) console.log("[startup] unpruuf Press: fără termene legale, păstrare reglabilă, ștergere pe caz.");
   // Dashboard access (security test finding OFF-1): loopback only by default. Listening on another
   // address needs OFFICER_BIND_HOST plus a dashboard password, and the names it may be called by.
   const bindHost = process.env.OFFICER_BIND_HOST?.trim() || "127.0.0.1";
@@ -115,7 +115,7 @@ async function main() {
   setInterval(pollTick, config.pollIntervalMs).unref();
   void pollTick();
 
-  // safeline Press: tips with no activity for the chosen number of days are deleted for good.
+  // unpruuf Press: tips with no activity for the chosen number of days are deleted for good.
   if (press) {
     const sweep = () => {
       const days = press.get().retentionDays;

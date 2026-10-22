@@ -201,7 +201,7 @@ sections.append(section('message', ('A message', 'Un mesaj'), ('What happens whe
     row('Who knows what', 'Cine ce știe', who_html, 'wide')
 ))
 
-# ---- safeline
+# ---- unpruuf Compliance
 sl_steps = [
     ('The organisation shows one code for everybody: on a poster, on the intranet, on a card. Never one code per person, because a personal code could point to a person.',
      'Organizația afișează un singur cod pentru toți: pe un poster, pe intranet, pe un card. Niciodată un cod per persoană, pentru că un cod personal ar putea duce la o persoană.'),

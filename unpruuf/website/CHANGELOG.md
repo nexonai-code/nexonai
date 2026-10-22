@@ -1,5 +1,7 @@
 # v12 — 2026-10-22
 
+**Umbenennung:** „safeline“ heißt auf der Seite jetzt „unpruuf Compliance“, „safeline Press“ heißt „unpruuf Press“. Der Anker #safeline ist zu #compliance geworden. Die CSS-Klasse safeline-art bleibt (technisch).
+
 Basis: die Datei web.zip (Stand v8 laut CHANGELOG). Die Änderungen v9 bis v11 waren in dieser Basis nicht enthalten; Logo und Blau sind hier neu nachgebaut, nicht aus v11 übernommen.
 
 **Header und Footer mit NexonAI-Logo:** statt der Wortmarke „unpruuf. by NexonAI“ steht das NexonAI-Consulting-Logo (assets/nexonai-logo.png), daneben getrennt durch eine feine Linie „unpruuf.“. Gleiches im Footer. Favicon aus dem Zeichen des Logos (assets/favicon.png). Auf dem Handy kleinere Größe.

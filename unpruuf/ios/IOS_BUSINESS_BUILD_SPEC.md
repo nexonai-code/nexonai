@@ -31,8 +31,8 @@ iOS is **client only**. It never hosts a node or a Temp Node (iOS cannot keep an
 
 ### Out of scope
 - Hosting nodes on iPhone (also: no phone-hosted Temp Node).
-- unpruuf Compliance / safeline iOS: stays relay-based (the `officer-app` still reads a relay). No change.
-- safeline Press on iOS.
+- unpruuf Compliance iOS: stays relay-based (the `officer-app` still reads a relay). No change.
+- unpruuf Press on iOS.
 - Tor Client Edition (client authorization): separate branch, not now.
 - Group chat: only as the optional phase D (section 5), after the team says yes.
 

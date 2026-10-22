@@ -1,5 +1,7 @@
 # Lieferungen und Artefakte — Stand 22. Oktober 2026
 
+**Umbenennung 22.10.2026:** „safeline“ heißt jetzt „unpruuf Compliance“, „safeline Press“ heißt „unpruuf Press“. Ältere Einträge unten nennen noch die alten Namen und Dateinamen (`safeline_EN/RO`), weil sie so ausgeliefert wurden.
+
 Die ZIP-Dateien hat Gabriel im Chat bekommen. Sie liegen nicht im Repo (zu groß). Was daraus neu gebaut werden kann, steht in `quellen/`.
 
 ## Seit 21.10. (im Chat an Gabriel geschickt, nicht im Repo)

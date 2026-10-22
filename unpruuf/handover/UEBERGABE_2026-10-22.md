@@ -6,7 +6,7 @@ Für Gabriel und für jede neue Claude-Sitzung. Beschreibt den Stand nach den Si
 
 ## 1. In einem Absatz
 
-NexonAI (Gabriel Hategan, alleiniger Mitarbeiter, Alba Iulia) baut **unpruuf**: Kommunikation ohne Identitäten, mit Server beim Kunden. Produkte: **unpruuf Business** (Hauptprodukt), **safeline** (Compliance), **safeline Press** (Journalisten, Pilot). Hauptlinie ist der Branch `android`. `main` ist per Vorspulen auf demselben Stand (Regel: nach jedem Push `git push origin android:main`). Stand zum Ende: `android` = `main` = `682b5ce`, Arbeitsbaum sauber. Alles ist getestet gegen Module und Tests, **nichts auf einem echten Telefon und nichts gegen das echte Tor-Netz**. Nicht auditiert.
+NexonAI (Gabriel Hategan, alleiniger Mitarbeiter, Alba Iulia) baut **unpruuf**: Kommunikation ohne Identitäten, mit Server beim Kunden. Produkte: **unpruuf Business** (Hauptprodukt), **unpruuf Compliance** (Compliance), **unpruuf Press** (Journalisten, Pilot). Hauptlinie ist der Branch `android`. `main` ist per Vorspulen auf demselben Stand (Regel: nach jedem Push `git push origin android:main`). Stand zum Ende: `android` = `main` = `682b5ce`, Arbeitsbaum sauber. Alles ist getestet gegen Module und Tests, **nichts auf einem echten Telefon und nichts gegen das echte Tor-Netz**. Nicht auditiert.
 
 ## 2. Zuerst wissen
 
@@ -15,7 +15,8 @@ NexonAI (Gabriel Hategan, alleiniger Mitarbeiter, Alba Iulia) baut **unpruuf**: 
 3. **Zwei `CLAUDE.md`-Regelwerke.** Wurzel `CLAUDE.md` (von `android`) und `unpruuf/CLAUDE.md` (von der Press-Linie) gelten beide und widersprechen sich teils (250 Nodes gegen 250 Nodes mit je 100 Slots; Bildsprache Briefkasten gegen Kurier). Das Zusammenlegen hat der Sicherheitsfilter der Sitzung blockiert und wurde nicht umgangen. Das Team legt sie zusammen. Die neueren Regeln (Kurier-Bild seit 14.10., Antwortstil, keine Zuweisungen an Personen) stehen im `unpruuf/CLAUDE.md` und in der Übergabe vom 21.10. der Press-Sitzung.
 4. **Die Website ist nicht die v11.** `unpruuf/website/` (v12) wurde auf Basis der `web.zip` von Gabriel gebaut (Stand v8). Logo und Blau sind neu gebaut, nicht aus v11 übernommen. Gabriels `unpruuf_Website_2026-10-19_v11.zip` liegt nur in seinem Chat. Nicht live, Impressum und Datenschutz haben offene Platzhalter.
 5. **Sicherheitstest-Bericht bleibt bei Gabriel**, nicht im Git. Befunde im Chat nicht in Dateien schreiben, die committet werden.
-6. **Release-Passwort** noch nicht geändert (`passwort-aendern.bat`). Test- und Release-Schlüssel liegen nur bei Gabriel (`*.jks`, `keystore.properties`, `release.properties` bleiben außerhalb von Git).
+6. **Umbenennung am 22.10.2026:** Das Whistleblower-Tool heißt **unpruuf Compliance**, das Presse-Produkt **unpruuf Press**. Der Name **safeline** entfällt in allem Sichtbaren (Decks, Website, Dokumente, Oberflächen von Officer-App und Control, Quellen). Technische Namen bleiben, damit installierte Apps und Daten weiterlaufen: Paket-IDs (`com.nexonai.unpruuf.press`), Ordner (`safeline_en/`, `safeline_ro/`), Skript `presentations/safeline.py`, der interne Produkttyp `safeline` in Control (Vault), Website-Klasse `safeline-art`. Das Deck heißt jetzt `unpruuf_Compliance_Kundendeck_EN/RO` (zusätzlich gibt es die älteren Decks `unpruuf_Compliance_RO/DE`). Beide `CLAUDE.md` (Wurzel und `unpruuf/`) sind mit ausdrücklicher Freigabe von Gabriel angepasst. Der Markenhinweis zu „SafeLine“ (Chaitin) ist mit dem Namen erledigt.
+7. **Release-Passwort** noch nicht geändert (`passwort-aendern.bat`). Test- und Release-Schlüssel liegen nur bei Gabriel (`*.jks`, `keystore.properties`, `release.properties` bleiben außerhalb von Git).
 
 ## 3. Was in den beiden Sitzungen entstand
 

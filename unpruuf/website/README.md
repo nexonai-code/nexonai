@@ -18,7 +18,7 @@
 ## Aufbau
 - Klare Navigation, großflächiger Bildeinstieg und abwechselnde Produktbereiche nach der Seitenlogik von Threema.
 - Eigene unpruuf-Gestaltung und vorhandene Konzeptillustration; keine fremden Logos oder Kundennachweise.
-- unpruuf Business und safeline zuerst; alle 20 Original-Lösungen mit ihren Statusangaben erhalten.
+- unpruuf Business und unpruuf Compliance zuerst; alle 20 Original-Lösungen mit ihren Statusangaben erhalten.
 - DE/EN/RO, mobile Navigation, aufklappbare Produktdetails und sechs Lösungsgruppen.
 - Kontaktformular bereitet nur einen lokalen E-Mail-Entwurf vor. Keine Serverübermittlung durch das Formular.
 - Lokale Schriftarten und Konzeptillustration.

@@ -54,7 +54,7 @@ export function accessGuard(opts: AccessOptions) {
     if (req.method === "OPTIONS") return res.status(403).json({ error: "forbidden" });
 
     if (expectedAuth && !sameSecret(req.headers.authorization ?? "", expectedAuth)) {
-      res.setHeader("WWW-Authenticate", 'Basic realm="safeline officer", charset="UTF-8"');
+      res.setHeader("WWW-Authenticate", 'Basic realm="unpruuf officer", charset="UTF-8"');
       return res.status(401).json({ error: "unauthorized" });
     }
 

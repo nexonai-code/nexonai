@@ -5,6 +5,15 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑22 · Renamed: safeline is gone, unpruuf Compliance and unpruuf Press
+
+- Whistleblower tool = **unpruuf Compliance**, press product = **unpruuf Press**. The name safeline is removed from everything visible: officer app (texts, login prompt, download file name `unpruuf-press-qr.png`, start script), Control (labels), website (text and anchor `#compliance`), decks, documentation, iOS spec, auditor scope, source files for solution descriptions, event decks and landing pages.
+- Deck `safeline` (EN, RO, 14 slides) rebuilt as **unpruuf Compliance** and exported as `unpruuf_Compliance_Kundendeck_EN/RO`; the old `safeline_EN/RO` exports are removed. The older decks `unpruuf_Compliance_RO/DE` stay.
+- **Unchanged on purpose (technical names):** package IDs (`com.nexonai.unpruuf.press`), folder and script names (`safeline_en/`, `safeline_ro/`, `safeline.py`), the internal product type `safeline` in Control's vault (stored data), the website CSS class `safeline-art`, history entries in this file.
+- Rules files `CLAUDE.md` (root and `unpruuf/`) updated with Gabriel's explicit instruction (new names, technical names stay, the SafeLine trademark note is dropped).
+
+---
+
 ## 2026‑10‑22 · Website in the repository (`unpruuf/website/`, v12)
 
 - Static site (no build): open `index.html`, copy the folder to the web root. DE/EN/RO. Own change history in `unpruuf/website/CHANGELOG.md`.

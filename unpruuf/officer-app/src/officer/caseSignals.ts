@@ -21,7 +21,7 @@ export const CASE_SIGNAL_PREFIX = "UNPRUUF_CASE_V1:";
 export const CASE_HELLO_TEXT = "UNPRUUF_CASE_HELLO_V1";
 
 export function caseSignalText(row: CaseRow, caseNumber: string, status: string, now: number = Date.now(), withDeadlines: boolean = !isPressEdition()): string {
-  // safeline Press: a journalist owes no legal deadline, so the source's app gets none.
+  // unpruuf Press: a journalist owes no legal deadline, so the source's app gets none.
   return CASE_SIGNAL_PREFIX + JSON.stringify({ n: caseNumber, s: status, o: row.openedAt, a: withDeadlines ? row.ackDueAt : null, f: withDeadlines ? row.feedbackDueAt : null, t: now });
 }
 

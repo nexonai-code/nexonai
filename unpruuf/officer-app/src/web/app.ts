@@ -45,7 +45,7 @@ export function createDashboardApp(
   app.disable("x-powered-by");
   app.use(accessGuard(access));
   const recherchen = new RechercheService(store, identity);
-  /** The case as the dashboard shows it, with the research it came in through (safeline Press). */
+  /** The case as the dashboard shows it, with the research it came in through (unpruuf Press). */
   const withRecherche = (row: CaseRow) => {
     const r = row.rechercheId ? store.getRecherche(row.rechercheId) : null;
     return { ...row, rechercheName: r ? r.name : null };
@@ -61,7 +61,7 @@ export function createDashboardApp(
     res.json({ userId: identity.userId, pairingCode: pairingJson, qrDataUrl, qrDataUrlLarge, relayReachableBaseUrl });
   });
 
-  // ───────── safeline Press: a contact code per research ─────────
+  // ───────── unpruuf Press: a contact code per research ─────────
   // The reporter apps need no change: a research code is the same kind of code as the general one,
   // created from its own officer identity (see officer/recherchen.ts).
   const pressOnly = (res: express.Response): boolean => {

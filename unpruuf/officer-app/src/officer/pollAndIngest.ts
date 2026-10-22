@@ -46,7 +46,7 @@ export class PollAndIngestLoop {
   /** Cases that just got an inbound ratchet message or a fresh intake — a pending receipt or
    *  status update may now be sendable (see caseSignals.ts). */
   private signalCandidates = new Set<string>();
-  /** safeline Press: researches with their own code. Without any research the loop behaves exactly as before. */
+  /** unpruuf Press: researches with their own code. Without any research the loop behaves exactly as before. */
   private recherchen: RechercheService;
   /** Refreshed at the start of every round. */
   private caseOwner = new Map<string, string | null>();
@@ -99,7 +99,7 @@ export class PollAndIngestLoop {
 
     // The organisation-wide letterbox (caseIntake.ts) — polled on every round, also before the
     // first case exists.
-    // One letterbox for the general code and one per active research (safeline Press).
+    // One letterbox for the general code and one per active research (unpruuf Press).
     const intakeOwnerByTag = new Map<string, IntakeOwner>();
     for (const owner of this.recherchen.intakeOwners()) {
       for (const tag of currentIntakeTags(owner.identity.messageKey)) intakeOwnerByTag.set(tag, owner);

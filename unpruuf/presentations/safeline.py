@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""safeline deck (whistleblower channel), English and Romanian, state 2026-10-10.
+"""unpruuf Compliance deck (whistleblower channel), English and Romanian, state 2026-10-10.
 
 Structure (Gabriel's rule): first "How unpruuf works" (the post-office picture), then the
 solution for the customer. After the first part there is no more technology talk, only what the
@@ -14,7 +14,7 @@ from common import *
 def build(lang):
     i = 0 if lang == "en" else 1
     P = lambda en, ro: (en, ro)[i]
-    D = "safeline"
+    D = "unpruuf Compliance"
     S = []
     n = [0]
 
@@ -45,10 +45,10 @@ def build(lang):
     S.append(("cover", sec("cover", f'''<div style="position:absolute;left:0;top:0;width:24px;height:1080px;background:{ORANGE}"></div>
 {eyebrow("NexonAI Consulting SRL", ON_DARK_MUTED)}
 <div style="flex:1"></div>
-<h1 style="font-family:{DISPLAY};font-size:140px;font-weight:800;line-height:1.05;color:{ON_DARK}">safeline</h1>
+<h1 style="font-family:{DISPLAY};font-size:110px;font-weight:800;line-height:1.05;color:{ON_DARK}">unpruuf Compliance</h1>
 <p style="font-size:48px;line-height:1.3;color:{ON_DARK}">{P("The reporting channel that only your organisation runs.", "Canalul de raportare pe care îl operează doar organizația dumneavoastră.")}</p>
 <p style="font-size:32px;line-height:1.4;color:{ON_DARK_MUTED}">{P("For employees who have something to report. For the officer who has to handle it by the deadline.", "Pentru angajații care au ceva de raportat. Pentru responsabilul care trebuie să rezolve la termen.")}</p>
-{notes(P("Open with the one sentence. Then explain how the system works in three slides, and only then talk about what safeline does for the organisation. Say up front: this is a pilot, not audited, not certified.", "Începeți cu o singură propoziție. Apoi explicați cum funcționează sistemul în trei diapozitive și abia după aceea vorbiți despre ce face safeline pentru organizație. Spuneți de la început: este un pilot, neauditat, necertificat."))}''', bg=DARK, color=ON_DARK, extra="display:flex;flex-direction:column;gap:32px")))
+{notes(P("Open with the one sentence. Then explain how the system works in three slides, and only then talk about what unpruuf Compliance does for the organisation. Say up front: this is a pilot, not audited, not certified.", "Începeți cu o singură propoziție. Apoi explicați cum funcționează sistemul în trei diapozitive și abia după aceea vorbiți despre ce face unpruuf Compliance pentru organizație. Spuneți de la început: este un pilot, neauditat, necertificat."))}''', bg=DARK, color=ON_DARK, extra="display:flex;flex-direction:column;gap:32px")))
 
     # 2 what you need
     k = nxt()
@@ -109,12 +109,12 @@ def build(lang):
 {row(card(P("A platform", "O platformă"), P("Somebody else runs it and could read along.", "Altcineva o operează și ar putea citi.")),
      card(P("Email or phone", "E-mail sau telefon"), P("Address, number and time give the reporter away.", "Adresa, numărul și ora îl trădează pe avertizor.")),
      card(P("A promise", "O promisiune"), P("The protection sits in a contract, not in how it is built.", "Protecția stă într-un contract, nu în felul în care este construit.")))}
-{body(P("People who fear retaliation do not report through a channel they have to trust. safeline is built so that nobody has to.", "Cine se teme de represalii nu raportează printr-un canal în care trebuie să aibă încredere. safeline este construit astfel încât nimeni să nu fie nevoit."))}
+{body(P("People who fear retaliation do not report through a channel they have to trust. unpruuf Compliance is built so that nobody has to.", "Cine se teme de represalii nu raportează printr-un canal în care trebuie să aibă încredere. unpruuf Compliance este construit astfel încât nimeni să nu fie nevoit."))}
 {footer(D, k)}''')))
 
-    # 7 safeline in one picture
+    # 7 unpruuf Compliance in one picture
     k = nxt()
-    S.append(("flow", sec("flow", f'''{eyebrow(P("safeline", "safeline"), ON_DARK_MUTED)}
+    S.append(("flow", sec("flow", f'''{eyebrow(P("unpruuf Compliance", "unpruuf Compliance"), ON_DARK_MUTED)}
 <h2 style="font-family:{DISPLAY};font-size:80px;font-weight:800;line-height:1.1;color:{ON_DARK}">{P("One code on the wall.<br>One case in the dashboard.", "Un cod pe perete.<br>Un caz în panou.")}</h2>
 <div style="display:flex;gap:48px">
 <div style="flex:1;border-top:8px solid {ON_DARK};padding-top:28px"><p style="font-family:{DISPLAY};font-size:64px;font-weight:800;color:{ON_DARK}">1</p><h3 style="font-family:{DISPLAY};font-size:40px;font-weight:700;color:{ON_DARK}">{P("Scan", "Scanează")}</h3><p style="font-size:30px;line-height:1.4;color:{ON_DARK_MUTED}">{P("The employee scans the organisation's one QR code and writes.", "Angajatul scanează codul QR unic al organizației și scrie.")}</p></div>
@@ -196,7 +196,7 @@ def build(lang):
     S.append(("status", sec("status", f'''{head(P("Where we stand", "Unde ne aflăm"), P("Tested by us. Not audited. Not certified.", "Testat de noi. Neauditat. Necertificat."))}
 {row(card(P("Done", "Gata"), P("Reporting, case numbers, status and deadlines run between the app, the browser and the dashboard. Encryption was checked byte for byte against a second, independent implementation.", "Raportarea, numerele de caz, starea și termenele funcționează între aplicație, browser și panou. Criptarea a fost verificată octet cu octet față de o a doua implementare independentă.")),
      card(P("Next", "Urmează"), P("Tests on real devices, access for more than one officer, case export, an independent audit.", "Teste pe dispozitive reale, acces pentru mai mulți responsabili, export de cazuri, un audit independent."), bg=LIGHT2))}
-{body(P("safeline supports your process. It is not legal advice and not a certification. Whether the national law is fully met is for your legal department to confirm.", "safeline sprijină procesul dumneavoastră. Nu este consultanță juridică și nici certificare. Dacă legea națională este îndeplinită complet, confirmă departamentul juridic."), MUTED, 28)}
+{body(P("unpruuf Compliance supports your process. It is not legal advice and not a certification. Whether the national law is fully met is for your legal department to confirm.", "unpruuf Compliance sprijină procesul dumneavoastră. Nu este consultanță juridică și nici certificare. Dacă legea națională este îndeplinită complet, confirmă departamentul juridic."), MUTED, 28)}
 {footer(D, k)}''')))
 
     # 14 contact
@@ -208,7 +208,7 @@ def build(lang):
     sections = {
         "s1": {"description": P("How unpruuf works: the post-office picture in three slides.", "Cum funcționează unpruuf: imaginea cu poșta, în trei diapozitive."), "start": "how-1"},
         "s2": {"description": P("The duty and the problem.", "Obligația și problema."), "start": "duty"},
-        "s3": {"description": P("safeline for employee, officer and organisation.", "safeline pentru angajat, responsabil și organizație."), "start": "flow"},
+        "s3": {"description": P("unpruuf Compliance for employee, officer and organisation.", "unpruuf Compliance pentru angajat, responsabil și organizație."), "start": "flow"},
         "s4": {"description": P("Honest status and next steps.", "Stadiu sincer și pașii următori."), "start": "who"},
     }
     return S, sections
@@ -219,4 +219,4 @@ if __name__ == "__main__":
         folder = f"safeline_{lang}"
         shutil.rmtree(os.path.join(folder, "project", "slides"), ignore_errors=True)
         S, sec_ = build(lang)
-        print(folder, write_deck(folder, "safeline" + (" (RO)" if lang == "ro" else " (EN)"), S, sec_))
+        print(folder, write_deck(folder, "unpruuf Compliance" + (" (RO)" if lang == "ro" else " (EN)"), S, sec_))

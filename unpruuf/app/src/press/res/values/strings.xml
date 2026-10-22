@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  safeline Press — the free reporting app of the press edition (a source writing a tip to a
+  unpruuf Press — the free reporting app of the press edition (a source writing a tip to a
   journalist or newsroom). English overlay: only the keys that talk about a "reporting office",
   an "organisation" or a "case" are replaced; everything else comes from main. Romanian is in
   values-ro/. The behaviour is the same as the whistleblower edition (AppEdition.isWhistleblower).

@@ -13,13 +13,13 @@ const state = {
   me: null,
   tab: "open",
   filter: "",
-  press: null, // safeline Press only: { settings, startedAt, offlineGapMs, lastOkPollAt }
+  press: null, // unpruuf Press only: { settings, startedAt, offlineGapMs, lastOkPollAt }
   lastOkAt: null, // when the last successful fetch from the server finished
   dismissedWarn: new Set(),
   detail: null, // the open case incl. messages
   previous: null, // id -> lastActivityAt, for "new case" toasts
   ownTouch: new Set(), // case ids this officer just changed (no toast for those)
-  recherchen: null, // safeline Press: { generalTipCount, recherchen: [...] } with codes and QR images
+  recherchen: null, // unpruuf Press: { generalTipCount, recherchen: [...] } with codes and QR images
 };
 
 /* ───────── helpers ───────── */
@@ -103,7 +103,7 @@ function urgency(nd) {
   return { cls, text, days: remaining / DAY, progress, mode, dayText };
 }
 function sortedByUrgency(list) {
-  // safeline Press has no legal deadlines: unread first, then the most recent activity.
+  // unpruuf Press has no legal deadlines: unread first, then the most recent activity.
   if (EDITION === "press") return [...list].sort((a, b) => (isUnread(b) - isUnread(a)) || (b.lastActivityAt - a.lastActivityAt));
   return [...list].sort((a, b) => {
     const ca = a.status === "closed", cb = b.status === "closed";
@@ -213,7 +213,7 @@ async function loadStatus() {
   }
 }
 
-/* ───────── safeline Press: pickup warning, settings, delete, website code ───────── */
+/* ───────── unpruuf Press: pickup warning, settings, delete, website code ───────── */
 async function loadEdition() {
   try {
     const e = await api("/api/edition");
@@ -651,7 +651,7 @@ $("addCaseBtn").addEventListener("click", async () => {
   }
 });
 
-/* ───────── safeline Press: a code per research ───────── */
+/* ───────── unpruuf Press: a code per research ───────── */
 async function loadRecherchen() {
   if (EDITION !== "press") return;
   state.recherchen = await api("/api/recherchen");
