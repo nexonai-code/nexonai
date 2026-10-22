@@ -5,6 +5,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑22 · Phone Temp Node: late connection after stop is no longer served (flaky test fixed)
+
+- **Cause (reproduced, not guessed):** `stop()` clears the state, then closes the listening socket. A connection that arrived in that instant could still be accepted by the accept loop and answered (measured: about 5 to 10 percent of rounds after one earlier request; 69 of 600 at TCP level). No data was reachable (packets and owner secret are already wiped), but the node answered `/health` after it had been stopped, and `PhoneTempNodeTest.startRunsAndStopRemovesEverything` failed once in a while.
+- **Fix:** `PhoneTempNode.acceptLoop` drops a connection accepted after the node was stopped. After the fix 0 of 600 probe rounds were answered. The test now repeats the check 100 times (still 181 tests per edition; Standard, Pro, Client, Group re-run in full: 181 passed, 0 failed each).
+
+---
+
 ## 2026‑10‑22 · Decks: test numbers corrected
 
 - Business status slide (RO, DE, EN): "70 / 15 / 80 tests, real Tor" replaced by the counts measured today: node server 123 automated tests (one skipped), run without the live Tor network; Android node 15; app 181, the same suite in every edition. The wrong "real Tor" wording is gone. Compliance status slide: "App: 80 Tests" now 181.
