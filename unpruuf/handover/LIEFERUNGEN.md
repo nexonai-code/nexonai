@@ -4,6 +4,21 @@
 
 Die ZIP-Dateien hat Gabriel im Chat bekommen. Sie liegen nicht im Repo (zu groß). Was daraus neu gebaut werden kann, steht in `quellen/`.
 
+## Neu gebaut am 22.10. mit den neuen Namen (im Chat an Gabriel geschickt)
+
+| Datei | Ersetzt | Hinweis |
+|---|---|---|
+| `unpruuf_Loesungsbeschreibungen_2026-10-22_v4.zip` | `…2026-10-13_v3.zip` | 18 Dateien DE/EN/RO, Dashboard-Aussage korrigiert |
+| `unpruuf_Control_2026-10-22_v2.zip` | `…2026-10-13_v1.zip` | Server-Paket unsigniert |
+| `unpruuf_OfficerApp_2026-10-22_v2.zip` | `…2026-10-09_v1.zip` | beide Editionen, Dashboard abgesichert |
+| `unpruuf_Beleg-Paket_2026-10-22_v2.zip` | `…2026-10-14_v1.zip` | Auditor-Umfang aktualisiert |
+| `unpruuf_TeamBriefing_2026-10-22_v2.zip` | Team-Briefing EN/RO vom 11.10. | Text ersetzt |
+| `unpruuf_UAB-Pitch-Kurz_2026-10-22_v12.zip` | `…2026-10-14_v11.zip` | nur PPTX, kein PDF |
+| `unpruuf_Compliance_Kundendeck_2026-10-22_v1.zip` | `safeline`-Deck EN/RO | |
+| `unpruuf_2026-10-22_v31.zip` und sieben APKs | v30 und APKs vom 21.10. | mit Temp-Node-Fix |
+
+Nicht neu gebaut (Quellen fehlen): Business-Pitch und Press-Pitch (13.10.), Compliance-Video, Press-Ein-Seiter, alle Online-Artefakte und Dokumente aus früheren Sitzungen.
+
 ## Seit 21.10. (im Chat an Gabriel geschickt, nicht im Repo)
 
 | Datei | Inhalt | Stand |

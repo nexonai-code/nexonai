@@ -65,7 +65,7 @@ put("5_Security_Features","EN","Security features","All security features of the
  ["Confidentiality (Art. 5(1)(f), Art. 32)","End-to-end encryption, sealed packages, equal size, cover traffic"],
  ["By design and default (Art. 25)","Short lifetime and memory-only option are built in"],
  ["Controller (Art. 4(7))","The organisation; NexonAI normally is not a processor (Art. 28) as long as it has no data access. A lawyer or data protection officer confirms this."]])]),
-("7. Suggested next steps for the team",[("b",["Commission an independent security audit and publish the result.","Test the connection assistant on a really blocked network.","Build per-case delete and export for unpruuf Compliance.","Test unpruuf Press with a real source in a controlled pilot."])]),
+("7. Suggested next steps for the team",[("b",["Commission an independent security audit and publish the result.","Test the connection assistant on a really blocked network.","Add an export over all cases for unpruuf Compliance.","Test unpruuf Press with a real source in a controlled pilot."])]),
 ])
 put("5_Security_Features","RO","Funcții de securitate","Toate funcțiile de securitate ale sistemului unpruuf · stare 12 oct. 2026 · pe ce se sprijină fiecare și ce nu acoperă",[
 ("Cum se citește acest document",[("p","Fiecare afirmație spune pe ce se sprijină. Separăm patru feluri: (1) ce rezultă din matematică, (2) ce este adevărat pentru că ceva nu există, (3) măsuri de tip „cel mai bun efort”, (4) ce nu pretindem în mod explicit. Nimic de aici nu este auditat sau certificat. Sistemul nu a trecut încă printr-un audit independent."),
@@ -93,7 +93,7 @@ put("5_Security_Features","RO","Funcții de securitate","Toate funcțiile de sec
  ["Confidențialitate (art. 5 alin. 1 lit. f, art. 32)","Criptare end-to-end, pachete sigilate, aceeași mărime, trafic de acoperire"],
  ["Protecția datelor din fază de proiectare și implicit (art. 25)","Durata scurtă și opțiunea doar în memorie sunt integrate"],
  ["Operator (art. 4 pct. 7)","Organizația; NexonAI nu este, în mod normal, persoană împuternicită (art. 28) atât timp cât nu are acces la date. Un avocat sau responsabilul cu protecția datelor confirmă."]])]),
-("7. Pași propuși pentru echipă",[("b",["Comandarea unui audit independent de securitate și publicarea rezultatului.","Testarea asistentului de conexiune într-o rețea blocată real.","Construirea ștergerii și exportului pe caz pentru unpruuf Compliance.","Testarea unpruuf Press cu o sursă reală într-un pilot controlat."])]),
+("7. Pași propuși pentru echipă",[("b",["Comandarea unui audit independent de securitate și publicarea rezultatului.","Testarea asistentului de conexiune într-o rețea blocată real.","Un export pentru toate cazurile la unpruuf Compliance.","Testarea unpruuf Press cu o sursă reală într-un pilot controlat."])]),
 ])
 put("5_Security_Features","DE","Sicherheitsfunktionen","Alle Sicherheitsfunktionen des Systems unpruuf · Stand 12.10.2026 · worauf jede beruht und was sie nicht abdeckt",[
 ("So liest du dieses Dokument",[("p","Jede Aussage nennt, worauf sie beruht. Wir trennen vier Arten: (1) was die Mathematik hergibt, (2) was wahr ist, weil etwas nicht existiert, (3) Maßnahmen nach bestem Bemühen, (4) was wir ausdrücklich nicht behaupten. Nichts hier ist auditiert oder zertifiziert. Das System hatte noch kein unabhängiges Audit."),
@@ -121,5 +121,5 @@ put("5_Security_Features","DE","Sicherheitsfunktionen","Alle Sicherheitsfunktion
  ["Vertraulichkeit (Art. 5 Abs. 1 lit. f, Art. 32)","Ende-zu-Ende-Verschlüsselung, versiegelte Pakete, gleiche Größe, Tarnverkehr"],
  ["Datenschutz durch Technikgestaltung und Voreinstellung (Art. 25)","Kurze Lebensdauer und Nur-Arbeitsspeicher-Option sind eingebaut"],
  ["Verantwortlicher (Art. 4 Nr. 7)","Die Organisation; NexonAI ist normalerweise nicht Auftragsverarbeiter (Art. 28), solange kein Datenzugriff besteht. Ein Jurist oder Datenschutzbeauftragter bestätigt das."]])]),
-("7. Vorschläge für das Team",[("b",["Unabhängiges Sicherheitsaudit beauftragen und das Ergebnis veröffentlichen.","Verbindungsassistent in einem wirklich gesperrten Netz testen.","Fall löschen und exportieren für unpruuf Compliance bauen.","unpruuf Press mit einer echten Quelle in einem kontrollierten Pilot testen."])]),
+("7. Vorschläge für das Team",[("b",["Unabhängiges Sicherheitsaudit beauftragen und das Ergebnis veröffentlichen.","Verbindungsassistent in einem wirklich gesperrten Netz testen.","Export über alle Fälle für unpruuf Compliance bauen.","unpruuf Press mit einer echten Quelle in einem kontrollierten Pilot testen."])]),
 ])

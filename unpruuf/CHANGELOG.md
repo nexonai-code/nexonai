@@ -5,6 +5,15 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑22 · Old deliveries rebuilt with the new names
+
+- Rebuilt from sources: solution descriptions (18 files, DE/EN/RO; also corrected "dashboard cannot yet delete a single case", which is wrong since 19.10.), Control (UI labels, new server bundle, unsigned), officer app (both editions, dashboard hardening), evidence package, whole project, seven APKs (with the Temp Node fix).
+- Patched in place (no sources in the repository): team briefing EN/RO (Word), event deck UAB-Pitch-Kurz EN/RO (PowerPoint, no PDF).
+- Not rebuildable from the repository: press pitch and business pitch decks (screenshots and assets missing), compliance video and one-pager for press (sources only in Gabriel's chat), the online artifacts and documents from earlier sessions (they must be edited one by one).
+- `quellen/loesungsbeschreibungen`: output file names now `2_unpruuf_Compliance_*` and `3_unpruuf_Press_*`.
+
+---
+
 ## 2026‑10‑22 · Renamed: safeline is gone, unpruuf Compliance and unpruuf Press
 
 - Whistleblower tool = **unpruuf Compliance**, press product = **unpruuf Press**. The name safeline is removed from everything visible: officer app (texts, login prompt, download file name `unpruuf-press-qr.png`, start script), Control (labels), website (text and anchor `#compliance`), decks, documentation, iOS spec, auditor scope, source files for solution descriptions, event decks and landing pages.
