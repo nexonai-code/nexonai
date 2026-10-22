@@ -5,6 +5,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑22 · Website in the repository (`unpruuf/website/`, v12)
+
+- Static site (no build): open `index.html`, copy the folder to the web root. DE/EN/RO. Own change history in `unpruuf/website/CHANGELOG.md`.
+- Content of this version: NexonAI logo in header and footer, blue instead of green, new section "Never give out your phone number again" in "How it works". Base was the `web.zip` the team had on hand (state v8); the v9 to v11 files from 19.10. are not in the repository, so logo and blue were rebuilt, not taken over.
+- Not changed: legal pages still carry open placeholders (street, hosting provider, log retention).
+
+---
+
 ## 2026‑10‑22 · Phone Temp Node: late connection after stop is no longer served (flaky test fixed)
 
 - **Cause (reproduced, not guessed):** `stop()` clears the state, then closes the listening socket. A connection that arrived in that instant could still be accepted by the accept loop and answered (measured: about 5 to 10 percent of rounds after one earlier request; 69 of 600 at TCP level). No data was reachable (packets and owner secret are already wiped), but the node answered `/health` after it had been stopped, and `PhoneTempNodeTest.startRunsAndStopRemovesEverything` failed once in a while.
