@@ -5,6 +5,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑22 · Decks: test numbers corrected
+
+- Business status slide (RO, DE, EN): "70 / 15 / 80 tests, real Tor" replaced by the counts measured today: node server 123 automated tests (one skipped), run without the live Tor network; Android node 15; app 181, the same suite in every edition. The wrong "real Tor" wording is gone. Compliance status slide: "App: 80 Tests" now 181.
+- Measured on 22.10.2026: app unit tests 181 per edition (Standard, Pro, Client, Group, Whistleblower, Press); `PhoneTempNodeTest.startRunsAndStopRemovesEverything` failed once in a full run (Client) and passed in all other runs (timing on the closed port, not investigated). Node server 123 passed, 1 skipped. Tablet node 15 passed.
+
+---
+
 ## 2026‑10‑22 · Business deck: new slide "no phone number" (RO, DE) and a new English deck
 
 - Slide 7 in `unpruuf_Business_RO` and `unpruuf_Business_DE` (after "what does not exist"): a code per contact instead of a phone number, one code per person, delete the contact and there is no way to you any more. States the limit on the slide itself (what someone already received stays with them; other channels are untouched). Source: `presentations/decks2.py`, slide `fara-numar`. Footer numbers of the following slides moved by one (18 slides).

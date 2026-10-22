@@ -228,7 +228,7 @@ def build_business(lang):
     # 16 status
     k = nxt()
     S.append(("stadiu", sec("stadiu", f'''{head(P("Aktueller Stand", "Stadiul actual"), P("Gebaut und getestet. Nächster Schritt: echte Geräte.", "Construit și testat. Următorul pas: dispozitive reale."))}
-{row(card(P("Fertig", "Gata"), P("Server: 70 automatische Tests, echtes Tor. Tablet-Node: 15 Tests. App: 80 Tests in allen 4 Editionen.", "Server: 70 de teste automate, Tor real. Nod pe tabletă: 15 teste. Aplicația: 80 de teste în toate cele 4 ediții.")),
+{row(card(P("Fertig", "Gata"), P("Server: 123 automatische Tests, ohne Live-Tor-Netz (einer übersprungen). Tablet-Node: 15 Tests. App: 181 Tests, dieselben in allen Editionen.", "Server: 123 de teste automate, fără rețeaua Tor reală (unul omis). Nod pe tabletă: 15 teste. Aplicația: 181 de teste, aceleași în toate edițiile.")),
      card(P("Als Nächstes", "Urmează"), P("Test auf echten Geräten. Messung auf einem echten VPS. Unabhängiges Sicherheits-Audit.", "Test pe dispozitive reale. Măsurare pe un VPS real. Audit independent de securitate."), bg=LIGHT2))}
 {body(P("Keine Architektur schützt vor einem Handy mit Spionage-Software oder einem Partner, der Screenshots macht.", "Nicio arhitectură nu protejează împotriva unui telefon cu software spion sau a unui partener care face capturi de ecran."), MUTED, 28)}
 {footer(D, k)}''', bg=LIGHT)))
@@ -436,7 +436,7 @@ def build_compliance(lang):
     # 14 status
     k = nxt()
     S.append(("stadiu", sec("stadiu", f'''{head(P("Aktueller Stand", "Stadiul actual"), P("Getestet. Nächster Schritt: echte Geräte.", "Testat. Următorul pas: dispozitive reale."))}
-{row(card(P("Fertig", "Gata"), P("Verschlüsselung Byte für Byte geprüft. Zwei unabhängige Umsetzungen gegeneinander getestet. Meldung, Fallnummer und Status laufen zwischen App, Browser und Dashboard. App: 80 Tests.", "Criptarea verificată octet cu octet. Două implementări independente testate una față de cealaltă. Raportarea, numărul de caz și starea circulă între aplicație, browser și panou. Aplicația: 80 de teste.")),
+{row(card(P("Fertig", "Gata"), P("Verschlüsselung Byte für Byte geprüft. Zwei unabhängige Umsetzungen gegeneinander getestet. Meldung, Fallnummer und Status laufen zwischen App, Browser und Dashboard. App: 181 Tests.", "Criptarea verificată octet cu octet. Două implementări independente testate una față de cealaltă. Raportarea, numărul de caz și starea circulă între aplicație, browser și panou. Aplicația: 181 de teste.")),
      card(P("Als Nächstes", "Urmează"), P("Test auf echten Geräten. Zugang für mehrere Officer. Export von Fällen. Unabhängiges Audit.", "Test pe dispozitive reale. Acces pentru mai mulți responsabili. Export de cazuri. Audit independent."), bg=LIGHT2))}
 {footer(D, k)}''')))
 

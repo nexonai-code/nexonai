@@ -149,7 +149,7 @@ EN_BUSINESS = {
 "Behörden": "Public authorities",
 "Interne Kommunikation ohne fremde Cloud.": "Internal communication without a foreign cloud.",
 "Fertig": "Done",
-"Server: 70 automatische Tests, echtes Tor. Tablet-Node: 15 Tests. App: 80 Tests in allen 4 Editionen.": "Server: 70 automated tests, real Tor. Tablet node: 15 tests. App: 80 tests in all 4 editions.",
+"Server: 123 automatische Tests, ohne Live-Tor-Netz (einer übersprungen). Tablet-Node: 15 Tests. App: 181 Tests, dieselben in allen Editionen.": "Server: 123 automated tests, without the live Tor network (one skipped). Tablet node: 15 tests. App: 181 tests, the same in every edition.",
 "Als Nächstes": "Next",
 "Test auf echten Geräten. Messung auf einem echten VPS. Unabhängiges Sicherheits-Audit.": "Test on real devices. Measurement on a real VPS. Independent security audit."
 }
