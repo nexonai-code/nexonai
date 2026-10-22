@@ -6,11 +6,14 @@ business_de/, business/, compliance_de/, compliance/ (project/deck.json + projec
 the same layout the earlier decks used. Render: see README.md.
 """
 from common import *
+from decks2_en import EN_BUSINESS
 
 
 def build_business(lang):
-    i = 0 if lang == "de" else 1
-    P = lambda de, ro: (de, ro)[i]
+    i = {"de": 0, "ro": 1, "en": 2}[lang]
+    # English: looked up by the German text (decks2_en.py); a missing text stops the build.
+    P = lambda de, ro: (de, ro, EN_BUSINESS[de] if lang == "en" else None)[i]
+    L = lambda de, ro, en: (de, ro, en)[i]
     D = "unpruuf Business"
     S = []
     n = [0]
@@ -53,7 +56,7 @@ def build_business(lang):
     S.append(("problema", sec("problema", f'''{head(P("Das Problem", "Problema"), P("Jeder Messenger hat einen Eigentümer", "Fiecare mesager are un proprietar"))}
 {row(card(P("Server des Anbieters", "Serverul furnizorului"), P("Alle Nachrichten laufen über fremde Infrastruktur.", "Toate mesajele trec prin infrastructura altcuiva.")),
      card(P("Konto und Telefonnummer", "Cont și număr de telefon"), P("Jeder Nutzer ist vom ersten Tag an identifizierbar.", "Fiecare utilizator este identificabil de la prima zi.")),
-     card("Metadaten" if i == 0 else "Metadate", P("Wer, mit wem, wann und wie oft: sichtbar für den Anbieter.", "Cine, cu cine, când și cât de des: vizibil pentru furnizor.")))}
+     card(L("Metadaten", "Metadate", "Metadata"), P("Wer, mit wem, wann und wie oft: sichtbar für den Anbieter.", "Cine, cu cine, când și cât de des: vizibil pentru furnizor.")))}
 {body(P("Auch mit Ende-zu-Ende-Verschlüsselung bleibt der Anbieter der Dritte, der zur Herausgabe von Daten verpflichtet werden kann.", "Chiar și cu criptare cap la cap, furnizorul rămâne a treia parte care poate fi obligată să predea date."))}
 {footer(D, k)}''')))
 
@@ -155,7 +158,7 @@ def build_business(lang):
 
     # 10 what the node sees
     k = nxt()
-    S.append(("ce-vede", sec("ce-vede", f'''{head("Der Node" if i == 0 else "Nodul", P("Was der Node sieht — und was nicht", "Ce vede nodul și ce nu"))}
+    S.append(("ce-vede", sec("ce-vede", f'''{head(L("Der Node", "Nodul", "The node"), P("Was der Node sieht — und was nicht", "Ce vede nodul și ce nu"))}
 {row(card(P("Sieht", "Vede"), P("Verschlüsselte Blöcke fester Größe unter stündlich wechselnden Nummern. Löscht sie selbst nach 1 bis 24 Stunden.", "Blocuri criptate de dimensiune fixă, sub numere care se schimbă din oră în oră. Le șterge singur după 1 până la 24 de ore.")),
      card(P("Sieht nicht", "Nu vede"), P("Den Inhalt. Den Absender. Den Empfänger. Die IP-Adresse. Wer zu wem gehört.", "Conținutul. Expeditorul. Destinatarul. Adresa IP. Cine aparține cui."), bg=DARK, border=DARK, tcolor=ON_DARK, bcolor=ON_DARK_MUTED))}
 {body(P("Ein beschlagnahmter oder gestohlener Server enthält nichts Lesbares und läuft nach einem Neustart erst weiter, wenn Ihre App ihn freigibt.", "Un server confiscat sau furat nu conține nimic lizibil și, după o repornire, funcționează din nou doar după ce aplicația dumneavoastră îl deblochează."))}
@@ -468,3 +471,9 @@ if __name__ == "__main__":
         print(bf, write_deck(bf, bt, S, sec_))
         S, sec_ = build_compliance(lang)
         print(cf, write_deck(cf, ct, S, sec_))
+
+    # English Business deck (2026-10-22): only Business, texts from decks2_en.py.
+    import shutil
+    shutil.rmtree(os.path.join("business_en", "project", "slides"), ignore_errors=True)
+    S, sec_ = build_business("en")
+    print("business_en", write_deck("business_en", "unpruuf Business (EN)", S, sec_))

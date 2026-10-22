@@ -6,7 +6,7 @@ from PIL import Image
 from pptx import Presentation
 from pptx.util import Inches
 
-NAMES = {"safeline_en": "safeline_EN", "safeline_ro": "safeline_RO", "business": "unpruuf_Business_RO", "business_de": "unpruuf_Business_DE",
+NAMES = {"business_en": "unpruuf_Business_EN", "safeline_en": "safeline_EN", "safeline_ro": "safeline_RO", "business": "unpruuf_Business_RO", "business_de": "unpruuf_Business_DE",
          "compliance": "unpruuf_Compliance_RO", "compliance_de": "unpruuf_Compliance_DE"}
 root, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)

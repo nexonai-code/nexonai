@@ -5,10 +5,11 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
-## 2026‑10‑22 · Business deck: new slide "no phone number" (RO and DE)
+## 2026‑10‑22 · Business deck: new slide "no phone number" (RO, DE) and a new English deck
 
 - Slide 7 in `unpruuf_Business_RO` and `unpruuf_Business_DE` (after "what does not exist"): a code per contact instead of a phone number, one code per person, delete the contact and there is no way to you any more. States the limit on the slide itself (what someone already received stays with them; other channels are untouched). Source: `presentations/decks2.py`, slide `fara-numar`. Footer numbers of the following slides moved by one (18 slides).
-- English version of the same slide exists separately (`unpruuf_Folie_KeineNummer`); there is no English Business deck yet.
+- **English Business deck added** (`unpruuf_Business_EN`, 18 slides, same source: `decks2.py` with the English texts in `decks2_en.py`, keyed by the German text). It carries the same new slide. Customer material is English + Romanian; the German deck stays for internal use.
+- Old content in all three Business decks, not changed here: "70 automated tests / 15 / 80" on the status slide is out of date (node server now 123, Android 181), and the mailbox/post-office picture has not been switched to the courier picture yet.
 - Not checked by a native speaker (RO). The online artifact links in `presentations/README.md` still show the old version until they are republished.
 
 ---
