@@ -43,14 +43,13 @@ class NodeMeshClient @Inject constructor(
 
         private const val FEED_TIMEOUT_MS = 60_000
 
-        private val ONION_ADDRESS = Regex("^[a-z2-7]{56}\\.onion$")
 
         /** Parses `{"addresses":["x.onion",...]}`; anything that isn't a v3 onion is dropped. */
         fun parsePoolAddresses(body: String): List<String> {
             val match = Regex(""""addresses"\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL).find(body) ?: return emptyList()
             return match.groupValues[1].split(",")
                 .map { it.trim().removeSurrounding("\"") }
-                .filter { ONION_ADDRESS.matches(it) }
+                .filter { NodeMeshManager.isOnionV3Address(it) }
                 .distinct()
         }
 
@@ -282,6 +281,9 @@ class NodeMeshClient @Inject constructor(
         socketTimeoutMs: Int = SOCKET_TIMEOUT_MS,
         authorization: String? = null
     ): HttpResponse {
+        // Last line of defence: nothing but a v3 onion name ever becomes a Host header or a
+        // SOCKS target, whatever a stored contact row or a pasted code may say.
+        require(NodeMeshManager.isOnionV3Address(address)) { "not an onion address" }
         val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", torManager.socksPort))
         Socket(proxy).use { socket ->
             socket.soTimeout = socketTimeoutMs

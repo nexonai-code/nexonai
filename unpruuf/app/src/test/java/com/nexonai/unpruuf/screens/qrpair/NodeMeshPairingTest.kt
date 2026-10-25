@@ -14,8 +14,8 @@ class NodeMeshPairingTest {
         x25519RatchetPublicKeyBase64 = "cmF0Y2hldEtleQ==",
         nodeMeshRoutingSeedBase64 = "cm91dGluZ1NlZWQ=",
         nodeAddresses = listOf(
-            NodeMeshManager.NODE_ADDRESS_PREFIX + "abcdefghijklmnop.onion:80",
-            NodeMeshManager.NODE_ADDRESS_PREFIX + "qrstuvwxyz234567.onion:80"
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2.onion"
         ),
         appEdition = "pro"
     )
@@ -35,7 +35,7 @@ class NodeMeshPairingTest {
 
     @Test
     fun `v1 QR with user id still parses and ignores it`() {
-        val v1 = """{"v":1,"u":"0123456789abcdef0123456789abcdef","p":"bWVzc2FnZUtleQ==","k":"cmF0Y2hldEtleQ==","s":"cm91dGluZ1NlZWQ=","n":"abcdefghijklmnop.onion:80","e":"standard"}"""
+        val v1 = """{"v":1,"u":"0123456789abcdef0123456789abcdef","p":"bWVzc2FnZUtleQ==","k":"cmF0Y2hldEtleQ==","s":"cm91dGluZ1NlZWQ=","n":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion","e":"standard"}"""
         val parsed = jsonToNodeMeshPayload(v1)
         assertNotNull(parsed)
         assertEquals("bWVzc2FnZUtleQ==", parsed!!.messageKeyBase64)
@@ -49,7 +49,7 @@ class NodeMeshPairingTest {
 
     @Test
     fun `missing routing seed is rejected`() {
-        val noSeed = """{"v":2,"p":"a","k":"b","n":"abcdefghijklmnop.onion:80","e":"standard"}"""
+        val noSeed = """{"v":2,"p":"a","k":"b","n":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion","e":"standard"}"""
         assertNull(jsonToNodeMeshPayload(noSeed))
     }
 
@@ -95,5 +95,26 @@ class NodeMeshPairingTest {
         assertEquals("inviteId123", answered.guestInviteId)
         assertEquals(payload.nodeAddresses, answered.nodeAddresses)
         assertEquals(emptyList<String>(), answered.guestGrants)
+    }
+
+    @Test
+    fun `only v3 onion names survive decoding, a code with none is refused`() {
+        val mixed = payload.copy(nodeAddresses = listOf(
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "evil.example.com",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "abcdefghijklmnop.onion:80",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "127.0.0.1"
+        ))
+        val parsed = jsonToNodeMeshPayload(nodeMeshPayloadToJson(mixed))!!
+        assertEquals(listOf(NodeMeshManager.NODE_ADDRESS_PREFIX + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion"), parsed.nodeAddresses)
+        val none = payload.copy(nodeAddresses = listOf(NodeMeshManager.NODE_ADDRESS_PREFIX + "evil.example.com"))
+        assertEquals(null, jsonToNodeMeshPayload(nodeMeshPayloadToJson(none)))
+    }
+
+    @Test
+    fun `a header injection in an address never reaches the host line`() {
+        val json = nodeMeshPayloadToJson(payload).replace("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion", "x.onion\\r\\nX-Evil: 1")
+        val parsed = jsonToNodeMeshPayload(json)
+        assertEquals(listOf(NodeMeshManager.NODE_ADDRESS_PREFIX + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2.onion"), parsed?.nodeAddresses)
     }
 }
