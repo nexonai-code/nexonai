@@ -79,6 +79,7 @@ fun PinSetupScreen(viewModel: LockViewModel) {
                 vmError == LockError.PIN_TOO_SHORT -> stringResource(R.string.lock_err_pin_too_short)
                 vmError == LockError.PANIC_SAME_AS_PIN -> stringResource(R.string.lock_err_panic_same_as_pin)
                 vmError == LockError.WRONG_PIN -> stringResource(R.string.lock_err_wrong_pin)
+                vmError == LockError.PIN_STORE_LOST -> stringResource(R.string.lock_err_store_lost)
                 else -> null
             }
             if (errText != null) {

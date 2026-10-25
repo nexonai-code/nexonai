@@ -5,6 +5,17 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Database key sealed, device transfer off, panic wipe completed (pre-audit H1, M9, M10)
+
+- **H1, database key:** the SQLCipher key of the contacts database (pairing keys, ratchet state) lay in plain Base64 in `db_key_store`/`db_key`, next to the database. It is now sealed under the phone-bound key in the same `k1:` form as `SealedStrings` (`data/db/DbKeyVault.kt`). Existing installs are migrated on the first start: new key sealed and noted first, WAL folded in, copy of the file (`unpruuf_contacts.db.rekey-backup`), `PRAGMA rekey` to a fresh key, reopen with the new key and compare the row count of every table, only then the plain value is replaced and the copy deleted. Any failure puts the copy back and keeps the old key (retried next start); a crash at any step is repaired from the copy on the next start. If the phone key cannot seal, the old key stays in use for now. If a sealed key cannot be opened, the app does not create a new database: it runs empty in memory, leaves the file alone and the lock screen shows the existing "phone key gone, clear the app data" message (`DbKeyState`, `PIN_STORE_LOST`, now also on the setup screen).
+- **M9:** `android:dataExtractionRules` (`res/xml/data_extraction_rules.xml`) excludes every app file from cloud backup and from device-to-device transfer; `allowBackup="false"` stays.
+- **M10:** the database is opened with `PRAGMA secure_delete=ON`. The panic wipe now also removes a pending pairing code (`clearPendingNodeMeshPairing`), empties the outgoing queue and half-received chunked messages (`P2PNetworkManager.forgetAllLocally`), and afterwards checkpoints and truncates the WAL and runs `VACUUM` (`DatabaseScrub`). The panic PIN needs at least 4 digits in the ViewModel too (the setup button already required it).
+- Tests: `DbKeyVaultTest` (15, JVM, simulated file and phone key): fresh install, migration, no plain field left, failed rekey with copy put back, wrong read-back, crash after rekey, crash while writing the key, unwritable key, leftover copy, failed copy, phone key cannot seal, sealed key unreadable, file without key.
+- **Not tested on a device:** the SQLCipher side (`SqlCipherDbFiles`: open with the old key, rekey, read probe, copy and restore), the migration of a real older install, the panic scrub and the transfer exclusion (some vendors' switch tools may ignore it). Should be checked on a phone before the next release.
+- **iOS (Norbert):** H1 does not apply as such (the contacts file key is in the Keychain, `ThisDeviceOnly`). Same idea needed in two places: `ContactStore.fileKey` creates a new key silently when the Keychain entry is missing and the next save overwrites the old file (should not create a new key while an old file exists), and `LockViewModel.swift` checks only the PIN length, the panic PIN length only in the view.
+
+---
+
 ## 2026‑10‑25 · Fixes from the pre-audit (M1, M2, M3, M7) and a dependency advisory
 
 Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed from it: M4 to M6, M8 to M10 (H1 is in progress).

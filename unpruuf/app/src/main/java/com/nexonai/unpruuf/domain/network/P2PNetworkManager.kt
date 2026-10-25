@@ -682,6 +682,15 @@ class P2PNetworkManager @Inject constructor(
         sendLocks.remove(contactId)
     }
 
+    /** Panic PIN: drops every queued outgoing packet and every half-received chunked message, for all contacts. */
+    fun forgetAllLocally() {
+        phoneTempNode.stop()
+        deliveryQueue.clear()
+        chunkReassembly.values.forEach { r -> r.pieces.forEach { it?.fill(0) } }
+        chunkReassembly.clear()
+        sendLocks.clear()
+    }
+
     // Re-sends the intake until the officer's receipt (case number) arrives — the officer may be
     // offline for hours, and its letterbox only looks 48 h back.
     private fun startOfficerIntakeLoop() {

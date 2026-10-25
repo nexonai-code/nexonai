@@ -33,7 +33,10 @@ class LockViewModel @Inject constructor(
     private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases,
     private val groupDao: com.nexonai.unpruuf.data.db.GroupDao,
     private val nodeMeshManager: com.nexonai.unpruuf.domain.network.NodeMeshManager,
-    private val relayManager: com.nexonai.unpruuf.domain.network.RelayManager
+    private val relayManager: com.nexonai.unpruuf.domain.network.RelayManager,
+    private val p2pNetworkManager: com.nexonai.unpruuf.domain.network.P2PNetworkManager,
+    private val database: com.nexonai.unpruuf.data.db.AppDatabase,
+    private val dbKeyState: com.nexonai.unpruuf.data.db.DbKeyState
 ) : ViewModel() {
 
     val isPinSet: Boolean get() = pinManager.isPinSet()
@@ -48,7 +51,10 @@ class LockViewModel @Inject constructor(
 
     /** Ersteinrichtung: normale PIN + Panik-PIN festlegen. */
     fun setupPins(pin: String, panicPin: String): Boolean {
-        if (pin.length < 4) { _error.value = LockError.PIN_TOO_SHORT; return false }
+        // Phone key gone: the contacts database cannot be opened; same answer as an unreadable PIN.
+        if (dbKeyState.lost) { _error.value = LockError.PIN_STORE_LOST; return false }
+        // Same minimum for both: a short panic PIN is easy to hit by accident (or to guess).
+        if (pin.length < 4 || panicPin.length < 4) { _error.value = LockError.PIN_TOO_SHORT; return false }
         if (pin == panicPin) { _error.value = LockError.PANIC_SAME_AS_PIN; return false }
         pinManager.setPins(pin, panicPin)
         appLockManager.unlock()
@@ -57,6 +63,7 @@ class LockViewModel @Inject constructor(
 
     /** Entsperren. Panik-PIN löscht alle Kontakte und öffnet die App leer. */
     fun submitPin(input: String) {
+        if (dbKeyState.lost) { _error.value = LockError.PIN_STORE_LOST; return }
         val result = pinManager.check(input)
         _lockSeconds.value = ((pinManager.lockRemainingMs() + 999) / 1000).toInt()
         when (result) {
@@ -95,12 +102,16 @@ class LockViewModel @Inject constructor(
      * Panic PIN: afterwards the app opens as if it had just been set up. Gone are the contacts and
      * their ratchet sessions and onion keys, the Pro Groups (codes and members), the own nodes with
      * their owner secrets, node lists, feed sources and pool sources, the relay setup, and the
-     * remembered organisation QR (whistleblower). Kept: the PINs themselves, the licence and the
-     * app's own identity keys (they say nothing about whom the user talks to).
+     * remembered organisation QR (whistleblower), a pairing code still waiting to be scanned, and
+     * the outgoing queue and half-received messages in memory. The database is opened with
+     * `secure_delete`, and after the deletes its WAL and free pages are scrubbed (DatabaseScrub).
+     * Kept: the PINs themselves, the licence and the app's own identity keys (they say nothing about
+     * whom the user talks to).
      */
     private suspend fun wipeEverything() {
         messageStore.zeroizeAll()
         withContext(Dispatchers.IO) {
+            p2pNetworkManager.forgetAllLocally()
             contactDao.getAllContactsOnce().forEach {
                 contactDao.deleteById(it.id)
                 ratchetSessionManager.deleteSession(it.id)
@@ -113,6 +124,9 @@ class LockViewModel @Inject constructor(
             relayManager.wipeAll()
             // Whistleblower: the remembered organisation QR goes too — no trace of where to report.
             whistleblowerCases.forgetOrganization()
+            identityManager.clearPendingNodeMeshPairing()
+            // Last: the rows are gone, now remove the copies WAL and free pages would keep.
+            runCatching { com.nexonai.unpruuf.data.db.DatabaseScrub.afterWipe(database.openHelper.writableDatabase) }
         }
     }
 }
