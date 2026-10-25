@@ -2,7 +2,7 @@
 
 For the team (Gabriel, Norbert, Floretta). 25 October 2026. Internal: contains protocol details (patent check running), do not forward.
 
-**What we ask the team to decide:** whether to close F1 now with one planned, incompatible release (option A, or A+ with M4 and M6), or to leave it open and let the audit report it (option B). Until the team agrees, nothing in the wire format changes.
+**What we ask the team to decide:** whether to close F1 now with one planned, incompatible release (option A, or A+ with M6), or to leave it open and let the audit report it (option B). Until the team agrees, nothing in the wire format changes.
 
 ## The finding in two sentences
 
@@ -20,10 +20,10 @@ What we may say to customers today, with no change: hidden from observers of the
 
 ## Options
 
-| | A: pad, then encrypt | A+: A plus M4 and M6 in the same release | B: document only | C: cover packets with a believable length |
+| | A: pad, then encrypt | A+: A plus M6 in the same release (M4 alongside, compatible) | B: document only | C: cover packets with a believable length |
 |---|---|---|---|---|
-| What it closes | F1 and L12: length and cover/real distinction are hidden; everything stored looks random | F1, L12, plus M6 (control signals carried by the ratchet) and M4 (a node operator chaining a contact's tags over days) | Nothing | Part of the cover/real distinction |
-| What breaks | Old and new apps cannot read each other's packets (unless we add a transition) | The same, once | Nothing now; a breaking release later, with a transition | Nothing; real lengths stay visible |
+| What it closes | F1 and L12: length and cover/real distinction are hidden; everything stored looks random | F1, L12 and M6 (control signals carried by the ratchet); M4 (a node operator chaining a contact's tags over days) is fixed alongside, without breaking anything | Nothing | Part of the cover/real distinction |
+| What breaks | Old and new apps cannot read each other's packets (unless we add a transition) | The same, once (M4 breaks nothing) | Nothing now; a breaking release later, with a transition | Nothing; real lengths stay visible |
 | Server and relay | Unchanged (they store blind 4096-byte packets) | Unchanged | Unchanged | Unchanged |
 | Clients to change | Android, Officer app, Web reporter, iOS | The same | None | Android, Officer app, Web reporter, iOS |
 | Audit | The auditor sees the final format | The auditor sees the final format and fewer known weaknesses | The auditor reports F1 as a finding; a second round later | Auditor reports it anyway |
@@ -38,11 +38,11 @@ What we may say to customers today, with no change: hidden from observers of the
 - The report path to the officer (`OfficerCase.sealIntake`, the path without a contact key) needs the same change.
 - Transition, if we want one: try the new format first, fall back to the old one (one extra authentication attempt per packet). Not needed while no customer runs a live system; needed from the first customer on.
 
-## What A+ adds, and why bundle
+## What A+ adds, and what goes alongside
 
 - **M6:** control signals (delete contact, node migration, temp node) today rely on the static outer layer from the pairing code. They would become a payload type inside the ratchet (or carry a MAC derived from the session). The version byte makes room for it.
-- **M4:** the app asks for the whole 26-hour tag window and bundles contacts per node. The change: after the first full fetch ask only for the current and the next hour, fetch each contact separately over its own Tor stream, and spread the requests in time.
-- Why in one release: all three change the same client code and each breaks compatibility. Three separate releases would mean three incompatible updates.
+- **M4 is not part of the incompatible release.** The app asks for the whole 26-hour tag window and bundles contacts per node. The change is on the receiving side only: ask from the hour of the last successful poll up to the next hour (the long window is only needed after the phone was offline), fetch each contact separately over its own Tor stream, and spread the requests in time. Old and new apps keep reading each other, so it can be done before, with or after the release.
+- Why F1 and M6 go in one release: both change the packet and the signal handling in the same client code and both break compatibility. Two separate releases would mean two incompatible updates.
 - M5 (one write key per server for all company devices) is a different design question and is **not** part of this; it needs its own decision (per-device write keys).
 
 ## What it means for each person (all proposals, the team decides together)
