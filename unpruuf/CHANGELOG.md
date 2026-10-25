@@ -16,6 +16,15 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · NexonAI design for all documents and artifacts
+
+- `design/NEXONAI_DESIGN.md`, `nexonai-tokens.css`, `brand/` (logo, favicon): tokens and rules taken from nexonai.ro (ink `#0f2a3a`, blue `#307098`, bright `#90c8e8`, Open Sans, hairlines, 4 px corners). Dark mode derived for artifacts.
+- `design/md_to_html.py`: Markdown to one page in this design (title band, header with logo and wordmark, tables that scroll inside their own box, light and dark). `design/md_to_docx.py`: the same look for Word. `CLAUDE.md` carries the rule for later sessions.
+- The F1 decision sheet, the Tor proposal and the pre-audit report are also published as HTML pages in the new design; the Docs versions stay for inline editing and comments.
+- The audit briefs (.docx) were rebuilt in the new look.
+
+---
+
 ## 2026‑10‑25 · Tor stream isolation per contact (level 1) and own timers per contact (level 3)
 
 - `Socks5.kt`: a SOCKS5 client of our own (RFC 1929 user name and password, host sent as a name, nothing resolved on the phone, fail closed: with credentials only the user-name method is offered, a proxy that skips authentication is refused). No global state (the platform's `java.net.Authenticator` is process-wide and would touch every other connection).
@@ -40,7 +49,7 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 ## 2026‑10‑25 · Audit briefs brought in line with the code (revision of 19 October)
 
 - `evidence/AUDIT_BRIEF_NODE_SERVER.md` and `AUDIT_BRIEF_ANDROID_APP.md` (+ .docx, + the shared Doc): wire format v2 is stated as "not done" (F1 open) instead of a finished precondition; claims reworded where the code did not carry them (write access is "every company device with the node list"; the release fingerprint covers `dist/*.js` and `package.json` only; tags vs a node operator over days; panic PIN and database key; clipboard; eleven permissions, not nine); evidence columns updated for the fixes of 25 October; new limits; new section 9 "What our own pre-audit found" with fixed and open items.
-- `evidence/md_to_docx.py` builds the .docx from the .md (python-docx).
+- `design/md_to_docx.py` builds the .docx from the .md (python-docx; moved from `evidence/` on 25 October and given the NexonAI design).
 - `CLAIMS_TO_EVIDENCE.md` B5: eleven permissions in the merged manifest.
 
 ---

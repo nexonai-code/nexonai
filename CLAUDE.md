@@ -57,6 +57,12 @@ Beispiele:
 - Die Hinweisgeber-Lösung heißt **safeline** (seit 10.10.2026). In neuem Kundenmaterial so nennen, nicht mehr „unpruuf Compliance“ oder „Whistleblower“. Das Grundsystem heißt weiter unpruuf („Wie unpruuf funktioniert“). Deck: `unpruuf/presentations/safeline.py` (EN und RO), Export in `presentations/export/safeline_EN/RO.pdf/.pptx`. App-Namen, Docs und ältere Compliance-Decks sind noch nicht umbenannt.
 - Newsletter-Anmeldungen und Newsletter-Anfragen gehen an **unpruuf@nexonai.ro** (Festlegung vom 11.10.2026). Die Landing Page hat dafür einen Abo-Knopf als E-Mail an diese Adresse, ohne Server-Formular. Der Datenschutztext muss den Newsletter nennen (Einwilligung, Abmeldung per E-Mail), sobald klar ist, womit versendet wird.
 
+## Design für alle Dokumente und Artefakte (von Gabriel festgelegt, 25.10.2026)
+
+- Alles, was ich erstelle (Seiten, Artefakte, Word-Dokumente, Präsentationen, Blätter), folgt dem Design von https://nexonai.ro: weiße Seiten, ein dunkelblauer Titelbalken (`#0f2a3a`), Akzent `#307098` (auf Dunkel `#90c8e8`), Open Sans, enge fette Überschriften, dünne Linien statt Kästen, 4 px Ecken, flach. Tokens, Regeln und Werkzeuge: `unpruuf/design/NEXONAI_DESIGN.md`, `nexonai-tokens.css`, `md_to_html.py`, `md_to_docx.py`, Logos in `design/brand`.
+- Artefakte als HTML-Seite im Design veröffentlichen. Der Docs-Typ (bearbeitbare Dokumente) lässt sich nicht gestalten; ihn nur nehmen, wenn das Team direkt im Dokument schreiben oder kommentieren soll, und das sagen.
+- Die Ehrlichkeitszeile der Seite („Pilotphase, nicht unabhängig auditiert“) bleibt in der Fußzeile von Dokumenten über unpruuf.
+
 ## GDPR (11.10.2026)
 
 - Nie „GDPR-konform“ behaupten. Sagen: Die Architektur unterstützt die Prinzipien (Datenminimierung, Speicherbegrenzung, Vertraulichkeit, Art. 5, 25, 32). Die Organisation ist Verantwortliche (Art. 4 Nr. 7). NexonAI ist normalerweise nicht Auftragsverarbeiter (Art. 28), solange kein Datenzugriff besteht. Einordnung bestätigt ein Jurist oder der Datenschutzbeauftragte.
