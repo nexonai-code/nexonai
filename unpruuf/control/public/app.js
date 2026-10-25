@@ -246,7 +246,7 @@
     openModal(h);
     if (wiz.step === 3) startInstallJob();
   }
-  var wizJob = null;
+  var wizJob = null, wizServerId = null;
   function startInstallJob() {
     var log = document.getElementById('wiz-log');
     if (wizJob) { return; }
@@ -257,7 +257,8 @@
       wizJob = r.json.jobId;
       followJob(wizJob, log, function (j) {
         wizJob = null; wiz.password = '';
-        end.innerHTML = j.state === 'done' ? '<p class="okmsg">' + t('wiz.done') + '</p><button class="btn primary" data-act="close">' + t('close') + '</button>' : '<p class="err">' + esc(errText(j.error)) + '</p><p class="small muted">' + t('wiz.retryhelp') + '</p><button class="btn" data-act="close">' + t('close') + '</button>';
+        wizServerId = j.state === 'done' && j.result ? j.result.serverId : null;
+        end.innerHTML = j.state === 'done' ? '<p class="okmsg">' + t('wiz.done') + '</p><p class="small muted">' + t('wiz.listhelp') + '</p><div class="row">' + (wizServerId ? '<button class="btn primary" data-act="wiz-list" data-id="' + esc(wizServerId) + '">' + t('wiz.getlist') + '</button>' : '') + '<button class="btn" data-act="close">' + t('close') + '</button></div>' : '<p class="err">' + esc(errText(j.error)) + '</p><p class="small muted">' + t('wiz.retryhelp') + '</p><button class="btn" data-act="close">' + t('close') + '</button>';
       });
     });
   }
@@ -347,6 +348,7 @@
       case 'wiz-back': wiz.step = 1; return showWizard();
       case 'wiz-install': wiz.err = ''; wiz.step = 3; wizJob = null; return showWizard();
       case 'details': return showDetails(id);
+      case 'wiz-list': // right after the installation: the addresses may still be in the making
       case 'list': return download('/api/servers/' + id + '/list', 'unpruuf-nodes.txt');
       case 'zip': return download('/api/lists.zip', 'unpruuf-node-lists.zip');
       case 'd-status': return refreshStatus(id).then(function () { showDetails(id); });

@@ -27,7 +27,7 @@ addressed to them. Keep the two conceptually separate.
 4. First start downloads the Tor Expert Bundle (one-time, ~30-50 MB) and bootstraps a real Tor
    connection — the same path the Android app uses, not a LAN shortcut (see "Architecture" below).
    Takes a few seconds to under a minute depending on the network; progress prints live.
-5. The dashboard opens by itself in your browser (`http://localhost:3000`; `OFFICER_OPEN_BROWSER=0` turns that off). With no cases yet, its first screen is the organisation's QR code, with a **Afișează mare** button that shows it full screen for a projector.
+5. The dashboard opens by itself in your browser (`http://localhost:3000/?t=<access key>`, the key is new at every start, see "Dashboard access"; `OFFICER_OPEN_BROWSER=0` turns that off). With no cases yet, its first screen is the organisation's QR code, with a **Afișează mare** button that shows it full screen for a projector.
 
 Don't have or want Tor for a quick local test? Set `RELAY_REACHABLE_BASE_URL` (e.g.
 `http://192.168.1.50:8787`) before starting — this skips Tor entirely and talks directly to the
@@ -135,6 +135,12 @@ routes every relay request through its local SOCKS port — this process reaches
   it refuses to start. This is hardening, not an audit result; plain HTTP on a LAN still shows
   the password and the reports to anyone on that network, so prefer an SSH tunnel to the loopback
   address. `OFFICER_PASSWORD` protects the data at rest.
+  Since 25 Oct 2026 the dashboard also needs an **access key** (32 random bytes, new at every
+  start), so other programs on the same computer cannot read, export or delete cases: in a terminal
+  the link `http://localhost:3000/?t=<key>` is printed and opened (the first visit sets an HttpOnly
+  cookie and goes to the clean address; scripts may send the header `x-officer-token`). Without a
+  terminal (service, redirected output) the key is not printed but written to `dashboard-token`
+  (0600) in the data folder. With `OFFICER_DASHBOARD_PASSWORD` set, both the password and the key apply.
 - **No "Wechsel" (relay-rotation) UI** — a case's generation counter stays 0 unless the reporter's
   own app rotates it, which the poll loop tolerates (small generation window) but the officer
   side can't trigger.

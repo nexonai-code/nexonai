@@ -2,7 +2,7 @@
 
 Diese Regeln gelten nur für unpruuf (alles unter `unpruuf/`). Die allgemeinen Regeln für den Antwortstil stehen in der `CLAUDE.md` im Wurzelordner und gelten hier ebenfalls.
 
-**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-14.md` lesen** (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
+**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-22.md` lesen** (neueste Übergabe) (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
 
 Diese Datei wird in jeder neuen Sitzung geladen. Sie hält fest, was Gabriel ausdrücklich verlangt hat.
 
@@ -27,7 +27,7 @@ Beispiele:
 - Business ist das Hauptprodukt. Compliance nur auf Anfrage.
 - Vor größeren Umbauten an dem, was schon funktioniert, sagen, wie es werden soll, und auf sein Ja warten. Der Kern bleibt klein und einfach: ein Knopf, 250 Briefkästen, Liste exportieren, in der App importieren.
 - Lieferungen mit mehreren Dateien als ZIP mit CHANGELOG.md, Namensschema `unpruuf_<Datum>_v<N>.zip`, bei Sondereditionen mit dem Editionsnamen im Dateinamen (zum Beispiel `unpruuf_TorClientEdition_<Datum>_v<N>.zip`). Branch `android` für die Hauptlinie. Die Tor Client Edition liegt auf dem Branch `tor-client-edition` und wird nur auf ausdrücklichen Wunsch gepusht.
-- Dokumente im Chat nur als Text anzeigen, ohne Erklärungen drumherum. Kurze Antworten, Du-Ansprache, Gabriel beim Namen nennen.
+- Dokumente im Chat nur als Text anzeigen, ohne Erklärungen drumherum. Kurze Antworten (vollständig bei Entscheidungsfragen), Du-Ansprache. Den Namen sparsam und nie als Anrede am Anfang (Regel vom 14.10.2026 in der Wurzel-`CLAUDE.md`).
 - Ehrlichkeit zuerst: nicht auditiert, Pilot, nicht gegen echtes Tor getestet, solange das stimmt. Nie „zertifiziert“, „unknackbar“ oder „DSGVO-konform“ behaupten.
 - Protokolldetails nicht öffentlich nennen (Patentprüfung läuft).
 - Floretta (Marketing) spricht nur Englisch. Alles, was für Floretta bestimmt ist oder an dem sie beteiligt ist (Erklärungen, Texte, Briefings, Kampagnen, Seiten), automatisch auf Englisch liefern, ohne Nachfrage. Für Gabriel selbst bleibt die Antwort im Chat auf Deutsch.
@@ -54,7 +54,7 @@ Beispiele:
 - Nie „GDPR-konform“ behaupten. Sagen: Die Architektur unterstützt die Prinzipien (Datenminimierung, Speicherbegrenzung, Vertraulichkeit, Art. 5, 25, 32). Die Organisation ist Verantwortliche (Art. 4 Nr. 7). NexonAI ist normalerweise nicht Auftragsverarbeiter (Art. 28), solange kein Datenzugriff besteht. Einordnung bestätigt ein Jurist oder der Datenschutzbeauftragte.
 - Datenlandkarte: Server = verschlüsselte Pakete höchstens 24 h, keine Namen/IPs; Telefon = lokal; Officer-Laptop = Falldateien lokal verschlüsselt; Lizenz = offline; Website = keine Cookies.
 - Hinweisgeber: Richtlinie 2019/1937 Art. 16 (Vertraulichkeit), 17 (DSGVO gilt, Irrelevantes löschen), 18 (Aufbewahrung nur so lange nötig).
-- Bekannte Lücke: Das Officer-Dashboard kann einen einzelnen Fall noch nicht löschen oder exportieren. Offen nennen, bis gebaut.
+- Officer-Dashboard: Einzelfall löschen und als Datei exportieren gibt es seit 19.10.2026 (beide Editionen, getestet). Noch offen: ein Export über alle Fälle; die Fehlermeldungen des Servers sind nur rumänisch (die Oberfläche selbst ist RO/EN).
 - Material: Deck-Folie 11 (GDPR), Whitepaper Kapitel 9, Landing-Page-Bereich GDPR (RO/EN).
 
 ## Produkte und Stand (12.10.2026, von Gabriel bestätigt)

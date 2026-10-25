@@ -133,4 +133,17 @@ class RatchetFrameTest {
         // ChunkCont with index 0 — reserved for ChunkStart's own piece, never valid on the wire.
         assertNull(RatchetFrame.decode(byteArrayOf(RatchetFrame.KIND_CHUNK_CONT, 0, 0, 0, 0, 9, 9)))
     }
+
+    @Test
+    fun `a chunk start that announces an absurd number of pieces is refused`() {
+        fun start(total: Int) = byteArrayOf(RatchetFrame.KIND_CHUNK_START) +
+            byteArrayOf((total ushr 24).toByte(), (total ushr 16).toByte(), (total ushr 8).toByte(), total.toByte()) +
+            header.encode() + ByteArray(10)
+        assertNull(RatchetFrame.decode(start(Int.MAX_VALUE)))
+        assertNull(RatchetFrame.decode(start(RatchetFrame.MAX_TOTAL_CHUNKS + 1)))
+        assertEquals(RatchetFrame.MAX_TOTAL_CHUNKS, (RatchetFrame.decode(start(RatchetFrame.MAX_TOTAL_CHUNKS)) as RatchetFrame.Frame.ChunkStart).totalChunks)
+        // A piece index beyond the limit is refused as well.
+        val cont = byteArrayOf(RatchetFrame.KIND_CHUNK_CONT, 0, 0, 0x7f, 0x7f.toByte()) + ByteArray(5)
+        assertNull(RatchetFrame.decode(cont))
+    }
 }

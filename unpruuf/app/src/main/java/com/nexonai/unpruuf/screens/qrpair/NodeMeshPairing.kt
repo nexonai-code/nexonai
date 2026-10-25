@@ -66,9 +66,7 @@ fun jsonToNodeMeshPayload(json: String): NodeMeshPairingPayload? {
         val n = map["n"] ?: return null
         val addresses = unescapeNodeMesh(n).split(";")
             .map { it.trim() }
-            .map { it.lowercase() }
-            // Only v3 onion names: anything else in a code is dropped, never connected to.
-            .filter { NodeMeshManager.isOnionV3Address(it) }
+            .filter { com.nexonai.unpruuf.domain.network.NodeMeshClient.isNodeAddress(it) }
             .map { NODE_ADDRESS_PREFIX + it }
             .take(NodeMeshManager.NODE_POOL_MAX_SIZE)
         if (addresses.isEmpty()) return null

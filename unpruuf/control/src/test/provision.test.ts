@@ -10,6 +10,7 @@ import { LicenseInventory } from "../licenses";
 import { Vault, ServerRecord } from "../vault";
 import { FakeVps, VpsOptions, appCode, makeBundle, newKeys, serverCode, tmpDir } from "./helpers";
 import { Remote, generateServerKey } from "../ssh";
+import { keyTarget } from "../provision";
 
 const keys = newKeys();
 
@@ -136,6 +137,27 @@ test("the setup page was reached with the loopback host and the admin header, ne
   await addAndInstall(t.ctx, await t.input());
   assert.ok(t.fake.admin.requests.length >= 3);
   assert.ok(t.fake.admin.requests.every((r) => ["/status.json", "/license"].includes(r.url)));
+  t.done();
+});
+
+test("every call to the setup page carries the access token, and a restart (new token) is picked up", async () => {
+  const t = await setup();
+  const rec = await addAndInstall(t.ctx, await t.input());
+  assert.equal(t.fake.admin.refusedForToken, 0, "no request went out without the token");
+  // One connection, the server restarts in between (new token): the next call is refused once, asks again, works.
+  const remote = await Remote.connect(keyTarget(rec));
+  try {
+    assert.equal((await remote.httpAdmin("GET", "/status.json")).status, 200);
+    t.fake.admin.token = t.fake.admin.token.slice(0, 40) + "AAA";
+    assert.equal((await remote.httpAdmin("GET", "/status.json")).status, 200);
+    assert.equal(t.fake.admin.refusedForToken, 1, "exactly one refusal, then the new token worked");
+  } finally { remote.close(); }
+  // A fresh connection reads the current token straight away.
+  t.fake.admin.token = t.fake.admin.token.slice(0, 40) + "BBB";
+  const status = await getStatus(t.ctx, rec);
+  assert.equal(status.reachable, true);
+  assert.equal(status.level, "ok");
+  assert.equal(t.fake.admin.refusedForToken, 1);
   t.done();
 });
 

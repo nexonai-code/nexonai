@@ -1,5 +1,7 @@
 # F1: Länge im Klartext im gespeicherten Paket. Stand und Plan
 
+**Entscheidungsblatt für das Team (Englisch, Stand 25.10.2026, mit M4/M6/L12): `F1_DECISION_SHEET_2026-10-25.md`.**
+
 **Stand 19.10.2026: offen. Gabriel hat „noch nicht“ gesagt. Nichts ändern, bis das Team (Gabriel, Norbert, Floretta) zugestimmt hat.** Internes Dokument (Protokolldetails, Patentprüfung läuft).
 
 ## Befund

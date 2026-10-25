@@ -1,6 +1,7 @@
 import express, { Express } from "express";
 import QRCode from "qrcode";
 import { loopbackOnly } from "../admin/adminApp";
+import { ADMIN_TOKEN_HEADER, tokenMatches } from "../admin/adminToken";
 import { TokenBucket } from "../middleware/rateLimit";
 import { buildFeedCode, FeedCode } from "./feedCrypto";
 import { FeedOnionStatus } from "./feedOnion";
@@ -9,8 +10,38 @@ import { FeedStore } from "./feedStore";
 /**
  * Setup page of the list feed — on the company's own server, reachable only from that computer
  * (loopback + Host check, same guard as the node setup page; every action also needs the custom
- * header, so a web page in the admin's browser cannot trigger anything).
+ * header, so a web page in the admin's browser cannot trigger anything). With an access token
+ * (every real start, see feedIndex.ts and admin/adminToken.ts) nothing answers without it.
  */
+
+/**
+ * Own cookie name: browsers do not separate cookies by port, so the node setup page (localhost:8790)
+ * and this page (localhost:8841) would overwrite each other's `unpruuf_admin_token`. Otherwise the
+ * same rules as adminTokenGuard: header, cookie, or `?t=` on a GET (sets the cookie, redirects).
+ */
+const FEED_COOKIE = "unpruuf_feed_token";
+
+function cookieValue(header: string | undefined, name: string): string | undefined {
+  for (const part of (header ?? "").split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
+  }
+  return undefined;
+}
+
+export function feedTokenGuard(token: string) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (tokenMatches(req.header(ADMIN_TOKEN_HEADER), token) || tokenMatches(cookieValue(req.headers.cookie, FEED_COOKIE), token)) {
+      return next();
+    }
+    const t = typeof req.query.t === "string" ? req.query.t : undefined;
+    if (req.method === "GET" && tokenMatches(t, token)) {
+      res.setHeader("Set-Cookie", `${FEED_COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/`);
+      return res.redirect(302, req.path);
+    }
+    return res.status(403).send("forbidden");
+  };
+}
 
 export interface FeedAdminState {
   store: FeedStore;
@@ -38,10 +69,11 @@ export function statusPayload(state: FeedAdminState) {
   };
 }
 
-export function createFeedAdminApp(state: FeedAdminState, adminPort: number): Express {
+export function createFeedAdminApp(state: FeedAdminState, adminPort: number, accessToken?: string): Express {
   const app = express();
   app.disable("x-powered-by");
   app.use(loopbackOnly(adminPort));
+  if (accessToken) app.use(feedTokenGuard(accessToken));
   // Passphrase attempts are slow on purpose (scrypt) and rate limited besides.
   const attempts = new TokenBucket(6, 0.1);
   const guard = (req: express.Request, res: express.Response): boolean => {

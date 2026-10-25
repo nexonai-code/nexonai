@@ -4,6 +4,10 @@ import * as http from "http";
 import type { AddressInfo } from "net";
 import { createAdminApp, isLocalPeer, isLoopbackHost, ownerConnectionString, ownerSecretFromCode } from "./adminApp";
 import { PROFILES } from "../profiles";
+import { adminTokenGuard, createAdminToken, tokenMatches, writeAdminToken } from "./adminToken";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 
 function request(port: number, host: string, path: string): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
@@ -410,4 +414,89 @@ test("the setup page saves the company's Tor bridge, shows it, puts it into the 
 test("the setup page only accepts connections from this computer or a private network, not a public address", () => {
   for (const ok of ["127.0.0.1", "::1", "::ffff:127.0.0.1", "172.17.0.1", "10.0.0.5", "192.168.1.20", "::ffff:172.18.0.1"]) assert.equal(isLocalPeer(ok), true, ok);
   for (const bad of ["8.8.8.8", "172.32.0.1", "11.0.0.1", "2001:db8::1", "", undefined]) assert.equal(isLocalPeer(bad as string | undefined), false, String(bad));
+});
+
+function get(port: number, host: string, pathAndQuery: string, headers: Record<string, string> = {}): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, path: pathAndQuery, headers: { host, ...headers } }, (res) => {
+      let body = "";
+      res.on("data", (c) => (body += c));
+      res.on("end", () => resolve({ status: res.statusCode!, body, headers: res.headers }));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+test("with an access token the setup page answers nobody without it, even a neighbour that sends a loopback Host", async () => {
+  const server = http.createServer();
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const port = (server.address() as AddressInfo).port;
+  server.close();
+  const token = createAdminToken();
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "owner-secret-xyz",
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      messagesInRam: false,
+      torEnabled: true,
+      publicAddress: () => "abcdef.onion",
+      torStatus: () => ({ state: "ready", bootstrapPercent: 100, onionAddress: "abcdef.onion", onionAddresses: ["abcdef.onion"], controlAddress: null, locked: false, restarts: 0, lastError: null, powEnabled: true }),
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+    },
+    port,
+    token,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  const host = `localhost:${port}`;
+  try {
+    for (const p of ["/status.json", "/overview.json", "/", "/overview"]) {
+      const r = await get(port, host, p);
+      assert.equal(r.status, 403, p);
+      assert.doesNotMatch(r.body, /owner-secret-xyz/);
+    }
+    assert.equal((await get(port, host, "/status.json", { "x-unpruuf-admin-token": "wrong" })).status, 403);
+    assert.equal((await get(port, host, "/status.json?t=" + "x".repeat(500))).status, 403);
+    assert.equal((await get(port, host, "/status.json", { cookie: "unpruuf_admin_token=wrong" })).status, 403);
+
+    // The customer tool: header.
+    const viaHeader = await get(port, host, "/status.json", { "x-unpruuf-admin-token": token });
+    assert.equal(viaHeader.status, 200);
+    assert.match(viaHeader.body, /owner-secret-xyz/);
+
+    // A person: the printed link sets a cookie and goes to the clean address.
+    const link = await get(port, host, `/?t=${token}`);
+    assert.equal(link.status, 302);
+    assert.equal(link.headers.location, "/");
+    const cookie = String(link.headers["set-cookie"]);
+    assert.match(cookie, /HttpOnly/);
+    assert.match(cookie, /SameSite=Strict/);
+    const page = await get(port, host, "/", { cookie: cookie.split(";")[0] });
+    assert.equal(page.status, 200);
+
+    // The token in the address works for reading only: a POST cannot be started from a link.
+    const post403 = await post(port, host, `/rotate-owner-secret?t=${token}`, { "x-unpruuf-admin": "1" });
+    assert.equal(post403.status, 403);
+  } finally {
+    listener.close();
+  }
+});
+
+test("the access token is random, compared in constant time and written 0600", () => {
+  const a = createAdminToken();
+  const b = createAdminToken();
+  assert.notEqual(a, b);
+  assert.ok(a.length >= 43);
+  assert.equal(tokenMatches(a, a), true);
+  assert.equal(tokenMatches(a, b), false);
+  assert.equal(tokenMatches(undefined, a), false);
+  assert.equal(tokenMatches("", a), false);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "admin-token-"));
+  const file = path.join(dir, "admin-token");
+  writeAdminToken(file, a);
+  assert.equal(fs.readFileSync(file, "utf8").trim(), a);
+  if (process.platform !== "win32") assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  assert.equal(typeof adminTokenGuard(a), "function");
 });

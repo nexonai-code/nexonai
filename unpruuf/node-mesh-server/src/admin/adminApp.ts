@@ -1,3 +1,4 @@
+import { adminTokenGuard } from "./adminToken";
 import express, { Express, NextFunction, Request, Response } from "express";
 import QRCode from "qrcode";
 import { OnionStatus } from "../tor/onionService";
@@ -170,10 +171,12 @@ export async function overviewPayload(state: AdminState) {
   };
 }
 
-export function createAdminApp(state: AdminState, adminPort: number): Express {
+export function createAdminApp(state: AdminState, adminPort: number, accessToken?: string): Express {
   const app = express();
   app.disable("x-powered-by");
   app.use(loopbackOnly(adminPort));
+  // With a token (every real start, see adminToken.ts) nothing on this page answers without it.
+  if (accessToken) app.use(adminTokenGuard(accessToken));
 
   app.get("/status.json", async (_req, res) => {
     res.json(await statusPayload(state));

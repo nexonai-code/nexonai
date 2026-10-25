@@ -21,6 +21,14 @@ export function createApp(
   const app = express();
   // Do not announce the web framework to anyone who asks.
   app.disable("x-powered-by");
+  // Nothing that identifies the framework: no ETag, exact paths, and no answer to HEAD or OPTIONS.
+  app.set("etag", false);
+  app.set("case sensitive routing", true);
+  app.set("strict routing", true);
+  app.use((req, res, next) => {
+    if (req.method === "HEAD" || req.method === "OPTIONS") return res.status(404).json({ error: "not found" });
+    next();
+  });
   // 16kb comfortably covers a base64'd 4096-byte ciphertext (~5.5kb) plus JSON/tag overhead,
   // same reasoning as the consumer relay's own app.ts.
   app.use(express.json({ limit: "16kb" }));
@@ -49,6 +57,8 @@ export function createApp(
   // the owner secret, and it reveals nothing (no tags, no blobs, no auth-guessing surface).
   app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
   app.use(nodeRouter(store, ownerSecret, addresses, lock, guest, new GuestQuota(GUEST_MAX_DEPOSITS_PER_HOUR, GUEST_MAX_BYTES_PER_HOUR)));
+  // Everything else: the same short answer for every method and path (Express's own page names it).
+  app.use((_req, res) => res.status(404).json({ error: "not found" }));
   // Anything that goes wrong before or inside a route (broken JSON, a body over the limit) gets a
   // short JSON error and nothing else — Express's default handler would send a stack trace with
   // the framework's and the program's file paths to any caller.

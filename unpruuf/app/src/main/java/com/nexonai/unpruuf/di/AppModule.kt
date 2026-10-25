@@ -4,8 +4,15 @@ import android.content.Context
 import androidx.room.Room
 import com.nexonai.unpruuf.data.db.AppDatabase
 import com.nexonai.unpruuf.data.db.ContactDao
+import com.nexonai.unpruuf.data.db.DbKeyResult
+import com.nexonai.unpruuf.data.db.DbKeyState
+import com.nexonai.unpruuf.data.db.DbKeyVault
 import com.nexonai.unpruuf.data.db.GroupDao
 import com.nexonai.unpruuf.data.db.RatchetStateDao
+import com.nexonai.unpruuf.data.db.SecureDeleteHook
+import com.nexonai.unpruuf.data.db.SharedPrefsDbKeyPrefs
+import com.nexonai.unpruuf.data.db.SqlCipherDbFiles
+import com.nexonai.unpruuf.domain.network.CryptoManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,21 +26,37 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
+    private const val DB_NAME = "unpruuf_contacts.db"
+
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+    fun provideAppDatabase(
+        @ApplicationContext context: Context,
+        crypto: CryptoManager,
+        keyState: DbKeyState
+    ): AppDatabase {
         SQLiteDatabase.loadLibs(context)
-        val passphrase = getOrCreateDbKey(context)
-        val factory = SupportFactory(passphrase)
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "unpruuf_contacts.db"
-        )
-            .openHelperFactory(factory)
-            .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12, com.nexonai.unpruuf.data.db.MIGRATION_12_13, com.nexonai.unpruuf.data.db.MIGRATION_13_14, com.nexonai.unpruuf.data.db.MIGRATION_14_15)
-            .fallbackToDestructiveMigration()
-            .build()
+        // The SQLCipher key is sealed under the phone-bound key; a plain key from an older version
+        // is migrated here once (rekey to a fresh key, with a file copy as safety net). See DbKeyVault.
+        val result = DbKeyVault(
+            prefs = SharedPrefsDbKeyPrefs(context.getSharedPreferences(DbKeyVault.PREFS_NAME, Context.MODE_PRIVATE)),
+            files = SqlCipherDbFiles(context.getDatabasePath(DB_NAME)),
+            seal = { crypto.encrypt(it) },
+            open = { crypto.decrypt(it) }
+        ).resolve()
+        return when (result) {
+            is DbKeyResult.Ready -> Room.databaseBuilder(context, AppDatabase::class.java, DB_NAME)
+                .openHelperFactory(SupportFactory(result.passphrase, SecureDeleteHook))
+                .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12, com.nexonai.unpruuf.data.db.MIGRATION_12_13, com.nexonai.unpruuf.data.db.MIGRATION_13_14, com.nexonai.unpruuf.data.db.MIGRATION_14_15)
+                .fallbackToDestructiveMigration()
+                .build()
+            is DbKeyResult.Lost -> {
+                // Phone key gone: never create a new file over the old one. The app runs on an empty
+                // database in memory and the lock screen asks to clear the app data (PIN_STORE_LOST).
+                keyState.markLost()
+                Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+            }
+        }
     }
 
     @Provides
@@ -44,19 +67,4 @@ object AppModule {
 
     @Provides
     fun provideRatchetStateDao(db: AppDatabase): RatchetStateDao = db.ratchetStateDao()
-
-    private fun getOrCreateDbKey(context: Context): ByteArray {
-        val prefs = context.getSharedPreferences("db_key_store", Context.MODE_PRIVATE)
-        val stored = prefs.getString("db_key", null)
-        return if (stored != null) {
-            android.util.Base64.decode(stored, android.util.Base64.DEFAULT)
-        } else {
-            val key = ByteArray(32)
-            java.security.SecureRandom().nextBytes(key)
-            prefs.edit()
-                .putString("db_key", android.util.Base64.encodeToString(key, android.util.Base64.DEFAULT))
-                .apply()
-            key
-        }
-    }
 }

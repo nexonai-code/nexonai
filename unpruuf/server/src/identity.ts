@@ -38,7 +38,9 @@ export function loadOrCreateIdentity(identityPath: string, defaultTtlHours: numb
 
 export function saveIdentity(identityPath: string, identity: RelayIdentity): void {
   fs.mkdirSync(path.dirname(identityPath), { recursive: true });
-  fs.writeFileSync(identityPath, JSON.stringify(identity, null, 2), "utf8");
+  // The file holds the bearer token: owner-only on Linux/macOS (Windows ignores the mode).
+  fs.writeFileSync(identityPath, JSON.stringify(identity, null, 2), { encoding: "utf8", mode: 0o600 });
+  try { fs.chmodSync(identityPath, 0o600); } catch { /* Windows: no POSIX modes */ }
 }
 
 /** Forces a fresh token (e.g. "credentials compromised, rotate them") while keeping the TTL. */

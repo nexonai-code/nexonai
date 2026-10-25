@@ -3,9 +3,11 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { Server } from "http";
+import { spawn } from "child_process";
 import QRCode from "qrcode";
 import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
+import { ADMIN_TOKEN_FILE, createAdminToken, writeAdminToken } from "./admin/adminToken";
 import { NodeStore } from "./store/nodeStore";
 import {
   ADMIN_PORT, BRIDGE_LINES_PATH, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM, PACKAGE_ROOT, REQUIRE_SIGNED,
@@ -17,7 +19,11 @@ import {
 import { NodeOnionService } from "./tor/onionService";
 import { Metrics } from "./metrics";
 import { LicenseGuard } from "./license";
+import { loweredProtection } from "./loweredProtection";
 import { describeIntegrity, IntegrityResult, verifyIntegrity } from "./integrity";
+
+// Files the server writes are readable by its own user only (the database holds waiting packets).
+process.umask(0o077);
 
 // Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
 // Tor's own working files go to a throwaway temp folder that is deleted on exit.
@@ -31,7 +37,11 @@ if (ephemeral) {
   identity = createEphemeralIdentity(NODE_PROFILE.ttlHours);
   torWorkDir = fs.mkdtempSync(path.join(os.tmpdir(), "unpruuf-tempnode-"));
 } else {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+  // A folder or database from an older start may be more open than the umask now makes new files.
+  for (const f of [DATA_DIR, DB_PATH, DB_PATH + "-wal", DB_PATH + "-shm"]) {
+    try { fs.chmodSync(f, f === DATA_DIR ? 0o700 : 0o600); } catch { /* not there (yet), or not ours to change */ }
+  }
   const loaded = loadOrCreateIdentity(IDENTITY_PATH, NODE_PROFILE.ttlHours, KEY_STORAGE);
   identity = loaded.identity;
   wasCreated = loaded.wasCreated;
@@ -123,6 +133,12 @@ const metrics = new Metrics();
 const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics, () => license.depositBlocked(), { enabled: GUEST_GRANTS_ENABLED, maxValidityMs: GUEST_MAX_VALIDITY_MS });
 console.log(`[guests] guest grants ${GUEST_GRANTS_ENABLED ? "ENABLED" : "off"}`);
 
+// Second factor of the setup page (admin/adminToken.ts): new at every start. Not in the logs of a
+// service; the customer's tool reads the file over its own login.
+const adminToken = createAdminToken();
+const adminTokenPath = path.join(DATA_DIR, ADMIN_TOKEN_FILE);
+if (!ephemeral) writeAdminToken(adminTokenPath, adminToken);
+
 const adminApp = createAdminApp(
   {
     getOwnerSecret: () => identity.ownerSecret,
@@ -163,7 +179,10 @@ const adminApp = createAdminApp(
     },
   },
   ADMIN_PORT,
+  adminToken,
 );
+
+for (const note of loweredProtection(process.env)) console.warn(`[settings] ${note}`);
 
 const kind = ephemeral
   ? "Temp Node"
@@ -179,8 +198,23 @@ if (sealed && isLocked(identity)) {
   console.log("[keys] sealed storage — after a restart this server stays locked until your app unlocks it");
 }
 
+function openInBrowser(url: string): void {
+  try {
+    const [cmd, args] = process.platform === "win32" ? ["cmd", ["/c", "start", "", url]]
+      : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
+    spawn(cmd as string, args as string[], { detached: true, stdio: "ignore" }).on("error", () => { /* no browser here: the link is printed above */ }).unref();
+  } catch { /* the link is printed above */ }
+}
+
 const adminServer: Server = adminApp.listen(ADMIN_PORT, adminBind, () => {
-  console.log(`[setup] open http://localhost:${ADMIN_PORT} on THIS computer to connect your app (owner QR)`);
+  if (process.stdout.isTTY || process.env.NODE_MESH_PRINT_OWNER_CODE === "1") {
+    console.log(`[setup] open http://localhost:${ADMIN_PORT}/?t=${adminToken} on THIS computer to connect your app (owner QR)`);
+    // start.bat asks for it: the browser is opened from here, so the token never has to leave this process.
+    if (process.env.NODE_MESH_OPEN_BROWSER === "1") openInBrowser(`http://localhost:${ADMIN_PORT}/?t=${adminToken}`);
+  } else {
+    console.log(`[setup] the setup page on port ${ADMIN_PORT} needs an access token. It is not printed here because this output is not a terminal;`);
+    console.log(`[setup] it is in ${adminTokenPath} (new at every start). Open http://localhost:${ADMIN_PORT}/?t=<token> on THIS computer.`);
+  }
 });
 
 // The owner code is the write credential for every node, so it goes to the console only when a
@@ -231,6 +265,7 @@ function startService(): void {
         if (all.length > 1) console.log(`[tor] ${all.length} onion addresses registered, first: ${address} (Tor proof-of-work defense on)`);
         else console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
         if (ephemeral || wasCreated) await printOwnerCode(address);
+        if (!ephemeral) console.log(`[list] node list for your app (all ${all.length} nodes in one file): run ${process.platform === "win32" ? "export-list.bat" : "./export-list.sh"} in this folder, or use the setup page. Control fetches it with one click.`);
       })
       .catch((err) => {
         console.error(`[tor] could not start yet: ${(err as Error).message}`);
@@ -266,10 +301,10 @@ logLicense();
 setInterval(logLicense, 60 * 60 * 1000).unref();
 
 // The only deletion path (NODE_MESH_SPEC.md §4) — Reset below never touches message data.
-setInterval(() => {
-  const removed = store.sweepExpired();
-  if (removed > 0) console.log(`[sweep] removed ${removed} expired blob(s)`);
-}, SWEEP_INTERVAL_MS).unref();
+// Not logged: a line per minute of traffic would leave a timeline of the server's use in docker logs
+// or the service journal for months. The counts are in the overview (metrics.ts), in memory.
+store.sweepExpired(); // once right at the start: packets that expired while the server was off go now
+setInterval(() => { store.sweepExpired(); }, SWEEP_INTERVAL_MS).unref();
 
 // NODE_MESH_SPEC.md §5 staggered Reset — connection/socket hygiene only: drop idle HTTP
 // keep-alive sockets, confirm the onion service is still registered (re-add with the same key if

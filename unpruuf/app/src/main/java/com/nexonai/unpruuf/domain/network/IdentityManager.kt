@@ -89,13 +89,13 @@ class IdentityManager @Inject constructor(
         prefs.edit().putString("display_name", name).apply()
     }
 
-    // Rotation factor rotiert stündlich (GRAL Säule 3)
+    // A fresh random value for each pairing payload (QR field `rotationFactor`). It is carried to
+    // the contact and stored, but no key is derived from it (see RatchetSessionManager). The old
+    // code seeded SHA1PRNG with the hour, which on Android 7+ does not make it deterministic and
+    // read like an hourly shared secret that never existed.
     fun getCurrentRotationFactor(): String {
-        val hourBucket = System.currentTimeMillis() / (60 * 60 * 1000L)
-        val random = SecureRandom.getInstance("SHA1PRNG")
-        random.setSeed(hourBucket.toString().toByteArray())
         val bytes = ByteArray(16)
-        random.nextBytes(bytes)
+        SecureRandom().nextBytes(bytes)
         return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
     }
 
@@ -260,6 +260,14 @@ class IdentityManager @Inject constructor(
         md.update(a); md.update(b)
         return md.digest()
     }
+
+    /**
+     * The SOCKS user name that keeps one contact's Tor traffic on circuits of its own (stream isolation,
+     * see [Socks5]). A keyed hash of the contact id under a device secret, so the id itself never appears
+     * as a user name, and two contacts can never be tied together through it. Stays on the phone.
+     */
+    fun torIsolationKeyFor(contactId: String): String =
+        TorIsolation.keyFor(myNodeMeshRoutingSeed, contactId)
 
     private fun hmac(key: ByteArray, msg: String): String =
         android.util.Base64.encodeToString(hmacBytes(key, msg), android.util.Base64.NO_WRAP)

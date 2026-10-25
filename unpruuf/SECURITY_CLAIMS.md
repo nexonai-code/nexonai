@@ -154,11 +154,11 @@ strong, checkable claim precisely because it's an absence, not a defense.
 | Claim | Why it's provable |
 |---|---|
 | **NexonAI runs no server, and no server holds readable messages.** | Messaging goes either directly between two devices (Tor/LAN sockets) or, in Business and Pro Groups, through a node server that the *customer* runs (`node-mesh-server`, the relay, an Android or phone Temp Node). That server holds end-to-end encrypted 4096-byte packets for at most 24 hours (unreadable to everyone after the lifetime, physically overwritten within about a minute after) and stores no name, no IP address and no key. It cannot read a message, but it exists and can be seized: an operator or whoever seizes it sees packet counts, timing and — finding F1 — the payload length of each stored packet. There is no NexonAI-operated infrastructure to compromise. |
-| **unpruuf itself never writes message content to disk.** | Messages live only in `InMemoryMessageStore`, a Kotlin `Map` in process RAM. There is no file I/O, no database table, no cache path for message bytes anywhere in the send/receive/store code. (Only *contacts* — not messages — are persisted, and that store is SQLCipher-encrypted.) |
+| **unpruuf itself never writes message content to disk.** | Messages live only in `InMemoryMessageStore`, a Kotlin `Map` in process RAM. There is no file I/O, no database table, no cache path for message bytes anywhere in the send/receive/store code. (Only *contacts* — not messages — are persisted, and that store is SQLCipher-encrypted. Until 2026‑10‑25 its key lay in plain text beside it in the app settings, so a copy of the app's files could open it; since then the key is sealed under the phone-bound key, see the row on key material below.) |
 | **Deleting a chat overwrites the RAM buffer with zeros before dropping the reference.** | `RamMessage.zeroize()` explicitly writes `0` into every byte of the content array before nulling it, rather than just dereferencing it and hoping the garbage collector clears it. It clears that one byte array only: a `String` made from it for the screen (Compose) is a separate copy that the runtime frees later and that cannot be zeroed. |
 | **The app never learns or stores a self-chosen username.** | There is no username field, model, or UI for it — a contact is identified only by a key pair and a name *they* assign locally. |
 | **Every edition presents a different on-wire ID to every contact.** | The identity sent over the socket is derived per-(contact, hour), not the same for all contacts — verifiable in `IdentityManager.myWireId()` and its call sites. |
-| **Private key material and the secrets of own nodes are never stored in plaintext at rest.** | The ratchet identity private key, Tor hidden-service private keys, per-contact onion private keys, and our message-decryption key are encrypted before being written to disk. iOS has always done this via the hardware-backed Keychain (`KeychainStore.swift`). Android closed the same gap on 2026-08-27: these values are now encrypted with `CryptoManager`'s Android Keystore-backed AEAD before being written to `SharedPreferences` — see `IdentityManager.kt`. Before this date, Android stored these values in plain `SharedPreferences`, readable via root or an `adb backup`; this row was not yet true for Android. Since 2026‑10‑19 the same holds for the owner secrets of the user's own nodes, node lists, feed keys, control addresses and the relay address, token and backup relays (`SealedStrings`, same phone-bound key). Older plain values are upgraded on first read. Not covered: bridge lines (`BridgeManager`) and the pasted organisation QR (`WhistleblowerCases`), which are not write credentials. |
+| **Private key material and the secrets of own nodes are never stored in plaintext at rest.** | The ratchet identity private key, Tor hidden-service private keys, per-contact onion private keys, and our message-decryption key are encrypted before being written to disk. iOS has always done this via the hardware-backed Keychain (`KeychainStore.swift`). Android closed the same gap on 2026-08-27: these values are now encrypted with `CryptoManager`'s Android Keystore-backed AEAD before being written to `SharedPreferences` — see `IdentityManager.kt`. Before this date, Android stored these values in plain `SharedPreferences`, readable via root or an `adb backup`; this row was not yet true for Android. Since 2026‑10‑19 the same holds for the owner secrets of the user's own nodes, node lists, feed keys, control addresses and the relay address, token and backup relays (`SealedStrings`, same phone-bound key). Older plain values are upgraded on first read. Not covered: bridge lines (`BridgeManager`) and the pasted organisation QR (`WhistleblowerCases`), which are not write credentials. Since 2026‑10‑25 the SQLCipher key of the contacts database (which holds the per-contact pairing keys and the ratchet state) is also sealed (`k1:` form, `DbKeyVault`, same phone-bound key). Before, it lay in plain Base64 in `db_key_store`; on the first start of the new version the database is re-encrypted to a fresh key (`PRAGMA rekey`, with a file copy that is put back on any failure) and the plain value is removed only after the new key has opened the file and read every table. If the phone key cannot be read, the app does not create a new database: it runs empty in memory, leaves the file untouched and shows the existing "phone key gone, clear the app data" message. Device-to-device transfer and cloud backup exclude all app files (`data_extraction_rules.xml`). The sequence is covered by JVM unit tests against a simulated file (`DbKeyVaultTest`); the SQLCipher side (`SqlCipherDbFiles`) and the migration on a real phone are **not yet tested on a device**. Limit that remains: the old plain key and old file blocks may survive in flash storage that the app cannot overwrite; the re-encryption makes that old key useless for the current file, not for a copy taken before the update. |
 
 ---
 
@@ -188,7 +188,9 @@ between a proof and a strong mitigation.
   for 30 s, doubling per further wrong try up to 1 h, and the stored hashes
   are encrypted under the phone's Keystore key, so a copy of the app files
   alone does not allow guessing the PIN offline. The counter lives in the app
-  storage and the device clock; someone with root can reset it, and then the
+  storage; the pause is timed by the wall clock and, since 25 Oct 2026, also
+  by the monotonic clock, so moving the date forward does not shorten it (until
+  the phone is restarted). Someone with root can reset the counter, and then the
   PIN's own entropy is the limit (see the math in the Limitations section).
   If the phone's key is lost (restore, lock-screen reset on some devices), the
   PIN hashes cannot be opened and the app says so; the only way out is
@@ -198,7 +200,9 @@ between a proof and a strong mitigation.
   reduced size (`SafeImage`). Before 2026‑10‑19 a contact with a modified app
   could crash the app with a tiny file that claimed a huge picture.
 - **Clipboard.** Group codes, case numbers and (debug/whistleblower) pairing
-  codes are copied marked sensitive and removed after 60 s if still ours.
+  codes are copied marked sensitive and removed after 60 s, unless the clipboard can be read
+  and holds something else (since 25 Oct 2026; before, an app in the background could not read it
+  and left the code there). Not yet tested on a device.
   Android 12 and older cannot hide a clip from other foreground apps; the
   automatic removal is the only protection there.
 - **Debug builds are not for customers.** They are debuggable (data readable
@@ -318,8 +322,15 @@ limits. These are known, real gaps — not hidden ones.
    What the wipe removes (since 2026‑10‑19): contacts, ratchet sessions,
    per-contact onion keys, Pro Groups, own nodes with their owner secrets,
    node lists, feed sources, the relay setup and the remembered organisation
-   QR. What stays: the PINs, the licence and the app's own identity keys.
-   Not yet confirmed on a device.
+   QR. Since 2026‑10‑25 also: a pairing code still waiting to be scanned,
+   the outgoing queue and half-received chunked messages in memory. The
+   contacts database is opened with `secure_delete` (deleted rows are
+   overwritten in the file), and after the wipe its WAL is checkpointed and
+   truncated and the file is rebuilt (`VACUUM`), so neither WAL nor free
+   pages keep the deleted rows. Blocks the flash controller has already
+   remapped are out of reach for any app. The panic PIN needs at least 4
+   digits, like the PIN. What stays: the PINs, the licence and the app's own
+   identity keys. Not yet confirmed on a device.
 6. **Edition pairing rules (Standard/Pro/Client) are policy, not cryptography.**
    The rule "Client can only pair with Pro" is enforced by app logic
    (`AppEdition.canAdd()`), checked at scan time. It is not backed by a

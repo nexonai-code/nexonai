@@ -62,6 +62,10 @@ export function createControlApp(opts: AppOptions) {
     vault: vault!, inventory: inventory!, bundle, log, pollMs: opts.pollMs, waitAdminMs: opts.waitAdminMs, waitOwnerMs: opts.waitOwnerMs,
   });
 
+  // Constant-time compare on SHA-256 digests, so a wrong token costs the same whatever its first differing byte.
+  const sameSecret = (a: string, b: string): boolean =>
+    crypto.timingSafeEqual(crypto.createHash("sha256").update(a).digest(), crypto.createHash("sha256").update(b).digest());
+
   // ── guards ──
   app.use((req, res, next) => {
     const host = (req.headers.host ?? "").toLowerCase();
@@ -81,7 +85,7 @@ export function createControlApp(opts: AppOptions) {
     next();
   };
   const auth = (req: Request, res: Response, next: NextFunction) => {
-    if (!vault || !token || req.header("x-control-token") !== token) return res.status(401).json({ error: "locked" });
+    if (!vault || !token || !sameSecret(req.header("x-control-token") ?? "", token)) return res.status(401).json({ error: "locked" });
     lastActivity = Date.now();
     next();
   };

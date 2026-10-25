@@ -372,7 +372,7 @@ class NodeMeshManager @Inject constructor(
             if (lastColon <= 0 || lastColon == rest.length - 1) return null
             val address = rest.substring(0, lastColon)
             val ownerSecret = rest.substring(lastColon + 1)
-            if (address.isEmpty() || ownerSecret.isEmpty()) return null
+            if (!NodeMeshClient.isNodeAddress(address) || ownerSecret.isEmpty()) return null
             return ParsedNodeConnection(address, ownerSecret)
         }
 
@@ -398,19 +398,11 @@ class NodeMeshManager @Inject constructor(
         /** Parses a bare `unpruuf-node:v1:<address>` (no secret) — what a Node-Mesh pairing QR's
          *  node list carries, and all a contact ever needs: no auth is required to fetch
          *  (NODE_MESH_SPEC.md §8), the address alone is enough to know where to poll. */
-        /** A v3 onion service name: exactly 56 base32 characters and the `.onion` suffix. Every
-         *  node address the app accepts (scanned, pasted, imported, stored) must look like this,
-         *  so a tampered code can never send a request, or a guest grant, anywhere but a hidden
-         *  service. Checked at the entry points and again before each connection. */
-        private val ONION_V3 = Regex("^[a-z2-7]{56}\\.onion$")
-
-        fun isOnionV3Address(address: String): Boolean = ONION_V3.matches(address)
-
         fun parseAddressConnectionString(raw: String): String? {
             val trimmed = raw.trim()
             if (!trimmed.startsWith(NODE_ADDRESS_PREFIX)) return null
-            val address = trimmed.substring(NODE_ADDRESS_PREFIX.length).lowercase()
-            return address.takeIf { isOnionV3Address(it) }
+            val address = trimmed.substring(NODE_ADDRESS_PREFIX.length)
+            return address.takeIf { NodeMeshClient.isNodeAddress(it) }
         }
 
         fun buildAddressConnectionString(address: String): String = "$NODE_ADDRESS_PREFIX$address"

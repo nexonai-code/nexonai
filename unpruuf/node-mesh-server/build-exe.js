@@ -94,7 +94,7 @@ function main() {
   fs.copyFileSync(nativeSrc, path.join(nativeDestDir, "better_sqlite3.node"));
 
   // Same slot/profile start menu as the source package's start.bat, pointed at the exe.
-  for (const name of ["start.bat", "start-tempnode.bat"]) {
+  for (const name of ["start.bat", "start-tempnode.bat", "export-list.bat"]) {
     fs.copyFileSync(path.join(ROOT, "exe-templates", name), path.join(OUT_DIR, name));
   }
 
@@ -104,11 +104,11 @@ function main() {
   fs.rmSync(blobPath, { force: true });
 
   console.log(`\n[build-exe] Done. Hand out the whole "${path.relative(ROOT, OUT_DIR)}" folder — ` +
-    `keep dist/, native/ and the two .bat files together.\n` +
+    `keep dist/, native/ and the three .bat files together.\n` +
     `Double-click start.bat: no Node.js needed. On first start the node downloads Tor once, ` +
     `creates its own onion service (address stays the same on every restart) and opens the ` +
     `setup page with the owner QR. start-tempnode.bat runs a memory-only Temp Node ` +
-    `(NODE_MESH_SPEC.md §7).`);
+    `(NODE_MESH_SPEC.md §7). export-list.bat writes the node list of the running server into a file (no browser).`);
 }
 
 main();

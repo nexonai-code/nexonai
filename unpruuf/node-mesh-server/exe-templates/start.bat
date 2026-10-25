@@ -39,6 +39,7 @@ set /a ADMIN_PORT_DEFAULT=8790 + (%NODE_SLOT% - 1) * 10
 echo.
 echo Starte Node %NODE_SLOT% mit Profil %NODE_PROFILE% ...
 echo Die Einrichtungsseite oeffnet sich gleich im Browser: http://localhost:%ADMIN_PORT_DEFAULT%
+echo Node-Liste fuer deine App: export-list.bat doppelklicken, waehrend dieses Fenster offen ist.
 echo Dieses Fenster offen lassen - schliessen stoppt den Node.
 start "" /b cmd /c "timeout /t 4 /nobreak >nul & start http://localhost:%ADMIN_PORT_DEFAULT%"
 dist\unpruuf-node-mesh.exe

@@ -105,6 +105,18 @@ export class NodeStore {
     return rows.map((r) => r.blob);
   }
 
+  /**
+   * Unexpired blobs under any of [tags] with a row id above [sinceId], oldest first across all tags,
+   * at most [limit] of them. This is what /fetchMany answers from: one query, a hard size bound.
+   */
+  fetchRows(tags: string[], sinceId: number, limit: number): { id: number; tag: string; blob: string }[] {
+    if (tags.length === 0) return [];
+    const marks = tags.map(() => "?").join(",");
+    return this.db
+      .prepare(`SELECT id, tag, blob FROM blobs WHERE tag IN (${marks}) AND id > ? AND expires_at > ? ORDER BY id ASC LIMIT ?`)
+      .all(...tags, sinceId, Date.now(), limit) as { id: number; tag: string; blob: string }[];
+  }
+
   /** Highest row id ever handed out (0 for an empty store). Every blob with an id up to this
    *  existed when it was read — better-sqlite3 is synchronous, so no insert can slip between a
    *  fetchSince() and this call in the same request handler. */

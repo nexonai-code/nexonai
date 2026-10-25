@@ -30,7 +30,7 @@ run.check('no code reads the caller\'s address, port, user agent or forwarded-fo
 
 // 2. Network modules: who may open connections, and where to.
 const NET_MODULES = /from\s+["'](https?|net|dns|dgram|tls|http2)["']|require\(["'](https?|net|dns|dgram|tls|http2)["']\)/;
-const ALLOWED_NET = { 'node-mesh-server/src/tor/torDownload.ts': ['https'], 'node-mesh-server/src/tor/torControl.ts': ['net'], 'node-mesh-server/src/index.ts': ['http'], 'node-mesh-server/src/feedIndex.ts': ['http'], 'node-mesh-server/src/bridgeIndex.ts': ['http'] };
+const ALLOWED_NET = { 'node-mesh-server/src/tor/torDownload.ts': ['https'], 'node-mesh-server/src/tor/torControl.ts': ['net'], 'node-mesh-server/src/index.ts': ['http'], 'node-mesh-server/src/feedIndex.ts': ['http'], 'node-mesh-server/src/bridgeIndex.ts': ['http'], 'node-mesh-server/src/exportListCli.ts': ['http'] };
 const netHits = [];
 for (const f of files) for (const { t, n } of lines(f)) {
   const m = t.match(NET_MODULES);
@@ -39,6 +39,14 @@ for (const f of files) for (const { t, n } of lines(f)) {
 const unexpected = netHits.filter((h) => !(ALLOWED_NET[h.file] || []).includes(h.mod));
 run.check('network modules are imported only where expected', unexpected.length === 0, unexpected.map((h) => `${h.file}:${h.n} ${h.mod}`).join(' | '));
 run.note('network imports found: ' + netHits.map((h) => `${h.file.replace('node-mesh-server/src/', '')} (${h.mod})`).join(', '));
+// export-list (exportListCli.ts) asks the running server's setup page for the node list. It may only
+// talk to this computer: every host it names is 127.0.0.1, and it never uses https.
+const exportCli = files.find((f) => /exportListCli\.ts$/.test(f));
+if (exportCli) {
+  const t = stripComments(fs.readFileSync(exportCli, 'utf8'));
+  const hosts = [...t.matchAll(/\bhost:\s*"([^"]*)"/g)].map((m) => m[1]);
+  run.check('the export-list tool talks only to this computer (127.0.0.1), never outward', hosts.length >= 1 && hosts.every((h) => h === '127.0.0.1') && !/\bhttps\b/.test(t), 'hosts: ' + hosts.join(', '));
+}
 
 const outbound = [];
 for (const f of files) {

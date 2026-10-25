@@ -5,6 +5,9 @@ import { RelayClient } from "./relay/relayClient";
 import { PollAndIngestLoop } from "./officer/pollAndIngest";
 import { createDashboardApp, DashboardStatus } from "./web/app";
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { startTorAndWaitReady, TorClient } from "./tor/tor";
 import { PressSettingsStore } from "./settings/pressSettings";
 import { AccessOptions, LOOPBACK_HOSTS } from "./web/accessGuard";
@@ -93,11 +96,25 @@ async function main() {
   const access: AccessOptions = {
     allowedHosts: [...LOOPBACK_HOSTS, ...(loopbackOnly ? [] : [bindHost.toLowerCase()]), ...extraHosts],
     password: dashboardPassword,
+    // SEC-009: second factor, new at every start (see accessGuard.ts).
+    token: randomBytes(32).toString("base64url"),
   };
   const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl, () => status, config.edition, press, access);
   app.listen(config.dashboardPort, bindHost, () => {
     console.log(`[startup] Panoul ascultă pe http://localhost:${config.dashboardPort}${loopbackOnly ? " (doar acest calculator)" : ` — ATENȚIE: deschis în rețea pe ${bindHost}, cu parolă`}`);
-    openInBrowser(`http://localhost:${config.dashboardPort}`);
+    const link = `http://localhost:${config.dashboardPort}/?t=${access.token}`;
+    if (process.stdout.isTTY) {
+      // Only a person at a terminal sees the token; it never goes into a log stream.
+      console.log(`[startup] Deschide panoul cu cheia de acces (nouă la fiecare pornire) / Open the dashboard with its access key: ${link}`);
+      openInBrowser(link);
+    } else {
+      const tokenPath = path.join(config.dataDir, "dashboard-token");
+      fs.mkdirSync(config.dataDir, { recursive: true });
+      fs.writeFileSync(tokenPath, access.token + "\n", { mode: 0o600 });
+      fs.chmodSync(tokenPath, 0o600);
+      console.log(`[startup] Panoul cere o cheie de acces, nouă la fiecare pornire; nu este afișată aici (ieșirea nu este un terminal). / The dashboard needs an access key; it is not printed here.`);
+      console.log(`[startup] Cheia este în / The key is in ${tokenPath}. Deschide / Open http://localhost:${config.dashboardPort}/?t=<cheie/key>`);
+    }
     console.log(`[startup] Interoghez releul la ${relayReachableBaseUrl} la fiecare ${config.pollIntervalMs}ms${torClient ? " (prin Tor)" : ""}.`);
   });
 

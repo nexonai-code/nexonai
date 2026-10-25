@@ -35,6 +35,8 @@ export const MAX_BLOBS_TOTAL = Number.isInteger(maxBlobsEnv) && maxBlobsEnv > 0 
 // 64 tags covers the clients' 25-epoch tolerance window (profiles.ts) with headroom; 55s stays
 // under typical reverse-proxy idle timeouts. Same values as the consumer relay.
 export const MAX_FETCH_MANY_TAGS = 64;
+/** Most packets one /fetchMany answer carries (about 1.4 MB as JSON). The rest follows via the cursor. */
+export const MAX_FETCH_MANY_BLOBS = 256;
 export const MAX_WAIT_MS = 55_000;
 
 // NODE_MESH_SPEC.md §5's staggered Reset. The slot picks this node's position in the 24h cycle

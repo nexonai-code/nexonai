@@ -294,3 +294,33 @@ test("POST /v1/fetchMany rejects a request with no Authorization header", async 
     store.close();
   }
 });
+
+test("POST /v1/relay rejects a blob that is not base64 (Buffer.from never throws, so the regex must)", async () => {
+  const { server, store, base } = startServer();
+  try {
+    for (const blob of ["not base64!", "aGVsbG8=junk", "====", "aGVs bG8="]) {
+      const res = await fetch(`${base}/v1/relay`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ tag: "abcDEF123", blob }) });
+      assert.equal(res.status, 400, blob);
+    }
+    const fetched = await fetch(`${base}/v1/fetch?tag=abcDEF123`, { headers: authHeaders() });
+    assert.deepEqual(await fetched.json(), { blobs: [] });
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("relay routes answer 429 once the bucket is empty", async () => {
+  const { server, store, base } = startServer();
+  try {
+    let limited = 0;
+    for (let i = 0; i < 130; i++) {
+      const res = await fetch(`${base}/v1/relay`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ tag: "limit" + i, blob: "aGVsbG8=" }) });
+      if (res.status === 429) limited++;
+    }
+    assert.ok(limited >= 1, "the 121st request and later must be limited");
+  } finally {
+    server.close();
+    store.close();
+  }
+});

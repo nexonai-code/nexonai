@@ -26,6 +26,9 @@ object RatchetFrame {
     /** Ciphertext bytes per outer packet — comfortably under the ~4015-4059 byte budget of every frame kind. */
     const val CIPHERTEXT_CHUNK_SIZE = 4000
 
+    /** A transfer of more pieces than this is refused: 2048 x 4000 bytes is about 8 MB, above the largest attachment (5 MB, plus coding). */
+    const val MAX_TOTAL_CHUNKS = 2048
+
     sealed class Frame {
         data class Single(val header: RatchetHeader, val ciphertext: ByteArray) : Frame()
         /** Always chunk index 0. */
@@ -66,7 +69,7 @@ object RatchetFrame {
             KIND_CHUNK_START -> {
                 if (raw.size < 1 + 4 + RatchetHeader.SIZE) return null
                 val totalChunks = readInt(raw, 1)
-                if (totalChunks < 2) return null // a real multi-chunk transfer always has >= 2 pieces
+                if (totalChunks < 2 || totalChunks > MAX_TOTAL_CHUNKS) return null // a real transfer has >= 2 pieces, and never absurdly many
                 val header = RatchetHeader.decode(raw, 1 + 4)
                 val piece = raw.copyOfRange(1 + 4 + RatchetHeader.SIZE, raw.size)
                 Frame.ChunkStart(totalChunks, header, piece)
@@ -74,7 +77,7 @@ object RatchetFrame {
             KIND_CHUNK_CONT -> {
                 if (raw.size < 1 + 4) return null
                 val index = readInt(raw, 1)
-                if (index < 1) return null // 0 is reserved for ChunkStart's own piece
+                if (index < 1 || index >= MAX_TOTAL_CHUNKS) return null // 0 is reserved for ChunkStart's own piece
                 Frame.ChunkCont(index, raw.copyOfRange(1 + 4, raw.size))
             }
             else -> null

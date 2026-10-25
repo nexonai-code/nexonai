@@ -8,3 +8,5 @@ local.properties
 *.keystore
 keystore.properties
 release.properties
+# Node lists contain the write key of a server: never into git
+unpruuf-nodes-*.txt

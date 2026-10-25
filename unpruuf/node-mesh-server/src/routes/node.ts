@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { NodeStore } from "../store/nodeStore";
-import { MAX_BLOB_BYTES, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
-import { OwnerSecretSource, requireOwner } from "../middleware/ownerAuth";
+import { MAX_BLOB_BYTES, MAX_FETCH_MANY_BLOBS, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
+import { checkOwner, OwnerSecretSource, requireOwner } from "../middleware/ownerAuth";
 import { GuestOptions, requireOwnerOrGuest } from "../middleware/depositAuth";
 import { GuestQuota } from "../guest/guestQuota";
 import { KeyedTokenBuckets, rateLimited, rateLimitedPerHost, TokenBucket } from "../middleware/rateLimit";
@@ -34,24 +34,39 @@ export function nodeRouter(
   guest: GuestOptions = { enabled: false, maxValidityMs: 0 },
   quota: GuestQuota = new GuestQuota(1, 1),
 ): Router {
-  const router = Router();
+  // Exact paths only: /DEPOSIT and /deposit/ are not routes.
+  const router = Router({ caseSensitive: true, strict: true });
   // Per node address (see KeyedTokenBuckets): burst of 30, refills 5/sec for each.
   const fetchRateLimit = new KeyedTokenBuckets(30, 5);
-  const poolRateLimit = new TokenBucket(5, 1);
+  // Separate buckets, so a stranger who knows an address (or the control address) can use up only
+  // the allowance of his own kind of request: asking /lock-status, or a wrong secret on /pool,
+  // never the owner's right secret on /pool, and never /unlock.
+  const lockStatusLimit = new TokenBucket(5, 1);
+  const poolOwnerLimit = new TokenBucket(5, 1);
+  const poolFailLimit = new TokenBucket(10, 1);
+  // /unlock has to try the secret to know whether it is right (a key derivation), so its attempts
+  // are bounded as a whole. The setup page is the owner's way around a blocked /unlock.
   const unlockRateLimit = new TokenBucket(5, 0.2);
 
   // Owner-only: every onion address this process serves. The owner's app scans ONE address +
   // the owner secret and learns all sibling nodes here, so a server with hundreds of nodes still
   // needs only one QR. Contacts never call this — they only ever learn the nodes assigned to them.
   // `control` (sealed servers) is the address the app reaches this server at after a restart.
-  router.get("/pool", rateLimited(poolRateLimit), requireOwner(ownerSecret), (_req, res) => {
+  router.get("/pool", (req, res) => {
+    const who = checkOwner(req, ownerSecret);
+    if (who === "locked") return res.status(423).json({ error: "locked" });
+    if (who === "bad") {
+      if (!poolFailLimit.tryTake()) return res.status(429).json({ error: "rate limit exceeded" });
+      return res.status(401).json({ error: "unauthorized" });
+    }
+    if (!poolOwnerLimit.tryTake()) return res.status(429).json({ error: "rate limit exceeded" });
     const control = lock?.controlAddress() ?? null;
     return res.status(200).json(control ? { control, addresses: addresses() } : { addresses: addresses() });
   });
 
   // Sealed servers: no secret needed to ASK — the app checks this on the control onion without
   // sending anything secret, so a stranger answering on a stolen control address learns nothing.
-  router.get("/lock-status", rateLimited(poolRateLimit), (_req, res) => {
+  router.get("/lock-status", rateLimited(lockStatusLimit), (_req, res) => {
     return res.status(200).json({ locked: lock ? lock.isLocked() : false });
   });
 
@@ -111,7 +126,7 @@ export function nodeRouter(
   // NODE_MESH_SPEC.md §2): it's HKDF-derived from the pairing secret, so knowing a valid one
   // already proves the caller was paired. Never deletes what it returns (§4) — only the TTL
   // sweep (nodeStore.ts) ever removes a row.
-  router.get("/fetch", rateLimitedPerHost(fetchRateLimit), (req, res) => {
+  router.get("/fetch", rateLimitedPerHost(fetchRateLimit, addresses), (req, res) => {
     const tag = req.query.tag;
     if (typeof tag !== "string" || !TAG_RE.test(tag)) {
       return res.status(400).json({ error: "invalid tag" });
@@ -123,7 +138,7 @@ export function nodeRouter(
   // Batched + optionally long-polling sibling of GET /fetch — same contract as the consumer
   // relay's POST /v1/fetchMany (server/src/routes/relay.ts), reused deliberately so a client
   // already speaking that format needs no new parsing. Read-only here too — see GET /fetch above.
-  router.post("/fetchMany", rateLimitedPerHost(fetchRateLimit), async (req, res) => {
+  router.post("/fetchMany", rateLimitedPerHost(fetchRateLimit, addresses), async (req, res) => {
     const { tags, waitMs, since } = req.body ?? {};
     if (!Array.isArray(tags) || tags.length === 0 || tags.length > MAX_FETCH_MANY_TAGS) {
       return res.status(400).json({ error: `tags must be a non-empty array of at most ${MAX_FETCH_MANY_TAGS}` });
@@ -140,22 +155,33 @@ export function nodeRouter(
     // the JSON so clients that parse `blobs` as the last object keep working.
     const sinceId = typeof since === "number" && Number.isInteger(since) && since >= 0 ? since : null;
 
-    const takeAll = (): Record<string, string[]> => {
-      const result: Record<string, string[]> = {};
-      for (const tag of tags as string[]) {
-        result[tag] = sinceId === null ? store.fetchAll(tag) : store.fetchSince(tag, sinceId);
-      }
-      return result;
+    // The same tag twice would be read, and sent, twice: ask for each tag once.
+    const uniqueTags = [...new Set(tags as string[])];
+    const from = sinceId ?? 0;
+
+    // One bounded read across the tags. `cursor` is derived from what this caller asked for
+    // (the highest packet id it is handed, or the `since` it sent), never from a counter of the
+    // whole server: a stranger who knows an address cannot watch the server's traffic through it,
+    // nor tell which addresses belong to one server. `more` means the answer was cut at
+    // MAX_FETCH_MANY_BLOBS; asking again with the cursor continues exactly there.
+    const take = () => {
+      const rows = store.fetchRows(uniqueTags, from, MAX_FETCH_MANY_BLOBS + 1);
+      const more = rows.length > MAX_FETCH_MANY_BLOBS;
+      const used = more ? rows.slice(0, MAX_FETCH_MANY_BLOBS) : rows;
+      const blobs: Record<string, string[]> = {};
+      for (const tag of uniqueTags) blobs[tag] = [];
+      for (const r of used) blobs[r.tag].push(r.blob);
+      const cursor = used.length > 0 ? Math.max(from, used[used.length - 1].id) : from;
+      return { blobs, cursor, more, empty: used.length === 0 };
     };
 
-    let blobs = takeAll();
-    let cursor = store.currentCursor();
-    if (wait > 0 && Object.values(blobs).every((v) => v.length === 0)) {
-      await store.waitForAny(tags as string[], wait);
-      blobs = takeAll();
-      cursor = store.currentCursor();
+    let got = take();
+    if (wait > 0 && got.empty) {
+      await store.waitForAny(uniqueTags, wait);
+      got = take();
     }
-    return res.status(200).json(sinceId === null ? { blobs } : { cursor, blobs });
+    if (sinceId === null && !got.more) return res.status(200).json({ blobs: got.blobs });
+    return res.status(200).json(got.more ? { cursor: got.cursor, more: true, blobs: got.blobs } : { cursor: got.cursor, blobs: got.blobs });
   });
 
   return router;

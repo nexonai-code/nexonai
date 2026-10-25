@@ -24,6 +24,8 @@ object NetworkObfuscation {
         val buf = ByteBuffer.wrap(packet)
         val payloadSize = buf.int
         val offset = buf.int
+        // The two numbers come from outside; they must describe a place inside the packet before anything is allocated.
+        require(payloadSize in 0..PACKET_SIZE - 8 && offset in 0..PACKET_SIZE - 8 - payloadSize) { "Invalid packet header" }
         val payload = ByteArray(payloadSize)
         System.arraycopy(packet, 8 + offset, payload, 0, payloadSize)
         return payload

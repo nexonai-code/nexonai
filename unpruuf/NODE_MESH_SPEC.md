@@ -59,7 +59,7 @@ Abschnitt 0).
   ändernden Node selbst ankündigen" damit automatisch erfüllt, ganz ohne Sonderfall. Empfangsseite
   in `ingestPacketInner` ersetzt beim Kontakt gezielt die alte durch die neue Adresse (nicht die
   ganze Liste), dedupliziert, deckelt auf `NODE_POOL_MAX_SIZE`. Neue Settings-UI: pro eigenem Node
-  ein "Migrate"-Button mit Inline-Eingabefeld. `fetchMany`-Bündelung: `pollNodeMeshOnce()` sammelt
+  ein "Migrate"-Button mit Inline-Eingabefeld. **Stand 25.10.2026 (Vor-Audit M4): nicht mehr gebündelt.** `pollNodeMeshOnce()` fragt je Kontakt und Node-Adresse einzeln, nur die Stunden seit dem letzten vollständigen Abruf (im Normalfall 2 bis 3 statt 26; nach einem App-Start oder einer Lücke das volle Fenster), mit zufällig gestaffeltem Start (bis 1,5 s). Seit 25.10.2026 hat jeder Kontakt außerdem einen eigenen SOCKS-Benutzernamen (Stream-Isolation, `Socks5.kt`, `TorIsolation.kt`) und einen eigenen Zeitgeber; Abrufe und Ablagen eines Kontakts laufen so auf eigenen Tor-Kreisen. Einheitengetestet gegen einen simulierten SOCKS-Server, noch nicht gegen echtes Tor geprüft. Der ursprüngliche Text zur Bündelung folgt als Geschichte. `fetchMany`-Bündelung: `pollNodeMeshOnce()` sammelt
   jetzt vor dem Abfragen alle Toleranzfenster-Tags ALLER Node-Mesh-Kontakte, gruppiert nach
   eindeutiger Node-**Adresse** (nicht mehr pro Kontakt), und macht genau einen `fetchMany`-Aufruf
   pro eindeutiger Adresse — exakt das bewährte `tagsByTarget`-Muster aus `pollRelayOnce()` (v1.09).
@@ -719,7 +719,18 @@ geöffnet wird.
 4. **Abhol-Cursor.** `POST /fetchMany` nimmt optional `since` (Server-Zeilen-ID) und antwortet mit
    `{"cursor":N,"blobs":{…}}`. Jeder Blob wird nur einmal geladen; Tags, die neu ins Fenster kommen,
    einmal ab 0. Ohne `since` bleibt die Antwort exakt wie vorher. (Android-Node: noch ohne Cursor,
-   App fällt dort auf Voll-Abruf zurück.)
+   App fällt dort auf Voll-Abruf zurück.) **Stand 25.10.2026:** Der Cursor kommt nur noch aus den
+   angefragten Tags (höchste ID der gelieferten Pakete, sonst das gesendete `since`), nicht mehr aus
+   einem Zähler des ganzen Servers; ein Fremder mit einer Adresse sieht so weder den Einwurf-Verkehr
+   des Servers noch, welche Adressen zusammengehören. Gleiche Tags in einer Anfrage werden einmal
+   gelesen. Eine Antwort trägt höchstens 256 Pakete; wurde sie gekürzt, steht `"more":true` vor
+   `blobs`, und die nächste Anfrage mit dem Cursor setzt genau dort fort. Ein Cursor ohne `more`
+   heißt: für diese Tags liegt bis jetzt nichts Weiteres bereit, ein Client darf bei mehreren
+   Blöcken den größten Cursor übernehmen (bei `more` den kleinsten der gekürzten). Alte Clients
+   bleiben korrekt, laden nur gelegentlich etwas doppelt (die Annahme dedupliziert).
+   Lese-Bremse: ein eigener Topf je Adresse, die der Server selbst bedient (und je Loopback-Name);
+   jeder andere Host-Header teilt sich einen einzigen Topf. **iOS (Norbert):** Cursor-Logik gleich
+   nachziehen, `more` auswerten, nur v3-Onion-Adressen annehmen.
 5. **Versiegelte Node-Schlüssel (`NODE_MESH_KEY_STORAGE=sealed`, Standard).** Owner-Secret und
    Onion-Schlüssel liegen nur verschlüsselt auf der Platte (AES-256-GCM, Schlüssel per HKDF aus dem
    Owner-Secret, das selbst nirgends gespeichert ist). Nach einem Neustart ist der Server **gesperrt**:

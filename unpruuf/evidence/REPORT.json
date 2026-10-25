@@ -1,7 +1,7 @@
 {
-  "run": "2026-10-20T12:46:50.783Z",
-  "commit": "9ec18097f8dc3bd6c3b4d1f9fdbfdc9ca1d6b28e (with uncommitted changes)",
-  "passed": 97,
+  "run": "2026-10-25T20:53:37.805Z",
+  "commit": "046f9ec879abe332194d2134afea24b3d2d8a817 (with uncommitted changes)",
+  "passed": 99,
   "failed": 0,
   "findings": [
     {
@@ -11,8 +11,8 @@
     }
   ],
   "suite": {
-    "tests": 113,
-    "pass": 112,
+    "tests": 138,
+    "pass": 137,
     "fail": 0,
     "skipped": 1
   },
@@ -228,7 +228,7 @@
       "exit": 0,
       "id": "03",
       "title": "What the node server source does with senders, network and logs",
-      "passed": 7,
+      "passed": 8,
       "failed": 0,
       "checks": [
         {
@@ -240,6 +240,11 @@
           "name": "network modules are imported only where expected",
           "ok": true,
           "detail": ""
+        },
+        {
+          "name": "the export-list tool talks only to this computer (127.0.0.1), never outward",
+          "ok": true,
+          "detail": "hosts: 127.0.0.1"
         },
         {
           "name": "the only outbound HTTPS request in the server is the one-time Tor download",
@@ -268,8 +273,8 @@
         }
       ],
       "notes": [
-        "node-mesh-server/src/admin/adminApp.ts:89  the setup page checks the connection comes from this computer or a private network (not stored, not logged)",
-        "network imports found: index.ts (http), tor/torControl.ts (net), tor/torDownload.ts (https)",
+        "node-mesh-server/src/admin/adminApp.ts:90  the setup page checks the connection comes from this computer or a private network (not stored, not logged)",
+        "network imports found: exportListCli.ts (http), index.ts (http), tor/torControl.ts (net), tor/torDownload.ts (https)",
         "production packages in package-lock.json (including nested): 133. An auditor should review these or ask for an SBOM."
       ],
       "findings": []
@@ -279,7 +284,7 @@
       "exit": 0,
       "id": "04",
       "title": "What the Android app can do towards the outside (manifest, libraries, source)",
-      "passed": 15,
+      "passed": 16,
       "failed": 0,
       "checks": [
         {
@@ -325,12 +330,17 @@
         {
           "name": "every client socket the app opens goes through the Tor SOCKS proxy, except one",
           "ok": true,
-          "detail": "through Tor: NodeMeshClient.kt:255, P2PNetworkManager.kt:2749, RelayClient.kt:145; direct: P2PNetworkManager.kt:2743"
+          "detail": "through Tor: P2PNetworkManager.kt:2879, RelayClient.kt:145, Socks5.kt:51; direct: P2PNetworkManager.kt:2873"
+        },
+        {
+          "name": "the app's own SOCKS5 client connects only to the local Tor proxy (127.0.0.1), and every caller passes that address",
+          "ok": true,
+          "detail": "callers: NodeMeshClient.kt:303; connect calls in Socks5.kt: 1"
         },
         {
           "name": "all listening sockets are bound to 127.0.0.1, except one random-port socket for the same-Wi-Fi shortcut",
           "ok": true,
-          "detail": "loopback: P2PNetworkManager.kt:1270, PhoneTempNode.kt:124; open: P2PNetworkManager.kt:2932"
+          "detail": "loopback: P2PNetworkManager.kt:1343, PhoneTempNode.kt:125; open: P2PNetworkManager.kt:3062"
         },
         {
           "name": "that open socket exists only while a direct contact exists: never in the whistleblower edition, never for Business (Node-Mesh) contacts",
@@ -360,7 +370,7 @@
       ],
       "notes": [
         "non-Android-platform libraries (an auditor should review each): com.google.crypto.tink:tink-android:1.11.0, com.google.zxing:core:3.5.3, com.journeyapps:zxing-android-embedded:4.3.0, com.netzarchitekten:IPtProxy:5.5.1, info.guardianproject:tor-android:0.4.8.16, net.zetetic:android-database-sqlcipher:4.5.4, org.nanohttpd:nanohttpd:2.3.1",
-        "the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2743) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).",
+        "the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2873) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).",
         "Only if the user is on a network that blocks Tor does the app fall back to bridges. The Snowflake path then contacts a broker through a CDN front and STUN servers (see ConnectionPaths.kt). That is Tor's own circumvention, but it IS contact with third-party infrastructure, so \"the app talks only to Tor\" holds for the direct path and must be worded carefully for the fallback path."
       ],
       "findings": []
@@ -441,7 +451,7 @@
         {
           "name": "tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005",
           "ok": true,
-          "detail": "share 0.4993"
+          "detail": "share 0.5001"
         }
       ],
       "notes": [
@@ -505,7 +515,7 @@
       ],
       "notes": [
         "meaning of the fields: v version, p message key (fresh for this one pairing), k ratchet public key (fresh), s routing seed (fresh), n up to three node addresses, e edition name.",
-        "fields of the contact record: id, onionAddress, publicKey, rotationFactor, displayName, isClientSlot, addedAt, lastSeen, x25519RatchetPublicKey, crossPlatform, myRelayConnectionString, theirRelayConnectionString, myGeneration, theirGeneration, isVerified, remoteUserId, myWireIdentity, theirWireIdentity, manualRelayOwner, nodeMesh, theirNodeMeshRoutingSeed, theirNodeAddresses, myPairMessageKey, myPairRatchetPrivateKey, myPairRatchetPublicKey, myPairRoutingSeed, myNodeAddresses, tempNodeAddress, tempNodeOwnerSecret, tempNodeActive, theirTempNodeAddress, caseNumber, caseStatus, caseOpenedAt, caseAckDueAt, caseFeedbackDueAt, caseUpdatedAt, intakeStartedAt, intakeLastSentAt, messageTtlHours, tempNodeOnPhone",
+        "fields of the contact record: id, onionAddress, publicKey, rotationFactor, displayName, isClientSlot, addedAt, lastSeen, x25519RatchetPublicKey, crossPlatform, myRelayConnectionString, theirRelayConnectionString, myGeneration, theirGeneration, isVerified, remoteUserId, myWireIdentity, theirWireIdentity, manualRelayOwner, nodeMesh, theirNodeMeshRoutingSeed, theirNodeAddresses, myPairMessageKey, myPairRatchetPrivateKey, myPairRatchetPublicKey, myPairRoutingSeed, myNodeAddresses, guestGrants, tempNodeAddress, tempNodeOwnerSecret, tempNodeActive, theirTempNodeAddress, caseNumber, caseStatus, caseOpenedAt, caseAckDueAt, caseFeedbackDueAt, caseUpdatedAt, intakeStartedAt, intakeLastSentAt, messageTtlHours, tempNodeOnPhone",
         "control signals defined in the app: UNPRUUF_REVOKE_V1, UNPRUUF_DELETE_CONTACT_V1, UNPRUUF_DUMMY_V1, UNPRUUF_MAIN_ONION_V1:, UNPRUUF_NEWID_V1:, UNPRUUF_VERIFIED_ONION_V1:, UNPRUUF_RELAYOWNER_V1:, UNPRUUF_NODEMIGRATE_V1:, UNPRUUF_TEMPNODE_V1:, UNPRUUF_TEMPNODE_OFF_V1, UNPRUUF_WECHSEL_V1:"
       ],
       "findings": [

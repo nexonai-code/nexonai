@@ -36,6 +36,9 @@ class NodeMeshClient @Inject constructor(
         // Same sizing rationale as RelayClient.MAX_RESPONSE_BYTES — worst case a full chunked
         // transfer's blobs come back in one fetch/fetchMany response.
         private const val MAX_RESPONSE_BYTES = 12 * 1024 * 1024
+        /** A reply head is a status line and a few headers; anything longer is not a node. */
+        private const val MAX_HEAD_LINE_BYTES = 8 * 1024
+        private const val MAX_HEAD_LINES = 64
         // Deliberately shorter than SOCKET_TIMEOUT_MS — a heartbeat that takes as long as a
         // real request to fail defeats the point of pinging on a short, frequent interval (see
         // P2PNetworkManager.startTempNodeHeartbeat()).
@@ -43,19 +46,31 @@ class NodeMeshClient @Inject constructor(
 
         private const val FEED_TIMEOUT_MS = 60_000
 
+        private val ONION_ADDRESS = Regex("^[a-z2-7]{56}\\.onion$")
+
+        /**
+         * The only kind of node address this app talks to: a v3 onion. The owner secret travels in
+         * clear HTTP inside Tor, so a plain host name (reached through a Tor exit) would hand it to the
+         * exit's operator and would mean talking to a server that is not the customer's own.
+         */
+        fun isNodeAddress(address: String): Boolean = ONION_ADDRESS.matches(address)
 
         /** Parses `{"addresses":["x.onion",...]}`; anything that isn't a v3 onion is dropped. */
         fun parsePoolAddresses(body: String): List<String> {
             val match = Regex(""""addresses"\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL).find(body) ?: return emptyList()
             return match.groupValues[1].split(",")
                 .map { it.trim().removeSurrounding("\"") }
-                .filter { NodeMeshManager.isOnionV3Address(it) }
+                .filter { ONION_ADDRESS.matches(it) }
                 .distinct()
         }
 
         /** `"cursor":123` at the top of a /fetchMany reply; null when the node has no cursors. */
         fun parseCursor(body: String): Long? =
             Regex(""""cursor"\s*:\s*(\d+)""").find(body)?.groupValues?.get(1)?.toLongOrNull()
+
+        /** `"more":true` at the top of a /fetchMany reply: the node cut the answer; ask again from the cursor. */
+        fun parseMore(body: String): Boolean =
+            Regex("""^\s*\{[^\[]*?"more"\s*:\s*true""").containsMatchIn(body)
 
         /** `"control":"x.onion"` in a GET /pool reply (sealed servers only). */
         fun parseControlAddress(body: String): String? =
@@ -67,26 +82,26 @@ class NodeMeshClient @Inject constructor(
 
     /** One incremental [fetchManySince] round: the blobs plus the server's cursor (null = an
      *  older node without cursor support — the caller then simply fetches everything again). */
-    data class FetchResult(val blobs: Map<String, List<ByteArray>>, val cursor: Long?)
+    data class FetchResult(val blobs: Map<String, List<ByteArray>>, val cursor: Long?, val more: Boolean = false)
 
     /**
      * [fetchMany] with a cursor: only blobs the node stored after [since] (0 = everything). Each
      * blob is downloaded once instead of on every poll — which keeps cover traffic cheap and lets
      * the long-poll actually wait. Null if the node couldn't be reached.
      */
-    fun fetchManySince(nodeAddress: String, tags: List<String>, waitMs: Long, since: Long): FetchResult? {
+    fun fetchManySince(nodeAddress: String, tags: List<String>, waitMs: Long, since: Long, isolationKey: String? = null): FetchResult? {
         if (tags.isEmpty()) return FetchResult(emptyMap(), since)
         val tagsJson = tags.joinToString(",") { "\"$it\"" }
         val body = """{"tags":[$tagsJson],"waitMs":$waitMs,"since":$since}"""
         val socketTimeoutMs = (waitMs + FETCH_MANY_TIMEOUT_MARGIN_MS).coerceAtLeast(SOCKET_TIMEOUT_MS.toLong()).toInt()
         val response = runCatching {
-            request(nodeAddress, "POST", "/fetchMany", body, socketTimeoutMs = socketTimeoutMs)
+            request(nodeAddress, "POST", "/fetchMany", body, socketTimeoutMs = socketTimeoutMs, isolationKey = isolationKey)
         }.getOrNull() ?: return null
         if (response.status !in 200..299) return null
         val blobs = parseBlobsMapBody(response.body).mapValues { (_, blobsB64) ->
             blobsB64.mapNotNull { runCatching { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) }.getOrNull() }
         }
-        return FetchResult(blobs, parseCursor(response.body))
+        return FetchResult(blobs, parseCursor(response.body), parseMore(response.body))
     }
 
     /** The company list feed's current file at [address] (a rotating onion address, see FeedCrypto).
@@ -138,7 +153,7 @@ class NodeMeshClient @Inject constructor(
      * the node's own configured default; the server enforces the cap, this call just forwards
      * the request.
      */
-    fun deposit(nodeAddress: String, ownerSecret: String, routingTag: String, ciphertext: ByteArray, ttlMs: Long? = null): Boolean {
+    fun deposit(nodeAddress: String, ownerSecret: String, routingTag: String, ciphertext: ByteArray, ttlMs: Long? = null, isolationKey: String? = null): Boolean {
         val blob = android.util.Base64.encodeToString(ciphertext, android.util.Base64.NO_WRAP)
         val body = if (ttlMs != null) {
             """{"routing_tag":"$routingTag","ciphertext":"$blob","ttl":$ttlMs}"""
@@ -146,7 +161,7 @@ class NodeMeshClient @Inject constructor(
             """{"routing_tag":"$routingTag","ciphertext":"$blob"}"""
         }
         val response = runCatching {
-            request(nodeAddress, "PUT", "/deposit", body, ownerSecret = ownerSecret)
+            request(nodeAddress, "PUT", "/deposit", body, ownerSecret = ownerSecret, isolationKey = isolationKey)
         }.getOrNull()
         return response != null && response.status in 200..299
     }
@@ -163,7 +178,7 @@ class NodeMeshClient @Inject constructor(
      * that node) comes back as [GuestDepositResult.GRANT_REFUSED]; the app then asks the owner
      * for a renewal. A reached quota comes back as [GuestDepositResult.QUOTA_REACHED].
      */
-    fun depositAsGuest(nodeAddress: String, grantToken: String, routingTag: String, ciphertext: ByteArray, ttlMs: Long? = null): GuestDepositResult {
+    fun depositAsGuest(nodeAddress: String, grantToken: String, routingTag: String, ciphertext: ByteArray, ttlMs: Long? = null, isolationKey: String? = null): GuestDepositResult {
         val blob = android.util.Base64.encodeToString(ciphertext, android.util.Base64.NO_WRAP)
         val body = if (ttlMs != null) {
             """{"routing_tag":"$routingTag","ciphertext":"$blob","ttl":$ttlMs}"""
@@ -171,7 +186,7 @@ class NodeMeshClient @Inject constructor(
             """{"routing_tag":"$routingTag","ciphertext":"$blob"}"""
         }
         val response = runCatching {
-            request(nodeAddress, "PUT", "/deposit", body, authorization = GuestGrant.authorizationHeader(grantToken))
+            request(nodeAddress, "PUT", "/deposit", body, authorization = GuestGrant.authorizationHeader(grantToken), isolationKey = isolationKey)
         }.getOrNull() ?: return GuestDepositResult.FAILED
         return when {
             response.status in 200..299 -> GuestDepositResult.OK
@@ -279,15 +294,14 @@ class NodeMeshClient @Inject constructor(
         body: String?,
         ownerSecret: String? = null,
         socketTimeoutMs: Int = SOCKET_TIMEOUT_MS,
+        isolationKey: String? = null,
         authorization: String? = null
     ): HttpResponse {
-        // Last line of defence: nothing but a v3 onion name ever becomes a Host header or a
-        // SOCKS target, whatever a stored contact row or a pasted code may say.
-        require(NodeMeshManager.isOnionV3Address(address)) { "not an onion address" }
-        val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", torManager.socksPort))
-        Socket(proxy).use { socket ->
+        require(isNodeAddress(address)) { "not a v3 onion address" }
+        // With an isolation key Tor puts this request on a circuit of its own, apart from the requests
+        // of other keys (see [Socks5]). Without one it uses the shared default group.
+        Socks5.connect("127.0.0.1", torManager.socksPort, address, NODE_PORT, isolationKey, CONNECT_TIMEOUT_MS).use { socket ->
             socket.soTimeout = socketTimeoutMs
-            socket.connect(InetSocketAddress.createUnresolved(address, NODE_PORT), CONNECT_TIMEOUT_MS)
 
             val bodyBytes = body?.toByteArray(Charsets.UTF_8)
             val out = socket.getOutputStream()
@@ -310,12 +324,14 @@ class NodeMeshClient @Inject constructor(
 
             val input = socket.getInputStream()
             val statusLine = readLine(input) ?: return HttpResponse(0, "")
+            var headLines = 0
             val status = statusLine.split(" ").getOrNull(1)?.toIntOrNull() ?: 0
 
             var contentLength = -1
             while (true) {
                 val line = readLine(input) ?: break
                 if (line.isEmpty()) break
+                if (++headLines > MAX_HEAD_LINES) return HttpResponse(0, "")
                 val idx = line.indexOf(':')
                 if (idx > 0 && line.substring(0, idx).equals("Content-Length", ignoreCase = true)) {
                     contentLength = line.substring(idx + 1).trim().toIntOrNull() ?: -1
@@ -334,6 +350,7 @@ class NodeMeshClient @Inject constructor(
         while (true) {
             val b = input.read()
             if (b == -1) return if (buf.size() == 0) null else buf.toString("ISO-8859-1")
+            if (buf.size() > MAX_HEAD_LINE_BYTES) throw java.io.IOException("reply line too long")
             if (b == '\n'.code) {
                 val bytes = buf.toByteArray()
                 val len = if (bytes.isNotEmpty() && bytes.last() == '\r'.code.toByte()) bytes.size - 1 else bytes.size

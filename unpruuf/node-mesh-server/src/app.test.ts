@@ -487,20 +487,148 @@ test("a node that holds its total ceiling refuses more deposits (507) but still 
   }
 });
 
+function startServerWithAddresses(addresses: string[]) {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-app-test-")), "node-mesh.sqlite");
+  const store = new NodeStore(file);
+  const server = createApp(store, OWNER_SECRET, () => addresses).listen(0);
+  const { port } = server.address() as AddressInfo;
+  return { server, store, base: `http://127.0.0.1:${port}` };
+}
+
+// fetch() does not let a caller set Host, so go through node:http.
+function getWithHost(base: string, host: string, pathAndQuery = "/fetch?tag=abc") {
+  return new Promise<number>((resolve, reject) => {
+    const u = new URL(`${base}${pathAndQuery}`);
+    const r = http.request({ hostname: u.hostname, port: u.port, path: u.pathname + u.search, headers: { host } }, (res) => { res.resume(); resolve(res.statusCode ?? 0); });
+    r.on("error", reject);
+    r.end();
+  });
+}
+
 test("read rate limit is per node address: draining one address leaves the others working", async () => {
+  const A = "nodeaaaaaaaaaaaaaaaa.onion";
+  const B = "nodebbbbbbbbbbbbbbbb.onion";
+  const { server, store, base } = startServerWithAddresses([A, B]);
+  try {
+    let limited = false;
+    for (let i = 0; i < 60; i++) if ((await getWithHost(base, A)) === 429) { limited = true; break; }
+    assert.equal(limited, true);
+    assert.equal(await getWithHost(base, B), 200);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("inventing Host names neither multiplies the read allowance nor starves the real addresses", async () => {
+  const A = "nodeaaaaaaaaaaaaaaaa.onion";
+  const { server, store, base } = startServerWithAddresses([A]);
+  try {
+    let ok = 0;
+    for (let i = 0; i < 60; i++) if ((await getWithHost(base, `junk${i}.example`)) === 200) ok++;
+    assert.ok(ok <= 31, `made-up hosts got ${ok} answers, expected at most the one shared burst of 30`);
+    assert.equal(await getWithHost(base, A), 200, "a real address keeps its own bucket");
+    // Port and case in the Host header do not make a new bucket.
+    assert.equal(await getWithHost(base, `${A.toUpperCase()}:80`), 200);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("POST /fetchMany reads a repeated tag once", async () => {
   const { server, store, base } = startServer();
   try {
-    // fetch() does not let a caller set Host, so go through node:http.
-    const get = (host: string) => new Promise<number>((resolve, reject) => {
-      const u = new URL(`${base}/fetch?tag=abc`);
-      const r = http.request({ hostname: u.hostname, port: u.port, path: u.pathname + u.search, headers: { host } }, (res) => { res.resume(); resolve(res.statusCode ?? 0); });
-      r.on("error", reject);
-      r.end();
-    });
-    let limited = false;
-    for (let i = 0; i < 60; i++) if ((await get("nodeaaaaaaaaaaaaaaaa.onion")) === 429) { limited = true; break; }
-    assert.equal(limited, true);
-    assert.equal(await get("nodebbbbbbbbbbbbbbbb.onion"), 200);
+    await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "dup", ciphertext: "b25l" }) });
+    const body: any = await (await fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: Array(64).fill("dup") }),
+    })).json();
+    assert.deepEqual(body, { blobs: { dup: ["b25l"] } });
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("POST /fetchMany cuts a big answer at 256 packets and continues from the cursor", async () => {
+  const { server, store, base } = startServer();
+  try {
+    for (let i = 0; i < 300; i++) store.put("big", Buffer.from(`p${String(i).padStart(3, "0")}`).toString("base64"));
+    const ask = async (since: number) => (await fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: ["big"], since }),
+    })).json() as Promise<any>;
+    const first = await ask(0);
+    assert.equal(first.blobs.big.length, 256);
+    assert.equal(first.more, true);
+    const second = await ask(first.cursor);
+    assert.equal(second.blobs.big.length, 44);
+    assert.equal(second.more, undefined);
+    assert.equal(Buffer.from(second.blobs.big[0], "base64").toString(), "p256");
+    // Without a cursor the cut is announced too, so a plain client can continue.
+    const plain: any = await (await fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: ["big"] }),
+    })).json();
+    assert.equal(plain.more, true);
+    assert.equal(plain.blobs.big.length, 256);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("the /fetchMany cursor does not show what happens on the rest of the server", async () => {
+  const { server, store, base } = startServer();
+  try {
+    const ask = async (tag: string) => (await fetch(`${base}/fetchMany`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tags: [tag], since: 0 }),
+    })).json() as Promise<any>;
+    const before = await ask("nobody");
+    for (const t of ["x1", "x2", "x3"]) {
+      await fetch(`${base}/deposit`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: t, ciphertext: "b25l" }) });
+    }
+    const after = await ask("nobody");
+    assert.equal(before.cursor, 0);
+    assert.equal(after.cursor, 0, "deposits under other tags must not move this caller's cursor");
+    // It still moves for the caller's own tags, which is what the client needs.
+    const own = await ask("x2");
+    assert.ok(own.cursor > 0);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("a stranger cannot use up the owner's allowance on /pool or lock the owner out of it", async () => {
+  const { server, store, base } = startServer();
+  try {
+    for (let i = 0; i < 12; i++) await fetch(`${base}/lock-status`);
+    for (let i = 0; i < 15; i++) await fetch(`${base}/pool`, { headers: { authorization: "Bearer wrong" } });
+    const owner = await fetch(`${base}/pool`, { headers: { authorization: `Bearer ${OWNER_SECRET}` } });
+    assert.equal(owner.status, 200);
+    // The strangers' wrong secrets are limited too, just in their own bucket.
+    const wrong = await fetch(`${base}/pool`, { headers: { authorization: "Bearer wrong" } });
+    assert.equal(wrong.status, 429);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("the server does not name its framework: JSON 404 for everything else, no ETag, exact paths, no HEAD or OPTIONS", async () => {
+  const { server, store, base } = startServer();
+  try {
+    const nothing = await fetch(`${base}/nothing`, { method: "POST" });
+    assert.equal(nothing.status, 404);
+    assert.deepEqual(await nothing.json(), { error: "not found" });
+    assert.equal(nothing.headers.get("etag"), null);
+    assert.equal((await fetch(`${base}/fetchMany`, { method: "OPTIONS" })).status, 404);
+    assert.equal((await fetch(`${base}/health`, { method: "HEAD" })).status, 404);
+    assert.equal((await fetch(`${base}/DEPOSIT`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "t", ciphertext: "b25l" }) })).status, 404);
+    assert.equal((await fetch(`${base}/deposit/`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "t", ciphertext: "b25l" }) })).status, 404);
+    const health = await fetch(`${base}/health`);
+    assert.equal(health.status, 200);
+    assert.equal(health.headers.get("etag"), null);
+    assert.equal(health.headers.get("x-powered-by"), null);
   } finally {
     server.close();
     store.close();

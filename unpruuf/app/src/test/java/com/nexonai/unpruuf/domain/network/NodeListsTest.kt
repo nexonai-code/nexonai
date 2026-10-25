@@ -13,17 +13,17 @@ import org.junit.Test
  */
 class NodeListsTest {
     private val fixture = "unpruuf-node-list:v1\nname: Acme GmbH · Server 1\nsecret: Owner_secret_0123456789-AB\n" +
-        "control: ctrlbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.onion\ncount: 4\n\n" +
-        (1..4).joinToString("") { "node00${it}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion\n" }
+        "control: ctrlbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.onion\ncount: 4\n\n" +
+        (1..4).joinToString("") { "nodeb${it + 1}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion\n" }
 
-    private fun addr(i: Int) = "node00${i}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion"
+    private fun addr(i: Int) = "nodeb${i + 1}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion"
 
     @Test
     fun serverFileParsesWithNameSecretControlAndAllAddresses() {
         val f = NodeListFile.parse(fixture)!!
         assertEquals("Acme GmbH · Server 1", f.name)
         assertEquals("Owner_secret_0123456789-AB", f.ownerSecret)
-        assertEquals("ctrlbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.onion", f.control)
+        assertEquals("ctrlbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.onion", f.control)
         assertEquals((1..4).map { addr(it) }, f.addresses)
     }
 

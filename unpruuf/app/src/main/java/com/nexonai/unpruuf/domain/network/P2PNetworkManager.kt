@@ -243,6 +243,10 @@ class P2PNetworkManager @Inject constructor(
         private const val NODE_MESH_POLL_BASE_MS = 20_000L
         private const val NODE_MESH_POLL_JITTER_MS = 5_000L
         private const val NODE_MESH_POLL_WAIT_MS = 20_000L
+        /** How often the set of per-contact poll loops is compared with the contact list. */
+        private const val NODE_MESH_LOOP_SYNC_MS = 10_000L
+        /** Follow-up requests for one chunk when a node cuts its answer short, per poll. */
+        private const val NODE_MESH_MAX_CONTINUATIONS = 8
         // Cover deposits: on average one every 15 min per Node-Mesh contact.
         private const val NODE_MESH_COVER_MEAN_MS = 15 * 60 * 1000L
         private const val NODE_MESH_COVER_MIN_MS = 20_000L
@@ -626,13 +630,44 @@ class P2PNetworkManager @Inject constructor(
     // wait whether a chat is open or the phone sits in a pocket. The old 6 s (chat open) / 90 s
     // (idle) split let anyone watching a node — or the encrypted Tor stream — read off WHEN a
     // chat was open. The long-poll (now effective thanks to the fetch cursor) keeps delivery fast.
+    //
+    // One loop PER CONTACT, each with its own random start and its own jittered interval, instead of
+    // one loop that asks for everybody at once: requests of different contacts then do not leave the
+    // phone in step, which would let a node operator tie them together by timing alone.
+    private val nodeMeshContactLoops = ConcurrentHashMap<String, Job>()
+
     private fun startNodeMeshPoll() {
         scope.launch {
             while (isActive) {
-                delay(nodeMeshPollDelayMs())
-                pollNodeMeshOnce()
+                syncNodeMeshContactLoops()
+                delay(NODE_MESH_LOOP_SYNC_MS)
             }
         }
+    }
+
+    /** Starts a loop for every Node-Mesh contact that has none and stops the loops of contacts that are gone. */
+    private suspend fun syncNodeMeshContactLoops() {
+        val ids = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+            .filter { it.nodeMesh }.map { it.id }.toSet()
+        for ((id, job) in nodeMeshContactLoops) {
+            if (id !in ids) { job.cancel(); nodeMeshContactLoops.remove(id); forgetNodeMeshPollState(id) }
+        }
+        for (id in ids) {
+            if (nodeMeshContactLoops[id]?.isActive != true) {
+                nodeMeshContactLoops[id] = scope.launch {
+                    delay(kotlin.random.Random.nextLong(0, NODE_MESH_POLL_BASE_MS + 1)) // its own start
+                    while (isActive) {
+                        pollNodeMeshContact(id)
+                        delay(nodeMeshPollDelayMs())
+                    }
+                }
+            }
+        }
+    }
+
+    private fun forgetNodeMeshPollState(contactId: String) {
+        nodeMeshCursors.keys.removeAll { it.startsWith("$contactId|") }
+        nodeMeshLastComplete.keys.removeAll { it.startsWith("$contactId|") }
     }
 
     private fun nodeMeshPollDelayMs(): Long =
@@ -678,6 +713,19 @@ class P2PNetworkManager @Inject constructor(
         deliveryQueue.removeAll { it.contactId == contactId }
         chunkReassembly.remove(contactId)
         sendLocks.remove(contactId)
+    }
+
+    /** Panic PIN: drops every queued outgoing packet and every half-received chunked message, for all contacts. */
+    fun forgetAllLocally() {
+        phoneTempNode.stop()
+        nodeMeshContactLoops.values.forEach { it.cancel() }
+        nodeMeshContactLoops.clear()
+        nodeMeshCursors.clear()
+        nodeMeshLastComplete.clear()
+        deliveryQueue.clear()
+        chunkReassembly.values.forEach { r -> r.pieces.forEach { it?.fill(0) } }
+        chunkReassembly.clear()
+        sendLocks.clear()
     }
 
     // Re-sends the intake until the officer's receipt (case number) arrives — the officer may be
@@ -811,63 +859,71 @@ class P2PNetworkManager @Inject constructor(
      *  next scheduled tick" reasoning as [pollRelayNow]. Safe to call freely: fetch never
      *  deletes (NODE_MESH_SPEC.md §4), so a redundant extra call just re-reads what's already
      *  there, same idempotence [ingestPacket]'s own dedup already relies on. */
-    fun pollNodeMeshNow() {
-        scope.launch { pollNodeMeshOnce() }
+    fun pollNodeMeshNow(contactId: String? = null) {
+        scope.launch { if (contactId != null) pollNodeMeshContact(contactId) else pollNodeMeshOnce() }
+    }
+
+    /** One poll round for every Node-Mesh contact, right now (used by [pollNodeMeshNow] without a contact). */
+    private suspend fun pollNodeMeshOnce() {
+        val ids = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+            .filter { it.nodeMesh }.map { it.id }
+        coroutineScope { ids.map { id -> async { pollNodeMeshContact(id) } }.awaitAll() }
     }
 
     /**
-     * Batched per distinct node ADDRESS across every Node-Mesh contact, not per contact — same
-     * reasoning as [pollRelayOnce]'s `tagsByTarget` map (see that function's doc comment):
-     * several contacts could share overlapping node infrastructure (e.g. a company hosting
-     * several employees' own nodes), and collapsing to one `fetchMany` call per distinct address
-     * avoids a redundant separate round-trip to the same server for each of them. Typically
-     * degrades to "one call per contact" anyway when nodes genuinely are unique per person, which
-     * costs nothing extra over the un-batched version — this is a pure win, never a regression.
+     * One poll round for ONE contact: one request per node address of that contact, never one that
+     * lists the tags of several contacts (that would tell the node operator the contacts belong to the
+     * same phone) and never one that lists 26 hourly tags (pre-audit M4). Only the epochs the contact
+     * can still be missing are asked for ([NodeMeshWindow]: two or three in the steady state, the full
+     * window after an app start or a failed poll). Every request carries the contact's own Tor
+     * isolation key ([IdentityManager.torIsolationKeyFor]), so Tor puts it on circuits of its own;
+     * what stays visible to a node operator is therefore not tied to the same phone through the circuit.
+     * The price is up to (nodes per contact) circuits per contact instead of one per distinct node.
      */
-    private suspend fun pollNodeMeshOnce() {
+    private suspend fun pollNodeMeshContact(contactId: String) {
         if (!torManager.isReady.value) return
-        val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
-            .filter { it.nodeMesh }
-        if (contacts.isEmpty()) return
+        val c = runCatching { contactDao.getContactById(contactId) }.getOrNull()?.takeIf { it.nodeMesh } ?: return
+        val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: return
+        val addresses = NodeMeshManager.parseNodeConnectionStringList(c.theirNodeAddresses ?: "")
+            .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+            // Temp Node (NODE_MESH_SPEC.md §7) — polled alongside the standard pool rather
+            // than switched to exclusively: fetch has no delete-on-fetch side effect, so
+            // checking both costs an extra request but never risks missing a message during
+            // the CONTACT's own activation/fallback transitions, which this device can't
+            // observe directly (that state lives on their phone, not this one).
+            .plus(c.theirTempNodeAddress?.let { listOf(it) } ?: emptyList())
+            .distinct()
+        if (addresses.isEmpty()) return
 
-        val tagsByAddress = LinkedHashMap<String, MutableSet<String>>()
-        for (c in contacts) {
-            val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: continue
-            val addresses = NodeMeshManager.parseNodeConnectionStringList(c.theirNodeAddresses ?: "")
-                .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
-                // Temp Node (NODE_MESH_SPEC.md §7) — polled alongside the standard pool rather
-                // than switched to exclusively: fetch has no delete-on-fetch side effect, so
-                // checking both costs an extra request but never risks missing a message during
-                // the CONTACT's own activation/fallback transitions, which this device can't
-                // observe directly (that state lives on their phone, not this one).
-                .plus(c.theirTempNodeAddress?.let { listOf(it) } ?: emptyList())
-                .distinct()
-            if (addresses.isEmpty()) continue
-            val tags = identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
-                .map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch, identityManager.myRoutingSeedFor(c)) }
-            // Every address is this ONE contact's own redundant node pool — added independently
-            // (a blob could be sitting on any of them, delete-on-fetch isn't in play here so
-            // there's no "already drained" risk in checking all).
-            for (address in addresses) {
-                tagsByAddress.getOrPut(address) { mutableSetOf() }.addAll(tags)
-            }
-        }
-        if (tagsByAddress.isEmpty()) return
-
-        // Every distinct address is fetched concurrently, same reasoning as pollRelayOnce's own
-        // concurrent target fetch — a long-poll blocks its own call for up to the wait, and
-        // sequential addresses would otherwise multiply that wait by the number of distinct
-        // node servers in play this round instead of paying it once, in parallel.
+        val fullWindow = identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
+        val current = fullWindow.first()
+        val mySeed = identityManager.myRoutingSeedFor(c)
+        val isolation = identityManager.torIsolationKeyFor(c.id)
+        // Every address is this ONE contact's own redundant node pool — each is asked on its own
+        // (a blob could be sitting on any of them; there is no delete-on-fetch).
         coroutineScope {
-            tagsByAddress.map { (address, tags) ->
-                async { pollNodeMeshAddress(address, tags.toList()) }
+            addresses.map { address ->
+                async {
+                    val key = "${c.id}|$address"
+                    val epochs = NodeMeshWindow.epochs(current, nodeMeshLastComplete[key], fullWindow)
+                    val tags = epochs.map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch, mySeed) }
+                    if (pollNodeMeshAddress(key, address, tags, isolation)) nodeMeshLastComplete[key] = current
+                    else nodeMeshLastComplete.remove(key)
+                }
             }.awaitAll()
         }
-        // Forget cursors of addresses no contact uses any more.
-        nodeMeshCursors.keys.retainAll(tagsByAddress.keys)
+        // Forget the state of addresses this contact no longer uses.
+        val keys = addresses.map { "${c.id}|$it" }.toSet()
+        nodeMeshCursors.keys.removeAll { it.startsWith("${c.id}|") && it !in keys }
+        nodeMeshLastComplete.keys.removeAll { it.startsWith("${c.id}|") && it !in keys }
     }
 
-    // Per node address: the server cursor up to which every blob of [NodeMeshCursor.tags] has
+    // Per (contact, node address): the epoch in which the last poll was COMPLETE (everything the node
+    // had for the asked tags was downloaded). Memory only, like the cursors: after an app start the
+    // first poll asks for the full window once.
+    private val nodeMeshLastComplete = ConcurrentHashMap<String, Long>()
+
+    // Per (contact, node address): the server cursor up to which every blob of [NodeMeshCursor.tags] has
     // been downloaded. Memory only — after an app restart the first poll fetches everything
     // once (ingestPacket's dedup drops what was already seen).
     private data class NodeMeshCursor(val cursor: Long, val tags: Set<String>)
@@ -880,23 +936,34 @@ class P2PNetworkManager @Inject constructor(
      * without cursor support (old server, Android node) answers without one; then every poll
      * stays a full fetch, exactly as before.
      */
-    private suspend fun pollNodeMeshAddress(address: String, tags: List<String>) {
-        val state = nodeMeshCursors[address]
+    private suspend fun pollNodeMeshAddress(key: String, address: String, tags: List<String>, isolationKey: String): Boolean {
+        val state = nodeMeshCursors[key]
         val known = state?.tags ?: emptySet()
         val fresh = tags.filter { it !in known }
         val covered = tags.filter { it in known }
         val cursors = ArrayList<Long?>()
+        // Cursors of chunks the node cut short (MAX packets per answer) and we could not finish.
+        val unfinished = ArrayList<Long>()
         var failed = false
 
         suspend fun run(group: List<String>, since: Long, wait: Long) {
             val chunks = group.chunked(MAX_FETCH_MANY_TAGS_PER_CALL)
             for (chunk in chunks) {
                 // Only a single-chunk call long-polls — several sequential waits would stack up.
-                val result = nodeMeshClient.fetchManySince(address, chunk, if (chunks.size == 1) wait else 0L, since)
-                if (result == null) { failed = true; return }
-                cursors.add(result.cursor)
-                for ((tag, blobs) in result.blobs) {
-                    for (blob in blobs) runCatching { ingestPacket(tag, blob) }
+                var from = since
+                var rounds = 0
+                while (true) {
+                    val result = nodeMeshClient.fetchManySince(address, chunk, if (chunks.size == 1 && rounds == 0) wait else 0L, from, isolationKey)
+                    if (result == null) { failed = true; return }
+                    for ((tag, blobs) in result.blobs) {
+                        for (blob in blobs) runCatching { ingestPacket(tag, blob) }
+                    }
+                    rounds++
+                    val next = result.cursor
+                    if (result.more && next != null && next > from && rounds < NODE_MESH_MAX_CONTINUATIONS) { from = next; continue }
+                    cursors.add(next)
+                    if (result.more && next != null) unfinished.add(next)
+                    break
                 }
             }
         }
@@ -904,12 +971,18 @@ class P2PNetworkManager @Inject constructor(
         if (fresh.isNotEmpty()) run(fresh, 0L, if (covered.isEmpty()) NODE_MESH_POLL_WAIT_MS else 0L)
         if (covered.isNotEmpty() && !failed) run(covered, state!!.cursor, NODE_MESH_POLL_WAIT_MS)
 
-        if (failed) return
+        if (failed) return false
         if (cursors.isEmpty() || cursors.any { it == null }) {
-            nodeMeshCursors.remove(address)
+            nodeMeshCursors.remove(key)
         } else {
-            nodeMeshCursors[address] = NodeMeshCursor(cursors.filterNotNull().min(), tags.toSet())
+            // A node's cursor comes from the packets it handed us for these tags, not from a counter of
+            // the whole server. A chunk that was answered completely says "nothing more up to now", so
+            // the furthest cursor is safe; a chunk that was cut short pins the bound to where it stopped.
+            val bound = if (unfinished.isNotEmpty()) unfinished.min() else cursors.filterNotNull().max()
+            nodeMeshCursors[key] = NodeMeshCursor(bound, tags.toSet())
         }
+        // Complete = nothing was cut short and cut off. Only then may older epochs drop out of the next window.
+        return unfinished.isEmpty()
     }
 
     // Solange ein Chat geöffnet ist, den Tor-Sendepfad zu genau diesem Kontakt
@@ -2570,13 +2643,13 @@ class P2PNetworkManager @Inject constructor(
      * depends on the CONTACT's row existing, so there's no "deleted mid-flight" risk to guard
      * against here the way [nodeMeshTagFor] does.
      */
-    private suspend fun depositToOwnNodes(addresses: List<String>, routingTag: String, padded: ByteArray, ttlMs: Long? = null): Boolean {
+    private suspend fun depositToOwnNodes(addresses: List<String>, routingTag: String, padded: ByteArray, ttlMs: Long? = null, isolationKey: String? = null): Boolean {
         val pool = nodeMeshManager.getMyNodePool().associateBy { it.address }
         val targets = addresses.mapNotNull { pool[it] }
         if (targets.isEmpty()) return false
         var anySucceeded = false
         for (node in targets) {
-            if (nodeMeshClient.deposit(node.address, node.ownerSecret, routingTag, padded, ttlMs)) anySucceeded = true
+            if (nodeMeshClient.deposit(node.address, node.ownerSecret, routingTag, padded, ttlMs, isolationKey)) anySucceeded = true
         }
         return anySucceeded
     }
@@ -2599,7 +2672,7 @@ class P2PNetworkManager @Inject constructor(
      * what the chat says; the message stays queued and is tried again. There is deliberately no
      * fallback to any own node or any other path.
      */
-    private fun depositAsGuest(contact: com.nexonai.unpruuf.data.model.Contact, routingTag: String, padded: ByteArray, ttlMs: Long?): Boolean {
+    private fun depositAsGuest(contact: com.nexonai.unpruuf.data.model.Contact, routingTag: String, padded: ByteArray, ttlMs: Long?, isolationKey: String? = null): Boolean {
         val addresses = NodeMeshManager.parseNodeConnectionStringList(contact.myNodeAddresses ?: "")
             .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
         val grants = GuestClient.grantsFor(contact.guestGrants, addresses.size)
@@ -2613,7 +2686,7 @@ class P2PNetworkManager @Inject constructor(
             if (token.isEmpty()) continue
             tried++
             if ((GuestGrant.parse(token)?.notAfterMs ?: 0L) <= now) { refused++; continue }
-            when (nodeMeshClient.depositAsGuest(address, token, routingTag, padded, ttlMs)) {
+            when (nodeMeshClient.depositAsGuest(address, token, routingTag, padded, ttlMs, isolationKey)) {
                 NodeMeshClient.GuestDepositResult.OK -> stored = true
                 NodeMeshClient.GuestDepositResult.GRANT_REFUSED -> refused++
                 NodeMeshClient.GuestDepositResult.QUOTA_REACHED -> overQuota++
@@ -2651,19 +2724,21 @@ class P2PNetworkManager @Inject constructor(
         // The chat's own packet lifetime (1 / 6 / 24 h, MessageTtl). A contact row that is already
         // gone sends with the node's default, which is the longest it allows.
         val ttlMs = contact?.let { MessageTtl.toMillis(it.messageTtlHours) }
+        // The contact's own Tor isolation key (also when its row is gone: the key depends only on the id).
+        val isolation = identityManager.torIsolationKeyFor(contactId)
         // Free Client app: no own nodes, only the grants the inviter issued. Never any fallback.
         if (contact != null && !contact.guestGrants.isNullOrEmpty()) {
-            return depositAsGuest(contact, routingTag, padded, ttlMs)
+            return depositAsGuest(contact, routingTag, padded, ttlMs, isolation)
         }
         if (contact == null || tempAddress == null || tempSecret == null) {
-            return depositToOwnNodes(nodes, routingTag, padded, ttlMs)
+            return depositToOwnNodes(nodes, routingTag, padded, ttlMs, isolation)
         }
         // A Temp Node that runs on THIS phone is filled directly (no Tor round trip to ourselves).
         // Such a deposit always works, so it proves nothing about the contact being able to reach
         // it: "confirmed" comes only from the heartbeat's real reachability check (below).
         val onThisPhone = phoneTempNode.isOwn(tempAddress)
         val tempSucceeded = if (onThisPhone) phoneTempNode.localDeposit(routingTag, padded, ttlMs)
-            else nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded, ttlMs)
+            else nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded, ttlMs, isolation)
         if (tempSucceeded && !onThisPhone && !contact.tempNodeActive) {
             // First successful deposit via the Temp Node — §7 step 6's confirmation ("erste
             // erfolgreiche eigene Nachricht über den Temp Node in diese Richtung"). From here on
@@ -2678,11 +2753,11 @@ class P2PNetworkManager @Inject constructor(
             // for THIS one message if the deposit above failed, so a message isn't lost in the
             // gap before the heartbeat loop notices an outage and flips the state back — the
             // state itself is heartbeat-governed, not decided per-send.
-            return tempSucceeded || depositToOwnNodes(nodes, routingTag, padded, ttlMs)
+            return tempSucceeded || depositToOwnNodes(nodes, routingTag, padded, ttlMs, isolation)
         }
         // Registered but not yet confirmed: dual-deposit, standard nodes stay the reliable path
         // until the Temp Node has proven itself reachable at least once.
-        val standardSucceeded = depositToOwnNodes(nodes, routingTag, padded, ttlMs)
+        val standardSucceeded = depositToOwnNodes(nodes, routingTag, padded, ttlMs, isolation)
         return tempSucceeded || standardSucceeded
     }
 

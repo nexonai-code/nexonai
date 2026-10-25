@@ -31,4 +31,7 @@ VOLUME ["/app/data"]
 # Only the setup page is published, and docker-compose.yml binds it to the host's loopback.
 # The node API is never published — it is reached exclusively through the onion service.
 EXPOSE 8790
+# The node API answers /health on its loopback port (slot 1: 8788) without any credential.
+HEALTHCHECK --interval=60s --timeout=5s --start-period=120s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8788)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/index.js"]

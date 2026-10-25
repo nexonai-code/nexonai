@@ -2,7 +2,7 @@
 
 **Gedächtnis:** `.claude/memory/MEMORY.md` ist der Index (Gabriel, Team, Arbeitsweise, Stand, Entscheidungen, offene Punkte, Orte). Nach jeder Entscheidung `decisions.md` ergänzen, am Tagesende `project_state.md` und `open_items.md` aktualisieren.
 
-**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-20.md` lesen** (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
+**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-22.md` lesen** (ersetzt die vom 20.10.) (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
 
 Diese Datei wird in jeder neuen Sitzung geladen. Sie hält fest, was Gabriel ausdrücklich verlangt hat.
 
@@ -57,7 +57,13 @@ Beispiele:
 - **Nach dem Verständnis keine Technologie mehr.** Die Lösungsteile reden nur darüber, was der Kunde damit tun kann (Abläufe, Ergebnisse, Alltag), nicht über Briefkästen, Schlüssel oder Tor. Technik nur auf ausdrückliche Nachfrage oder in einem getrennten Anhang.
 - Die Basistexte stehen in `unpruuf_Story_DE/EN/RO.docx` und in der Landing-Page-Story (Postamt). Neue Materialien übernehmen sie unverändert oder gekürzt, nicht neu erfunden. Protokolldetails bleiben draußen (Patent).
 - Das Whistleblower-Tool heißt **unpruuf Compliance**, das Presse-Produkt **unpruuf Press** (Entscheidung von Gabriel vom 22.10.2026). Der Name „safeline“ entfällt in allem Sichtbaren und wird nicht mehr verwendet. In neuem Kundenmaterial so nennen, nicht „Whistleblower“. Das Grundsystem heißt weiter unpruuf („Wie unpruuf funktioniert“). Deck: Quelle `unpruuf/presentations/safeline.py` (technischer Name, bleibt), Export `presentations/export/unpruuf_Compliance_Kundendeck_EN/RO.pdf/.pptx`. Technische Namen (Paket-IDs, Ordner `safeline_en/ro`, interner Produkttyp `safeline` in Control) bleiben, damit Updates und gespeicherte Daten weiterlaufen.
-- Newsletter-Anmeldungen und Newsletter-Anfragen gehen an **unpruuf@nexonai.ro** (Festlegung vom 11.10.2026). Die Landing Page hat dafür einen Abo-Knopf als E-Mail an diese Adresse, ohne Server-Formular. Der Datenschutztext muss den Newsletter nennen (Einwilligung, Abmeldung per E-Mail), sobald klar ist, womit versendet wird.
+- Newsletter entfällt vorerst (Entscheidung vom 15.10.2026, ersetzt die Festlegung vom 11.10.). Kein Versand, keine Abo-Anmeldung, die Datenschutzerklärung nennt keinen Newsletter. Kontakt läuft über einen Knopf, der eine E-Mail an **unpruuf@nexonai.ro** öffnet, die Adresse steht zusätzlich als Text auf der Seite. Kommt ein Newsletter zurück, braucht er Double-Opt-in und einen Absatz in der Datenschutzerklärung.
+
+## Design für alle Dokumente und Artefakte (von Gabriel festgelegt, 25.10.2026)
+
+- Alles, was ich erstelle (Seiten, Artefakte, Word-Dokumente, Präsentationen, Blätter), folgt dem Design von https://nexonai.ro: weiße Seiten, ein dunkelblauer Titelbalken (`#0f2a3a`), Akzent `#307098` (auf Dunkel `#90c8e8`), Open Sans, enge fette Überschriften, dünne Linien statt Kästen, 4 px Ecken, flach. Tokens, Regeln und Werkzeuge: `unpruuf/design/NEXONAI_DESIGN.md`, `nexonai-tokens.css`, `md_to_html.py`, `md_to_docx.py`, Logos in `design/brand`.
+- Artefakte als HTML-Seite im Design veröffentlichen. Der Docs-Typ (bearbeitbare Dokumente) lässt sich nicht gestalten; ihn nur nehmen, wenn das Team direkt im Dokument schreiben oder kommentieren soll, und das sagen.
+- Die Ehrlichkeitszeile der Seite („Pilotphase, nicht unabhängig auditiert“) bleibt in der Fußzeile von Dokumenten über unpruuf.
 
 ## GDPR (11.10.2026)
 

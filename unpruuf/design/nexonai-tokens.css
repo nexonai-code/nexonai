@@ -1,0 +1,16 @@
+/* NexonAI / unpruuf design tokens, taken from https://nexonai.ro (styles.css), 25 Oct 2026.
+   Light is the site's own look. Dark is derived for artifacts, which must offer both. */
+:root {
+  --ink: #0f2a3a;          /* text, dark panels, theme-color of the site */
+  --blue: #307098;         /* accent: buttons, links, eyebrows on light (the site calls it --green) */
+  --blue-hover: #235577;
+  --bright: #90c8e8;       /* accent on dark: eyebrows, second headline line, big numerals */
+  --bright-hover: #a6d3ec;
+  --muted: #4a5a66;        /* running text under headings */
+  --line: #d9e4ea;         /* hairlines, table rules */
+  --paper: #f2f6f9;        /* soft panels, table header */
+  --white: #ffffff;
+  --sans: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+  --mono: 'DejaVu Sans Mono', 'DejaVu Mono', ui-monospace, Menlo, Consolas, monospace;
+  --radius: 4px;
+}

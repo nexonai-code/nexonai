@@ -83,3 +83,7 @@ untested is Windows-specific execution of the final binary. Report back exactly 
 real run — if something's off, it's very likely contained to `sea-entry.ts` or `build-exe.js`, not
 the app logic itself (which is the same, unchanged code the already-working `start-windows.bat`
 path runs).
+
+## Node list from the exe (`export-list.bat`)
+
+`export-list.bat` in the exe folder runs `dist\unpruuf-node-mesh.exe --export-list` and writes `unpruuf-nodes-server-<slot>.txt` next to it, while the server runs (same behaviour as `export-list.bat` of the source package, see README). Verified on Linux against a stub server; not yet on a real Windows machine.

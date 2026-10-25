@@ -87,7 +87,7 @@ class ConnectionPathsTest {
     @Test fun `node list file carries the company bridge and ignores a broken bridge line`() {
         val file = listOf(
             "unpruuf-node-list:v1", "name: Acme", "secret: abcdefghijklmnopqrstuvwxyz012345",
-            "count: 1", "bridge: $goodObfs4", "bridge: not a bridge", "", "abcdefabcdefabcd.onion"
+            "count: 1", "bridge: $goodObfs4", "bridge: not a bridge", "", "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab.onion"
         ).joinToString("\n")
         val parsed = NodeListFile.parse(file)
         assertNotNull(parsed)
@@ -96,7 +96,7 @@ class ConnectionPathsTest {
     }
 
     @Test fun `node list file without bridge has none`() {
-        val file = listOf("unpruuf-node-list:v1", "name: A", "secret: abcdefghijklmnopqrstuvwxyz012345", "count: 1", "", "abcdefabcdefabcd.onion").joinToString("\n")
+        val file = listOf("unpruuf-node-list:v1", "name: A", "secret: abcdefghijklmnopqrstuvwxyz012345", "count: 1", "", "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab.onion").joinToString("\n")
         assertEquals(emptyList<String>(), NodeListFile.parse(file)!!.bridges)
     }
 }

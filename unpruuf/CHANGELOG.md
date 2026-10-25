@@ -7,11 +7,154 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ## 2026‑10‑25 · Hardening of the guest exchange and node addresses
 
-- Only v3 onion names are accepted as node addresses: dropped at decoding of a code, when a stored address is parsed, and refused once more before any connection. A code with no valid address is rejected. Header injection through an address is impossible (test).
+- Only v3 onion names are accepted as node addresses (same ground as pre-audit fix M7 on the audit line; both lines merged, the audit line's version kept): dropped at decoding of a code, when a stored address is parsed, and refused once more before any connection. A code with no valid address is rejected. Header injection through an address is impossible (test).
 - A pasted guest answer (Pro app) now needs a check code: the guest's phone shows it under its own code, the inviter confirms it before the contact is added. Scanned answers are unchanged.
 - Order in the guest binding fixed: unknown invitation is reported before "contact exists".
 - Tests: `NodeMeshAddressTest` (new), `NodeMeshPairingTest` (+2, fixtures now real-length onions), `GuestClientTest` (+1). All flavours compile, Standard and Client unit tests pass.
 - Build environment was reset: Android SDK reinstalled; the signing keys are not in this environment any more (they were never in git).
+---
+
+## 2026‑10‑25 · Security audit R1 (scanners plus review) and first fix round
+
+- **Audit:** Gitleaks, Semgrep, OSV-Scanner, npm audit and Checkov over the whole code base, plus a review of the hotspots. 17 findings: 0 Critical, 0 High, 6 Medium, 7 Low, 4 Info; no live secret anywhere; 0 dependency advisories outside the licence tool. The register (`.security-audit/`) stays with the owner and is not in git (team rule of 22 Oct); the report is an artifact.
+- **Fixed in this commit (13 of 17):**
+  - `.bat` command injection (SEC-001): `officer-app/start.bat`, `start-press.bat`, `node-mesh-server/start-bridge.bat` validate the pasted relay code or bridge address with `findstr` and write it quoted.
+  - Licence tool GUI (SEC-002): Host/Origin/header guard like Control, OPTIONS refused, `/api/sign-release` limited to the repository; page sends `x-unpruuf-license: 1`. Express transitive packages updated, npm audit clean (SEC-013).
+  - web-reporter (SEC-003): malformed URL answers 400 instead of killing the process; binds 127.0.0.1 unless `HOST=0.0.0.0`.
+  - Relay (SEC-007, SEC-011, SEC-014): `npm ci` with the lock file, non-root user and HEALTHCHECK in both Dockerfiles; strict base64 check and token buckets on all three routes (`server/src/middleware/rateLimit.ts`, new). HEALTHCHECK also on the node server image.
+  - Feed setup page (SEC-008): per-start access token like the node page (`feedIndex.ts`, `feedAdmin.ts`, own cookie `unpruuf_feed_token`); `start-feed.bat` opens the tokenised link.
+  - Officer dashboard (SEC-009): per-start access token (header, cookie `unpruuf_officer_token_<port>`, or `?t=` link), on top of the optional password; the start scripts explain the link.
+  - File modes 0600 for the relay identity, `customers.json` and bridge lines (SEC-010); constant-time token compare in Control (SEC-012); `getCurrentRotationFactor()` is plain `SecureRandom` with an honest comment (SEC-016); officer `fetchMany` copies only requested tags into a prototype-less map (SEC-017).
+- **Left open on purpose:** SEC-004 (F1 with M6 and L12), SEC-005 (M5), SEC-006 (M8) wait for the team's decision; SEC-015 is informational.
+- **Checks:** node server 139 (138 pass, 1 skipped), relay 72, Control 63, officer app 32, app unit tests Standard green, licence tool and web-reporter smoke-tested with curl. Not done: Windows run of the three `.bat` files, Docker builds (no registry here; `server/tor/torrc` is missing from the repository, so that image did not build before either), `security-verify` rescan.
+
+---
+
+## 2026‑10‑25 · Merge of `android` (36 commits from 20.–23.10.) into the audit line
+
+- **What:** the two lines had split at `9ec1809`. `android`/`main` carried guest invitations (Room v15, guest grants on the server, Client edition), the rename to **unpruuf Compliance** and **unpruuf Press** (22.10.), the Press line with one contact code per research, Officer-dashboard hardening (OFF-1), website v12, the spam-protection concept, the structured memory under `.claude/memory`. This line carried the pre-audit fixes (H1, M1–M4, M7, M9–M11, L1–L11), Tor isolation levels 1 and 3, the design kit, the process documents and `export-list`. Both are now in one history; nothing of either side was dropped.
+- **11 conflicts, resolved by hand:** `routes/node.ts`, `app.ts`, `package.json` (server: guest deposit auth *and* the new buckets, cursor, strict routing, 404 handler, both test lists), `NodeMeshClient.kt` (the request takes `isolationKey` *and* `authorization`), `P2PNetworkManager.kt` (guest deposits also run on the contact's Tor isolation key), `AppModule.kt` (sealed database key *and* `MIGRATION_14_15`), `CHANGELOG.md`, both READMEs, `evidence/REPORT.*` (re-run, see below).
+- **Guest deposits and Tor isolation:** `depositAsGuest` now carries the contact's isolation key, so a guest's packets to the inviter's node travel on that contact's circuit like every other deposit. Not verified against real Tor (same state as the rest of level 3).
+- **Evidence scripts:** `03` allows `http` in `exportListCli.ts` and checks that the tool names only `127.0.0.1`; `04` counts `Socks5.kt` as the Tor path and checks that the app's own SOCKS5 client connects only to the local proxy and that every caller passes `127.0.0.1`. Before that, both checks failed on the new files — a true report of the new code, not a regression.
+- **Rules:** root `CLAUDE.md` and `unpruuf/CLAUDE.md` now agree on the hand-over to read first (`UEBERGABE_2026-10-22.md`), the newsletter (dropped, 15.10.), the form of address, and the Officer-dashboard state. The product names from 22.10. were already in the root file via the merge. "safeline" replaced in the F1 sheet, the audit process, the pre-audit report and the audit-readiness page (sources and the four published pages; the live pages had been renamed by another session this morning and the sources now match them word for word).
+- **Checks after the merge:** node server 137 passed, 1 skipped (138); app unit tests green in all six editions (Standard 247; Pro, Client, Group, Whistleblower, Press compile and pass); Control 63; Officer app 28; relay server 70; evidence 99 passed, 0 failed, 1 finding (F1, known). Not done: a phone test of the merged app, real Tor, Windows run of the exe.
+- **Pending from the other line, unchanged:** `evidence/AUDITOR_SCOPE.md` still lists Control and Officer app as WP5/6 (round one is node server and Business app only).
+
+---
+
+## 2026‑10‑25 · Node list without a browser (`export-list`), exe and Control button
+
+- **Why:** the list of all nodes of a server (for the import in the app) was only reachable through the setup page, which on a VPS means an SSH tunnel and a browser. Control already fetched it with one click (Distribute); a server without Control had no easy way.
+- **New:** `node-mesh-server/export-list.bat` / `export-list.sh` (`src/exportListCli.ts`): asks the running server's setup page on loopback with the access token from the data folder, waits while the addresses are still being created (409), and writes `unpruuf-nodes-server-<slot>.txt` readable for the owner only. Clear messages for a locked server and for a wrong token. The start output and `start.bat`/`start.sh` point to it.
+- **Decision (finding):** nothing is written at start. A sealed server holds its write key only in memory (`nodeIdentity.ts`), so a list file at start would put the key on the disk and undo the sealing. The file exists only on request.
+- `.gitignore` excludes `unpruuf-nodes-*.txt` (contains the write key). 3 new tests (127 in total). Checked by hand against a stub server: file written with mode 600, waiting on 409, wrong token gives exit 1.
+- **Standalone exe:** `unpruuf-node-mesh.exe --export-list [folder]` (via `sea-entry.ts`), and `export-list.bat` is part of the exe folder (`exe-templates/`, `build-exe.js`); `start.bat` of the exe points to it. Built on Linux and run against a stub server (file written, mode 600). The Windows `.exe` itself is still not run on a real Windows machine.
+- **Control:** after the installation wizard has finished, the "Download node list" button appears right in the dialog (EN/RO), with the hint to wait a minute if the addresses are not there yet. It uses the existing list download. Control tests 63/63.
+- Fixed on the way: the batch file passed `"%~dp0"` (trailing backslash) to node, which Windows reads as an escaped quote. Now `"%~dp0."`.
+
+---
+
+## 2026‑10‑25 · Database key sealed, device transfer off, panic wipe completed (pre-audit H1, M9, M10)
+
+- **H1, database key:** the SQLCipher key of the contacts database (pairing keys, ratchet state) lay in plain Base64 in `db_key_store`/`db_key`, next to the database. It is now sealed under the phone-bound key in the same `k1:` form as `SealedStrings` (`data/db/DbKeyVault.kt`). Existing installs are migrated on the first start: new key sealed and noted first, WAL folded in, copy of the file (`unpruuf_contacts.db.rekey-backup`), `PRAGMA rekey` to a fresh key, reopen with the new key and compare the row count of every table, only then the plain value is replaced and the copy deleted. Any failure puts the copy back and keeps the old key (retried next start); a crash at any step is repaired from the copy on the next start. If the phone key cannot seal, the old key stays in use for now. If a sealed key cannot be opened, the app does not create a new database: it runs empty in memory, leaves the file alone and the lock screen shows the existing "phone key gone, clear the app data" message (`DbKeyState`, `PIN_STORE_LOST`, now also on the setup screen).
+- **M9:** `android:dataExtractionRules` (`res/xml/data_extraction_rules.xml`) excludes every app file from cloud backup and from device-to-device transfer; `allowBackup="false"` stays.
+- **M10:** the database is opened with `PRAGMA secure_delete=ON`. The panic wipe now also removes a pending pairing code (`clearPendingNodeMeshPairing`), empties the outgoing queue and half-received chunked messages (`P2PNetworkManager.forgetAllLocally`), and afterwards checkpoints and truncates the WAL and runs `VACUUM` (`DatabaseScrub`). The panic PIN needs at least 4 digits in the ViewModel too (the setup button already required it).
+- Tests: `DbKeyVaultTest` (15, JVM, simulated file and phone key): fresh install, migration, no plain field left, failed rekey with copy put back, wrong read-back, crash after rekey, crash while writing the key, unwritable key, leftover copy, failed copy, phone key cannot seal, sealed key unreadable, file without key.
+- **Not tested on a device:** the SQLCipher side (`SqlCipherDbFiles`: open with the old key, rekey, read probe, copy and restore), the migration of a real older install, the panic scrub and the transfer exclusion (some vendors' switch tools may ignore it). Should be checked on a phone before the next release.
+- **iOS (Norbert):** H1 does not apply as such (the contacts file key is in the Keychain, `ThisDeviceOnly`). Same idea needed in two places: `ContactStore.fileKey` creates a new key silently when the Keychain entry is missing and the next save overwrites the old file (should not create a new key while an old file exists), and `LockViewModel.swift` checks only the PIN length, the panic PIN length only in the view.
+
+---
+
+## 2026‑10‑25 · Audit process document
+
+- `handover/PROCESS_AUDIT_2026-10-25.md` (also published as a page in the NexonAI design): gate, decision, hand-over, quotes, contract, kick-off, running the audit, draft report, fix and retest, final report and how we may use it, close. Suggested RACI, exceptions, metrics.
+- Found while writing it: `evidence/AUDITOR_SCOPE.md` (14 October) still lists Control and the Officer app as work packages 5 and 6, while the plan since 20 October is round one with node server and Business app only. To be aligned.
+
+---
+
+## 2026‑10‑25 · Release process document
+
+- `handover/PROCESS_RELEASE_2026-10-25.md` (also published as a page in the NexonAI design): 13 steps from the prepared version to the record after delivery, with a suggested RACI, exceptions and metrics. It uses what exists (`sign-release.js`, `verify-release`, Control bundle, release key, evidence scripts) and marks what does not exist yet: the extended signed file list (M8), a reproducible build, a bill of materials, a release record script.
+- Found while writing it: every app build, debug and release, stops running about 180 days after it was compiled (`BUILD_EXPIRY_MS`); the process puts a reminder 150 days after each build.
+
+---
+
+## 2026‑10‑25 · Audit readiness checklist (shared page)
+
+- `design/pages/audit_readiness.py` builds the page "Audit readiness" in the NexonAI design: 17 items in four groups with status (open, in progress, done, needs decision), suggested owner and a note per item, what we ask the auditor for, what raises the result and what to expect. The team's status and notes live in the artifact's shared database (`audit_items`); without it the page shows the defaults read-only.
+- The owners are suggestions; the team decides together.
+
+---
+
+## 2026‑10‑25 · NexonAI design for all documents and artifacts
+
+- `design/NEXONAI_DESIGN.md`, `nexonai-tokens.css`, `brand/` (logo, favicon): tokens and rules taken from nexonai.ro (ink `#0f2a3a`, blue `#307098`, bright `#90c8e8`, Open Sans, hairlines, 4 px corners). Dark mode derived for artifacts.
+- `design/md_to_html.py`: Markdown to one page in this design (title band, header with logo and wordmark, tables that scroll inside their own box, light and dark). `design/md_to_docx.py`: the same look for Word. `CLAUDE.md` carries the rule for later sessions.
+- The F1 decision sheet, the Tor proposal and the pre-audit report are also published as HTML pages in the new design; the Docs versions stay for inline editing and comments.
+- The audit briefs (.docx) were rebuilt in the new look.
+
+---
+
+## 2026‑10‑25 · Tor stream isolation per contact (level 1) and own timers per contact (level 3)
+
+- `Socks5.kt`: a SOCKS5 client of our own (RFC 1929 user name and password, host sent as a name, nothing resolved on the phone, fail closed: with credentials only the user-name method is offered, a proxy that skips authentication is refused). No global state (the platform's `java.net.Authenticator` is process-wide and would touch every other connection).
+- `TorIsolation.kt` / `IdentityManager.torIsolationKeyFor`: the user name is a keyed hash of the contact id under a device secret (32 hex characters); it stays on the phone.
+- `NodeMeshClient`: `fetchManySince` and `deposit` take an isolation key; without a key (pool lists, feeds) the request uses the shared default group. `P2PNetworkManager` passes the contact's key for every poll and every deposit of that contact (also the Temp Node path).
+- Level 3: one poll loop per contact with its own random start and jittered interval (before: one loop for all). A loop starts when a contact appears and stops when it is gone; the panic wipe stops them all.
+- Tests: `Socks5Test` (13, against an in-process fake proxy: only the user-name method offered, name-based connect, every connect error code, refused credentials, another version, all bound address types, timeout, bad arguments), `TorIsolationTest` (4). Android unit tests: 220 per build.
+- Not verified: real Tor (do two requests with different user names land on different circuits?), battery, mobile data and latency with more circuits. Level 2 (isolation per hour) is not built. iOS: Norbert to check whether the iOS Tor stack allows a SOCKS user name per connection.
+
+---
+
+## 2026‑10‑25 · M4: tags are no longer chained by one big request (receiving side)
+
+- `NodeMeshWindow.kt` (+ `NodeMeshWindowTest`): which hourly epochs a poll asks for. The full window of 26 only on the first poll after an app start, after a failed or cut-short poll, or when the clock went backwards; otherwise from the epoch before the last complete poll up to now (2 or 3 epochs in the steady state).
+- `P2PNetworkManager.pollNodeMeshOnce`: one request per (contact, node address) instead of one per address, so a request no longer lists the tags of several contacts; requests start spread over up to 1.5 s. Cursors are kept per (contact, address). A poll counts as complete only if no answer was cut short.
+- Compatible: nothing changes in the packets or on the server; old and new apps keep reading each other. Not part of the incompatible F1/M6 release.
+- Remains: requests to one node address share Tor's circuit to that address and consecutive requests overlap by one epoch, so an operator who can tie requests to one client can still chain tags. Separate circuits per contact (SOCKS isolation) are not built. Cost: up to (contacts x nodes) parallel requests instead of (distinct nodes). Not tested on a device or against real Tor.
+- iOS (Norbert): same receiving-side change; no format change.
+
+---
+
+## 2026‑10‑25 · Audit briefs brought in line with the code (revision of 19 October)
+
+- `evidence/AUDIT_BRIEF_NODE_SERVER.md` and `AUDIT_BRIEF_ANDROID_APP.md` (+ .docx, + the shared Doc): wire format v2 is stated as "not done" (F1 open) instead of a finished precondition; claims reworded where the code did not carry them (write access is "every company device with the node list"; the release fingerprint covers `dist/*.js` and `package.json` only; tags vs a node operator over days; panic PIN and database key; clipboard; eleven permissions, not nine); evidence columns updated for the fixes of 25 October; new limits; new section 9 "What our own pre-audit found" with fixed and open items.
+- `design/md_to_docx.py` builds the .docx from the .md (python-docx; moved from `evidence/` on 25 October and given the NexonAI design).
+- `CLAIMS_TO_EVIDENCE.md` B5: eleven permissions in the merged manifest.
+
+---
+
+## 2026‑10‑25 · Pre-audit, low findings (L1 to L11)
+
+L12 belongs to the wire-format decision (F1) and is not touched. Not tested on a device: L4, L10, L11 (clipboard, lock-out with the date moved, Temp Node timeout).
+
+- **L1 (server):** `/lock-status`, `/pool` (owner) and `/pool` (wrong secret) have separate buckets; a stranger can no longer lock the owner out of `/pool`. `/unlock` keeps its own bucket (it has to try the secret to know) and the setup page is the way around it.
+- **L2 (server):** one sweep right at the start, so packets that expired while the server was off are removed first. The claim "gone within about a minute" holds while the server runs.
+- **L3 (server):** one JSON `{"error":"not found"}` for every unknown path and method; no ETag; exact paths (`/DEPOSIT`, `/deposit/` are 404); HEAD and OPTIONS answer 404.
+- **L7 (server):** the per-minute `[sweep] removed N` log line is gone (a timeline of traffic in `docker logs` for months). Counts stay in memory (overview).
+- **L8 (server):** `umask 077`; data folder 0700, database files 0600 (also for existing installs).
+- **L9 (server):** every start prints one `[settings]` line per setting that lowers protection (`loweredProtection.ts`: key storage on disk, Tor off, setup page beyond loopback, owner code in the log, changed ceiling, own Tor program or folder, public address that is not an onion, unsigned-start allowed). Unit-tested.
+- **L4 (app):** the clipboard is cleared after 60 s also when it cannot be read (Android 10+ background); it is left alone only when it can be read and holds something else.
+- **L5 (app):** chunk transfers above 2048 pieces are refused; `unpadPacket` checks the size and offset fields before allocating; the node client limits reply head lines (8 KB, 64 lines).
+- **L6 (app):** node list parser is linear (a set instead of `contains`) and refuses more than 5000 addresses.
+- **L10 (app):** the PIN lock-out is also timed on the monotonic clock; moving the date forward no longer shortens a pause. A restart makes only the wall clock count again. The count is written with `commit()`.
+- **L11 (app):** a Temp Node connection has 5 s to deliver its request (was 70 s); a long-poll waits after that, not while reading.
+- Checks: node-mesh-server 123 passed (1 skipped), Android unit tests 196 each for standard, pro and group.
+
+---
+
+## 2026‑10‑25 · Fixes from the pre-audit (M1, M2, M3, M7) and a dependency advisory
+
+Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed from it: M4 to M6, M8 to M10 (H1 is in progress).
+
+- **M1, read limit:** each address the server really serves gets its own bucket (Host header lower-cased, port stripped); every other Host value shares ONE bucket. Before, invented host names multiplied the allowance and could push the real nodes into a shared overflow. Tests: `app.test.ts` (invented hosts, port and case).
+- **M2, `/fetchMany`:** repeated tags are read once; one answer carries at most 256 packets (`MAX_FETCH_MANY_BLOBS`), read with a single bounded query. A cut answer says `"more":true`; the cursor continues there. The app follows up to 8 continuations per poll.
+- **M3, cursor:** derived from the requested tags only, no longer the server-wide counter. A stranger with one address can neither watch the server's deposit traffic nor link addresses to one server. Android combines chunk cursors accordingly (largest when complete, smallest of the cut ones).
+- **M7, addresses:** the app accepts only v3 onion addresses (pairing codes, node lists, owner strings, migrate and temp-node signals), and `NodeMeshClient.request` refuses anything else, so the owner secret can no longer be sent to a plain host name through a Tor exit. The LAN-style `host:port` form is gone; tests with placeholder names now use real-shaped onions. **iOS:** same rule needed (Norbert).
+- **M11, setup page:** an access token (32 random bytes, new at every start, file `admin-token` with 0600 in the data folder) is now required for every request of the setup page, on top of the loopback checks. A neighbouring container can no longer read the owner code by sending a loopback Host header. A person gets a link `/?t=<token>` printed to the terminal (not into service logs); `start.bat` opens it itself. Control reads the token over its SSH login (`docker exec … cat /app/data/admin-token`), sends it with every call and asks again once after a restart. Tests: 2 in `adminApp.test.ts`, 1 in Control with a fake server that rotates its token. Older servers without a token keep working with the new Control.
+- **Dependency:** `body-parser` 1.20.8 to 1.20.9 (high-severity DoS advisory published after the last evidence run) in node-mesh-server, server, control and officer-app (lock files only).
+- **Test:** `PhoneTempNodeTest.startRunsAndStopRemovesEverything` no longer assumes a freed port stays closed.
+- Checks: node-mesh-server 116 passed (1 skipped), relay 70, control 62, officer-app 15, evidence 97 passed / 0 failed / F1, Android unit tests 169 each for standard, pro and group.
 
 ---
 

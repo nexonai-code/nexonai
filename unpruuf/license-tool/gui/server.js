@@ -38,11 +38,34 @@ function loadCustomers() {
 }
 
 function saveCustomers(list) {
-  fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(list, null, 2));
+  // Every issued code lives in this file: owner-only on Linux/macOS (Windows ignores the mode).
+  fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(list, null, 2), { mode: 0o600 });
+  try { fs.chmodSync(CUSTOMERS_FILE, 0o600); } catch { /* Windows */ }
 }
 
 const app = express();
-app.use(express.json());
+app.disable('x-powered-by');
+// Binding to 127.0.0.1 keeps the network out, not the browser: a page on another site can still
+// reach "localhost:4321" (DNS rebinding makes it same-origin). So, like Control and the node setup
+// page: the Host header must be this computer, every /api call carries a header a foreign page
+// cannot add without a CORS preflight (which is never answered), and OPTIONS gets nothing.
+const LOOPBACK_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`, `[::1]:${PORT}`]);
+app.use((req, res, next) => {
+  if (!LOOPBACK_HOSTS.has(String(req.headers.host || '').toLowerCase())) return res.status(403).send('forbidden');
+  if (req.method === 'OPTIONS') return res.status(403).end();
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin !== `http://${req.headers.host}`) return res.status(403).send('forbidden origin');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; form-action 'none'");
+  next();
+});
+app.use('/api', (req, res, next) => {
+  if (req.header('x-unpruuf-license') !== '1') return res.status(403).json({ error: 'forbidden' });
+  next();
+});
+app.use(express.json({ limit: '64kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/customers', (req, res) => {
@@ -126,6 +149,12 @@ app.post('/api/issue-server', (req, res) => {
 app.post('/api/sign-release', (req, res) => {
   const body = req.body || {};
   const folder = path.resolve((typeof body.folder === 'string' && body.folder.trim()) || path.join(__dirname, '..', '..', 'node-mesh-server'));
+  // Only folders inside this repository can be signed: the key must never become a signing
+  // oracle for an arbitrary path on this PC.
+  const repoRoot = path.resolve(__dirname, '..', '..');
+  if (!(folder === repoRoot || folder.startsWith(repoRoot + path.sep))) {
+    return res.status(400).json({ error: `folder must be inside ${repoRoot}` });
+  }
   try {
     const r = signRelease(folder, privateKey);
     const line = `${new Date().toISOString()}  version ${r.version}  ${r.files} files  fingerprint ${r.fingerprint}\n`;

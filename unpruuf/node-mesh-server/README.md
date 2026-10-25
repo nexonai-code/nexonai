@@ -62,13 +62,16 @@ danach löschen. Gesperrte Server exportieren nicht.
 Onion-Adresse, die sich alle paar Stunden ändert (nur die App rechnet sie aus). Einrichtungsseite `http://localhost:8841`,
 Ports 8840 (Dienst, nur Onion) und 8841. Aufbau und Format: `../NODE_MESH_SPEC.md` §16, Anleitung: `../NODE_MESH_BETRIEB.md`.
 Code in `src/feed/`. Nicht gegen ein echtes Tor getestet; Tor-Client-Autorisierung ist nicht enthalten.
+Die Einrichtungsseite braucht wie die Node-Seite einen Zugangs-Schlüssel, der bei jedem Start neu ist: im Terminal wird der Link
+`http://localhost:8841/?t=<token>` ausgegeben (`start-feed.bat` öffnet ihn), ohne Terminal steht der Schlüssel nur in der Datei
+`admin-token` (0600) im Feed-Datenordner (`data/feed`). Eigenes Cookie `unpruuf_feed_token`, damit sich Feed- und Node-Seite nicht gegenseitig abmelden.
 
 ## Linux / Docker
 
 ```bash
-./start.sh 1 standard          # slot, profile — setup page on http://localhost:8790
+./start.sh 1 standard          # slot, profile — setup page on http://localhost:8790 (link with token is printed)
 ./start-tempnode.sh            # Temp Node — setup page on http://localhost:8810
-docker compose up -d           # container, setup page on the host's http://localhost:8790
+docker compose up -d           # container, setup page on the host's http://localhost:8790 (needs the access token, see below)
 ```
 
 ## What the node does on its own
@@ -174,6 +177,30 @@ not the limit, and one process with N nodes costs about a tenth of N separate pr
 - A real Windows run of `start.bat` / the `.exe`, and the Docker image (the sandbox's Docker
   build couldn't reach the npm registry). `docker compose up` on a normal machine is the check.
 
+
+## Node list without a browser: `export-list` (since 25 Oct 2026)
+
+The node list (all nodes of this server, the write key, control address, bridges) comes in three ways:
+
+| Where | How |
+|---|---|
+| **Control** (admin PC, recommended) | Distribute → one server's name = its list, or the ZIP with all servers. One click, no SSH by hand. |
+| **On the server itself** | `export-list.bat` (Windows) or `./export-list.sh` in this folder, while the server runs. Writes `unpruuf-nodes-server-<slot>.txt` next to the program, readable for the owner only. It waits while the server is still creating its addresses. |
+| **Setup page** | Card "Node-Liste für deine App". |
+
+Nothing is written at start. A sealed server keeps its write key only in memory, so a file at start would defeat that. The file exists only after you asked for it: move it to your own phone over a cable or a trusted channel, import it (Settings → Node lists → Import list) and delete it. The start output points to the script once the addresses are up.
+
+## Access token of the setup page (since 25 Oct 2026)
+
+The setup page (port 8790, loopback only) now answers nobody without a token. Reason: inside a container
+"this computer" includes every other container on the same network, and the Host header is chosen by the caller.
+The token is 32 random bytes, **new at every start**.
+
+- **Terminal (start.bat / start.sh):** the link `http://localhost:8790/?t=<token>` is printed, `start.bat` opens it for you. The first visit sets a cookie and goes to the clean address.
+- **Docker / service (no terminal):** the token is not printed into the log. Read it as root on the host:
+  `docker exec unpruuf-node cat /app/data/admin-token`, then open `http://localhost:8790/?t=<token>` (through an SSH tunnel if the host is remote). unpruuf Control does this by itself.
+- The file `admin-token` in the data folder is `0600`. A token in the address works for reading only; changes always need the cookie or the header `x-unpruuf-admin-token`.
+- After a restart the old token is void; reload the link with the new one.
 
 ## Guest grants (optional, off by default)
 

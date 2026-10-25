@@ -2,3 +2,6 @@
 Thumbs.db
 
 __pycache__/
+
+# Security audit register: stays with the owner, never in git (rule of 22.10.2026)
+.security-audit/

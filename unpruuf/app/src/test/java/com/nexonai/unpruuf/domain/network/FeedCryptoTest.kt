@@ -73,11 +73,13 @@ class FeedCryptoTest {
         val c = FeedCrypto.parseFeedCode(code)!!
         val opened = FeedCrypto.openList(blob, c.contentKey, c.signPublicKey)!!
         assertEquals(5L, opened.seq)
-        val files = FeedCrypto.splitLists(opened.plaintext).map { NodeListFile.parse(it)!! }
-        assertEquals(listOf("Wien", "Zuerich"), files.map { it.name })
-        assertEquals(listOf(3, 2), files.map { it.addresses.size })
-        assertEquals("Owner_secret_0123456789-AB", files[0].ownerSecret)
-        assertEquals(3, files[0].addresses.size.let { _ -> 3 })
+        // This fixture was sealed with placeholder node names, which the app (v3 onions only) no longer
+        // accepts as a node list; what the feed layer owes is the split itself.
+        val files = FeedCrypto.splitLists(opened.plaintext)
+        assertEquals(2, files.size)
+        assertEquals(listOf("Wien", "Zuerich"), files.map { f -> Regex("(?m)^name: (.*)$").find(f)!!.groupValues[1].trim() })
+        assertEquals(listOf(3, 2), files.map { f -> f.lines().count { it.endsWith(".onion") } })
+        assertTrue(files[0].contains("secret: Owner_secret_0123456789-AB"))
     }
 
     @Test
