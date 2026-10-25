@@ -14,8 +14,8 @@ class NodeMeshPairingTest {
         x25519RatchetPublicKeyBase64 = "cmF0Y2hldEtleQ==",
         nodeMeshRoutingSeedBase64 = "cm91dGluZ1NlZWQ=",
         nodeAddresses = listOf(
-            NodeMeshManager.NODE_ADDRESS_PREFIX + "abcdefghijklmnop.onion:80",
-            NodeMeshManager.NODE_ADDRESS_PREFIX + "qrstuvwxyz234567.onion:80"
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "abcdefghijklmnopabcdefghijklmnopabcdefghijklmnopabcdefgh.onion",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "qrstuvwxyz234567qrstuvwxyz234567qrstuvwxyz234567qrstuvwx.onion"
         ),
         appEdition = "pro"
     )
@@ -35,7 +35,7 @@ class NodeMeshPairingTest {
 
     @Test
     fun `v1 QR with user id still parses and ignores it`() {
-        val v1 = """{"v":1,"u":"0123456789abcdef0123456789abcdef","p":"bWVzc2FnZUtleQ==","k":"cmF0Y2hldEtleQ==","s":"cm91dGluZ1NlZWQ=","n":"abcdefghijklmnop.onion:80","e":"standard"}"""
+        val v1 = """{"v":1,"u":"0123456789abcdef0123456789abcdef","p":"bWVzc2FnZUtleQ==","k":"cmF0Y2hldEtleQ==","s":"cm91dGluZ1NlZWQ=","n":"abcdefghijklmnopabcdefghijklmnopabcdefghijklmnopabcdefgh.onion","e":"standard"}"""
         val parsed = jsonToNodeMeshPayload(v1)
         assertNotNull(parsed)
         assertEquals("bWVzc2FnZUtleQ==", parsed!!.messageKeyBase64)
@@ -49,7 +49,7 @@ class NodeMeshPairingTest {
 
     @Test
     fun `missing routing seed is rejected`() {
-        val noSeed = """{"v":2,"p":"a","k":"b","n":"abcdefghijklmnop.onion:80","e":"standard"}"""
+        val noSeed = """{"v":2,"p":"a","k":"b","n":"abcdefghijklmnopabcdefghijklmnopabcdefghijklmnopabcdefgh.onion","e":"standard"}"""
         assertNull(jsonToNodeMeshPayload(noSeed))
     }
 }

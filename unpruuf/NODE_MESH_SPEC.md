@@ -719,7 +719,18 @@ geöffnet wird.
 4. **Abhol-Cursor.** `POST /fetchMany` nimmt optional `since` (Server-Zeilen-ID) und antwortet mit
    `{"cursor":N,"blobs":{…}}`. Jeder Blob wird nur einmal geladen; Tags, die neu ins Fenster kommen,
    einmal ab 0. Ohne `since` bleibt die Antwort exakt wie vorher. (Android-Node: noch ohne Cursor,
-   App fällt dort auf Voll-Abruf zurück.)
+   App fällt dort auf Voll-Abruf zurück.) **Stand 25.10.2026:** Der Cursor kommt nur noch aus den
+   angefragten Tags (höchste ID der gelieferten Pakete, sonst das gesendete `since`), nicht mehr aus
+   einem Zähler des ganzen Servers; ein Fremder mit einer Adresse sieht so weder den Einwurf-Verkehr
+   des Servers noch, welche Adressen zusammengehören. Gleiche Tags in einer Anfrage werden einmal
+   gelesen. Eine Antwort trägt höchstens 256 Pakete; wurde sie gekürzt, steht `"more":true` vor
+   `blobs`, und die nächste Anfrage mit dem Cursor setzt genau dort fort. Ein Cursor ohne `more`
+   heißt: für diese Tags liegt bis jetzt nichts Weiteres bereit, ein Client darf bei mehreren
+   Blöcken den größten Cursor übernehmen (bei `more` den kleinsten der gekürzten). Alte Clients
+   bleiben korrekt, laden nur gelegentlich etwas doppelt (die Annahme dedupliziert).
+   Lese-Bremse: ein eigener Topf je Adresse, die der Server selbst bedient (und je Loopback-Name);
+   jeder andere Host-Header teilt sich einen einzigen Topf. **iOS (Norbert):** Cursor-Logik gleich
+   nachziehen, `more` auswerten, nur v3-Onion-Adressen annehmen.
 5. **Versiegelte Node-Schlüssel (`NODE_MESH_KEY_STORAGE=sealed`, Standard).** Owner-Secret und
    Onion-Schlüssel liegen nur verschlüsselt auf der Platte (AES-256-GCM, Schlüssel per HKDF aus dem
    Owner-Secret, das selbst nirgends gespeichert ist). Nach einem Neustart ist der Server **gesperrt**:

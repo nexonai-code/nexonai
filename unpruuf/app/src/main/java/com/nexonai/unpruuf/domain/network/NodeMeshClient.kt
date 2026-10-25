@@ -45,6 +45,13 @@ class NodeMeshClient @Inject constructor(
 
         private val ONION_ADDRESS = Regex("^[a-z2-7]{56}\\.onion$")
 
+        /**
+         * The only kind of node address this app talks to: a v3 onion. The owner secret travels in
+         * clear HTTP inside Tor, so a plain host name (reached through a Tor exit) would hand it to the
+         * exit's operator and would mean talking to a server that is not the customer's own.
+         */
+        fun isNodeAddress(address: String): Boolean = ONION_ADDRESS.matches(address)
+
         /** Parses `{"addresses":["x.onion",...]}`; anything that isn't a v3 onion is dropped. */
         fun parsePoolAddresses(body: String): List<String> {
             val match = Regex(""""addresses"\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL).find(body) ?: return emptyList()
@@ -58,6 +65,10 @@ class NodeMeshClient @Inject constructor(
         fun parseCursor(body: String): Long? =
             Regex(""""cursor"\s*:\s*(\d+)""").find(body)?.groupValues?.get(1)?.toLongOrNull()
 
+        /** `"more":true` at the top of a /fetchMany reply: the node cut the answer; ask again from the cursor. */
+        fun parseMore(body: String): Boolean =
+            Regex("""^\s*\{[^\[]*?"more"\s*:\s*true""").containsMatchIn(body)
+
         /** `"control":"x.onion"` in a GET /pool reply (sealed servers only). */
         fun parseControlAddress(body: String): String? =
             Regex(""""control"\s*:\s*"([a-z2-7]{56}\.onion)"""").find(body)?.groupValues?.get(1)
@@ -68,7 +79,7 @@ class NodeMeshClient @Inject constructor(
 
     /** One incremental [fetchManySince] round: the blobs plus the server's cursor (null = an
      *  older node without cursor support — the caller then simply fetches everything again). */
-    data class FetchResult(val blobs: Map<String, List<ByteArray>>, val cursor: Long?)
+    data class FetchResult(val blobs: Map<String, List<ByteArray>>, val cursor: Long?, val more: Boolean = false)
 
     /**
      * [fetchMany] with a cursor: only blobs the node stored after [since] (0 = everything). Each
@@ -87,7 +98,7 @@ class NodeMeshClient @Inject constructor(
         val blobs = parseBlobsMapBody(response.body).mapValues { (_, blobsB64) ->
             blobsB64.mapNotNull { runCatching { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) }.getOrNull() }
         }
-        return FetchResult(blobs, parseCursor(response.body))
+        return FetchResult(blobs, parseCursor(response.body), parseMore(response.body))
     }
 
     /** The company list feed's current file at [address] (a rotating onion address, see FeedCrypto).
@@ -251,6 +262,7 @@ class NodeMeshClient @Inject constructor(
         ownerSecret: String? = null,
         socketTimeoutMs: Int = SOCKET_TIMEOUT_MS
     ): HttpResponse {
+        require(isNodeAddress(address)) { "not a v3 onion address" }
         val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", torManager.socksPort))
         Socket(proxy).use { socket ->
             socket.soTimeout = socketTimeoutMs

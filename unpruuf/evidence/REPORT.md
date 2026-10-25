@@ -1,10 +1,10 @@
 # Evidence report
 
-- Run: 2026-10-20T12:57:03.751Z
-- Source: git 9ec18097f8dc3bd6c3b4d1f9fdbfdc9ca1d6b28e
+- Run: 2026-10-25T01:10:53.199Z
+- Source: git 7ed795fcf446199ec428aac4c97da9fff45e4c8b (with uncommitted changes)
 - Node.js v22.22.0, linux x64
-- Checks: 96 passed, 0 failed. Findings (claims the evidence does not support): 1.
-- Node server test suite: 112 passed, 0 failed, 1 skipped, of 113.
+- Checks: 97 passed, 0 failed. Findings (claims the evidence does not support): 1.
+- Node server test suite: NaN passed, NaN failed, NaN skipped, of NaN.
 - Online comparison of the Tor hashes: no.
 
 This report shows what these scripts could check on this source and this machine. It is not a security audit and not a certificate. Anything marked "needs an auditor" in CLAIMS_TO_EVIDENCE.md is not covered here.
@@ -93,8 +93,8 @@ Notes:
 - PASS no analytics, crash-reporting, advertising, push or Google Play services library is a dependency
 - PASS the app uses no ready-made HTTP client, WebView or download manager
 - PASS no source file imports telephony, location, contacts, accounts, call log, Google services or Firebase
-- PASS every client socket the app opens goes through the Tor SOCKS proxy, except one (through Tor: NodeMeshClient.kt:255, P2PNetworkManager.kt:2749, RelayClient.kt:145; direct: P2PNetworkManager.kt:2743)
-- PASS all listening sockets are bound to 127.0.0.1, except one random-port socket for the same-Wi-Fi shortcut (loopback: P2PNetworkManager.kt:1270, PhoneTempNode.kt:124; open: P2PNetworkManager.kt:2932)
+- PASS every client socket the app opens goes through the Tor SOCKS proxy, except one (through Tor: NodeMeshClient.kt:267, P2PNetworkManager.kt:2766, RelayClient.kt:145; direct: P2PNetworkManager.kt:2760)
+- PASS all listening sockets are bound to 127.0.0.1, except one random-port socket for the same-Wi-Fi shortcut (loopback: P2PNetworkManager.kt:1287, PhoneTempNode.kt:124; open: P2PNetworkManager.kt:2949)
 - PASS that open socket exists only while a direct contact exists: never in the whistleblower edition, never for Business (Node-Mesh) contacts (definition + 1 call; guard found: true; call behind the guard: true)
 - PASS the Android device id is read in exactly one place (the local licence check), and nowhere else (app/src/main/java/com/nexonai/unpruuf/domain/license/LicenseManager.kt:162)
 - PASS that value is hashed and kept on the phone (the licence check has no network call)
@@ -103,7 +103,7 @@ Notes:
 
 Notes:
 - non-Android-platform libraries (an auditor should review each): com.google.crypto.tink:tink-android:1.11.0, com.google.zxing:core:3.5.3, com.journeyapps:zxing-android-embedded:4.3.0, com.netzarchitekten:IPtProxy:5.5.1, info.guardianproject:tor-android:0.4.8.16, net.zetetic:android-database-sqlcipher:4.5.4, org.nanohttpd:nanohttpd:2.3.1
-- the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2743) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).
+- the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2760) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).
 - Only if the user is on a network that blocks Tor does the app fall back to bridges. The Snowflake path then contacts a broker through a CDN front and STUN servers (see ConnectionPaths.kt). That is Tor's own circumvention, but it IS contact with third-party infrastructure, so "the app talks only to Tor" holds for the direct path and must be worded carefully for the fallback path.
 
 ## 05 Routing tags: formula, fixed values, and what they reveal across contacts
@@ -165,15 +165,13 @@ Notes:
 
 ## 08 What a stored packet shows without a key (finding F1)
 
-4 passed, 0 failed
+5 passed, 0 failed
 
 - PASS a stored packet is exactly 4096 bytes
 - PASS its first four bytes, readable without any key, give the payload length (a cover packet shows 44)
 - PASS the length is exactly the length of what was encrypted (iv + plaintext + tag)
 - PASS different message lengths show as different numbers (31, 329, 3029)
-
-Notes:
-- PacketMetadataTest has not been run here (needs Gradle and the Android SDK): ./gradlew :app:testStandardDebugUnitTest --tests "*PacketMetadataTest*"
+- PASS PacketMetadataTest (real app classes) ran and passed: it pins that the leak exists today (4 tests, 0 failures)
 
 ## 09 Known vulnerabilities in the libraries of the server programs (npm audit)
 

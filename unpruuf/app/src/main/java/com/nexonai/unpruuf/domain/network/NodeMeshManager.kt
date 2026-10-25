@@ -372,7 +372,7 @@ class NodeMeshManager @Inject constructor(
             if (lastColon <= 0 || lastColon == rest.length - 1) return null
             val address = rest.substring(0, lastColon)
             val ownerSecret = rest.substring(lastColon + 1)
-            if (address.isEmpty() || ownerSecret.isEmpty()) return null
+            if (!NodeMeshClient.isNodeAddress(address) || ownerSecret.isEmpty()) return null
             return ParsedNodeConnection(address, ownerSecret)
         }
 
@@ -402,7 +402,7 @@ class NodeMeshManager @Inject constructor(
             val trimmed = raw.trim()
             if (!trimmed.startsWith(NODE_ADDRESS_PREFIX)) return null
             val address = trimmed.substring(NODE_ADDRESS_PREFIX.length)
-            return address.ifEmpty { null }
+            return address.takeIf { NodeMeshClient.isNodeAddress(it) }
         }
 
         fun buildAddressConnectionString(address: String): String = "$NODE_ADDRESS_PREFIX$address"

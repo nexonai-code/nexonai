@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { NodeStore } from "../store/nodeStore";
-import { MAX_BLOB_BYTES, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
+import { MAX_BLOB_BYTES, MAX_FETCH_MANY_BLOBS, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
 import { OwnerSecretSource, requireOwner } from "../middleware/ownerAuth";
 import { KeyedTokenBuckets, rateLimited, rateLimitedPerHost, TokenBucket } from "../middleware/rateLimit";
 
@@ -103,7 +103,7 @@ export function nodeRouter(
   // NODE_MESH_SPEC.md §2): it's HKDF-derived from the pairing secret, so knowing a valid one
   // already proves the caller was paired. Never deletes what it returns (§4) — only the TTL
   // sweep (nodeStore.ts) ever removes a row.
-  router.get("/fetch", rateLimitedPerHost(fetchRateLimit), (req, res) => {
+  router.get("/fetch", rateLimitedPerHost(fetchRateLimit, addresses), (req, res) => {
     const tag = req.query.tag;
     if (typeof tag !== "string" || !TAG_RE.test(tag)) {
       return res.status(400).json({ error: "invalid tag" });
@@ -115,7 +115,7 @@ export function nodeRouter(
   // Batched + optionally long-polling sibling of GET /fetch — same contract as the consumer
   // relay's POST /v1/fetchMany (server/src/routes/relay.ts), reused deliberately so a client
   // already speaking that format needs no new parsing. Read-only here too — see GET /fetch above.
-  router.post("/fetchMany", rateLimitedPerHost(fetchRateLimit), async (req, res) => {
+  router.post("/fetchMany", rateLimitedPerHost(fetchRateLimit, addresses), async (req, res) => {
     const { tags, waitMs, since } = req.body ?? {};
     if (!Array.isArray(tags) || tags.length === 0 || tags.length > MAX_FETCH_MANY_TAGS) {
       return res.status(400).json({ error: `tags must be a non-empty array of at most ${MAX_FETCH_MANY_TAGS}` });
@@ -132,22 +132,33 @@ export function nodeRouter(
     // the JSON so clients that parse `blobs` as the last object keep working.
     const sinceId = typeof since === "number" && Number.isInteger(since) && since >= 0 ? since : null;
 
-    const takeAll = (): Record<string, string[]> => {
-      const result: Record<string, string[]> = {};
-      for (const tag of tags as string[]) {
-        result[tag] = sinceId === null ? store.fetchAll(tag) : store.fetchSince(tag, sinceId);
-      }
-      return result;
+    // The same tag twice would be read, and sent, twice: ask for each tag once.
+    const uniqueTags = [...new Set(tags as string[])];
+    const from = sinceId ?? 0;
+
+    // One bounded read across the tags. `cursor` is derived from what this caller asked for
+    // (the highest packet id it is handed, or the `since` it sent), never from a counter of the
+    // whole server: a stranger who knows an address cannot watch the server's traffic through it,
+    // nor tell which addresses belong to one server. `more` means the answer was cut at
+    // MAX_FETCH_MANY_BLOBS; asking again with the cursor continues exactly there.
+    const take = () => {
+      const rows = store.fetchRows(uniqueTags, from, MAX_FETCH_MANY_BLOBS + 1);
+      const more = rows.length > MAX_FETCH_MANY_BLOBS;
+      const used = more ? rows.slice(0, MAX_FETCH_MANY_BLOBS) : rows;
+      const blobs: Record<string, string[]> = {};
+      for (const tag of uniqueTags) blobs[tag] = [];
+      for (const r of used) blobs[r.tag].push(r.blob);
+      const cursor = used.length > 0 ? Math.max(from, used[used.length - 1].id) : from;
+      return { blobs, cursor, more, empty: used.length === 0 };
     };
 
-    let blobs = takeAll();
-    let cursor = store.currentCursor();
-    if (wait > 0 && Object.values(blobs).every((v) => v.length === 0)) {
-      await store.waitForAny(tags as string[], wait);
-      blobs = takeAll();
-      cursor = store.currentCursor();
+    let got = take();
+    if (wait > 0 && got.empty) {
+      await store.waitForAny(uniqueTags, wait);
+      got = take();
     }
-    return res.status(200).json(sinceId === null ? { blobs } : { cursor, blobs });
+    if (sinceId === null && !got.more) return res.status(200).json({ blobs: got.blobs });
+    return res.status(200).json(got.more ? { cursor: got.cursor, more: true, blobs: got.blobs } : { cursor: got.cursor, blobs: got.blobs });
   });
 
   return router;

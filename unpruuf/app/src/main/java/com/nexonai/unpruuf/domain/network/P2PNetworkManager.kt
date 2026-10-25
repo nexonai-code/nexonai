@@ -243,6 +243,8 @@ class P2PNetworkManager @Inject constructor(
         private const val NODE_MESH_POLL_BASE_MS = 20_000L
         private const val NODE_MESH_POLL_JITTER_MS = 5_000L
         private const val NODE_MESH_POLL_WAIT_MS = 20_000L
+        /** Follow-up requests for one chunk when a node cuts its answer short, per poll. */
+        private const val NODE_MESH_MAX_CONTINUATIONS = 8
         // Cover deposits: on average one every 15 min per Node-Mesh contact.
         private const val NODE_MESH_COVER_MEAN_MS = 15 * 60 * 1000L
         private const val NODE_MESH_COVER_MIN_MS = 20_000L
@@ -886,17 +888,28 @@ class P2PNetworkManager @Inject constructor(
         val fresh = tags.filter { it !in known }
         val covered = tags.filter { it in known }
         val cursors = ArrayList<Long?>()
+        // Cursors of chunks the node cut short (MAX packets per answer) and we could not finish.
+        val unfinished = ArrayList<Long>()
         var failed = false
 
         suspend fun run(group: List<String>, since: Long, wait: Long) {
             val chunks = group.chunked(MAX_FETCH_MANY_TAGS_PER_CALL)
             for (chunk in chunks) {
                 // Only a single-chunk call long-polls — several sequential waits would stack up.
-                val result = nodeMeshClient.fetchManySince(address, chunk, if (chunks.size == 1) wait else 0L, since)
-                if (result == null) { failed = true; return }
-                cursors.add(result.cursor)
-                for ((tag, blobs) in result.blobs) {
-                    for (blob in blobs) runCatching { ingestPacket(tag, blob) }
+                var from = since
+                var rounds = 0
+                while (true) {
+                    val result = nodeMeshClient.fetchManySince(address, chunk, if (chunks.size == 1 && rounds == 0) wait else 0L, from)
+                    if (result == null) { failed = true; return }
+                    for ((tag, blobs) in result.blobs) {
+                        for (blob in blobs) runCatching { ingestPacket(tag, blob) }
+                    }
+                    rounds++
+                    val next = result.cursor
+                    if (result.more && next != null && next > from && rounds < NODE_MESH_MAX_CONTINUATIONS) { from = next; continue }
+                    cursors.add(next)
+                    if (result.more && next != null) unfinished.add(next)
+                    break
                 }
             }
         }
@@ -908,7 +921,11 @@ class P2PNetworkManager @Inject constructor(
         if (cursors.isEmpty() || cursors.any { it == null }) {
             nodeMeshCursors.remove(address)
         } else {
-            nodeMeshCursors[address] = NodeMeshCursor(cursors.filterNotNull().min(), tags.toSet())
+            // A node's cursor comes from the packets it handed us for these tags, not from a counter of
+            // the whole server. A chunk that was answered completely says "nothing more up to now", so
+            // the furthest cursor is safe; a chunk that was cut short pins the bound to where it stopped.
+            val bound = if (unfinished.isNotEmpty()) unfinished.min() else cursors.filterNotNull().max()
+            nodeMeshCursors[address] = NodeMeshCursor(bound, tags.toSet())
         }
     }
 

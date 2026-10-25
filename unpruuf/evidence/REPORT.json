@@ -1,7 +1,7 @@
 {
-  "run": "2026-10-20T12:57:03.752Z",
-  "commit": "9ec18097f8dc3bd6c3b4d1f9fdbfdc9ca1d6b28e",
-  "passed": 96,
+  "run": "2026-10-25T01:10:53.200Z",
+  "commit": "7ed795fcf446199ec428aac4c97da9fff45e4c8b (with uncommitted changes)",
+  "passed": 97,
   "failed": 0,
   "findings": [
     {
@@ -11,10 +11,10 @@
     }
   ],
   "suite": {
-    "tests": 113,
-    "pass": 112,
-    "fail": 0,
-    "skipped": 1
+    "tests": null,
+    "pass": null,
+    "fail": null,
+    "skipped": null
   },
   "results": [
     {
@@ -325,12 +325,12 @@
         {
           "name": "every client socket the app opens goes through the Tor SOCKS proxy, except one",
           "ok": true,
-          "detail": "through Tor: NodeMeshClient.kt:255, P2PNetworkManager.kt:2749, RelayClient.kt:145; direct: P2PNetworkManager.kt:2743"
+          "detail": "through Tor: NodeMeshClient.kt:267, P2PNetworkManager.kt:2766, RelayClient.kt:145; direct: P2PNetworkManager.kt:2760"
         },
         {
           "name": "all listening sockets are bound to 127.0.0.1, except one random-port socket for the same-Wi-Fi shortcut",
           "ok": true,
-          "detail": "loopback: P2PNetworkManager.kt:1270, PhoneTempNode.kt:124; open: P2PNetworkManager.kt:2932"
+          "detail": "loopback: P2PNetworkManager.kt:1287, PhoneTempNode.kt:124; open: P2PNetworkManager.kt:2949"
         },
         {
           "name": "that open socket exists only while a direct contact exists: never in the whistleblower edition, never for Business (Node-Mesh) contacts",
@@ -360,7 +360,7 @@
       ],
       "notes": [
         "non-Android-platform libraries (an auditor should review each): com.google.crypto.tink:tink-android:1.11.0, com.google.zxing:core:3.5.3, com.journeyapps:zxing-android-embedded:4.3.0, com.netzarchitekten:IPtProxy:5.5.1, info.guardianproject:tor-android:0.4.8.16, net.zetetic:android-database-sqlcipher:4.5.4, org.nanohttpd:nanohttpd:2.3.1",
-        "the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2743) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).",
+        "the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2760) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).",
         "Only if the user is on a network that blocks Tor does the app fall back to bridges. The Snowflake path then contacts a broker through a CDN front and STUN servers (see ConnectionPaths.kt). That is Tor's own circumvention, but it IS contact with third-party infrastructure, so \"the app talks only to Tor\" holds for the direct path and must be worded carefully for the fallback path."
       ],
       "findings": []
@@ -570,7 +570,7 @@
       "exit": 0,
       "id": "08",
       "title": "What a stored packet shows without a key (finding F1)",
-      "passed": 4,
+      "passed": 5,
       "failed": 0,
       "checks": [
         {
@@ -592,11 +592,14 @@
           "name": "different message lengths show as different numbers",
           "ok": true,
           "detail": "31, 329, 3029"
+        },
+        {
+          "name": "PacketMetadataTest (real app classes) ran and passed: it pins that the leak exists today",
+          "ok": true,
+          "detail": "4 tests, 0 failures"
         }
       ],
-      "notes": [
-        "PacketMetadataTest has not been run here (needs Gradle and the Android SDK): ./gradlew :app:testStandardDebugUnitTest --tests \"*PacketMetadataTest*\""
-      ],
+      "notes": [],
       "findings": [
         {
           "id": "F1",

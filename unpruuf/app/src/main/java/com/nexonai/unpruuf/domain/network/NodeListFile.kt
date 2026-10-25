@@ -21,8 +21,7 @@ package com.nexonai.unpruuf.domain.network
 object NodeListFile {
     const val HEADER = "unpruuf-node-list:v1"
 
-    /** Same bounds as the server side: addresses and secret are url-safe text, no spaces. */
-    private val ADDRESS_RE = Regex("^[A-Za-z0-9._:-]{3,120}$")
+    /** Addresses are v3 onions only (see [NodeMeshClient.isNodeAddress]); the secret is url-safe text, no spaces. */
     private val SECRET_RE = Regex("^[A-Za-z0-9_-]{16,128}$")
     private val KEY_VALUE = Regex("^([a-z]+):\\s?(.*)$")
 
@@ -58,7 +57,7 @@ object NodeListFile {
             val a = lines[i].trim()
             i++
             if (a.isEmpty()) continue
-            if (!ADDRESS_RE.matches(a)) return null
+            if (!NodeMeshClient.isNodeAddress(a)) return null
             if (a !in addresses) addresses += a
         }
         val secret = header["secret"] ?: return null
@@ -66,7 +65,7 @@ object NodeListFile {
         if (addresses.isEmpty()) return null
         header["count"]?.let { if (it.toIntOrNull() != addresses.size) return null }
         val control = header["control"]?.takeIf { it.isNotEmpty() }
-        if (control != null && !ADDRESS_RE.matches(control)) return null
+        if (control != null && !NodeMeshClient.isNodeAddress(control)) return null
         return Parsed(NodeLists.cleanName(header["name"] ?: ""), secret, control, addresses, ConnectionPaths.cleanCompanyBridgeLines(bridgeLines))
     }
 }

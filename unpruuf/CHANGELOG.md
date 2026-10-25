@@ -5,6 +5,20 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Fixes from the pre-audit (M1, M2, M3, M7) and a dependency advisory
+
+Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed from it: H1 (database key), M4 to M6, M8 to M11.
+
+- **M1, read limit:** each address the server really serves gets its own bucket (Host header lower-cased, port stripped); every other Host value shares ONE bucket. Before, invented host names multiplied the allowance and could push the real nodes into a shared overflow. Tests: `app.test.ts` (invented hosts, port and case).
+- **M2, `/fetchMany`:** repeated tags are read once; one answer carries at most 256 packets (`MAX_FETCH_MANY_BLOBS`), read with a single bounded query. A cut answer says `"more":true`; the cursor continues there. The app follows up to 8 continuations per poll.
+- **M3, cursor:** derived from the requested tags only, no longer the server-wide counter. A stranger with one address can neither watch the server's deposit traffic nor link addresses to one server. Android combines chunk cursors accordingly (largest when complete, smallest of the cut ones).
+- **M7, addresses:** the app accepts only v3 onion addresses (pairing codes, node lists, owner strings, migrate and temp-node signals), and `NodeMeshClient.request` refuses anything else, so the owner secret can no longer be sent to a plain host name through a Tor exit. The LAN-style `host:port` form is gone; tests with placeholder names now use real-shaped onions. **iOS:** same rule needed (Norbert).
+- **Dependency:** `body-parser` 1.20.8 to 1.20.9 (high-severity DoS advisory published after the last evidence run) in node-mesh-server, server, control and officer-app (lock files only).
+- **Test:** `PhoneTempNodeTest.startRunsAndStopRemovesEverything` no longer assumes a freed port stays closed.
+- Checks: node-mesh-server 116 passed (1 skipped), relay 70, control 62, officer-app 15, evidence 97 passed / 0 failed / F1, Android unit tests 169 each for standard, pro and group.
+
+---
+
 ## 2026‑10‑19 · Owner secrets of own nodes are stored encrypted
 
 - `SealedStrings` (+ `SealedStringsTest`): the app's own-node list with owner secrets, node lists, feed sources (with keys), control addresses, relay address, token and backup relays are stored as `k1:<encrypted>` under the phone-bound key. Plain values from older versions are read and rewritten encrypted on first use.
