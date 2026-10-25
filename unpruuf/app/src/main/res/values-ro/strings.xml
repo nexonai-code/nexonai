@@ -468,4 +468,20 @@ Această acțiune nu poate fi anulată.</string>
     <string name="msg_phone_tn_busy">Un Temp Node rulează deja pe acest telefon pentru altă conversație. Oprește-l mai întâi acolo.</string>
     <string name="msg_phone_tn_failed">Temp Node nu a putut fi pornit.</string>
     <string name="tor_notif_temp_node">Temp Node activ pentru o conversație</string>
+
+    <!-- Aplicația Client gratuită: invitație de la un utilizator Pro (GUEST_LOCKERS_BUILD_SPEC.md) -->
+    <string name="msg_guest_invite_client_only">Acest cod este o invitație pentru aplicația gratuită unpruuf Client. Instalează aplicația Client ca să o accepți.</string>
+    <string name="msg_guest_invite_expired">Invitația a expirat. Cere contactului tău una nouă.</string>
+    <string name="msg_guest_invite_invalid">Acest cod nu este o invitație validă. Cere contactului tău una nouă.</string>
+    <string name="msg_guest_invite_accepted">Invitația de la %1$s a fost acceptată. Arată acum codul tău ca %1$s să îl scaneze.</string>
+    <string name="msg_guest_code_unknown">Nicio invitație deschisă nu corespunde acestui cod. Poate a expirat sau a fost deja folosită. Creează o invitație nouă.</string>
+    <string name="guest_code_title">Arată acest cod lui %1$s</string>
+    <string name="guest_code_body">Contactul tău scanează acest cod ca să termine conexiunea. Nimic nu se trimite înainte. Arată-l doar acestei persoane.</string>
+    <string name="guest_code_done">Gata, ascunde codul</string>
+    <string name="qr_client_scan_invitation">Scanează invitația contactului tău Pro</string>
+    <string name="qr_client_scan_invitation_body">Aplicația Client gratuită nu are un server propriu. Contactul tău Pro creează o invitație pentru tine; scanează-o aici, apoi arată-i propriul tău cod.</string>
+    <string name="guest_status_expiring">Invitația ta expiră în curând. Cere contactului tău una nouă.</string>
+    <string name="guest_status_expired">Invitația ta a expirat. Nu se poate trimite nimic până când contactul tău te invită din nou.</string>
+    <string name="guest_status_refused">Serverul a refuzat invitația (expirată sau invitații dezactivate acolo). Cere contactului tău una nouă.</string>
+    <string name="guest_status_quota">Ai atins limita de trimitere a invitației pentru moment. Mesajele așteaptă și se încearcă din nou.</string>
 </resources>

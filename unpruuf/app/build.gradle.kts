@@ -158,7 +158,7 @@ android {
             buildConfigField("String", "EDITION", "\"whistleblower\"")
             resValue("string", "app_name", "unpruuf")
         }
-        // safeline Press: the free reporting app for sources writing to a journalist (the
+        // unpruuf Press: the free reporting app for sources writing to a journalist (the
         // officer-app's press edition). Same behaviour as "whistleblower" (AppEdition.isWhistleblower
         // is true for both), its own wording in app/src/press/res (English, values-ro Romanian) and
         // its own install id, so it can sit next to the other editions. Neutral name on the phone.

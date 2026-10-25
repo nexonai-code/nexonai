@@ -91,6 +91,16 @@ class PhoneTempNodeTest {
         val after = runCatching { deposit(st, "tag3", port = port) }.getOrNull()
         assertTrue("the old secret deposits nothing after stop", after == null || after.status != 201)
         node.stop() // twice is fine
+        // A request arriving in the instant of stop() must never be answered (this failed about one run
+        // in ten before acceptLoop dropped late connections): many rounds, each after one real request.
+        repeat(100) { round ->
+            val n = PhoneTempNode(FakeOnionHost()) { clock }
+            runBlocking { n.start("contact-r$round") }
+            val p = n.localPort()
+            assertEquals(200, call("GET", "/health", port = p).status)
+            n.stop()
+            assertTrue("round $round: answered after stop", runCatching { call("GET", "/health", port = p) }.isFailure)
+        }
     }
 
     @Test fun onlyOneAtATime() = runBlocking {

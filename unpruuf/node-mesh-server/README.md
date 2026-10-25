@@ -198,3 +198,7 @@ The token is 32 random bytes, **new at every start**.
   `docker exec unpruuf-node cat /app/data/admin-token`, then open `http://localhost:8790/?t=<token>` (through an SSH tunnel if the host is remote). unpruuf Control does this by itself.
 - The file `admin-token` in the data folder is `0600`. A token in the address works for reading only; changes always need the cookie or the header `x-unpruuf-admin-token`.
 - After a restart the old token is void; reload the link with the new one.
+
+## Guest grants (optional, off by default)
+
+Lets a free Client app user without servers deposit on this node with a signed, expiring token issued by the owner. Switch on with `NODE_MESH_GUEST_GRANTS=1`. Format and limits: `../guest-grants/FORMAT.md`; design: `../GUEST_LOCKERS_BUILD_SPEC.md`. A guest can only `PUT /deposit`; nothing else changes, and no grant or grant id is ever stored.

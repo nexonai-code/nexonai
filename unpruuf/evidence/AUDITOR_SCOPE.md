@@ -51,7 +51,7 @@ a customer verifies a release (`verify-release`).
 web page (loopback, token, CSRF header, idle lock), the Docker install it performs on a server. Control holds keys to every
 server of a customer, so it is the most valuable target in the system.
 
-**6. Officer app (safeline).** Local case database encryption, password handling, what remains after closing it, the
+**6. Officer app (unpruuf Compliance).** Local case database encryption, password handling, what remains after closing it, the
 known gap (no delete or export of a single case).
 
 ## Out of scope

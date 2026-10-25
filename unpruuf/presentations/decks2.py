@@ -6,11 +6,14 @@ business_de/, business/, compliance_de/, compliance/ (project/deck.json + projec
 the same layout the earlier decks used. Render: see README.md.
 """
 from common import *
+from decks2_en import EN_BUSINESS
 
 
 def build_business(lang):
-    i = 0 if lang == "de" else 1
-    P = lambda de, ro: (de, ro)[i]
+    i = {"de": 0, "ro": 1, "en": 2}[lang]
+    # English: looked up by the German text (decks2_en.py); a missing text stops the build.
+    P = lambda de, ro: (de, ro, EN_BUSINESS[de] if lang == "en" else None)[i]
+    L = lambda de, ro, en: (de, ro, en)[i]
     D = "unpruuf Business"
     S = []
     n = [0]
@@ -53,7 +56,7 @@ def build_business(lang):
     S.append(("problema", sec("problema", f'''{head(P("Das Problem", "Problema"), P("Jeder Messenger hat einen Eigentümer", "Fiecare mesager are un proprietar"))}
 {row(card(P("Server des Anbieters", "Serverul furnizorului"), P("Alle Nachrichten laufen über fremde Infrastruktur.", "Toate mesajele trec prin infrastructura altcuiva.")),
      card(P("Konto und Telefonnummer", "Cont și număr de telefon"), P("Jeder Nutzer ist vom ersten Tag an identifizierbar.", "Fiecare utilizator este identificabil de la prima zi.")),
-     card("Metadaten" if i == 0 else "Metadate", P("Wer, mit wem, wann und wie oft: sichtbar für den Anbieter.", "Cine, cu cine, când și cât de des: vizibil pentru furnizor.")))}
+     card(L("Metadaten", "Metadate", "Metadata"), P("Wer, mit wem, wann und wie oft: sichtbar für den Anbieter.", "Cine, cu cine, când și cât de des: vizibil pentru furnizor.")))}
 {body(P("Auch mit Ende-zu-Ende-Verschlüsselung bleibt der Anbieter der Dritte, der zur Herausgabe von Daten verpflichtet werden kann.", "Chiar și cu criptare cap la cap, furnizorul rămâne a treia parte care poate fi obligată să predea date."))}
 {footer(D, k)}''')))
 
@@ -112,6 +115,17 @@ def build_business(lang):
 {body(P("Jedes Pairing bekommt neue Schlüssel und eigene Nodes. Zwei Kontakte, die ihre QR-Codes vergleichen, finden nichts Gemeinsames.", "Fiecare asociere primește chei noi și noduri proprii. Două contacte care își compară codurile QR nu găsesc nimic în comun."))}
 {footer(D, k)}''')))
 
+    # 6b no phone number (added 2026-10-22)
+    k = nxt()
+    S.append(("fara-numar", sec("fara-numar", f'''{head(P("So funktioniert es", "Cum funcționează"), P("Nie wieder die Telefonnummer herausgeben", "Fără să vă mai dați numărul de telefon"))}
+{body(P("Sie geben einen Code weiter. Löschen Sie den Kontakt, gibt es keinen Weg mehr zu Ihnen.", "Dați un cod. Ștergeți contactul și nu mai există nicio cale către dumneavoastră."), DARK, 40)}
+{row(big(P("Ein Code, keine Nummer", "Un cod, nu un număr"), P("Jeder Kontakt erhält seinen eigenen Code. Keine Telefonnummer, keine E-Mail, kein WhatsApp, kein gemeinsames Adressbuch.", "Fiecare contact primește propriul cod. Fără număr de telefon, fără e-mail, fără WhatsApp, fără agendă comună."), TEAL),
+     big(P("Ein Code pro Person", "Un cod pentru fiecare persoană"), P("Allein aus den Codes lassen sich zwei Kontakte nicht verknüpfen. Wer einen hält, erfährt nichts über Ihre anderen Kontakte.", "Doar din coduri, două contacte nu pot fi legate între ele. Cine are unul nu află nimic despre ceilalți contacți ai dumneavoastră."), ORANGE),
+     big(P("Löschen, und es ist vorbei", "Ștergeți și s-a terminat"), P("Ihr Telefon holt bei dieser Person nichts mehr ab. Es gibt keinen Weg mehr zu Ihnen, außer Sie geben einen neuen Code.", "Telefonul dumneavoastră nu mai ridică nimic de la acea persoană. Nu mai există nicio cale către dumneavoastră, decât dacă îi dați un cod nou."), TEAL), gap=32)}
+{body(P("Was jemand bereits erhalten hat, bleibt bei ihm. Das schließt den unpruuf-Weg, nicht Ihre anderen Kanäle.", "Ce a primit deja persoana rămâne la ea. Se închide calea unpruuf, nu și celelalte canale ale dumneavoastră."), ORANGE, 28)}
+{footer(D, k)}
+{notes(P("In einem Atemzug: keine Telefonnummer, keine E-Mail. Ein Code pro Person. Kontakt löschen, und die Leitung ist weg. Dann die ehrliche Grenze: Was schon empfangen wurde, bleibt, und andere Kanäle sind unberührt. Nicht sagen, es sei ein Schutz vor allem.", "Dintr-o suflare: fără număr de telefon, fără e-mail. Un cod pentru fiecare persoană. Ștergeți contactul și legătura dispare. Apoi limita onestă: ce s-a primit deja rămâne, iar celelalte canale nu sunt atinse. Nu spuneți că este o protecție împotriva a tot."))}''')))
+
     # 7 scale
     k = nxt()
     S.append(("sute-noduri", sec("sute-noduri", f'''{head(P("Skalierung", "Scalare"), P("250 Nodes je Server, 3 je Kontakt", "250 de noduri pe server, 3 pe contact"))}
@@ -144,7 +158,7 @@ def build_business(lang):
 
     # 10 what the node sees
     k = nxt()
-    S.append(("ce-vede", sec("ce-vede", f'''{head("Der Node" if i == 0 else "Nodul", P("Was der Node sieht — und was nicht", "Ce vede nodul și ce nu"))}
+    S.append(("ce-vede", sec("ce-vede", f'''{head(L("Der Node", "Nodul", "The node"), P("Was der Node sieht — und was nicht", "Ce vede nodul și ce nu"))}
 {row(card(P("Sieht", "Vede"), P("Verschlüsselte Blöcke fester Größe unter stündlich wechselnden Nummern. Löscht sie selbst nach 1 bis 24 Stunden.", "Blocuri criptate de dimensiune fixă, sub numere care se schimbă din oră în oră. Le șterge singur după 1 până la 24 de ore.")),
      card(P("Sieht nicht", "Nu vede"), P("Den Inhalt. Den Absender. Den Empfänger. Die IP-Adresse. Wer zu wem gehört.", "Conținutul. Expeditorul. Destinatarul. Adresa IP. Cine aparține cui."), bg=DARK, border=DARK, tcolor=ON_DARK, bcolor=ON_DARK_MUTED))}
 {body(P("Ein beschlagnahmter oder gestohlener Server enthält nichts Lesbares und läuft nach einem Neustart erst weiter, wenn Ihre App ihn freigibt.", "Un server confiscat sau furat nu conține nimic lizibil și, după o repornire, funcționează din nou doar după ce aplicația dumneavoastră îl deblochează."))}
@@ -214,7 +228,7 @@ def build_business(lang):
     # 16 status
     k = nxt()
     S.append(("stadiu", sec("stadiu", f'''{head(P("Aktueller Stand", "Stadiul actual"), P("Gebaut und getestet. Nächster Schritt: echte Geräte.", "Construit și testat. Următorul pas: dispozitive reale."))}
-{row(card(P("Fertig", "Gata"), P("Server: 70 automatische Tests, echtes Tor. Tablet-Node: 15 Tests. App: 80 Tests in allen 4 Editionen.", "Server: 70 de teste automate, Tor real. Nod pe tabletă: 15 teste. Aplicația: 80 de teste în toate cele 4 ediții.")),
+{row(card(P("Fertig", "Gata"), P("Server: 123 automatische Tests, ohne Live-Tor-Netz (einer übersprungen). Tablet-Node: 15 Tests. App: 181 Tests, dieselben in allen Editionen.", "Server: 123 de teste automate, fără rețeaua Tor reală (unul omis). Nod pe tabletă: 15 teste. Aplicația: 181 de teste, aceleași în toate edițiile.")),
      card(P("Als Nächstes", "Urmează"), P("Test auf echten Geräten. Messung auf einem echten VPS. Unabhängiges Sicherheits-Audit.", "Test pe dispozitive reale. Măsurare pe un VPS real. Audit independent de securitate."), bg=LIGHT2))}
 {body(P("Keine Architektur schützt vor einem Handy mit Spionage-Software oder einem Partner, der Screenshots macht.", "Nicio arhitectură nu protejează împotriva unui telefon cu software spion sau a unui partener care face capturi de ecran."), MUTED, 28)}
 {footer(D, k)}''', bg=LIGHT)))
@@ -422,7 +436,7 @@ def build_compliance(lang):
     # 14 status
     k = nxt()
     S.append(("stadiu", sec("stadiu", f'''{head(P("Aktueller Stand", "Stadiul actual"), P("Getestet. Nächster Schritt: echte Geräte.", "Testat. Următorul pas: dispozitive reale."))}
-{row(card(P("Fertig", "Gata"), P("Verschlüsselung Byte für Byte geprüft. Zwei unabhängige Umsetzungen gegeneinander getestet. Meldung, Fallnummer und Status laufen zwischen App, Browser und Dashboard. App: 80 Tests.", "Criptarea verificată octet cu octet. Două implementări independente testate una față de cealaltă. Raportarea, numărul de caz și starea circulă între aplicație, browser și panou. Aplicația: 80 de teste.")),
+{row(card(P("Fertig", "Gata"), P("Verschlüsselung Byte für Byte geprüft. Zwei unabhängige Umsetzungen gegeneinander getestet. Meldung, Fallnummer und Status laufen zwischen App, Browser und Dashboard. App: 181 Tests.", "Criptarea verificată octet cu octet. Două implementări independente testate una față de cealaltă. Raportarea, numărul de caz și starea circulă între aplicație, browser și panou. Aplicația: 181 de teste.")),
      card(P("Als Nächstes", "Urmează"), P("Test auf echten Geräten. Zugang für mehrere Officer. Export von Fällen. Unabhängiges Audit.", "Test pe dispozitive reale. Acces pentru mai mulți responsabili. Export de cazuri. Audit independent."), bg=LIGHT2))}
 {footer(D, k)}''')))
 
@@ -457,3 +471,9 @@ if __name__ == "__main__":
         print(bf, write_deck(bf, bt, S, sec_))
         S, sec_ = build_compliance(lang)
         print(cf, write_deck(cf, ct, S, sec_))
+
+    # English Business deck (2026-10-22): only Business, texts from decks2_en.py.
+    import shutil
+    shutil.rmtree(os.path.join("business_en", "project", "slides"), ignore_errors=True)
+    S, sec_ = build_business("en")
+    print("business_en", write_deck("business_en", "unpruuf Business (EN)", S, sec_))

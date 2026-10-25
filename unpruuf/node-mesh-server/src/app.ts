@@ -3,6 +3,9 @@ import { NodeStore } from "./store/nodeStore";
 import { LockControl, nodeRouter } from "./routes/node";
 import { OwnerSecretSource } from "./middleware/ownerAuth";
 import { Metrics } from "./metrics";
+import { GuestOptions } from "./middleware/depositAuth";
+import { GuestQuota } from "./guest/guestQuota";
+import { GUEST_MAX_BYTES_PER_HOUR, GUEST_MAX_DEPOSITS_PER_HOUR, GUEST_MAX_VALIDITY_MS } from "./config";
 
 export function createApp(
   store: NodeStore,
@@ -12,6 +15,8 @@ export function createApp(
   metrics?: Metrics,
   /** Server license: a reason code refuses new deposits (HTTP 402). Reading is never blocked. */
   depositBlocked?: () => string | null,
+  /** Guest grants (guest/): off unless enabled, see config.ts. */
+  guest: GuestOptions = { enabled: false, maxValidityMs: GUEST_MAX_VALIDITY_MS },
 ): Express {
   const app = express();
   // Do not announce the web framework to anyone who asks.
@@ -51,7 +56,7 @@ export function createApp(
   // /health is intentionally unauthenticated — a container/process health check shouldn't need
   // the owner secret, and it reveals nothing (no tags, no blobs, no auth-guessing surface).
   app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
-  app.use(nodeRouter(store, ownerSecret, addresses, lock));
+  app.use(nodeRouter(store, ownerSecret, addresses, lock, guest, new GuestQuota(GUEST_MAX_DEPOSITS_PER_HOUR, GUEST_MAX_BYTES_PER_HOUR)));
   // Everything else: the same short answer for every method and path (Express's own page names it).
   app.use((_req, res) => res.status(404).json({ error: "not found" }));
   // Anything that goes wrong before or inside a route (broken JSON, a body over the limit) gets a

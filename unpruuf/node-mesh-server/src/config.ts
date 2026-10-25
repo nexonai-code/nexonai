@@ -80,3 +80,12 @@ export const KEY_STORAGE: "sealed" | "disk" = process.env.NODE_MESH_KEY_STORAGE 
 
 // Tor's onion-service proof-of-work defense (Tor ≥ 0.4.8). Values are Tor's own defaults.
 export const POW = { queueRate: 250, queueBurst: 2500 };
+
+// Guest grants (GUEST_LOCKERS_BUILD_SPEC.md): lets a free Client app user without servers of their
+// own deposit with a signed, expiring token issued by the owner. OFF by default; with the switch
+// off, a `Guest` credential is refused like any wrong credential. The caps below are the node
+// operator's ceiling; a grant may ask for less, never more.
+export const GUEST_GRANTS_ENABLED = process.env.NODE_MESH_GUEST_GRANTS === "1";
+export const GUEST_MAX_VALIDITY_MS = Number(process.env.NODE_MESH_GUEST_MAX_VALIDITY_DAYS ?? 30) * 24 * 60 * 60 * 1000;
+export const GUEST_MAX_DEPOSITS_PER_HOUR = Number(process.env.NODE_MESH_GUEST_MAX_DEPOSITS_PER_HOUR ?? 120);
+export const GUEST_MAX_BYTES_PER_HOUR = Number(process.env.NODE_MESH_GUEST_MAX_BYTES_PER_HOUR ?? 2 * 1024 * 1024);

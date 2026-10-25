@@ -52,4 +52,48 @@ class NodeMeshPairingTest {
         val noSeed = """{"v":2,"p":"a","k":"b","n":"abcdefghijklmnopabcdefghijklmnopabcdefghijklmnopabcdefgh.onion","e":"standard"}"""
         assertNull(jsonToNodeMeshPayload(noSeed))
     }
+
+    @Test
+    fun `guest invitation id and grants survive the round trip and stay out of normal codes`() {
+        val grant = com.nexonai.unpruuf.domain.network.GuestGrant.issue(
+            "owner-secret",
+            com.nexonai.unpruuf.domain.network.GuestGrant.Spec(
+                com.nexonai.unpruuf.domain.network.GuestGrant.newGrantId(), 4_000_000_000_000L, 60, 1024
+            )
+        )
+        val invited = payload.copy(guestGrants = listOf(grant, ""), guestInviteId = "abcDEF123_-xy")
+        val parsed = jsonToNodeMeshPayload(nodeMeshPayloadToJson(invited))
+        assertEquals(invited, parsed)
+        assertFalse(nodeMeshPayloadToJson(payload).contains("\"i\""))
+        assertFalse(nodeMeshPayloadToJson(payload).contains("\"g\""))
+    }
+
+    @Test
+    fun `a malformed invitation id is dropped, never trusted`() {
+        for (bad in listOf("short", "has space in it!!", "x".repeat(40), "semi;colon;id;x")) {
+            val json = nodeMeshPayloadToJson(payload.copy(guestInviteId = "validId1234")).replace("validId1234", bad)
+            assertEquals("", jsonToNodeMeshPayload(json)?.guestInviteId)
+        }
+    }
+
+    @Test
+    fun `a full invitation from a Pro user reads as an invitation in the Client app`() {
+        val now = 1_800_000_000_000L
+        val grants = com.nexonai.unpruuf.domain.network.GuestInvite.issueGrants(
+            nodes = payload.nodeAddresses.map { com.nexonai.unpruuf.domain.network.GuestInvite.OwnNode(it, "secret-$it") },
+            nowMs = now, validityDays = 7,
+            quota = com.nexonai.unpruuf.domain.network.GuestInvite.Quota.NORMAL
+        )
+        val code = nodeMeshPayloadToJson(payload.copy(guestGrants = grants, guestInviteId = "inviteId123"))
+        val parsed = jsonToNodeMeshPayload(code)!!
+        val check = com.nexonai.unpruuf.domain.network.GuestClient.check(parsed.nodeAddresses, parsed.guestGrants, now)
+        val ok = check as com.nexonai.unpruuf.domain.network.GuestClient.Check.Ok
+        assertEquals(2, ok.grants.count { it.isNotEmpty() })
+        // The guest's own code answers with the same invitation id and the same nodes.
+        val answer = nodeMeshPayloadToJson(payload.copy(appEdition = "client", guestInviteId = parsed.guestInviteId))
+        val answered = jsonToNodeMeshPayload(answer)!!
+        assertEquals("inviteId123", answered.guestInviteId)
+        assertEquals(payload.nodeAddresses, answered.nodeAddresses)
+        assertEquals(emptyList<String>(), answered.guestGrants)
+    }
 }

@@ -76,7 +76,7 @@ a('Aplicația · Ediția pentru avertizori',[
 ('Cazul meu','Număr de caz, stare și termene pentru avertizor.','ok',0),
 ('Română','Texte proprii (peste 280), vizibile doar avertizorilor și responsabililor.','ok',0),
 ('Releu obligatoriu','Raportările trec întotdeauna prin releul organizației. Fără LAN, fără serviciu onion propriu.','ok',0),
-('safeline Press (pilot)','Aceeași aplicație de raportare, cu formulări pentru jurnaliști: o sursă scrie unei redacții. Un pilot, netestat cu o sursă reală.','unk',1),
+('unpruuf Press (pilot)','Aceeași aplicație de raportare, cu formulări pentru jurnaliști: o sursă scrie unei redacții. Un pilot, netestat cu o sursă reală.','unk',1),
 ])
 a('Aplicația · Tor Client Edition (versiune specială)',[
 ('Scanarea QR a codului de feed','Codul de feed se scanează în loc să se tasteze.','unk',0),

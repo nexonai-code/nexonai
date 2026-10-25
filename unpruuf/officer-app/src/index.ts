@@ -7,6 +7,7 @@ import { createDashboardApp, DashboardStatus } from "./web/app";
 import { spawn } from "node:child_process";
 import { startTorAndWaitReady, TorClient } from "./tor/tor";
 import { PressSettingsStore } from "./settings/pressSettings";
+import { AccessOptions, LOOPBACK_HOSTS } from "./web/accessGuard";
 
 /** Opens the dashboard in the default browser so a live demo needs no typing. OFFICER_OPEN_BROWSER=0 turns it off. */
 function openInBrowser(url: string): void {
@@ -78,10 +79,24 @@ async function main() {
 
   const status: DashboardStatus = { viaTor: Boolean(torClient), lastPollAt: null, lastPollOk: true };
   const press = config.edition === "press" ? new PressSettingsStore(config.settingsPath) : undefined;
-  if (press) console.log("[startup] safeline Press: fără termene legale, păstrare reglabilă, ștergere pe caz.");
-  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl, () => status, config.edition, press);
-  app.listen(config.dashboardPort, () => {
-    console.log(`[startup] Panoul ascultă pe http://localhost:${config.dashboardPort}`);
+  if (press) console.log("[startup] unpruuf Press: fără termene legale, păstrare reglabilă, ștergere pe caz.");
+  // Dashboard access (security test finding OFF-1): loopback only by default. Listening on another
+  // address needs OFFICER_BIND_HOST plus a dashboard password, and the names it may be called by.
+  const bindHost = process.env.OFFICER_BIND_HOST?.trim() || "127.0.0.1";
+  const loopbackOnly = ["127.0.0.1", "::1", "localhost"].includes(bindHost);
+  const dashboardPassword = process.env.OFFICER_DASHBOARD_PASSWORD || undefined;
+  if (!loopbackOnly && (!dashboardPassword || dashboardPassword.length < 12)) {
+    console.error(`\n[startup] OFFICER_BIND_HOST=${bindHost} deschide panoul în rețea. Setează și OFFICER_DASHBOARD_PASSWORD (cel puțin 12 caractere), altfel nu pornesc.\n`);
+    process.exit(1);
+  }
+  const extraHosts = (process.env.OFFICER_ALLOWED_HOSTS ?? "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+  const access: AccessOptions = {
+    allowedHosts: [...LOOPBACK_HOSTS, ...(loopbackOnly ? [] : [bindHost.toLowerCase()]), ...extraHosts],
+    password: dashboardPassword,
+  };
+  const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl, () => status, config.edition, press, access);
+  app.listen(config.dashboardPort, bindHost, () => {
+    console.log(`[startup] Panoul ascultă pe http://localhost:${config.dashboardPort}${loopbackOnly ? " (doar acest calculator)" : ` — ATENȚIE: deschis în rețea pe ${bindHost}, cu parolă`}`);
     openInBrowser(`http://localhost:${config.dashboardPort}`);
     console.log(`[startup] Interoghez releul la ${relayReachableBaseUrl} la fiecare ${config.pollIntervalMs}ms${torClient ? " (prin Tor)" : ""}.`);
   });
@@ -100,7 +115,7 @@ async function main() {
   setInterval(pollTick, config.pollIntervalMs).unref();
   void pollTick();
 
-  // safeline Press: tips with no activity for the chosen number of days are deleted for good.
+  // unpruuf Press: tips with no activity for the chosen number of days are deleted for good.
   if (press) {
     const sweep = () => {
       const days = press.get().retentionDays;

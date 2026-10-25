@@ -1,6 +1,8 @@
 # Arbeitsregeln für dieses Projekt (Gabriel Hategan, NexonAI Consulting SRL)
 
-**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-20.md` lesen** (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
+**Gedächtnis:** `.claude/memory/MEMORY.md` ist der Index (Gabriel, Team, Arbeitsweise, Stand, Entscheidungen, offene Punkte, Orte). Nach jeder Entscheidung `decisions.md` ergänzen, am Tagesende `project_state.md` und `open_items.md` aktualisieren.
+
+**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-22.md` lesen** (ersetzt die vom 20.10.) (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
 
 Diese Datei wird in jeder neuen Sitzung geladen. Sie hält fest, was Gabriel ausdrücklich verlangt hat.
 
@@ -54,8 +56,8 @@ Beispiele:
 - **Bildsprache seit 14.10.2026 (von Gabriel festgelegt):** kein Postamt und keine Briefkästen mehr in neuem Material. Stattdessen ein **eigener Kurierdienst**: 250 Paketautomaten (wie easybox), jeder mit etwa 100 Fächern. Wer den richtigen Automaten hat und seinen Abholcode zeigt, bekommt das Paket; wer noch den zweiten Schlüssel hat, kann den Inhalt lesen. Man kann beliebig viele Dienste gleichzeitig laufen lassen und alles untereinander nutzen. In dieser Erklärung stehen die Zahlen 250 und 100, weil Gabriel sie so verlangt; „100 Fächer“ ist eine Planungszahl (rechnerisch, nicht unter Last gemessen) und wird so gekennzeichnet. Das Bild ist ein Bild: im Code sind die 250 Adressen eines Servers Zugänge zu einem gemeinsamen Speicher mit einer gemeinsamen Obergrenze (200 000 Pakete), keine getrennten Automaten. Nicht so darstellen, als wären die Automaten voneinander isoliert oder hätten je ein eigenes Fachlimit. Bestehende Decks, Seiten und Dokumente mit Briefkasten/Postamt sind noch nicht umgestellt. Vorlage: `unpruuf/handover/quellen/seite-in-klaren-worten/build_kurier.py`.
 - **Nach dem Verständnis keine Technologie mehr.** Die Lösungsteile reden nur darüber, was der Kunde damit tun kann (Abläufe, Ergebnisse, Alltag), nicht über Briefkästen, Schlüssel oder Tor. Technik nur auf ausdrückliche Nachfrage oder in einem getrennten Anhang.
 - Die Basistexte stehen in `unpruuf_Story_DE/EN/RO.docx` und in der Landing-Page-Story (Postamt). Neue Materialien übernehmen sie unverändert oder gekürzt, nicht neu erfunden. Protokolldetails bleiben draußen (Patent).
-- Die Hinweisgeber-Lösung heißt **safeline** (seit 10.10.2026). In neuem Kundenmaterial so nennen, nicht mehr „unpruuf Compliance“ oder „Whistleblower“. Das Grundsystem heißt weiter unpruuf („Wie unpruuf funktioniert“). Deck: `unpruuf/presentations/safeline.py` (EN und RO), Export in `presentations/export/safeline_EN/RO.pdf/.pptx`. App-Namen, Docs und ältere Compliance-Decks sind noch nicht umbenannt.
-- Newsletter-Anmeldungen und Newsletter-Anfragen gehen an **unpruuf@nexonai.ro** (Festlegung vom 11.10.2026). Die Landing Page hat dafür einen Abo-Knopf als E-Mail an diese Adresse, ohne Server-Formular. Der Datenschutztext muss den Newsletter nennen (Einwilligung, Abmeldung per E-Mail), sobald klar ist, womit versendet wird.
+- Das Whistleblower-Tool heißt **unpruuf Compliance**, das Presse-Produkt **unpruuf Press** (Entscheidung von Gabriel vom 22.10.2026). Der Name „safeline“ entfällt in allem Sichtbaren und wird nicht mehr verwendet. In neuem Kundenmaterial so nennen, nicht „Whistleblower“. Das Grundsystem heißt weiter unpruuf („Wie unpruuf funktioniert“). Deck: Quelle `unpruuf/presentations/safeline.py` (technischer Name, bleibt), Export `presentations/export/unpruuf_Compliance_Kundendeck_EN/RO.pdf/.pptx`. Technische Namen (Paket-IDs, Ordner `safeline_en/ro`, interner Produkttyp `safeline` in Control) bleiben, damit Updates und gespeicherte Daten weiterlaufen.
+- Newsletter entfällt vorerst (Entscheidung vom 15.10.2026, ersetzt die Festlegung vom 11.10.). Kein Versand, keine Abo-Anmeldung, die Datenschutzerklärung nennt keinen Newsletter. Kontakt läuft über einen Knopf, der eine E-Mail an **unpruuf@nexonai.ro** öffnet, die Adresse steht zusätzlich als Text auf der Seite. Kommt ein Newsletter zurück, braucht er Double-Opt-in und einen Absatz in der Datenschutzerklärung.
 
 ## Design für alle Dokumente und Artefakte (von Gabriel festgelegt, 25.10.2026)
 
@@ -73,13 +75,12 @@ Beispiele:
 
 ## Produkte und Stand (12.10.2026, von Gabriel bestätigt)
 
-- Drei Produkte auf demselben System: **safeline** (Compliance), **unpruuf Business** (interne Kommunikation), **safeline Press** (Journalisten).
-- Stand: Compliance und Business sind getestet und funktionieren. Ein unabhängiges Audit steht an. Bis dahin: nicht auditiert, nicht zertifiziert. safeline Press ist eine Pilotversion, nicht mit einer echten Quelle getestet.
-- Folien und Seiten: Briefkastenbild ohne Zahlen (kein 250, kein 100 pro Node), „Was der Server weiß“, „Nur der Kunde hat seine Daten“. Business-App hat heute nur eine englische Oberfläche (Rumänisch nur in safeline und Press). Die Einrichtungsseite des Node-Servers ist deutsch.
+- Drei Produkte auf demselben System: **unpruuf Compliance** (Whistleblower-Tool), **unpruuf Business** (interne Kommunikation), **unpruuf Press** (Journalisten).
+- Stand: Compliance und Business sind getestet und funktionieren. Ein unabhängiges Audit steht an. Bis dahin: nicht auditiert, nicht zertifiziert. unpruuf Press ist eine Pilotversion, nicht mit einer echten Quelle getestet.
+- Folien und Seiten: Briefkastenbild ohne Zahlen (kein 250, kein 100 pro Node), „Was der Server weiß“, „Nur der Kunde hat seine Daten“. Business-App hat heute nur eine englische Oberfläche (Rumänisch nur in unpruuf Compliance und Press). Die Einrichtungsseite des Node-Servers ist deutsch.
 - Telefon-Bilder in Decks sind Nachbauten und so zu kennzeichnen, bis echte Aufnahmen vorliegen.
 
 ## Wettbewerb und Aussagen (12.10.2026)
 
 - Nie „als Erste“, „einzigartig“, „sicherer als …“ sagen. Jedes Einzelteil gibt es bei anderen (SimpleX, Session, Briar, Cwtch, Threema OnPrem, Wire, Matrix, SecureDrop, GlobaLeaks, EQS). Wir dürfen sagen: fertige Produkte für Compliance, Presse und Firmen auf einem System, Server immer beim Kunden, keine Identitäten, Tor von Anfang an. Vergleich: `Wettbewerbsvergleich_2026-10-12`.
-- Der Name „SafeLine“ ist bei einer bekannten Open-Source-Firewall (Chaitin) belegt. Vor Veröffentlichung Markenrecherche und Jurist.
 - Rumänien, anonyme Meldungen: Stand ungeklärt (Änderungsantrag zum Gesetz 361/2022). Nie behaupten, anonyme Meldungen seien vorgeschrieben, ohne den aktuellen Text geprüft zu haben.

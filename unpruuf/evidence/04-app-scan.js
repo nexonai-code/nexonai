@@ -43,10 +43,19 @@ const imports = find(/import\s+(android\.telephony|android\.location|android\.pr
 run.check('no source file imports telephony, location, contacts, accounts, call log, Google services or Firebase', imports.length === 0, imports.map((x) => `${x.f}:${x.n}`).join(', '));
 
 const sockets = find(/(^|[^A-Za-z.])Socket\(/).filter((x) => !/ServerSocket/.test(x.t));
-const viaTor = sockets.filter((x) => /Socket\(proxy\)/.test(x.t));
-const direct = sockets.filter((x) => !/Socket\(proxy\)/.test(x.t));
+// Two ways through Tor: Java's own Proxy object (Socket(proxy)), and the app's SOCKS5 client
+// (Socks5.kt), which opens a plain socket to the local Tor proxy and asks it for the onion service.
+const torPath = (x) => /Socket\(proxy\)/.test(x.t) || /Socks5\.kt$/.test(x.f);
+const viaTor = sockets.filter(torPath);
+const direct = sockets.filter((x) => !torPath(x));
 run.check('every client socket the app opens goes through the Tor SOCKS proxy, except one', viaTor.length >= 3 && direct.length === 1, `through Tor: ${viaTor.map((x) => x.f.split('/').pop() + ':' + x.n).join(', ')}; direct: ${direct.map((x) => x.f.split('/').pop() + ':' + x.n).join(', ')}`);
 if (direct.length) run.note(`the one direct socket (${direct[0].f}:${direct[0].n}) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).`);
+const socksCalls = find(/\bSocks5\.connect\(/);
+const socks5 = code.find((c) => /Socks5\.kt$/.test(c.f));
+const socksConnects = socks5 ? socks5.lines.filter((t) => /\.connect\(/.test(t)) : [];
+run.check('the app\'s own SOCKS5 client connects only to the local Tor proxy (127.0.0.1), and every caller passes that address',
+  socksCalls.length >= 1 && socksCalls.every((x) => /Socks5\.connect\(\s*"127\.0\.0\.1"/.test(x.t)) && socksConnects.length === 1 && /InetSocketAddress\(proxyHost, proxyPort\)/.test(socksConnects[0]),
+  `callers: ${socksCalls.map((x) => x.f.split('/').pop() + ':' + x.n).join(', ')}; connect calls in Socks5.kt: ${socksConnects.length}`);
 const serverSockets = find(/ServerSocket\(/);
 const loopbackSockets = serverSockets.filter((x) => /127\.0\.0\.1/.test(x.t));
 const openSockets = serverSockets.filter((x) => !/127\.0\.0\.1/.test(x.t));

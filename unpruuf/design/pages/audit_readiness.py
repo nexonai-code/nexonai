@@ -79,7 +79,7 @@ GROUPS = [
 ASK = [
     ("Scope", [
         "First round: node server and Business app (pro, then group).",
-        "Name the exclusions in the contract: Control, Officer app, Press, safeline parts, iOS. Otherwise the report gets read wider than it is.",
+        "Name the exclusions in the contract: Control, Officer app, Press, unpruuf Compliance parts, iOS. Otherwise the report gets read wider than it is.",
         "A cryptography review by a specialist (Double Ratchet, the reduced session start, the outer layer, the new packet format).",
         "Build and release chain, the Tor and bridge integration, and inputs from outside (pairing codes, lists, images).",
     ]),

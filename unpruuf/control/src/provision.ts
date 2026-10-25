@@ -234,7 +234,7 @@ export interface NewServerInput {
 }
 
 export function defaultsFor(product: Product): { profile: Profile; store: StoreMode } {
-  // Business: the usual 6 hours. safeline and Press: packets may wait the full 24 hours, because the
+  // Business: the usual 6 hours. unpruuf Compliance and Press: packets may wait the full 24 hours, because the
   // officer or journalist is not always online. Suggestions only: the admin can change them.
   return product === "business" ? { profile: "standard", store: "disk" } : { profile: "offline-tolerant", store: "disk" };
 }

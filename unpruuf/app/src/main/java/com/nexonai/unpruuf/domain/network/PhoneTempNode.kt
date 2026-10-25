@@ -202,6 +202,9 @@ class PhoneTempNode(
     private fun acceptLoop(ss: ServerSocket) {
         while (!ss.isClosed) {
             val s = try { ss.accept() } catch (e: Exception) { break }
+            // stop() clears `server` before it closes the socket, but a connection that arrived in
+            // that instant can still be accepted: drop it, never serve it.
+            if (server !== ss) { runCatching { s.close() }; break }
             if (!permits.tryAcquire()) { runCatching { s.close() }; continue }
             Thread({ try { handle(s) } finally { runCatching { s.close() }; permits.release() } }, "phone-temp-node-conn")
                 .apply { isDaemon = true; start() }

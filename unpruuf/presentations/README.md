@@ -4,6 +4,7 @@
 |---|---|---|
 | unpruuf Business (Hauptprodukt) | https://claude.ai/artifact/4tH2sYnsmWgAkZELQGNkCd | `business/project/slides/` |
 | unpruuf Compliance | https://claude.ai/artifact/61vsMG7dqfqqu3ZJhjVGoe | `compliance/project/slides/` |
+| unpruuf Business (English, Datei in `export/`) | – | `business_en/project/slides/` |
 | unpruuf Business (Deutsch) | https://claude.ai/artifact/JP11hQVZbqVTUqGt1ahysF | `business_de/project/slides/` |
 | unpruuf Compliance (Deutsch) | https://claude.ai/artifact/Rwc3AVsDLhhZHZXmgmULdA | `compliance_de/project/slides/` |
 

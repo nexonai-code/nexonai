@@ -79,7 +79,7 @@ a('App · Whistleblower edition',[
 ('My case','Case number, status and deadlines for the reporter.','ok',0),
 ('Romanian','Own texts (over 280), visible only to reporters and officers.','ok',0),
 ('Relay required','Reports always go through the organisation\'s relay. No LAN, no own onion service.','ok',0),
-('safeline Press (pilot)','The same reporter app with journalist wording: a source writes to a newsroom. A pilot, never tested with a real source.','unk',1),
+('unpruuf Press (pilot)','The same reporter app with journalist wording: a source writes to a newsroom. A pilot, never tested with a real source.','unk',1),
 ])
 a('App · Tor Client Edition (special build)',[
 ('QR scan of the feed code','The feed code is scanned instead of typed.','unk',0),

@@ -76,6 +76,9 @@ class ChatViewModel @Inject constructor(
     // IDs ausgehender Nachrichten, die der Empfänger per ACK bestätigt hat
     val deliveredIds = p2pNetworkManager.deliveredIds
 
+    /** Free Client app: what this chat's guest deposits ran into (see P2PNetworkManager.GuestIssue). */
+    val guestIssues = p2pNetworkManager.guestIssues
+
     val messages = _contact
         .flatMapLatest { contact ->
             if (contact == null) flowOf(emptyList())

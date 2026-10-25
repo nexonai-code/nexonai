@@ -10,7 +10,7 @@ function requireEnv(name: string, hint: string): string {
   return value.trim();
 }
 
-/** "compliance" = safeline (organisation, legal deadlines). "press" = safeline Press (editorial
+/** "compliance" = unpruuf Compliance (organisation, legal deadlines). "press" = unpruuf Press (editorial
  *  tip line: no deadlines, adjustable retention, delete a tip, pickup warning). */
 export type OfficerEdition = "compliance" | "press";
 

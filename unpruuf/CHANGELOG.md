@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Merge of `android` (36 commits from 20.–23.10.) into the audit line
+
+- **What:** the two lines had split at `9ec1809`. `android`/`main` carried guest invitations (Room v15, guest grants on the server, Client edition), the rename to **unpruuf Compliance** and **unpruuf Press** (22.10.), the Press line with one contact code per research, Officer-dashboard hardening (OFF-1), website v12, the spam-protection concept, the structured memory under `.claude/memory`. This line carried the pre-audit fixes (H1, M1–M4, M7, M9–M11, L1–L11), Tor isolation levels 1 and 3, the design kit, the process documents and `export-list`. Both are now in one history; nothing of either side was dropped.
+- **11 conflicts, resolved by hand:** `routes/node.ts`, `app.ts`, `package.json` (server: guest deposit auth *and* the new buckets, cursor, strict routing, 404 handler, both test lists), `NodeMeshClient.kt` (the request takes `isolationKey` *and* `authorization`), `P2PNetworkManager.kt` (guest deposits also run on the contact's Tor isolation key), `AppModule.kt` (sealed database key *and* `MIGRATION_14_15`), `CHANGELOG.md`, both READMEs, `evidence/REPORT.*` (re-run, see below).
+- **Guest deposits and Tor isolation:** `depositAsGuest` now carries the contact's isolation key, so a guest's packets to the inviter's node travel on that contact's circuit like every other deposit. Not verified against real Tor (same state as the rest of level 3).
+- **Evidence scripts:** `03` allows `http` in `exportListCli.ts` and checks that the tool names only `127.0.0.1`; `04` counts `Socks5.kt` as the Tor path and checks that the app's own SOCKS5 client connects only to the local proxy and that every caller passes `127.0.0.1`. Before that, both checks failed on the new files — a true report of the new code, not a regression.
+- **Rules:** root `CLAUDE.md` and `unpruuf/CLAUDE.md` now agree on the hand-over to read first (`UEBERGABE_2026-10-22.md`), the newsletter (dropped, 15.10.), the form of address, and the Officer-dashboard state. The product names from 22.10. were already in the root file via the merge. "safeline" replaced in the F1 sheet, the audit process, the pre-audit report and the audit-readiness page (sources and the four published pages; the live pages had been renamed by another session this morning and the sources now match them word for word).
+- **Checks after the merge:** node server 137 passed, 1 skipped (138); app unit tests green in all six editions (Standard 247; Pro, Client, Group, Whistleblower, Press compile and pass); Control 63; Officer app 28; relay server 70; evidence 99 passed, 0 failed, 1 finding (F1, known). Not done: a phone test of the merged app, real Tor, Windows run of the exe.
+- **Pending from the other line, unchanged:** `evidence/AUDITOR_SCOPE.md` still lists Control and Officer app as WP5/6 (round one is node server and Business app only).
+
+---
+
 ## 2026‑10‑25 · Node list without a browser (`export-list`), exe and Control button
 
 - **Why:** the list of all nodes of a server (for the import in the app) was only reachable through the setup page, which on a VPS means an SSH tunnel and a browser. Control already fetched it with one click (Distribute); a server without Control had no easy way.
@@ -118,6 +130,72 @@ Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed
 - **Dependency:** `body-parser` 1.20.8 to 1.20.9 (high-severity DoS advisory published after the last evidence run) in node-mesh-server, server, control and officer-app (lock files only).
 - **Test:** `PhoneTempNodeTest.startRunsAndStopRemovesEverything` no longer assumes a freed port stays closed.
 - Checks: node-mesh-server 116 passed (1 skipped), relay 70, control 62, officer-app 15, evidence 97 passed / 0 failed / F1, Android unit tests 169 each for standard, pro and group.
+
+---
+
+## 2026‑10‑22 · Client import for guest invitations
+
+- unpruuf Client accepts a guest invitation by scan (two-scan key exchange, field `i` in the pairing code), stores the grants (Room v15, `guestGrants`), deposits as guest, shows refused/quota/expiring banners. Pro side issues grants for exactly the chosen nodes with invitation-specific pairing values and binds the guest on the second scan. Panic wipe removes open invitations.
+- Tests: `GuestClientTest` (8), `NodeMeshPairingTest` (+3). All flavours compile, Standard and Client unit tests pass.
+- Not done: `GRANT_RENEW`, guest list, Control, relay-android guest auth, iOS, phone test.
+
+---
+
+## 2026‑10‑22 · Old deliveries rebuilt with the new names
+
+- Rebuilt from sources: solution descriptions (18 files, DE/EN/RO; also corrected "dashboard cannot yet delete a single case", which is wrong since 19.10.), Control (UI labels, new server bundle, unsigned), officer app (both editions, dashboard hardening), evidence package, whole project, seven APKs (with the Temp Node fix).
+- Patched in place (no sources in the repository): team briefing EN/RO (Word), event deck UAB-Pitch-Kurz EN/RO (PowerPoint, no PDF).
+- Not rebuildable from the repository: press pitch and business pitch decks (screenshots and assets missing), compliance video and one-pager for press (sources only in Gabriel's chat), the online artifacts and documents from earlier sessions (they must be edited one by one).
+- `quellen/loesungsbeschreibungen`: output file names now `2_unpruuf_Compliance_*` and `3_unpruuf_Press_*`.
+
+---
+
+## 2026‑10‑22 · Renamed: safeline is gone, unpruuf Compliance and unpruuf Press
+
+- Whistleblower tool = **unpruuf Compliance**, press product = **unpruuf Press**. The name safeline is removed from everything visible: officer app (texts, login prompt, download file name `unpruuf-press-qr.png`, start script), Control (labels), website (text and anchor `#compliance`), decks, documentation, iOS spec, auditor scope, source files for solution descriptions, event decks and landing pages.
+- Deck `safeline` (EN, RO, 14 slides) rebuilt as **unpruuf Compliance** and exported as `unpruuf_Compliance_Kundendeck_EN/RO`; the old `safeline_EN/RO` exports are removed. The older decks `unpruuf_Compliance_RO/DE` stay.
+- **Unchanged on purpose (technical names):** package IDs (`com.nexonai.unpruuf.press`), folder and script names (`safeline_en/`, `safeline_ro/`, `safeline.py`), the internal product type `safeline` in Control's vault (stored data), the website CSS class `safeline-art`, history entries in this file.
+- Rules files `CLAUDE.md` (root and `unpruuf/`) updated with Gabriel's explicit instruction (new names, technical names stay, the SafeLine trademark note is dropped).
+
+---
+
+## 2026‑10‑22 · Website in the repository (`unpruuf/website/`, v12)
+
+- Static site (no build): open `index.html`, copy the folder to the web root. DE/EN/RO. Own change history in `unpruuf/website/CHANGELOG.md`.
+- Content of this version: NexonAI logo in header and footer, blue instead of green, new section "Never give out your phone number again" in "How it works". Base was the `web.zip` the team had on hand (state v8); the v9 to v11 files from 19.10. are not in the repository, so logo and blue were rebuilt, not taken over.
+- Not changed: legal pages still carry open placeholders (street, hosting provider, log retention).
+
+---
+
+## 2026‑10‑22 · Phone Temp Node: late connection after stop is no longer served (flaky test fixed)
+
+- **Cause (reproduced, not guessed):** `stop()` clears the state, then closes the listening socket. A connection that arrived in that instant could still be accepted by the accept loop and answered (measured: about 5 to 10 percent of rounds after one earlier request; 69 of 600 at TCP level). No data was reachable (packets and owner secret are already wiped), but the node answered `/health` after it had been stopped, and `PhoneTempNodeTest.startRunsAndStopRemovesEverything` failed once in a while.
+- **Fix:** `PhoneTempNode.acceptLoop` drops a connection accepted after the node was stopped. After the fix 0 of 600 probe rounds were answered. The test now repeats the check 100 times (still 181 tests per edition; Standard, Pro, Client, Group re-run in full: 181 passed, 0 failed each).
+
+---
+
+## 2026‑10‑22 · Decks: test numbers corrected
+
+- Business status slide (RO, DE, EN): "70 / 15 / 80 tests, real Tor" replaced by the counts measured today: node server 123 automated tests (one skipped), run without the live Tor network; Android node 15; app 181, the same suite in every edition. The wrong "real Tor" wording is gone. Compliance status slide: "App: 80 Tests" now 181.
+- Measured on 22.10.2026: app unit tests 181 per edition (Standard, Pro, Client, Group, Whistleblower, Press); `PhoneTempNodeTest.startRunsAndStopRemovesEverything` failed once in a full run (Client) and passed in all other runs (timing on the closed port, not investigated). Node server 123 passed, 1 skipped. Tablet node 15 passed.
+
+---
+
+## 2026‑10‑22 · Business deck: new slide "no phone number" (RO, DE) and a new English deck
+
+- Slide 7 in `unpruuf_Business_RO` and `unpruuf_Business_DE` (after "what does not exist"): a code per contact instead of a phone number, one code per person, delete the contact and there is no way to you any more. States the limit on the slide itself (what someone already received stays with them; other channels are untouched). Source: `presentations/decks2.py`, slide `fara-numar`. Footer numbers of the following slides moved by one (18 slides).
+- **English Business deck added** (`unpruuf_Business_EN`, 18 slides, same source: `decks2.py` with the English texts in `decks2_en.py`, keyed by the German text). It carries the same new slide. Customer material is English + Romanian; the German deck stays for internal use.
+- Old content in all three Business decks, not changed here: "70 automated tests / 15 / 80" on the status slide is out of date (node server now 123, Android 181), and the mailbox/post-office picture has not been switched to the courier picture yet.
+- Not checked by a native speaker (RO). The online artifact links in `presentations/README.md` still show the old version until they are republished.
+
+---
+
+## 2026‑10‑21 · Press line merged into `android`; officer dashboard access hardened
+
+- **Merge:** branch `ccr-9a899f8d-xrqsp0` (guest lockers, design kit, safeline Press with one contact code per research, split `CLAUDE.md`) merged into `android`. `officer-app` taken from the Press branch (it had been copied unchanged from `android`). Guest grants ported onto the current node server (licence, sealed keys, per-address limits kept): `depositAuth.ts` follows the rotating owner secret and answers 423 while a sealed server is locked. Android: pairing code carries the optional guest grants, invite button next to the Business code. Node server tests 123 passed; officer app 28 passed.
+- **`CLAUDE.md`:** left as on `android`; the split file `unpruuf/CLAUDE.md` from the Press branch is now also present. The team merges the two rule sets by hand (not done automatically).
+- **Officer dashboard (internal security test, finding on listening address and missing login):** now answers on `127.0.0.1` only; requests for any other host name are refused; changing requests need the header the page itself sends and a matching Origin; no CORS answer; optional HTTP Basic password. Listening on another address needs `OFFICER_BIND_HOST`, `OFFICER_ALLOWED_HOSTS` and `OFFICER_DASHBOARD_PASSWORD` (12+ characters), otherwise the program does not start. Identity file written with mode 0600. Hardening, not an audit result. New `accessGuard.test.ts`.
+- **Not done:** the tip page with real codes (needs the code list from a running Press officer app), the Press one-pager update (sources are not in the repo), a test with a real phone, real Tor.
 
 ---
 
@@ -1443,6 +1521,13 @@ changes (no Android SDK here, same as always); Windows execution of any of the
 new `.bat` scripts (written on Linux, structurally reviewed only — see each
 new folder's README "Known gaps" section, and `unpruuf/WHISTLEBLOWER_DEMO.md`
 for the full demo runbook and setup steps).
+## 2026‑10‑18 · Guest lockers for a free, invite-only Client app (first build)
+
+**What was done.** Guest grants: a signed, expiring token that lets a Client app user without servers deposit on the inviter's node. Server (`node-mesh-server`): `PUT /deposit` accepts `Guest <token>` besides the owner bearer, off by default (`NODE_MESH_GUEST_GRANTS=1`), stateless MAC check, in-memory quota per grant, no grant data on disk; 9 new tests, 35 pass. Shared format and test vectors in `guest-grants/`. Android: `GuestGrant.kt` (issue, parse, renewal check) with 8 JVM tests against the vectors, `NodeMeshClient.depositAsGuest`, pairing field `g`. Specs: `GUEST_LOCKERS_BUILD_SPEC.md`, `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`.
+
+**Added later the same day.** Slot scope module for the 250 x 100 server (`guestScope.ts`, Kotlin `GuestScope.kt`, vector `slot-scope`), owner invite screen (`GuestInviteScreen`, `GuestInviteViewModel`, `GuestInvite.kt`), navigation and a button in the Business pairing screen. 37 server tests and 15 JVM tests pass.
+
+**Open / not verified.** The two Android files that touch Android classes were not compiled (no SDK here). No screens, Control, evidence scripts or iOS yet. The server change is in the older single-node server of this repository and must be ported to the current multi-slot server. Packet-length finding F1 is still open in this snapshot.
 
 ---
 

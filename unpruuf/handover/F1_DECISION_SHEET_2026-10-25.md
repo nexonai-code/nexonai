@@ -12,9 +12,9 @@ The first 8 bytes of every stored 4096-byte packet state the payload length in c
 
 | Product | Who is the operator | What F1 gives away |
 |---|---|---|
-| safeline (reporting channel) | The company the reporter is afraid of | When a report was filed: the cover traffic does not hide it, because cover packets are recognisable |
+| unpruuf Compliance (reporting channel) | The company the reporter is afraid of | When a report was filed: the cover traffic does not hide it, because cover packets are recognisable |
 | unpruuf Business | The customer's own admin | Roughly how long each message is, and when real messages (not cover) are sent |
-| safeline Press (pilot) | The newsroom or its host | Same as Business |
+| unpruuf Press (pilot) | The newsroom or its host | Same as Business |
 
 What we may say to customers today, with no change: hidden from observers of the network; **not** hidden from the operator of the server (they see the approximate length and can tell cover packets from messages).
 

@@ -15,7 +15,7 @@ How we prepare, order, run and close an independent security review of the node 
 
 **Round one (in):** node server and the Business app (`pro`, then `group`), the build and release chain, the Tor and bridge integration, inputs from outside, and a cryptography review by a specialist.
 
-**Later rounds (out for now, to be named in the contract):** unpruuf Control, Officer app, Press, safeline-specific parts, iOS.
+**Later rounds (out for now, to be named in the contract):** unpruuf Control, Officer app, Press, unpruuf Compliance-specific parts, iOS.
 
 **Not covered by any round:** Tor and the operating systems, the customer's hosting provider, a compromised phone, a global observer, legal assessment.
 
@@ -72,7 +72,7 @@ How we prepare, order, run and close an independent security review of the node 
 
 ### Step 4: Select and sign
 - **Who:** Norbert, with a lawyer reading the contract.
-- **How:** the contract names: the tag and the scope, the exclusions (Control, Officer app, Press, safeline parts, iOS), the deliverables (report with severities and evidence; a coverage statement per claim; the release fingerprint reviewed; a draft for factual correction; interim notice of serious findings; the retest in the price; a short summary we may show customers; permission to quote that summary and the coverage statement word for word), confidentiality that covers the protocol details while the patent check runs, rules for disclosure, no change of scope without writing, one contact on each side with a response time. Ask the lawyer about the patent before the briefs leave the house.
+- **How:** the contract names: the tag and the scope, the exclusions (Control, Officer app, Press, unpruuf Compliance parts, iOS), the deliverables (report with severities and evidence; a coverage statement per claim; the release fingerprint reviewed; a draft for factual correction; interim notice of serious findings; the retest in the price; a short summary we may show customers; permission to quote that summary and the coverage statement word for word), confidentiality that covers the protocol details while the patent check runs, rules for disclosure, no change of scope without writing, one contact on each side with a response time. Ask the lawyer about the patent before the briefs leave the house.
 - **Output:** the signed contract and NDA.
 
 ### Step 5: Kick-off
@@ -102,7 +102,7 @@ How we prepare, order, run and close an independent security review of the node 
 
 ### Step 10: Close
 - **Who:** the team.
-- **How:** lessons learned (what the auditor found that our own review did not; what took time); archive the report in a restricted place; plan the next round (Control, Officer app, Press and safeline parts, iOS) and a repeat rule (for example after any change of the wire format, and at least once a year; the team decides); update this document.
+- **How:** lessons learned (what the auditor found that our own review did not; what took time); archive the report in a restricted place; plan the next round (Control, Officer app, Press and unpruuf Compliance parts, iOS) and a repeat rule (for example after any change of the wire format, and at least once a year; the team decides); update this document.
 - **Output:** notes, the archive entry, the next round in the calendar.
 
 ## Exceptions and edge cases

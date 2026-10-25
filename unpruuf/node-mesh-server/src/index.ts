@@ -11,7 +11,7 @@ import { ADMIN_TOKEN_FILE, createAdminToken, writeAdminToken } from "./admin/adm
 import { NodeStore } from "./store/nodeStore";
 import {
   ADMIN_PORT, BRIDGE_LINES_PATH, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM, PACKAGE_ROOT, REQUIRE_SIGNED,
-  RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED,
+  RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED, GUEST_GRANTS_ENABLED, GUEST_MAX_VALIDITY_MS,
 } from "./config";
 import {
   createEphemeralIdentity, isLocked, loadOrCreateIdentity, NodeIdentity, regenerateSecret, saveIdentity, unlockIdentity,
@@ -130,7 +130,8 @@ const publicAddress = (): string | null => (onion ? onion.getStatus().onionAddre
 const publicAddresses = (): string[] =>
   onion ? onion.getStatus().onionAddresses : operatorAddress ? [operatorAddress] : [];
 const metrics = new Metrics();
-const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics, () => license.depositBlocked());
+const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics, () => license.depositBlocked(), { enabled: GUEST_GRANTS_ENABLED, maxValidityMs: GUEST_MAX_VALIDITY_MS });
+console.log(`[guests] guest grants ${GUEST_GRANTS_ENABLED ? "ENABLED" : "off"}`);
 
 // Second factor of the setup page (admin/adminToken.ts): new at every start. Not in the logs of a
 // service; the customer's tool reads the file over its own login.

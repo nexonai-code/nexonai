@@ -546,6 +546,79 @@ class IdentityManager @Inject constructor(
         prefs.edit().remove("pending_nm_pairing").apply()
     }
 
+    // ─── Guest invitations (Pro side, GUEST_LOCKERS_BUILD_SPEC.md §4 and §7) ─────────────────
+    // An invitation carries its OWN fresh pairing values (message key, ratchet key pair, routing
+    // seed, nodes), separate from the Node-Mesh QR on screen, so inviting a guest never disturbs
+    // a normal pairing and a guest never shares a key with anyone else. The values stay here,
+    // encrypted, until the guest's own code is scanned (then they become the contact's values)
+    // or the invitation expires. Several invitations may be open at once; the guest's code
+    // repeats the invitation id so the right one is found.
+
+    data class GuestInvitation(val id: String, val expiresAtMs: Long, val pairing: PendingNodeMeshPairing)
+
+    /** Fresh pairing values (never persisted by itself) for [nodes]: used for an invitation (Pro)
+     *  and for the guest's own side of one (Client). */
+    fun freshNodeMeshPairing(nodes: List<String>): PendingNodeMeshPairing {
+        val random = java.security.SecureRandom()
+        val priv = X25519.generatePrivateKey()
+        return PendingNodeMeshPairing(
+            messageKey = b64(ByteArray(32).also { random.nextBytes(it) }),
+            ratchetPrivateKey = b64(priv),
+            ratchetPublicKey = b64(X25519.publicFromPrivate(priv)),
+            routingSeed = b64(ByteArray(32).also { random.nextBytes(it) }),
+            nodeAddresses = nodes
+        )
+    }
+
+    fun createGuestInvitation(nodes: List<String>, expiresAtMs: Long): GuestInvitation {
+        val random = java.security.SecureRandom()
+        val inv = GuestInvitation(
+            id = android.util.Base64.encodeToString(ByteArray(9).also { random.nextBytes(it) }, android.util.Base64.NO_WRAP or android.util.Base64.URL_SAFE),
+            expiresAtMs = expiresAtMs,
+            pairing = freshNodeMeshPairing(nodes)
+        )
+        saveGuestInvitations(loadGuestInvitations(System.currentTimeMillis()) + inv)
+        return inv
+    }
+
+    /** The open invitation with [id], or null if there is none or it has expired. */
+    fun guestInvitation(id: String, nowMs: Long = System.currentTimeMillis()): GuestInvitation? =
+        loadGuestInvitations(nowMs).firstOrNull { it.id == id }
+
+    fun removeGuestInvitation(id: String) {
+        saveGuestInvitations(loadGuestInvitations(System.currentTimeMillis()).filterNot { it.id == id })
+    }
+
+    private fun loadGuestInvitations(nowMs: Long): List<GuestInvitation> {
+        val stored = prefs.getString("guest_invitations", null) ?: return emptyList()
+        val array = runCatching { org.json.JSONArray(String(decryptSecret(stored), Charsets.UTF_8)) }.getOrNull() ?: return emptyList()
+        val out = ArrayList<GuestInvitation>()
+        for (i in 0 until array.length()) {
+            val o = array.optJSONObject(i) ?: continue
+            val expires = o.optLong("x", 0L)
+            if (expires <= nowMs) continue
+            runCatching { parsePending(o.getJSONObject("p").toString()) }.getOrNull()?.let {
+                out.add(GuestInvitation(o.getString("i"), expires, it))
+            }
+        }
+        return out
+    }
+
+    private fun saveGuestInvitations(list: List<GuestInvitation>) {
+        if (list.isEmpty()) { prefs.edit().remove("guest_invitations").apply(); return }
+        val array = org.json.JSONArray()
+        // At most ten open invitations; the oldest fall away first.
+        for (inv in list.takeLast(10)) {
+            array.put(org.json.JSONObject().put("i", inv.id).put("x", inv.expiresAtMs).put("p", org.json.JSONObject(serializePending(inv.pairing))))
+        }
+        prefs.edit().putString("guest_invitations", encryptSecret(array.toString().toByteArray(Charsets.UTF_8))).apply()
+    }
+
+    /** Panic PIN: the pairing values shown in a QR and every open guest invitation go too. */
+    fun wipePendingPairings() {
+        prefs.edit().remove("pending_nm_pairing").remove("guest_invitations").commit()
+    }
+
     private fun serializePending(p: PendingNodeMeshPairing): String =
         org.json.JSONObject()
             .put("m", p.messageKey).put("rp", p.ratchetPrivateKey).put("rk", p.ratchetPublicKey)

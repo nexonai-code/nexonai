@@ -2654,6 +2654,57 @@ class P2PNetworkManager @Inject constructor(
         return anySucceeded
     }
 
+    /** What a guest's deposits ran into for one contact (free Client app); cleared by the next
+     *  deposit that works. Shown in the chat so the guest knows what to do. */
+    enum class GuestIssue { REFUSED, QUOTA }
+
+    private val _guestIssues = MutableStateFlow<Map<String, GuestIssue>>(emptyMap())
+    val guestIssues: StateFlow<Map<String, GuestIssue>> = _guestIssues.asStateFlow()
+
+    private fun setGuestIssue(contactId: String, issue: GuestIssue?) {
+        _guestIssues.value = if (issue == null) _guestIssues.value - contactId else _guestIssues.value + (contactId to issue)
+    }
+
+    /**
+     * Free Client app (GUEST_LOCKERS_BUILD_SPEC.md §7.2): deposits [padded] on every node of the
+     * inviter that this guest holds a valid grant for. A grant that has run out is not even tried.
+     * A node that answers 401 (expired, forged, guests off) or 429 (sending limit) only changes
+     * what the chat says; the message stays queued and is tried again. There is deliberately no
+     * fallback to any own node or any other path.
+     */
+    private fun depositAsGuest(contact: com.nexonai.unpruuf.data.model.Contact, routingTag: String, padded: ByteArray, ttlMs: Long?, isolationKey: String? = null): Boolean {
+        val addresses = NodeMeshManager.parseNodeConnectionStringList(contact.myNodeAddresses ?: "")
+            .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+        val grants = GuestClient.grantsFor(contact.guestGrants, addresses.size)
+        val now = System.currentTimeMillis()
+        var stored = false
+        var tried = 0
+        var refused = 0
+        var overQuota = 0
+        for ((i, address) in addresses.withIndex()) {
+            val token = grants[i]
+            if (token.isEmpty()) continue
+            tried++
+            if ((GuestGrant.parse(token)?.notAfterMs ?: 0L) <= now) { refused++; continue }
+            when (nodeMeshClient.depositAsGuest(address, token, routingTag, padded, ttlMs, isolationKey)) {
+                NodeMeshClient.GuestDepositResult.OK -> stored = true
+                NodeMeshClient.GuestDepositResult.GRANT_REFUSED -> refused++
+                NodeMeshClient.GuestDepositResult.QUOTA_REACHED -> overQuota++
+                NodeMeshClient.GuestDepositResult.FAILED -> {}
+            }
+        }
+        setGuestIssue(
+            contact.id,
+            when {
+                stored -> null
+                tried == 0 || refused == tried -> GuestIssue.REFUSED
+                overQuota > 0 -> GuestIssue.QUOTA
+                else -> null
+            }
+        )
+        return stored
+    }
+
     /**
      * Routes a Node-Mesh deposit through [contactId]'s Temp Node override (NODE_MESH_SPEC.md §7)
      * when one is registered, falling back to [depositToOwnNodes] otherwise — including when
@@ -2675,6 +2726,10 @@ class P2PNetworkManager @Inject constructor(
         val ttlMs = contact?.let { MessageTtl.toMillis(it.messageTtlHours) }
         // The contact's own Tor isolation key (also when its row is gone: the key depends only on the id).
         val isolation = identityManager.torIsolationKeyFor(contactId)
+        // Free Client app: no own nodes, only the grants the inviter issued. Never any fallback.
+        if (contact != null && !contact.guestGrants.isNullOrEmpty()) {
+            return depositAsGuest(contact, routingTag, padded, ttlMs, isolation)
+        }
         if (contact == null || tempAddress == null || tempSecret == null) {
             return depositToOwnNodes(nodes, routingTag, padded, ttlMs, isolation)
         }
