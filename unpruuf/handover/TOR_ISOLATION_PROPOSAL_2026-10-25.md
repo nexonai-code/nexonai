@@ -2,6 +2,8 @@
 
 For the team (Gabriel, Norbert, Floretta). 25 October 2026. A proposal, not a decision. Internal: contains protocol details (patent check running), do not forward.
 
+**Status 25 October 2026:** Level 1 and Level 3 are built for Android (unit-tested against a fake SOCKS server; not yet run against real Tor, not measured for battery or latency). Level 2 is not built. The questions below stay open for the team: measure first, then decide about Level 2.
+
 **The question for the team:** after the M4 change (each contact is asked on its own, for two or three hourly tags) one thing is left that lets a node operator tie requests together: all requests to one node address travel through the same Tor circuit. Do we give each contact its own circuit, and how far do we go?
 
 ## What the node operator sees today

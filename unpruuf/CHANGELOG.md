@@ -16,6 +16,17 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Tor stream isolation per contact (level 1) and own timers per contact (level 3)
+
+- `Socks5.kt`: a SOCKS5 client of our own (RFC 1929 user name and password, host sent as a name, nothing resolved on the phone, fail closed: with credentials only the user-name method is offered, a proxy that skips authentication is refused). No global state (the platform's `java.net.Authenticator` is process-wide and would touch every other connection).
+- `TorIsolation.kt` / `IdentityManager.torIsolationKeyFor`: the user name is a keyed hash of the contact id under a device secret (32 hex characters); it stays on the phone.
+- `NodeMeshClient`: `fetchManySince` and `deposit` take an isolation key; without a key (pool lists, feeds) the request uses the shared default group. `P2PNetworkManager` passes the contact's key for every poll and every deposit of that contact (also the Temp Node path).
+- Level 3: one poll loop per contact with its own random start and jittered interval (before: one loop for all). A loop starts when a contact appears and stops when it is gone; the panic wipe stops them all.
+- Tests: `Socks5Test` (13, against an in-process fake proxy: only the user-name method offered, name-based connect, every connect error code, refused credentials, another version, all bound address types, timeout, bad arguments), `TorIsolationTest` (4). Android unit tests: 220 per build.
+- Not verified: real Tor (do two requests with different user names land on different circuits?), battery, mobile data and latency with more circuits. Level 2 (isolation per hour) is not built. iOS: Norbert to check whether the iOS Tor stack allows a SOCKS user name per connection.
+
+---
+
 ## 2026‑10‑25 · M4: tags are no longer chained by one big request (receiving side)
 
 - `NodeMeshWindow.kt` (+ `NodeMeshWindowTest`): which hourly epochs a poll asks for. The full window of 26 only on the first poll after an app start, after a failed or cut-short poll, or when the clock went backwards; otherwise from the epoch before the last complete poll up to now (2 or 3 epochs in the steady state).

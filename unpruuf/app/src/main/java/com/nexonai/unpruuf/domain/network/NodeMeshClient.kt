@@ -89,13 +89,13 @@ class NodeMeshClient @Inject constructor(
      * blob is downloaded once instead of on every poll — which keeps cover traffic cheap and lets
      * the long-poll actually wait. Null if the node couldn't be reached.
      */
-    fun fetchManySince(nodeAddress: String, tags: List<String>, waitMs: Long, since: Long): FetchResult? {
+    fun fetchManySince(nodeAddress: String, tags: List<String>, waitMs: Long, since: Long, isolationKey: String? = null): FetchResult? {
         if (tags.isEmpty()) return FetchResult(emptyMap(), since)
         val tagsJson = tags.joinToString(",") { "\"$it\"" }
         val body = """{"tags":[$tagsJson],"waitMs":$waitMs,"since":$since}"""
         val socketTimeoutMs = (waitMs + FETCH_MANY_TIMEOUT_MARGIN_MS).coerceAtLeast(SOCKET_TIMEOUT_MS.toLong()).toInt()
         val response = runCatching {
-            request(nodeAddress, "POST", "/fetchMany", body, socketTimeoutMs = socketTimeoutMs)
+            request(nodeAddress, "POST", "/fetchMany", body, socketTimeoutMs = socketTimeoutMs, isolationKey = isolationKey)
         }.getOrNull() ?: return null
         if (response.status !in 200..299) return null
         val blobs = parseBlobsMapBody(response.body).mapValues { (_, blobsB64) ->
@@ -153,7 +153,7 @@ class NodeMeshClient @Inject constructor(
      * the node's own configured default; the server enforces the cap, this call just forwards
      * the request.
      */
-    fun deposit(nodeAddress: String, ownerSecret: String, routingTag: String, ciphertext: ByteArray, ttlMs: Long? = null): Boolean {
+    fun deposit(nodeAddress: String, ownerSecret: String, routingTag: String, ciphertext: ByteArray, ttlMs: Long? = null, isolationKey: String? = null): Boolean {
         val blob = android.util.Base64.encodeToString(ciphertext, android.util.Base64.NO_WRAP)
         val body = if (ttlMs != null) {
             """{"routing_tag":"$routingTag","ciphertext":"$blob","ttl":$ttlMs}"""
@@ -161,7 +161,7 @@ class NodeMeshClient @Inject constructor(
             """{"routing_tag":"$routingTag","ciphertext":"$blob"}"""
         }
         val response = runCatching {
-            request(nodeAddress, "PUT", "/deposit", body, ownerSecret = ownerSecret)
+            request(nodeAddress, "PUT", "/deposit", body, ownerSecret = ownerSecret, isolationKey = isolationKey)
         }.getOrNull()
         return response != null && response.status in 200..299
     }
@@ -263,13 +263,14 @@ class NodeMeshClient @Inject constructor(
         path: String,
         body: String?,
         ownerSecret: String? = null,
-        socketTimeoutMs: Int = SOCKET_TIMEOUT_MS
+        socketTimeoutMs: Int = SOCKET_TIMEOUT_MS,
+        isolationKey: String? = null
     ): HttpResponse {
         require(isNodeAddress(address)) { "not a v3 onion address" }
-        val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", torManager.socksPort))
-        Socket(proxy).use { socket ->
+        // With an isolation key Tor puts this request on a circuit of its own, apart from the requests
+        // of other keys (see [Socks5]). Without one it uses the shared default group.
+        Socks5.connect("127.0.0.1", torManager.socksPort, address, NODE_PORT, isolationKey, CONNECT_TIMEOUT_MS).use { socket ->
             socket.soTimeout = socketTimeoutMs
-            socket.connect(InetSocketAddress.createUnresolved(address, NODE_PORT), CONNECT_TIMEOUT_MS)
 
             val bodyBytes = body?.toByteArray(Charsets.UTF_8)
             val out = socket.getOutputStream()
