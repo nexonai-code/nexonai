@@ -16,6 +16,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Audit briefs brought in line with the code (revision of 19 October)
+
+- `evidence/AUDIT_BRIEF_NODE_SERVER.md` and `AUDIT_BRIEF_ANDROID_APP.md` (+ .docx, + the shared Doc): wire format v2 is stated as "not done" (F1 open) instead of a finished precondition; claims reworded where the code did not carry them (write access is "every company device with the node list"; the release fingerprint covers `dist/*.js` and `package.json` only; tags vs a node operator over days; panic PIN and database key; clipboard; eleven permissions, not nine); evidence columns updated for the fixes of 25 October; new limits; new section 9 "What our own pre-audit found" with fixed and open items.
+- `evidence/md_to_docx.py` builds the .docx from the .md (python-docx).
+- `CLAIMS_TO_EVIDENCE.md` B5: eleven permissions in the merged manifest.
+
+---
+
 ## 2026‑10‑25 · Pre-audit, low findings (L1 to L11)
 
 L12 belongs to the wire-format decision (F1) and is not touched. Not tested on a device: L4, L10, L11 (clipboard, lock-out with the date moved, Temp Node timeout).
