@@ -243,6 +243,8 @@ class P2PNetworkManager @Inject constructor(
         private const val NODE_MESH_POLL_BASE_MS = 20_000L
         private const val NODE_MESH_POLL_JITTER_MS = 5_000L
         private const val NODE_MESH_POLL_WAIT_MS = 20_000L
+        /** The per-contact requests of one poll start within this spread, not all at once. */
+        private const val NODE_MESH_START_SPREAD_MS = 1_500L
         /** Follow-up requests for one chunk when a node cuts its answer short, per poll. */
         private const val NODE_MESH_MAX_CONTINUATIONS = 8
         // Cover deposits: on average one every 15 min per Node-Mesh contact.
@@ -827,13 +829,15 @@ class P2PNetworkManager @Inject constructor(
     }
 
     /**
-     * Batched per distinct node ADDRESS across every Node-Mesh contact, not per contact — same
-     * reasoning as [pollRelayOnce]'s `tagsByTarget` map (see that function's doc comment):
-     * several contacts could share overlapping node infrastructure (e.g. a company hosting
-     * several employees' own nodes), and collapsing to one `fetchMany` call per distinct address
-     * avoids a redundant separate round-trip to the same server for each of them. Typically
-     * degrades to "one call per contact" anyway when nodes genuinely are unique per person, which
-     * costs nothing extra over the un-batched version — this is a pure win, never a regression.
+     * One request per (contact, node address), not one per address: a request that lists the tags
+     * of several contacts tells the node operator that those contacts belong to the same phone, and
+     * a request that lists 26 hourly tags tells them which tags follow each other (pre-audit M4).
+     * So every contact is asked separately, only for the epochs it can still be missing
+     * ([NodeMeshWindow]: two or three in the steady state, the full window after an app start or a
+     * failed poll), and the requests start at slightly different moments. What stays: requests to
+     * one node address share Tor's circuit to that address, so an operator can still tell that they
+     * come from one client; separate circuits per contact would need SOCKS isolation, not done here.
+     * The price is up to (contacts x nodes) parallel requests instead of (distinct nodes).
      */
     private suspend fun pollNodeMeshOnce() {
         if (!torManager.isReady.value) return
@@ -841,7 +845,10 @@ class P2PNetworkManager @Inject constructor(
             .filter { it.nodeMesh }
         if (contacts.isEmpty()) return
 
-        val tagsByAddress = LinkedHashMap<String, MutableSet<String>>()
+        class PollJob(val key: String, val address: String, val tags: List<String>, val epoch: Long)
+        val jobs = ArrayList<PollJob>()
+        val fullWindow = identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
+        val current = fullWindow.first()
         for (c in contacts) {
             val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: continue
             val addresses = NodeMeshManager.parseNodeConnectionStringList(c.theirNodeAddresses ?: "")
@@ -854,31 +861,41 @@ class P2PNetworkManager @Inject constructor(
                 .plus(c.theirTempNodeAddress?.let { listOf(it) } ?: emptyList())
                 .distinct()
             if (addresses.isEmpty()) continue
-            val tags = identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
-                .map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch, identityManager.myRoutingSeedFor(c)) }
-            // Every address is this ONE contact's own redundant node pool — added independently
-            // (a blob could be sitting on any of them, delete-on-fetch isn't in play here so
-            // there's no "already drained" risk in checking all).
+            val mySeed = identityManager.myRoutingSeedFor(c)
+            // Every address is this ONE contact's own redundant node pool — each is asked on its
+            // own (a blob could be sitting on any of them; there is no delete-on-fetch).
             for (address in addresses) {
-                tagsByAddress.getOrPut(address) { mutableSetOf() }.addAll(tags)
+                val key = "${c.id}|$address"
+                val epochs = NodeMeshWindow.epochs(current, nodeMeshLastComplete[key], fullWindow)
+                val tags = epochs.map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch, mySeed) }
+                jobs += PollJob(key, address, tags, current)
             }
         }
-        if (tagsByAddress.isEmpty()) return
+        if (jobs.isEmpty()) return
 
-        // Every distinct address is fetched concurrently, same reasoning as pollRelayOnce's own
-        // concurrent target fetch — a long-poll blocks its own call for up to the wait, and
-        // sequential addresses would otherwise multiply that wait by the number of distinct
-        // node servers in play this round instead of paying it once, in parallel.
+        // All requests run concurrently (a long-poll blocks its own call for up to the wait), each
+        // starting after its own short random delay so they do not leave as one burst.
         coroutineScope {
-            tagsByAddress.map { (address, tags) ->
-                async { pollNodeMeshAddress(address, tags.toList()) }
+            jobs.map { job ->
+                async {
+                    delay(kotlin.random.Random.nextLong(0, NODE_MESH_START_SPREAD_MS + 1))
+                    if (pollNodeMeshAddress(job.key, job.address, job.tags)) nodeMeshLastComplete[job.key] = job.epoch
+                    else nodeMeshLastComplete.remove(job.key)
+                }
             }.awaitAll()
         }
-        // Forget cursors of addresses no contact uses any more.
-        nodeMeshCursors.keys.retainAll(tagsByAddress.keys)
+        // Forget what belongs to a contact or an address that is gone.
+        val keys = jobs.map { it.key }.toSet()
+        nodeMeshCursors.keys.retainAll(keys)
+        nodeMeshLastComplete.keys.retainAll(keys)
     }
 
-    // Per node address: the server cursor up to which every blob of [NodeMeshCursor.tags] has
+    // Per (contact, node address): the epoch in which the last poll was COMPLETE (everything the node
+    // had for the asked tags was downloaded). Memory only, like the cursors: after an app start the
+    // first poll asks for the full window once.
+    private val nodeMeshLastComplete = ConcurrentHashMap<String, Long>()
+
+    // Per (contact, node address): the server cursor up to which every blob of [NodeMeshCursor.tags] has
     // been downloaded. Memory only — after an app restart the first poll fetches everything
     // once (ingestPacket's dedup drops what was already seen).
     private data class NodeMeshCursor(val cursor: Long, val tags: Set<String>)
@@ -891,8 +908,8 @@ class P2PNetworkManager @Inject constructor(
      * without cursor support (old server, Android node) answers without one; then every poll
      * stays a full fetch, exactly as before.
      */
-    private suspend fun pollNodeMeshAddress(address: String, tags: List<String>) {
-        val state = nodeMeshCursors[address]
+    private suspend fun pollNodeMeshAddress(key: String, address: String, tags: List<String>): Boolean {
+        val state = nodeMeshCursors[key]
         val known = state?.tags ?: emptySet()
         val fresh = tags.filter { it !in known }
         val covered = tags.filter { it in known }
@@ -926,16 +943,18 @@ class P2PNetworkManager @Inject constructor(
         if (fresh.isNotEmpty()) run(fresh, 0L, if (covered.isEmpty()) NODE_MESH_POLL_WAIT_MS else 0L)
         if (covered.isNotEmpty() && !failed) run(covered, state!!.cursor, NODE_MESH_POLL_WAIT_MS)
 
-        if (failed) return
+        if (failed) return false
         if (cursors.isEmpty() || cursors.any { it == null }) {
-            nodeMeshCursors.remove(address)
+            nodeMeshCursors.remove(key)
         } else {
             // A node's cursor comes from the packets it handed us for these tags, not from a counter of
             // the whole server. A chunk that was answered completely says "nothing more up to now", so
             // the furthest cursor is safe; a chunk that was cut short pins the bound to where it stopped.
             val bound = if (unfinished.isNotEmpty()) unfinished.min() else cursors.filterNotNull().max()
-            nodeMeshCursors[address] = NodeMeshCursor(bound, tags.toSet())
+            nodeMeshCursors[key] = NodeMeshCursor(bound, tags.toSet())
         }
+        // Complete = nothing was cut short and cut off. Only then may older epochs drop out of the next window.
+        return unfinished.isEmpty()
     }
 
     // Solange ein Chat geöffnet ist, den Tor-Sendepfad zu genau diesem Kontakt

@@ -16,6 +16,16 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · M4: tags are no longer chained by one big request (receiving side)
+
+- `NodeMeshWindow.kt` (+ `NodeMeshWindowTest`): which hourly epochs a poll asks for. The full window of 26 only on the first poll after an app start, after a failed or cut-short poll, or when the clock went backwards; otherwise from the epoch before the last complete poll up to now (2 or 3 epochs in the steady state).
+- `P2PNetworkManager.pollNodeMeshOnce`: one request per (contact, node address) instead of one per address, so a request no longer lists the tags of several contacts; requests start spread over up to 1.5 s. Cursors are kept per (contact, address). A poll counts as complete only if no answer was cut short.
+- Compatible: nothing changes in the packets or on the server; old and new apps keep reading each other. Not part of the incompatible F1/M6 release.
+- Remains: requests to one node address share Tor's circuit to that address and consecutive requests overlap by one epoch, so an operator who can tie requests to one client can still chain tags. Separate circuits per contact (SOCKS isolation) are not built. Cost: up to (contacts x nodes) parallel requests instead of (distinct nodes). Not tested on a device or against real Tor.
+- iOS (Norbert): same receiving-side change; no format change.
+
+---
+
 ## 2026‑10‑25 · Audit briefs brought in line with the code (revision of 19 October)
 
 - `evidence/AUDIT_BRIEF_NODE_SERVER.md` and `AUDIT_BRIEF_ANDROID_APP.md` (+ .docx, + the shared Doc): wire format v2 is stated as "not done" (F1 open) instead of a finished precondition; claims reworded where the code did not carry them (write access is "every company device with the node list"; the release fingerprint covers `dist/*.js` and `package.json` only; tags vs a node operator over days; panic PIN and database key; clipboard; eleven permissions, not nine); evidence columns updated for the fixes of 25 October; new limits; new section 9 "What our own pre-audit found" with fixed and open items.
