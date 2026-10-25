@@ -16,6 +16,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Audit process document
+
+- `handover/PROCESS_AUDIT_2026-10-25.md` (also published as a page in the NexonAI design): gate, decision, hand-over, quotes, contract, kick-off, running the audit, draft report, fix and retest, final report and how we may use it, close. Suggested RACI, exceptions, metrics.
+- Found while writing it: `evidence/AUDITOR_SCOPE.md` (14 October) still lists Control and the Officer app as work packages 5 and 6, while the plan since 20 October is round one with node server and Business app only. To be aligned.
+
+---
+
 ## 2026‑10‑25 · Release process document
 
 - `handover/PROCESS_RELEASE_2026-10-25.md` (also published as a page in the NexonAI design): 13 steps from the prepared version to the record after delivery, with a suggested RACI, exceptions and metrics. It uses what exists (`sign-release.js`, `verify-release`, Control bundle, release key, evidence scripts) and marks what does not exist yet: the extended signed file list (M8), a reproducible build, a bill of materials, a release record script.
