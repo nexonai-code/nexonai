@@ -21,10 +21,19 @@ if "%RELAY_CONNECTION_STRING%"=="" (
   set /p RELAY_CONNECTION_STRING=^>
 )
 
+rem Doar forma unpruuf-relay:v1:... cu litere, cifre si : . _ - = este acceptata. Valoarea este scrisa
+rem intre ghilimele, deci nimic din ce a fost lipit nu poate rula vreodata ca o comanda.
+rem Only unpruuf-relay:v1:... with letters, digits and : . _ - = is accepted, and it is written quoted,
+rem so nothing that was pasted can ever run as a command.
+echo(!RELAY_CONNECTION_STRING!| findstr /r /c:"^unpruuf-relay:v1:[A-Za-z0-9:._=-]*$" >nul || (
+  echo Codul de conectare nu are forma asteptata ^(unpruuf-relay:v1:...^) - nimic nu a fost salvat.
+  pause
+  exit /b 1
+)
 (
   echo @echo off
-  echo set RELAY_CONNECTION_STRING=%RELAY_CONNECTION_STRING%
-  if not "%RELAY_REACHABLE_BASE_URL%"=="" echo set RELAY_REACHABLE_BASE_URL=%RELAY_REACHABLE_BASE_URL%
+  echo set "RELAY_CONNECTION_STRING=!RELAY_CONNECTION_STRING!"
+  if not "!RELAY_REACHABLE_BASE_URL!"=="" echo set "RELAY_REACHABLE_BASE_URL=!RELAY_REACHABLE_BASE_URL!"
 ) > officer.env.bat
 
 echo.
@@ -41,8 +50,8 @@ if "%RELAY_REACHABLE_BASE_URL%"=="" (
 ) else (
   echo RELAY_REACHABLE_BASE_URL este setat - Tor este omis, se comunica direct cu %RELAY_REACHABLE_BASE_URL%.
 )
-echo Cand apare "Panoul asculta", se deschide singur http://localhost:3000 in browser.
-echo Daca nu se deschide, deschide adresa manual. Pentru demonstratie: apasa "Afiseaza mare" pentru codul QR.
+echo Cand apare "Panoul asculta", se deschide singur in browser ^(cu o cheie de acces noua la fiecare pornire^).
+echo Daca nu se deschide, copiaza linkul care incepe cu http://localhost:3000/?t= din aceasta fereastra. Pentru demonstratie: apasa "Afiseaza mare" pentru codul QR.
 rem Interogare mai rapida a releului: o sesizare apare in cateva secunde (implicit al aplicatiei: 8 s).
 if "%POLL_INTERVAL_MS%"=="" set POLL_INTERVAL_MS=4000
 node dist\index.js

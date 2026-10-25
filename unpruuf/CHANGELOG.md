@@ -5,6 +5,22 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Security audit R1 (scanners plus review) and first fix round
+
+- **Audit:** Gitleaks, Semgrep, OSV-Scanner, npm audit and Checkov over the whole code base, plus a review of the hotspots. 17 findings: 0 Critical, 0 High, 6 Medium, 7 Low, 4 Info; no live secret anywhere; 0 dependency advisories outside the licence tool. The register (`.security-audit/`) stays with the owner and is not in git (team rule of 22 Oct); the report is an artifact.
+- **Fixed in this commit (13 of 17):**
+  - `.bat` command injection (SEC-001): `officer-app/start.bat`, `start-press.bat`, `node-mesh-server/start-bridge.bat` validate the pasted relay code or bridge address with `findstr` and write it quoted.
+  - Licence tool GUI (SEC-002): Host/Origin/header guard like Control, OPTIONS refused, `/api/sign-release` limited to the repository; page sends `x-unpruuf-license: 1`. Express transitive packages updated, npm audit clean (SEC-013).
+  - web-reporter (SEC-003): malformed URL answers 400 instead of killing the process; binds 127.0.0.1 unless `HOST=0.0.0.0`.
+  - Relay (SEC-007, SEC-011, SEC-014): `npm ci` with the lock file, non-root user and HEALTHCHECK in both Dockerfiles; strict base64 check and token buckets on all three routes (`server/src/middleware/rateLimit.ts`, new). HEALTHCHECK also on the node server image.
+  - Feed setup page (SEC-008): per-start access token like the node page (`feedIndex.ts`, `feedAdmin.ts`, own cookie `unpruuf_feed_token`); `start-feed.bat` opens the tokenised link.
+  - Officer dashboard (SEC-009): per-start access token (header, cookie `unpruuf_officer_token_<port>`, or `?t=` link), on top of the optional password; the start scripts explain the link.
+  - File modes 0600 for the relay identity, `customers.json` and bridge lines (SEC-010); constant-time token compare in Control (SEC-012); `getCurrentRotationFactor()` is plain `SecureRandom` with an honest comment (SEC-016); officer `fetchMany` copies only requested tags into a prototype-less map (SEC-017).
+- **Left open on purpose:** SEC-004 (F1 with M6 and L12), SEC-005 (M5), SEC-006 (M8) wait for the team's decision; SEC-015 is informational.
+- **Checks:** node server 139 (138 pass, 1 skipped), relay 72, Control 63, officer app 32, app unit tests Standard green, licence tool and web-reporter smoke-tested with curl. Not done: Windows run of the three `.bat` files, Docker builds (no registry here; `server/tor/torrc` is missing from the repository, so that image did not build before either), `security-verify` rescan.
+
+---
+
 ## 2026‑10‑25 · Merge of `android` (36 commits from 20.–23.10.) into the audit line
 
 - **What:** the two lines had split at `9ec1809`. `android`/`main` carried guest invitations (Room v15, guest grants on the server, Client edition), the rename to **unpruuf Compliance** and **unpruuf Press** (22.10.), the Press line with one contact code per research, Officer-dashboard hardening (OFF-1), website v12, the spam-protection concept, the structured memory under `.claude/memory`. This line carried the pre-audit fixes (H1, M1–M4, M7, M9–M11, L1–L11), Tor isolation levels 1 and 3, the design kit, the process documents and `export-list`. Both are now in one history; nothing of either side was dropped.

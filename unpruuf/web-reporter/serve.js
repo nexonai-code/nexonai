@@ -10,12 +10,24 @@ const path = require("node:path");
 
 const ROOT = path.join(__dirname, "public");
 const PORT = Number(process.env.PORT ?? 5173);
+// This computer only, unless the operator opens it to the office network on purpose
+// (HOST=0.0.0.0): the page is meant for the people in the building, not for the internet.
+const HOST = process.env.HOST ?? "127.0.0.1";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".ico": "image/x-icon" };
 
 const server = http.createServer((req, res) => {
-  let filePath = path.join(ROOT, decodeURIComponent(req.url === "/" ? "/index.html" : req.url));
-  if (!filePath.startsWith(ROOT)) {
+  // A malformed escape (`/%`) makes decodeURIComponent throw; without this guard that one
+  // request would end the process for everyone. Query strings are not part of the file name.
+  let filePath;
+  try {
+    const pathname = (req.url ?? "/").split("?")[0];
+    filePath = path.join(ROOT, decodeURIComponent(pathname === "/" ? "/index.html" : pathname));
+  } catch {
+    res.writeHead(400);
+    return res.end("bad request");
+  }
+  if (!filePath.startsWith(ROOT + path.sep)) {
     res.writeHead(403);
     return res.end("forbidden");
   }
@@ -30,6 +42,6 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`unpruuf web-reporter listening on http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`unpruuf web-reporter listening on http://${HOST === "0.0.0.0" ? "<this computer's IP>" : "localhost"}:${PORT}`);
 });

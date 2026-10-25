@@ -21,10 +21,19 @@ if "%RELAY_CONNECTION_STRING%"=="" (
   set /p RELAY_CONNECTION_STRING=^>
 )
 
+rem Doar forma unpruuf-relay:v1:... cu litere, cifre si : . _ - = este acceptata. Valoarea este scrisa
+rem intre ghilimele, deci nimic din ce a fost lipit nu poate rula vreodata ca o comanda.
+rem Only unpruuf-relay:v1:... with letters, digits and : . _ - = is accepted, and it is written quoted,
+rem so nothing that was pasted can ever run as a command.
+echo(!RELAY_CONNECTION_STRING!| findstr /r /c:"^unpruuf-relay:v1:[A-Za-z0-9:._=-]*$" >nul || (
+  echo Codul nu are forma asteptata / The code does not look like unpruuf-relay:v1:... - nothing was saved.
+  pause
+  exit /b 1
+)
 (
   echo @echo off
-  echo set RELAY_CONNECTION_STRING=%RELAY_CONNECTION_STRING%
-  if not "%RELAY_REACHABLE_BASE_URL%"=="" echo set RELAY_REACHABLE_BASE_URL=%RELAY_REACHABLE_BASE_URL%
+  echo set "RELAY_CONNECTION_STRING=!RELAY_CONNECTION_STRING!"
+  if not "!RELAY_REACHABLE_BASE_URL!"=="" echo set "RELAY_REACHABLE_BASE_URL=!RELAY_REACHABLE_BASE_URL!"
 ) > press.env.bat
 
 echo.
@@ -37,7 +46,8 @@ if "%PORT%"=="" set PORT=3001
 if "%POLL_INTERVAL_MS%"=="" set POLL_INTERVAL_MS=4000
 
 echo.
-echo Cand apare "Panoul asculta", se deschide singur http://localhost:%PORT% in browser.
+echo Cand apare "Panoul asculta", se deschide singur in browser ^(cu o cheie de acces noua la fiecare pornire^).
+echo Daca nu, copiaza linkul care incepe cu http://localhost:%PORT%/?t= din aceasta fereastra. / If not, copy the link starting with http://localhost:%PORT%/?t= from this window.
 echo Tine aceasta fereastra deschisa: mesajele asteapta pe server cel mult 24 de ore.
 echo Keep this window open: tips wait on the server for 24 hours at most.
 node dist\index.js

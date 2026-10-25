@@ -52,6 +52,7 @@ export function writeBridgeLines(file: string, raw: string[]): string[] {
     return [];
   }
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, lines.join("\n") + "\n", "utf8");
+  fs.writeFileSync(file, lines.join("\n") + "\n", { encoding: "utf8", mode: 0o600 });
+  try { fs.chmodSync(file, 0o600); } catch { /* Windows: no POSIX modes */ }
   return lines;
 }

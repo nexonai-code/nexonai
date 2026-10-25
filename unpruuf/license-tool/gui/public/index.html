@@ -147,7 +147,7 @@ function fmtDate(ms) {
 }
 
 async function loadCustomers() {
-  const res = await fetch('/api/customers');
+  const res = await fetch('/api/customers', { headers: { 'x-unpruuf-license': '1' } });
   const list = await res.json();
   const wrap = document.getElementById('tableWrap');
   if (!list.length) {
@@ -196,7 +196,7 @@ document.getElementById('issueBtn').addEventListener('click', async () => {
   try {
     const res = await fetch('/api/issue', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-unpruuf-license': '1' },
       body: JSON.stringify(body),
     });
     const data = await res.json();
@@ -242,7 +242,7 @@ document.getElementById('srvBtn').addEventListener('click', async () => {
   try {
     const res = await fetch('/api/issue-server', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-unpruuf-license': '1' },
       body: JSON.stringify(body),
     });
     const data = await res.json();
@@ -272,7 +272,7 @@ document.getElementById('relBtn').addEventListener('click', async () => {
   button.disabled = true;
   try {
     const res = await fetch('/api/sign-release', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-unpruuf-license': '1' },
       body: JSON.stringify({ folder: document.getElementById('relFolder').value }),
     });
     const data = await res.json();

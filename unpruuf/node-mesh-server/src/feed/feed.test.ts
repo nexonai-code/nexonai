@@ -171,3 +171,46 @@ test("setup page: header guard, setup returns a working feed code + QR, publish 
     listener.close();
   }
 });
+
+test("setup page with access token: nothing without it, header works, ?t= on GET sets the feed cookie and redirects", async () => {
+  const { createFeedAdminApp } = await import("./feedAdmin");
+  const { createAdminToken, ADMIN_TOKEN_HEADER } = await import("../admin/adminToken");
+  const token = createAdminToken();
+  const store = new FeedStore(tmp());
+  const port = 22000 + Math.floor(Math.random() * 1000);
+  const listener = createFeedAdminApp({ store, onion: () => null, startService: () => undefined, served: () => 0 }, port, token).listen(port, "127.0.0.1");
+  await new Promise<void>((resolve) => listener.once("listening", () => resolve()));
+  const base = `http://localhost:${port}`;
+  const setup = (headers: Record<string, string>) =>
+    fetch(`${base}/setup`, { method: "POST", headers: { "content-type": "application/json", "x-unpruuf-admin": "1", ...headers }, body: JSON.stringify({ name: "Acme", periodHours: 6, passphrase: PASS }) });
+  try {
+    // Without the token: the custom header alone (any local process can set it) is no longer enough.
+    assert.equal((await setup({})).status, 403);
+    assert.equal((await fetch(`${base}/status.json`)).status, 403);
+    assert.equal((await fetch(`${base}/`)).status, 403);
+    assert.equal((await setup({ [ADMIN_TOKEN_HEADER]: "wrong" })).status, 403);
+    assert.equal((await setup({ cookie: `unpruuf_admin_token=${token}` })).status, 403); // the node page's cookie is not this page's
+    assert.equal(store.isSetUp(), false);
+
+    // ?t= on a GET: cookie + redirect to the clean address. Not on a POST.
+    const link = await fetch(`${base}/?t=${encodeURIComponent(token)}`, { redirect: "manual" });
+    assert.equal(link.status, 302);
+    assert.equal(link.headers.get("location"), "/");
+    const cookie = link.headers.get("set-cookie") ?? "";
+    assert.match(cookie, /^unpruuf_feed_token=/);
+    assert.match(cookie, /HttpOnly/);
+    assert.match(cookie, /SameSite=Strict/);
+    assert.equal((await fetch(`${base}/setup?t=${encodeURIComponent(token)}`, { method: "POST", headers: { "x-unpruuf-admin": "1" } })).status, 403);
+
+    const jar = cookie.split(";")[0];
+    assert.equal((await fetch(`${base}/status.json`, { headers: { cookie: jar } })).status, 200);
+    assert.equal((await fetch(`${base}/`, { headers: { cookie: jar } })).status, 200);
+
+    // With the header: works.
+    assert.equal((await fetch(`${base}/status.json`, { headers: { [ADMIN_TOKEN_HEADER]: token } })).status, 200);
+    assert.equal((await setup({ [ADMIN_TOKEN_HEADER]: token })).status, 200);
+    assert.equal(store.isSetUp(), true);
+  } finally {
+    listener.close();
+  }
+});

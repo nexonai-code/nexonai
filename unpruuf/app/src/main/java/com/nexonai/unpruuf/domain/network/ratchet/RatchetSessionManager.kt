@@ -90,7 +90,7 @@ class RatchetSessionManager @Inject constructor(
         // root key — the bug that shipped in the previous delivery and broke decryption in both
         // directions despite pairing itself succeeding (pairing doesn't touch this code path).
         // Also NOT Contact.rotationFactor: despite the name, that field isn't a per-pair secret
-        // at all — it's derived purely from the current hour and is identical for every device.
+        // at all — it's a random value carried in the pairing QR, known to anyone who saw the QR.
         return Hkdf.computeHkdf("HmacSha256", dh, identityManager.pairSecretFor(contact), X3DH_INFO, 32)
     }
 

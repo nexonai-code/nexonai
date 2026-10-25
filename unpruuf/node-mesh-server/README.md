@@ -62,6 +62,9 @@ danach löschen. Gesperrte Server exportieren nicht.
 Onion-Adresse, die sich alle paar Stunden ändert (nur die App rechnet sie aus). Einrichtungsseite `http://localhost:8841`,
 Ports 8840 (Dienst, nur Onion) und 8841. Aufbau und Format: `../NODE_MESH_SPEC.md` §16, Anleitung: `../NODE_MESH_BETRIEB.md`.
 Code in `src/feed/`. Nicht gegen ein echtes Tor getestet; Tor-Client-Autorisierung ist nicht enthalten.
+Die Einrichtungsseite braucht wie die Node-Seite einen Zugangs-Schlüssel, der bei jedem Start neu ist: im Terminal wird der Link
+`http://localhost:8841/?t=<token>` ausgegeben (`start-feed.bat` öffnet ihn), ohne Terminal steht der Schlüssel nur in der Datei
+`admin-token` (0600) im Feed-Datenordner (`data/feed`). Eigenes Cookie `unpruuf_feed_token`, damit sich Feed- und Node-Seite nicht gegenseitig abmelden.
 
 ## Linux / Docker
 

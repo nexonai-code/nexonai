@@ -40,13 +40,14 @@ export class RelayClient {
    *  larger lists (many cases + the 49 intake tags) are split into several calls. */
   async fetchMany(tags: string[], waitMs = 0): Promise<Record<string, string[]>> {
     if (tags.length === 0) return {};
-    const out: Record<string, string[]> = {};
+    // No prototype: a key such as `__proto__` in the relay's answer must not shadow another tag.
+    const out: Record<string, string[]> = Object.create(null);
     for (let i = 0; i < tags.length; i += MAX_TAGS_PER_CALL) {
       const chunk = tags.slice(i, i + MAX_TAGS_PER_CALL);
       const res = await this.request("POST", "/v1/fetchMany", { tags: chunk, waitMs: tags.length <= MAX_TAGS_PER_CALL ? waitMs : 0 });
       if (res.status < 200 || res.status >= 300) throw new Error(`fetchMany failed: HTTP ${res.status}`);
       const json = JSON.parse(res.body) as { blobs: Record<string, string[]> };
-      Object.assign(out, json.blobs ?? {});
+      for (const [tag, blobs] of Object.entries(json.blobs ?? {})) if (chunk.includes(tag) && Array.isArray(blobs)) out[tag] = blobs;
     }
     return out;
   }

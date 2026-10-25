@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 if not exist dist (
@@ -28,10 +28,22 @@ if "%NODE_MESH_BRIDGE_ADDRESS%"=="" (
 )
 if "%NODE_MESH_BRIDGE_PORT%"=="" set NODE_MESH_BRIDGE_PORT=443
 
+rem Nur IP-Adresse oder DNS-Name (Buchstaben, Ziffern, Punkt, Bindestrich) und eine Portnummer.
+rem Beides wird in Anfuehrungszeichen geschrieben: nichts Eingetipptes kann je als Befehl laufen.
+echo(!NODE_MESH_BRIDGE_ADDRESS!| findstr /r /c:"^[A-Za-z0-9.-][A-Za-z0-9.-]*$" >nul || (
+  echo Das ist keine IP-Adresse und kein DNS-Name. Nichts gespeichert.
+  pause
+  exit /b 1
+)
+echo(!NODE_MESH_BRIDGE_PORT!| findstr /r /c:"^[0-9][0-9]*$" >nul || (
+  echo Der Port muss eine Zahl sein. Nichts gespeichert.
+  pause
+  exit /b 1
+)
 (
   echo @echo off
-  echo set NODE_MESH_BRIDGE_ADDRESS=%NODE_MESH_BRIDGE_ADDRESS%
-  echo set NODE_MESH_BRIDGE_PORT=%NODE_MESH_BRIDGE_PORT%
+  echo set "NODE_MESH_BRIDGE_ADDRESS=!NODE_MESH_BRIDGE_ADDRESS!"
+  echo set "NODE_MESH_BRIDGE_PORT=!NODE_MESH_BRIDGE_PORT!"
 ) > bridge.env.bat
 
 echo.

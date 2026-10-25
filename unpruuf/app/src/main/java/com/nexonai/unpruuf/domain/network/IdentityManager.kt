@@ -89,13 +89,13 @@ class IdentityManager @Inject constructor(
         prefs.edit().putString("display_name", name).apply()
     }
 
-    // Rotation factor rotiert stündlich (GRAL Säule 3)
+    // A fresh random value for each pairing payload (QR field `rotationFactor`). It is carried to
+    // the contact and stored, but no key is derived from it (see RatchetSessionManager). The old
+    // code seeded SHA1PRNG with the hour, which on Android 7+ does not make it deterministic and
+    // read like an hourly shared secret that never existed.
     fun getCurrentRotationFactor(): String {
-        val hourBucket = System.currentTimeMillis() / (60 * 60 * 1000L)
-        val random = SecureRandom.getInstance("SHA1PRNG")
-        random.setSeed(hourBucket.toString().toByteArray())
         val bytes = ByteArray(16)
-        random.nextBytes(bytes)
+        SecureRandom().nextBytes(bytes)
         return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
     }
 
