@@ -16,6 +16,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Audit readiness checklist (shared page)
+
+- `design/pages/audit_readiness.py` builds the page "Audit readiness" in the NexonAI design: 17 items in four groups with status (open, in progress, done, needs decision), suggested owner and a note per item, what we ask the auditor for, what raises the result and what to expect. The team's status and notes live in the artifact's shared database (`audit_items`); without it the page shows the defaults read-only.
+- The owners are suggestions; the team decides together.
+
+---
+
 ## 2026‑10‑25 · NexonAI design for all documents and artifacts
 
 - `design/NEXONAI_DESIGN.md`, `nexonai-tokens.css`, `brand/` (logo, favicon): tokens and rules taken from nexonai.ro (ink `#0f2a3a`, blue `#307098`, bright `#90c8e8`, Open Sans, hairlines, 4 px corners). Dark mode derived for artifacts.
