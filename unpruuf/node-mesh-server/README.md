@@ -66,9 +66,9 @@ Code in `src/feed/`. Nicht gegen ein echtes Tor getestet; Tor-Client-Autorisieru
 ## Linux / Docker
 
 ```bash
-./start.sh 1 standard          # slot, profile — setup page on http://localhost:8790
+./start.sh 1 standard          # slot, profile — setup page on http://localhost:8790 (link with token is printed)
 ./start-tempnode.sh            # Temp Node — setup page on http://localhost:8810
-docker compose up -d           # container, setup page on the host's http://localhost:8790
+docker compose up -d           # container, setup page on the host's http://localhost:8790 (needs the access token, see below)
 ```
 
 ## What the node does on its own
@@ -173,3 +173,16 @@ not the limit, and one process with N nodes costs about a tenth of N separate pr
   normal internet connection.
 - A real Windows run of `start.bat` / the `.exe`, and the Docker image (the sandbox's Docker
   build couldn't reach the npm registry). `docker compose up` on a normal machine is the check.
+
+
+## Access token of the setup page (since 25 Oct 2026)
+
+The setup page (port 8790, loopback only) now answers nobody without a token. Reason: inside a container
+"this computer" includes every other container on the same network, and the Host header is chosen by the caller.
+The token is 32 random bytes, **new at every start**.
+
+- **Terminal (start.bat / start.sh):** the link `http://localhost:8790/?t=<token>` is printed, `start.bat` opens it for you. The first visit sets a cookie and goes to the clean address.
+- **Docker / service (no terminal):** the token is not printed into the log. Read it as root on the host:
+  `docker exec unpruuf-node cat /app/data/admin-token`, then open `http://localhost:8790/?t=<token>` (through an SSH tunnel if the host is remote). unpruuf Control does this by itself.
+- The file `admin-token` in the data folder is `0600`. A token in the address works for reading only; changes always need the cookie or the header `x-unpruuf-admin-token`.
+- After a restart the old token is void; reload the link with the new one.

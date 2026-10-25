@@ -3,9 +3,11 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { Server } from "http";
+import { spawn } from "child_process";
 import QRCode from "qrcode";
 import { createApp } from "./app";
 import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
+import { ADMIN_TOKEN_FILE, createAdminToken, writeAdminToken } from "./admin/adminToken";
 import { NodeStore } from "./store/nodeStore";
 import {
   ADMIN_PORT, BRIDGE_LINES_PATH, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM, PACKAGE_ROOT, REQUIRE_SIGNED,
@@ -122,6 +124,12 @@ const publicAddresses = (): string[] =>
 const metrics = new Metrics();
 const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics, () => license.depositBlocked());
 
+// Second factor of the setup page (admin/adminToken.ts): new at every start. Not in the logs of a
+// service; the customer's tool reads the file over its own login.
+const adminToken = createAdminToken();
+const adminTokenPath = path.join(DATA_DIR, ADMIN_TOKEN_FILE);
+if (!ephemeral) writeAdminToken(adminTokenPath, adminToken);
+
 const adminApp = createAdminApp(
   {
     getOwnerSecret: () => identity.ownerSecret,
@@ -162,6 +170,7 @@ const adminApp = createAdminApp(
     },
   },
   ADMIN_PORT,
+  adminToken,
 );
 
 const kind = ephemeral
@@ -178,8 +187,23 @@ if (sealed && isLocked(identity)) {
   console.log("[keys] sealed storage — after a restart this server stays locked until your app unlocks it");
 }
 
+function openInBrowser(url: string): void {
+  try {
+    const [cmd, args] = process.platform === "win32" ? ["cmd", ["/c", "start", "", url]]
+      : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
+    spawn(cmd as string, args as string[], { detached: true, stdio: "ignore" }).on("error", () => { /* no browser here: the link is printed above */ }).unref();
+  } catch { /* the link is printed above */ }
+}
+
 const adminServer: Server = adminApp.listen(ADMIN_PORT, adminBind, () => {
-  console.log(`[setup] open http://localhost:${ADMIN_PORT} on THIS computer to connect your app (owner QR)`);
+  if (process.stdout.isTTY || process.env.NODE_MESH_PRINT_OWNER_CODE === "1") {
+    console.log(`[setup] open http://localhost:${ADMIN_PORT}/?t=${adminToken} on THIS computer to connect your app (owner QR)`);
+    // start.bat asks for it: the browser is opened from here, so the token never has to leave this process.
+    if (process.env.NODE_MESH_OPEN_BROWSER === "1") openInBrowser(`http://localhost:${ADMIN_PORT}/?t=${adminToken}`);
+  } else {
+    console.log(`[setup] the setup page on port ${ADMIN_PORT} needs an access token. It is not printed here because this output is not a terminal;`);
+    console.log(`[setup] it is in ${adminTokenPath} (new at every start). Open http://localhost:${ADMIN_PORT}/?t=<token> on THIS computer.`);
+  }
 });
 
 // The owner code is the write credential for every node, so it goes to the console only when a

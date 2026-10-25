@@ -136,8 +136,31 @@ export class Remote {
     return this.exec(wrapped, opts);
   }
 
-  /** One HTTP request to the server's setup page, through an SSH port forward to its loopback. */
-  httpAdmin(method: "GET" | "POST", path: string, body?: unknown, port = 8790, timeoutMs = 30_000): Promise<{ status: number; json: any; text: string }> {
+  /** The setup page's access token (node-mesh-server admin/adminToken.ts): undefined = not asked yet,
+   *  null = this server has none (an older version), otherwise the token of the running container. */
+  private adminToken: string | null | undefined = undefined;
+
+  /** Reads the token from the container's data folder over this SSH login (root on the host). */
+  async loadAdminToken(container = "unpruuf-node"): Promise<string | null> {
+    const r = await this.execRoot(`docker exec ${container} cat /app/data/admin-token 2>/dev/null`, { timeoutMs: 20_000 }).catch(() => null);
+    const t = r && r.code === 0 ? r.stdout.trim() : "";
+    this.adminToken = /^[A-Za-z0-9_-]{43}$/.test(t) ? t : null;
+    return this.adminToken;
+  }
+
+  /** One HTTP request to the server's setup page, through an SSH port forward to its loopback. It
+   *  carries the access token; after a restart of the server (new token) it asks for it once more. */
+  async httpAdmin(method: "GET" | "POST", path: string, body?: unknown, port = 8790, timeoutMs = 30_000): Promise<{ status: number; json: any; text: string }> {
+    if (this.adminToken === undefined) await this.loadAdminToken();
+    let res = await this.httpAdminOnce(method, path, body, port, timeoutMs, this.adminToken ?? null);
+    if (res.status === 403 && this.adminToken) {
+      await this.loadAdminToken();
+      res = await this.httpAdminOnce(method, path, body, port, timeoutMs, this.adminToken ?? null);
+    }
+    return res;
+  }
+
+  private httpAdminOnce(method: "GET" | "POST", path: string, body: unknown, port: number, timeoutMs: number, token: string | null): Promise<{ status: number; json: any; text: string }> {
     return new Promise((resolve, reject) => {
       this.client.forwardOut("127.0.0.1", 0, "127.0.0.1", port, (err, stream) => {
         if (err) return reject(new SshError("network", `The server's setup page is not reachable (${err.message}). Is the container running?`));
@@ -153,6 +176,7 @@ export class Remote {
               // The setup page only answers loopback host names and POSTs that carry this header.
               Host: `127.0.0.1:${port}`,
               "x-unpruuf-admin": "1",
+              ...(token ? { "x-unpruuf-admin-token": token } : {}),
               ...(payload ? { "content-type": "application/json", "content-length": String(payload.length) } : {}),
             },
             timeout: timeoutMs,

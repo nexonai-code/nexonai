@@ -56,6 +56,9 @@ export class FakeAdmin {
   registered = 250;
   bridges: string[] = [];
   requests: { method: string; url: string }[] = [];
+  /** Like the real page: new at every start of the server, nothing answers without it. */
+  token = crypto.randomBytes(32).toString("base64url");
+  refusedForToken = 0;
   private server: http.Server;
   port = 0;
   constructor(private keys: TestKeys) {
@@ -77,6 +80,7 @@ export class FakeAdmin {
     const send = (code: number, body: unknown, type = "application/json") => { res.writeHead(code, { "content-type": type }); res.end(typeof body === "string" ? body : JSON.stringify(body)); };
     // The real page answers loopback host names only, and POSTs only with the custom header.
     if (req.headers.host !== "127.0.0.1:8790") return send(403, "forbidden", "text/plain");
+    if (req.headers["x-unpruuf-admin-token"] !== this.token) { this.refusedForToken++; return send(403, "forbidden", "text/plain"); }
     if (req.method === "POST" && req.headers["x-unpruuf-admin"] !== "1") return send(403, { error: "forbidden" });
     const chunks: Buffer[] = [];
     req.on("data", (c) => chunks.push(c));
@@ -214,6 +218,11 @@ export class FakeVps {
   }
 
   private runCommand(cmd: string, stdin: Buffer, stream: any): void {
+    // The access token of the setup page, read from the container's data folder (not a step script).
+    if (/docker exec unpruuf-node cat \/app\/data\/admin-token/.test(cmd)) {
+      if (!this.containerRunning) { stream.exit(1); stream.end(); return; }
+      stream.write(this.admin.token + "\n"); stream.exit(0); stream.end(); return;
+    }
     const step = /: step=([a-z-]+)/.exec(cmd)?.[1] ?? "unknown";
     this.steps.push({ step, cmd });
     const out = (s: string) => stream.write(s);
@@ -256,6 +265,7 @@ export class FakeVps {
         this.runEnv = {};
         for (const m of cmd.matchAll(/-e ([A-Z_0-9]+)=(\S+)/g)) this.runEnv[m[1]] = m[2];
         this.containerRunning = true;
+        this.admin.token = crypto.randomBytes(32).toString("base64url"); // a started server has a new token
         // Same data volume again: licence and addresses survive, but sealed keys mean it comes back locked.
         if (!this.hadVolume) { this.admin.license = null; this.admin.locked = false; this.hadVolume = true; }
         else this.admin.locked = true;

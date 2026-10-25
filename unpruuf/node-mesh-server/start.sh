@@ -9,5 +9,5 @@ if [ ! -d node_modules ]; then npm install; fi
 npm run build
 export NODE_SLOT="${1:-${NODE_SLOT:-1}}"
 export NODE_PROFILE="${2:-${NODE_PROFILE:-standard}}"
-echo "Setup page: http://localhost:$((8790 + (NODE_SLOT - 1) * 10))"
+echo "Setup page: the link with the access token is printed below once the server is up (new at every start)."
 exec node dist/index.js

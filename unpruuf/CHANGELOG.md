@@ -7,12 +7,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ## 2026‑10‑25 · Fixes from the pre-audit (M1, M2, M3, M7) and a dependency advisory
 
-Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed from it: H1 (database key), M4 to M6, M8 to M11.
+Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed from it: M4 to M6, M8 to M10 (H1 is in progress).
 
 - **M1, read limit:** each address the server really serves gets its own bucket (Host header lower-cased, port stripped); every other Host value shares ONE bucket. Before, invented host names multiplied the allowance and could push the real nodes into a shared overflow. Tests: `app.test.ts` (invented hosts, port and case).
 - **M2, `/fetchMany`:** repeated tags are read once; one answer carries at most 256 packets (`MAX_FETCH_MANY_BLOBS`), read with a single bounded query. A cut answer says `"more":true`; the cursor continues there. The app follows up to 8 continuations per poll.
 - **M3, cursor:** derived from the requested tags only, no longer the server-wide counter. A stranger with one address can neither watch the server's deposit traffic nor link addresses to one server. Android combines chunk cursors accordingly (largest when complete, smallest of the cut ones).
 - **M7, addresses:** the app accepts only v3 onion addresses (pairing codes, node lists, owner strings, migrate and temp-node signals), and `NodeMeshClient.request` refuses anything else, so the owner secret can no longer be sent to a plain host name through a Tor exit. The LAN-style `host:port` form is gone; tests with placeholder names now use real-shaped onions. **iOS:** same rule needed (Norbert).
+- **M11, setup page:** an access token (32 random bytes, new at every start, file `admin-token` with 0600 in the data folder) is now required for every request of the setup page, on top of the loopback checks. A neighbouring container can no longer read the owner code by sending a loopback Host header. A person gets a link `/?t=<token>` printed to the terminal (not into service logs); `start.bat` opens it itself. Control reads the token over its SSH login (`docker exec … cat /app/data/admin-token`), sends it with every call and asks again once after a restart. Tests: 2 in `adminApp.test.ts`, 1 in Control with a fake server that rotates its token. Older servers without a token keep working with the new Control.
 - **Dependency:** `body-parser` 1.20.8 to 1.20.9 (high-severity DoS advisory published after the last evidence run) in node-mesh-server, server, control and officer-app (lock files only).
 - **Test:** `PhoneTempNodeTest.startRunsAndStopRemovesEverything` no longer assumes a freed port stays closed.
 - Checks: node-mesh-server 116 passed (1 skipped), relay 70, control 62, officer-app 15, evidence 97 passed / 0 failed / F1, Android unit tests 169 each for standard, pro and group.
