@@ -185,4 +185,6 @@ Two scans, nothing typed, no phone number or email:
 
 Client deposits go with `Authorization: Guest <token>` per node that has a grant; no fallback to owner deposit; a locally expired grant is not tried. 401 shows "refused", 429 "quota used up", a grant 2 days from expiry shows a renewal hint (chat banner).
 
+**Hardening (25 October 2026):** every node address in a code, a stored contact row or an import must be a v3 onion name (56 base32 characters + `.onion`); anything else is dropped at decoding (`jsonToNodeMeshPayload`), at parsing (`NodeMeshManager.parseAddressConnectionString`) and once more before each connection (`NodeMeshClient.request`), so a tampered code can never direct a request or a guest grant to a clearnet host. A guest's answer that is **pasted** instead of scanned is not added right away: the Pro app shows a check code (`GuestClient.fingerprint`, SHA-256 over the guest's keys and the invitation id, `XXXXX-XXXXX`) and asks the inviter to compare it with the one the guest's phone shows under its QR code. A scanned answer needs no check (the phones were together).
+
 Not built yet: automatic renewal (`GRANT_RENEW`), guest list in the Pro app, Control, relay-android (the Android node does not check guest tokens), iOS. Nodes need `NODE_MESH_GUEST_GRANTS=1`. Format change for iOS: pairing field `i` and the two-scan exchange (Norbert).

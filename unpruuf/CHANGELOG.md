@@ -5,6 +5,16 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Hardening of the guest exchange and node addresses
+
+- Only v3 onion names are accepted as node addresses: dropped at decoding of a code, when a stored address is parsed, and refused once more before any connection. A code with no valid address is rejected. Header injection through an address is impossible (test).
+- A pasted guest answer (Pro app) now needs a check code: the guest's phone shows it under its own code, the inviter confirms it before the contact is added. Scanned answers are unchanged.
+- Order in the guest binding fixed: unknown invitation is reported before "contact exists".
+- Tests: `NodeMeshAddressTest` (new), `NodeMeshPairingTest` (+2, fixtures now real-length onions), `GuestClientTest` (+1). All flavours compile, Standard and Client unit tests pass.
+- Build environment was reset: Android SDK reinstalled; the signing keys are not in this environment any more (they were never in git).
+
+---
+
 ## 2026‑10‑22 · Client import for guest invitations
 
 - unpruuf Client accepts a guest invitation by scan (two-scan key exchange, field `i` in the pairing code), stores the grants (Room v15, `guestGrants`), deposits as guest, shows refused/quota/expiring banners. Pro side issues grants for exactly the chosen nodes with invitation-specific pairing values and binds the guest on the second scan. Panic wipe removes open invitations.
