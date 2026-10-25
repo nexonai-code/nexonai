@@ -5,6 +5,16 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Node list without a browser (`export-list`)
+
+- **Why:** the list of all nodes of a server (for the import in the app) was only reachable through the setup page, which on a VPS means an SSH tunnel and a browser. Control already fetched it with one click (Distribute); a server without Control had no easy way.
+- **New:** `node-mesh-server/export-list.bat` / `export-list.sh` (`src/exportListCli.ts`): asks the running server's setup page on loopback with the access token from the data folder, waits while the addresses are still being created (409), and writes `unpruuf-nodes-server-<slot>.txt` readable for the owner only. Clear messages for a locked server and for a wrong token. The start output and `start.bat`/`start.sh` point to it.
+- **Decision (finding):** nothing is written at start. A sealed server holds its write key only in memory (`nodeIdentity.ts`), so a list file at start would put the key on the disk and undo the sealing. The file exists only on request.
+- `.gitignore` excludes `unpruuf-nodes-*.txt` (contains the write key). 3 new tests (127 in total). Checked by hand against a stub server: file written with mode 600, waiting on 409, wrong token gives exit 1.
+- **Not done:** the exe build (`build-exe.js`) does not yet ship the script. Control and the app are unchanged.
+
+---
+
 ## 2026‑10‑25 · Database key sealed, device transfer off, panic wipe completed (pre-audit H1, M9, M10)
 
 - **H1, database key:** the SQLCipher key of the contacts database (pairing keys, ratchet state) lay in plain Base64 in `db_key_store`/`db_key`, next to the database. It is now sealed under the phone-bound key in the same `k1:` form as `SealedStrings` (`data/db/DbKeyVault.kt`). Existing installs are migrated on the first start: new key sealed and noted first, WAL folded in, copy of the file (`unpruuf_contacts.db.rekey-backup`), `PRAGMA rekey` to a fresh key, reopen with the new key and compare the row count of every table, only then the plain value is replaced and the copy deleted. Any failure puts the copy back and keeps the old key (retried next start); a crash at any step is repaired from the copy on the next start. If the phone key cannot seal, the old key stays in use for now. If a sealed key cannot be opened, the app does not create a new database: it runs empty in memory, leaves the file alone and the lock screen shows the existing "phone key gone, clear the app data" message (`DbKeyState`, `PIN_STORE_LOST`, now also on the setup screen).

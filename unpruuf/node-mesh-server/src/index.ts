@@ -264,6 +264,7 @@ function startService(): void {
         if (all.length > 1) console.log(`[tor] ${all.length} onion addresses registered, first: ${address} (Tor proof-of-work defense on)`);
         else console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
         if (ephemeral || wasCreated) await printOwnerCode(address);
+        if (!ephemeral) console.log(`[list] node list for your app (all ${all.length} nodes in one file): run ${process.platform === "win32" ? "export-list.bat" : "./export-list.sh"} in this folder, or use the setup page. Control fetches it with one click.`);
       })
       .catch((err) => {
         console.error(`[tor] could not start yet: ${(err as Error).message}`);

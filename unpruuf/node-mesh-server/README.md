@@ -175,6 +175,18 @@ not the limit, and one process with N nodes costs about a tenth of N separate pr
   build couldn't reach the npm registry). `docker compose up` on a normal machine is the check.
 
 
+## Node list without a browser: `export-list` (since 25 Oct 2026)
+
+The node list (all nodes of this server, the write key, control address, bridges) comes in three ways:
+
+| Where | How |
+|---|---|
+| **Control** (admin PC, recommended) | Distribute → one server's name = its list, or the ZIP with all servers. One click, no SSH by hand. |
+| **On the server itself** | `export-list.bat` (Windows) or `./export-list.sh` in this folder, while the server runs. Writes `unpruuf-nodes-server-<slot>.txt` next to the program, readable for the owner only. It waits while the server is still creating its addresses. |
+| **Setup page** | Card "Node-Liste für deine App". |
+
+Nothing is written at start. A sealed server keeps its write key only in memory, so a file at start would defeat that. The file exists only after you asked for it: move it to your own phone over a cable or a trusted channel, import it (Settings → Node lists → Import list) and delete it. The start output points to the script once the addresses are up.
+
 ## Access token of the setup page (since 25 Oct 2026)
 
 The setup page (port 8790, loopback only) now answers nobody without a token. Reason: inside a container
