@@ -14,6 +14,13 @@ export function resolveOwnerSecret(source: OwnerSecretSource): string {
   return typeof source === "function" ? source() : source;
 }
 
+/** The same check as [requireOwner], as a value: lets a route count failures and successes apart. */
+export function checkOwner(req: Request, ownerSecret: OwnerSecretSource): "ok" | "locked" | "bad" {
+  const secret = resolveOwnerSecret(ownerSecret);
+  if (!secret) return "locked";
+  return timingSafeEqual(req.header("authorization") ?? "", `Bearer ${secret}`) ? "ok" : "bad";
+}
+
 export function requireOwner(ownerSecret: OwnerSecretSource) {
   return (req: Request, res: Response, next: NextFunction) => {
     const header = req.header("authorization") ?? "";

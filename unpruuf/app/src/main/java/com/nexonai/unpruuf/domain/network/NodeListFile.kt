@@ -28,6 +28,9 @@ object NodeListFile {
     /** Refuse absurd inputs before parsing — a real file is ~70 bytes per node. */
     const val MAX_CHARS = 400_000
 
+    /** Ten servers of 250 nodes make 2500 addresses; more than twice that in one file is not a list. */
+    const val MAX_ADDRESSES = 5_000
+
     data class Parsed(
         val name: String,
         val ownerSecret: String,
@@ -51,15 +54,18 @@ object NodeListFile {
             else header[m.groupValues[1]] = m.groupValues[2].trim()
             i++
         }
-        val addresses = mutableListOf<String>()
+        // A set, not list.contains: a file of 60 000 lines must not cost minutes (the old version was quadratic).
+        val seen = LinkedHashSet<String>()
         i++
         while (i < lines.size) {
             val a = lines[i].trim()
             i++
             if (a.isEmpty()) continue
             if (!NodeMeshClient.isNodeAddress(a)) return null
-            if (a !in addresses) addresses += a
+            seen += a
+            if (seen.size > MAX_ADDRESSES) return null
         }
+        val addresses = seen.toList()
         val secret = header["secret"] ?: return null
         if (!SECRET_RE.matches(secret)) return null
         if (addresses.isEmpty()) return null

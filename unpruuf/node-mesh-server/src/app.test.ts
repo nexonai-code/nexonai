@@ -597,3 +597,40 @@ test("the /fetchMany cursor does not show what happens on the rest of the server
     store.close();
   }
 });
+
+test("a stranger cannot use up the owner's allowance on /pool or lock the owner out of it", async () => {
+  const { server, store, base } = startServer();
+  try {
+    for (let i = 0; i < 12; i++) await fetch(`${base}/lock-status`);
+    for (let i = 0; i < 15; i++) await fetch(`${base}/pool`, { headers: { authorization: "Bearer wrong" } });
+    const owner = await fetch(`${base}/pool`, { headers: { authorization: `Bearer ${OWNER_SECRET}` } });
+    assert.equal(owner.status, 200);
+    // The strangers' wrong secrets are limited too, just in their own bucket.
+    const wrong = await fetch(`${base}/pool`, { headers: { authorization: "Bearer wrong" } });
+    assert.equal(wrong.status, 429);
+  } finally {
+    server.close();
+    store.close();
+  }
+});
+
+test("the server does not name its framework: JSON 404 for everything else, no ETag, exact paths, no HEAD or OPTIONS", async () => {
+  const { server, store, base } = startServer();
+  try {
+    const nothing = await fetch(`${base}/nothing`, { method: "POST" });
+    assert.equal(nothing.status, 404);
+    assert.deepEqual(await nothing.json(), { error: "not found" });
+    assert.equal(nothing.headers.get("etag"), null);
+    assert.equal((await fetch(`${base}/fetchMany`, { method: "OPTIONS" })).status, 404);
+    assert.equal((await fetch(`${base}/health`, { method: "HEAD" })).status, 404);
+    assert.equal((await fetch(`${base}/DEPOSIT`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "t", ciphertext: "b25l" }) })).status, 404);
+    assert.equal((await fetch(`${base}/deposit/`, { method: "PUT", headers: ownerHeaders(), body: JSON.stringify({ routing_tag: "t", ciphertext: "b25l" }) })).status, 404);
+    const health = await fetch(`${base}/health`);
+    assert.equal(health.status, 200);
+    assert.equal(health.headers.get("etag"), null);
+    assert.equal(health.headers.get("x-powered-by"), null);
+  } finally {
+    server.close();
+    store.close();
+  }
+});

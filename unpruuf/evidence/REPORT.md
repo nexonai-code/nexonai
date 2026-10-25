@@ -1,10 +1,10 @@
 # Evidence report
 
-- Run: 2026-10-25T01:10:53.199Z
-- Source: git 7ed795fcf446199ec428aac4c97da9fff45e4c8b (with uncommitted changes)
+- Run: 2026-10-25T01:37:53.204Z
+- Source: git 4f923d4dd2eed98527ba744bd591921bf27b097b (with uncommitted changes)
 - Node.js v22.22.0, linux x64
 - Checks: 97 passed, 0 failed. Findings (claims the evidence does not support): 1.
-- Node server test suite: NaN passed, NaN failed, NaN skipped, of NaN.
+- Node server test suite: 123 passed, 0 failed, 1 skipped, of 124.
 - Online comparison of the Tor hashes: no.
 
 This report shows what these scripts could check on this source and this machine. It is not a security audit and not a certificate. Anything marked "needs an auditor" in CLAIMS_TO_EVIDENCE.md is not covered here.
@@ -75,7 +75,7 @@ Notes:
 - PASS the server has exactly three runtime dependencies: better-sqlite3, express, qrcode (better-sqlite3, express, qrcode)
 
 Notes:
-- node-mesh-server/src/admin/adminApp.ts:89  the setup page checks the connection comes from this computer or a private network (not stored, not logged)
+- node-mesh-server/src/admin/adminApp.ts:90  the setup page checks the connection comes from this computer or a private network (not stored, not logged)
 - network imports found: index.ts (http), tor/torControl.ts (net), tor/torDownload.ts (https)
 - production packages in package-lock.json (including nested): 133. An auditor should review these or ask for an SBOM.
 
@@ -93,8 +93,8 @@ Notes:
 - PASS no analytics, crash-reporting, advertising, push or Google Play services library is a dependency
 - PASS the app uses no ready-made HTTP client, WebView or download manager
 - PASS no source file imports telephony, location, contacts, accounts, call log, Google services or Firebase
-- PASS every client socket the app opens goes through the Tor SOCKS proxy, except one (through Tor: NodeMeshClient.kt:267, P2PNetworkManager.kt:2766, RelayClient.kt:145; direct: P2PNetworkManager.kt:2760)
-- PASS all listening sockets are bound to 127.0.0.1, except one random-port socket for the same-Wi-Fi shortcut (loopback: P2PNetworkManager.kt:1287, PhoneTempNode.kt:124; open: P2PNetworkManager.kt:2949)
+- PASS every client socket the app opens goes through the Tor SOCKS proxy, except one (through Tor: NodeMeshClient.kt:270, P2PNetworkManager.kt:2775, RelayClient.kt:145; direct: P2PNetworkManager.kt:2769)
+- PASS all listening sockets are bound to 127.0.0.1, except one random-port socket for the same-Wi-Fi shortcut (loopback: P2PNetworkManager.kt:1296, PhoneTempNode.kt:125; open: P2PNetworkManager.kt:2958)
 - PASS that open socket exists only while a direct contact exists: never in the whistleblower edition, never for Business (Node-Mesh) contacts (definition + 1 call; guard found: true; call behind the guard: true)
 - PASS the Android device id is read in exactly one place (the local licence check), and nowhere else (app/src/main/java/com/nexonai/unpruuf/domain/license/LicenseManager.kt:162)
 - PASS that value is hashed and kept on the phone (the licence check has no network call)
@@ -103,7 +103,7 @@ Notes:
 
 Notes:
 - non-Android-platform libraries (an auditor should review each): com.google.crypto.tink:tink-android:1.11.0, com.google.zxing:core:3.5.3, com.journeyapps:zxing-android-embedded:4.3.0, com.netzarchitekten:IPtProxy:5.5.1, info.guardianproject:tor-android:0.4.8.16, net.zetetic:android-database-sqlcipher:4.5.4, org.nanohttpd:nanohttpd:2.3.1
-- the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2760) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).
+- the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2769) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).
 - Only if the user is on a network that blocks Tor does the app fall back to bridges. The Snowflake path then contacts a broker through a CDN front and STUN servers (see ConnectionPaths.kt). That is Tor's own circumvention, but it IS contact with third-party infrastructure, so "the app talks only to Tor" holds for the direct path and must be worded carefully for the fallback path.
 
 ## 05 Routing tags: formula, fixed values, and what they reveal across contacts
@@ -123,7 +123,7 @@ Notes:
 - PASS 300 contacts get 300 different tags in the same hour
 - PASS the 26 tags of the receive window of one contact are all different
 - PASS a different seed for the same epoch gives a different tag (an outsider without the seeds cannot compute it)
-- PASS tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005 (share 0.5002)
+- PASS tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005 (share 0.4997)
 
 Notes:
 - What this does not show: that no structure exists (that rests on HMAC-SHA256 being a pseudo-random function), or anything about traffic timing and volume, which the next scripts and the auditor scope list as open.

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { NodeStore } from "../store/nodeStore";
 import { MAX_BLOB_BYTES, MAX_FETCH_MANY_BLOBS, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
-import { OwnerSecretSource, requireOwner } from "../middleware/ownerAuth";
+import { checkOwner, OwnerSecretSource, requireOwner } from "../middleware/ownerAuth";
 import { KeyedTokenBuckets, rateLimited, rateLimitedPerHost, TokenBucket } from "../middleware/rateLimit";
 
 const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
@@ -30,24 +30,39 @@ export function nodeRouter(
   addresses: () => string[] = () => [],
   lock?: LockControl,
 ): Router {
-  const router = Router();
+  // Exact paths only: /DEPOSIT and /deposit/ are not routes.
+  const router = Router({ caseSensitive: true, strict: true });
   // Per node address (see KeyedTokenBuckets): burst of 30, refills 5/sec for each.
   const fetchRateLimit = new KeyedTokenBuckets(30, 5);
-  const poolRateLimit = new TokenBucket(5, 1);
+  // Separate buckets, so a stranger who knows an address (or the control address) can use up only
+  // the allowance of his own kind of request: asking /lock-status, or a wrong secret on /pool,
+  // never the owner's right secret on /pool, and never /unlock.
+  const lockStatusLimit = new TokenBucket(5, 1);
+  const poolOwnerLimit = new TokenBucket(5, 1);
+  const poolFailLimit = new TokenBucket(10, 1);
+  // /unlock has to try the secret to know whether it is right (a key derivation), so its attempts
+  // are bounded as a whole. The setup page is the owner's way around a blocked /unlock.
   const unlockRateLimit = new TokenBucket(5, 0.2);
 
   // Owner-only: every onion address this process serves. The owner's app scans ONE address +
   // the owner secret and learns all sibling nodes here, so a server with hundreds of nodes still
   // needs only one QR. Contacts never call this — they only ever learn the nodes assigned to them.
   // `control` (sealed servers) is the address the app reaches this server at after a restart.
-  router.get("/pool", rateLimited(poolRateLimit), requireOwner(ownerSecret), (_req, res) => {
+  router.get("/pool", (req, res) => {
+    const who = checkOwner(req, ownerSecret);
+    if (who === "locked") return res.status(423).json({ error: "locked" });
+    if (who === "bad") {
+      if (!poolFailLimit.tryTake()) return res.status(429).json({ error: "rate limit exceeded" });
+      return res.status(401).json({ error: "unauthorized" });
+    }
+    if (!poolOwnerLimit.tryTake()) return res.status(429).json({ error: "rate limit exceeded" });
     const control = lock?.controlAddress() ?? null;
     return res.status(200).json(control ? { control, addresses: addresses() } : { addresses: addresses() });
   });
 
   // Sealed servers: no secret needed to ASK — the app checks this on the control onion without
   // sending anything secret, so a stranger answering on a stolen control address learns nothing.
-  router.get("/lock-status", rateLimited(poolRateLimit), (_req, res) => {
+  router.get("/lock-status", rateLimited(lockStatusLimit), (_req, res) => {
     return res.status(200).json({ locked: lock ? lock.isLocked() : false });
   });
 

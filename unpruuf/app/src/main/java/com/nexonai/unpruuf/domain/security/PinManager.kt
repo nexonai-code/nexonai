@@ -1,6 +1,7 @@
 package com.nexonai.unpruuf.domain.security
 
 import android.content.Context
+import android.os.SystemClock
 import com.nexonai.unpruuf.domain.network.CryptoManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.SecureRandom
@@ -25,8 +26,9 @@ enum class PinResult { NORMAL, PANIC, WRONG, LOCKED, STORE_LOST }
  *    a copy of the app's files alone does not allow guessing the PINs offline; the Keystore key
  *    stays on the device. Older installs with plain hashes are converted on the first correct PIN.
  *
- * Limit that remains: the lock-out counter lives in the app's own storage and the device clock.
- * Someone with root on the phone can reset both. This is protection for a lost or briefly seized
+ * Limit that remains: the lock-out counter lives in the app's own storage, timed by the device's wall clock
+ * and by its monotonic clock. Moving the date does not shorten a pause (until the phone is restarted);
+ * someone with root on the phone can reset the counter. This is protection for a lost or briefly seized
  * phone, not against a forensic lab.
  */
 @Singleton
@@ -54,13 +56,16 @@ class PinManager @Inject constructor(
             .putString("salt", saltB64)
             .putString("pin_hash", seal(hash(pin, salt)))
             .putString("panic_hash", seal(hash(panicPin, salt)))
-            .remove("fail_count").remove("locked_until")
+            .remove("fail_count").remove("locked_until").remove("locked_for").remove("locked_rt")
             .apply()
     }
 
     /** Milliseconds until the PIN pad accepts a try again; 0 when it is not locked. */
-    fun lockRemainingMs(now: Long = System.currentTimeMillis()): Long =
-        (prefs.getLong("locked_until", 0L) - now).coerceAtLeast(0L)
+    fun lockRemainingMs(now: Long = System.currentTimeMillis(), elapsed: Long = SystemClock.elapsedRealtime()): Long =
+        remainingLockMs(
+            wallUntil = prefs.getLong("locked_until", 0L), wallNow = now,
+            lockedForMs = prefs.getLong("locked_for", 0L), elapsedAtLock = prefs.getLong("locked_rt", -1L), elapsedNow = elapsed
+        )
 
     fun check(input: String, now: Long = System.currentTimeMillis()): PinResult {
         if (lockRemainingMs(now) > 0) return PinResult.LOCKED
@@ -77,10 +82,15 @@ class PinManager @Inject constructor(
         if (result == PinResult.WRONG) {
             val fails = prefs.getInt("fail_count", 0) + 1
             val edit = prefs.edit().putInt("fail_count", fails)
-            lockDelayMs(fails)?.let { edit.putLong("locked_until", now + it) }
-            edit.apply()
+            lockDelayMs(fails)?.let {
+                edit.putLong("locked_until", now + it)
+                // The same pause on the monotonic clock: moving the date forward in the settings does not shorten it.
+                edit.putLong("locked_for", it).putLong("locked_rt", SystemClock.elapsedRealtime())
+            }
+            // commit(): the count must be on disk before the app can be killed and tried again.
+            edit.commit()
         } else {
-            val edit = prefs.edit().remove("fail_count").remove("locked_until")
+            val edit = prefs.edit().remove("fail_count").remove("locked_until").remove("locked_for").remove("locked_rt")
             // Convert a plain hash from an older install to the encrypted form.
             if (stored != null && !stored.startsWith(SEALED)) edit.putString("pin_hash", seal(stored))
             if (panic != null && !panic.startsWith(SEALED)) edit.putString("panic_hash", seal(panic))
@@ -103,6 +113,19 @@ class PinManager @Inject constructor(
         private const val FREE_TRIES = 4
         private const val FIRST_LOCK_MS = 30_000L
         private const val MAX_LOCK_MS = 60 * 60 * 1000L
+
+        /**
+         * What is left of a lock-out, from two clocks. The wall clock survives a restart of the phone but can be
+         * moved by hand; the monotonic clock ([elapsedAtLock] was `elapsedRealtime()` when the lock started) cannot,
+         * but starts again at a restart (then [elapsedNow] < [elapsedAtLock] and only the wall clock counts).
+         * The longer remaining time wins.
+         */
+        fun remainingLockMs(wallUntil: Long, wallNow: Long, lockedForMs: Long, elapsedAtLock: Long, elapsedNow: Long): Long {
+            val wall = (wallUntil - wallNow).coerceAtLeast(0L)
+            val since = elapsedNow - elapsedAtLock
+            val monotonic = if (elapsedAtLock >= 0 && since >= 0) (lockedForMs - since).coerceAtLeast(0L) else 0L
+            return maxOf(wall, monotonic)
+        }
 
         /** Pause after the [fails]-th wrong try in a row: none for the first four, then 30 s, 60 s, 2 min ... up to 1 h. */
         fun lockDelayMs(fails: Int): Long? {

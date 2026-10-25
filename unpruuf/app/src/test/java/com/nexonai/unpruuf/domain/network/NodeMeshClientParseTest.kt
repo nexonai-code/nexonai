@@ -57,4 +57,22 @@ class NodeMeshClientParseTest {
         assertTrue(NodeMeshClient.parseLocked("""{"locked":true}"""))
         assertFalse(NodeMeshClient.parseLocked("""{"locked":false}"""))
     }
+
+    @Test
+    fun `a node list with very many addresses is read fast and one beyond the cap is refused`() {
+        fun onionOf(i: Int): String {
+            val alphabet = "abcdefghijklmnopqrstuvwxyz234567"
+            val body = StringBuilder()
+            var n = i
+            repeat(56) { body.append(alphabet[n % 32]); n /= 32 }
+            return body.toString() + ".onion"
+        }
+        fun file(count: Int) = (listOf("unpruuf-node-list:v1", "name: Big", "secret: abcdefghijklmnopqrstuvwxyz012345", "count: $count", "") + (0 until count).map(::onionOf)).joinToString("\n")
+        val started = System.nanoTime()
+        val ok = NodeListFile.parse(file(NodeListFile.MAX_ADDRESSES))
+        assertNotNull(ok)
+        assertEquals(NodeListFile.MAX_ADDRESSES, ok!!.addresses.size)
+        assertTrue("took ${(System.nanoTime() - started) / 1_000_000} ms", (System.nanoTime() - started) / 1_000_000 < 2_000)
+        assertNull(NodeListFile.parse(file(NodeListFile.MAX_ADDRESSES + 1)))
+    }
 }

@@ -36,6 +36,9 @@ class NodeMeshClient @Inject constructor(
         // Same sizing rationale as RelayClient.MAX_RESPONSE_BYTES — worst case a full chunked
         // transfer's blobs come back in one fetch/fetchMany response.
         private const val MAX_RESPONSE_BYTES = 12 * 1024 * 1024
+        /** A reply head is a status line and a few headers; anything longer is not a node. */
+        private const val MAX_HEAD_LINE_BYTES = 8 * 1024
+        private const val MAX_HEAD_LINES = 64
         // Deliberately shorter than SOCKET_TIMEOUT_MS — a heartbeat that takes as long as a
         // real request to fail defeats the point of pinging on a short, frequent interval (see
         // P2PNetworkManager.startTempNodeHeartbeat()).
@@ -288,12 +291,14 @@ class NodeMeshClient @Inject constructor(
 
             val input = socket.getInputStream()
             val statusLine = readLine(input) ?: return HttpResponse(0, "")
+            var headLines = 0
             val status = statusLine.split(" ").getOrNull(1)?.toIntOrNull() ?: 0
 
             var contentLength = -1
             while (true) {
                 val line = readLine(input) ?: break
                 if (line.isEmpty()) break
+                if (++headLines > MAX_HEAD_LINES) return HttpResponse(0, "")
                 val idx = line.indexOf(':')
                 if (idx > 0 && line.substring(0, idx).equals("Content-Length", ignoreCase = true)) {
                     contentLength = line.substring(idx + 1).trim().toIntOrNull() ?: -1
@@ -312,6 +317,7 @@ class NodeMeshClient @Inject constructor(
         while (true) {
             val b = input.read()
             if (b == -1) return if (buf.size() == 0) null else buf.toString("ISO-8859-1")
+            if (buf.size() > MAX_HEAD_LINE_BYTES) throw java.io.IOException("reply line too long")
             if (b == '\n'.code) {
                 val bytes = buf.toByteArray()
                 val len = if (bytes.isNotEmpty() && bytes.last() == '\r'.code.toByte()) bytes.size - 1 else bytes.size

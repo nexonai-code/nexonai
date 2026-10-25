@@ -19,7 +19,11 @@ import {
 import { NodeOnionService } from "./tor/onionService";
 import { Metrics } from "./metrics";
 import { LicenseGuard } from "./license";
+import { loweredProtection } from "./loweredProtection";
 import { describeIntegrity, IntegrityResult, verifyIntegrity } from "./integrity";
+
+// Files the server writes are readable by its own user only (the database holds waiting packets).
+process.umask(0o077);
 
 // Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
 // Tor's own working files go to a throwaway temp folder that is deleted on exit.
@@ -33,7 +37,11 @@ if (ephemeral) {
   identity = createEphemeralIdentity(NODE_PROFILE.ttlHours);
   torWorkDir = fs.mkdtempSync(path.join(os.tmpdir(), "unpruuf-tempnode-"));
 } else {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+  // A folder or database from an older start may be more open than the umask now makes new files.
+  for (const f of [DATA_DIR, DB_PATH, DB_PATH + "-wal", DB_PATH + "-shm"]) {
+    try { fs.chmodSync(f, f === DATA_DIR ? 0o700 : 0o600); } catch { /* not there (yet), or not ours to change */ }
+  }
   const loaded = loadOrCreateIdentity(IDENTITY_PATH, NODE_PROFILE.ttlHours, KEY_STORAGE);
   identity = loaded.identity;
   wasCreated = loaded.wasCreated;
@@ -173,6 +181,8 @@ const adminApp = createAdminApp(
   adminToken,
 );
 
+for (const note of loweredProtection(process.env)) console.warn(`[settings] ${note}`);
+
 const kind = ephemeral
   ? "Temp Node"
   : `Business Node server (slot ${NODE_SLOT}/3)`;
@@ -289,10 +299,10 @@ logLicense();
 setInterval(logLicense, 60 * 60 * 1000).unref();
 
 // The only deletion path (NODE_MESH_SPEC.md §4) — Reset below never touches message data.
-setInterval(() => {
-  const removed = store.sweepExpired();
-  if (removed > 0) console.log(`[sweep] removed ${removed} expired blob(s)`);
-}, SWEEP_INTERVAL_MS).unref();
+// Not logged: a line per minute of traffic would leave a timeline of the server's use in docker logs
+// or the service journal for months. The counts are in the overview (metrics.ts), in memory.
+store.sweepExpired(); // once right at the start: packets that expired while the server was off go now
+setInterval(() => { store.sweepExpired(); }, SWEEP_INTERVAL_MS).unref();
 
 // NODE_MESH_SPEC.md §5 staggered Reset — connection/socket hygiene only: drop idle HTTP
 // keep-alive sockets, confirm the onion service is still registered (re-add with the same key if

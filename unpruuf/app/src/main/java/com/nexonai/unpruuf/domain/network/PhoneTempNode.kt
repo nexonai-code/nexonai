@@ -81,7 +81,8 @@ class PhoneTempNode(
         private const val MAX_REQUEST_BODY = 8192
         private const val MAX_HEADER_BYTES = 16 * 1024
         private const val MAX_PARALLEL = 12
-        private const val READ_TIMEOUT_MS = 70_000
+        /** How long a connection may take to deliver its request (head and body). A long-poll waits after that, not while reading. */
+        private const val READ_TIMEOUT_MS = 5_000
         private val TAG_REGEX = Regex("^[A-Za-z0-9+/=_-]{1,64}$")
         private const val READ_BURST = 30.0
         private const val READ_REFILL_PER_SEC = 5.0

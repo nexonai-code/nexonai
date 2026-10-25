@@ -66,4 +66,18 @@ class NetworkObfuscationTest {
     fun `dummy packets are exactly one packet size`() {
         assertEquals(NetworkObfuscation.PACKET_SIZE, NetworkObfuscation.generateDummyPacket().size)
     }
+
+    @Test
+    fun `a packet header that points outside the packet is refused before anything is allocated`() {
+        fun packet(size: Int, offset: Int) = ByteArray(NetworkObfuscation.PACKET_SIZE).also {
+            java.nio.ByteBuffer.wrap(it).putInt(size).putInt(offset)
+        }
+        assertThrows(IllegalArgumentException::class.java) { NetworkObfuscation.unpadPacket(packet(Int.MAX_VALUE, 0)) }
+        assertThrows(IllegalArgumentException::class.java) { NetworkObfuscation.unpadPacket(packet(200_000_000, 0)) }
+        assertThrows(IllegalArgumentException::class.java) { NetworkObfuscation.unpadPacket(packet(-1, 0)) }
+        assertThrows(IllegalArgumentException::class.java) { NetworkObfuscation.unpadPacket(packet(100, 5_000)) }
+        assertThrows(IllegalArgumentException::class.java) { NetworkObfuscation.unpadPacket(packet(4000, 200)) }
+        // The largest legal combination still works.
+        assertEquals(NetworkObfuscation.PACKET_SIZE - 8, NetworkObfuscation.unpadPacket(packet(NetworkObfuscation.PACKET_SIZE - 8, 0)).size)
+    }
 }

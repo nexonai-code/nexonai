@@ -16,6 +16,25 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Pre-audit, low findings (L1 to L11)
+
+L12 belongs to the wire-format decision (F1) and is not touched. Not tested on a device: L4, L10, L11 (clipboard, lock-out with the date moved, Temp Node timeout).
+
+- **L1 (server):** `/lock-status`, `/pool` (owner) and `/pool` (wrong secret) have separate buckets; a stranger can no longer lock the owner out of `/pool`. `/unlock` keeps its own bucket (it has to try the secret to know) and the setup page is the way around it.
+- **L2 (server):** one sweep right at the start, so packets that expired while the server was off are removed first. The claim "gone within about a minute" holds while the server runs.
+- **L3 (server):** one JSON `{"error":"not found"}` for every unknown path and method; no ETag; exact paths (`/DEPOSIT`, `/deposit/` are 404); HEAD and OPTIONS answer 404.
+- **L7 (server):** the per-minute `[sweep] removed N` log line is gone (a timeline of traffic in `docker logs` for months). Counts stay in memory (overview).
+- **L8 (server):** `umask 077`; data folder 0700, database files 0600 (also for existing installs).
+- **L9 (server):** every start prints one `[settings]` line per setting that lowers protection (`loweredProtection.ts`: key storage on disk, Tor off, setup page beyond loopback, owner code in the log, changed ceiling, own Tor program or folder, public address that is not an onion, unsigned-start allowed). Unit-tested.
+- **L4 (app):** the clipboard is cleared after 60 s also when it cannot be read (Android 10+ background); it is left alone only when it can be read and holds something else.
+- **L5 (app):** chunk transfers above 2048 pieces are refused; `unpadPacket` checks the size and offset fields before allocating; the node client limits reply head lines (8 KB, 64 lines).
+- **L6 (app):** node list parser is linear (a set instead of `contains`) and refuses more than 5000 addresses.
+- **L10 (app):** the PIN lock-out is also timed on the monotonic clock; moving the date forward no longer shortens a pause. A restart makes only the wall clock count again. The count is written with `commit()`.
+- **L11 (app):** a Temp Node connection has 5 s to deliver its request (was 70 s); a long-poll waits after that, not while reading.
+- Checks: node-mesh-server 123 passed (1 skipped), Android unit tests 196 each for standard, pro and group.
+
+---
+
 ## 2026‑10‑25 · Fixes from the pre-audit (M1, M2, M3, M7) and a dependency advisory
 
 Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed from it: M4 to M6, M8 to M10 (H1 is in progress).

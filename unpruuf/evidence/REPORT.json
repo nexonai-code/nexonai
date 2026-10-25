@@ -1,6 +1,6 @@
 {
-  "run": "2026-10-25T01:10:53.200Z",
-  "commit": "7ed795fcf446199ec428aac4c97da9fff45e4c8b (with uncommitted changes)",
+  "run": "2026-10-25T01:37:53.205Z",
+  "commit": "4f923d4dd2eed98527ba744bd591921bf27b097b (with uncommitted changes)",
   "passed": 97,
   "failed": 0,
   "findings": [
@@ -11,10 +11,10 @@
     }
   ],
   "suite": {
-    "tests": null,
-    "pass": null,
-    "fail": null,
-    "skipped": null
+    "tests": 124,
+    "pass": 123,
+    "fail": 0,
+    "skipped": 1
   },
   "results": [
     {
@@ -268,7 +268,7 @@
         }
       ],
       "notes": [
-        "node-mesh-server/src/admin/adminApp.ts:89  the setup page checks the connection comes from this computer or a private network (not stored, not logged)",
+        "node-mesh-server/src/admin/adminApp.ts:90  the setup page checks the connection comes from this computer or a private network (not stored, not logged)",
         "network imports found: index.ts (http), tor/torControl.ts (net), tor/torDownload.ts (https)",
         "production packages in package-lock.json (including nested): 133. An auditor should review these or ask for an SBOM."
       ],
@@ -325,12 +325,12 @@
         {
           "name": "every client socket the app opens goes through the Tor SOCKS proxy, except one",
           "ok": true,
-          "detail": "through Tor: NodeMeshClient.kt:267, P2PNetworkManager.kt:2766, RelayClient.kt:145; direct: P2PNetworkManager.kt:2760"
+          "detail": "through Tor: NodeMeshClient.kt:270, P2PNetworkManager.kt:2775, RelayClient.kt:145; direct: P2PNetworkManager.kt:2769"
         },
         {
           "name": "all listening sockets are bound to 127.0.0.1, except one random-port socket for the same-Wi-Fi shortcut",
           "ok": true,
-          "detail": "loopback: P2PNetworkManager.kt:1287, PhoneTempNode.kt:124; open: P2PNetworkManager.kt:2949"
+          "detail": "loopback: P2PNetworkManager.kt:1296, PhoneTempNode.kt:125; open: P2PNetworkManager.kt:2958"
         },
         {
           "name": "that open socket exists only while a direct contact exists: never in the whistleblower edition, never for Business (Node-Mesh) contacts",
@@ -360,7 +360,7 @@
       ],
       "notes": [
         "non-Android-platform libraries (an auditor should review each): com.google.crypto.tink:tink-android:1.11.0, com.google.zxing:core:3.5.3, com.journeyapps:zxing-android-embedded:4.3.0, com.netzarchitekten:IPtProxy:5.5.1, info.guardianproject:tor-android:0.4.8.16, net.zetetic:android-database-sqlcipher:4.5.4, org.nanohttpd:nanohttpd:2.3.1",
-        "the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2760) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).",
+        "the one direct socket (app/src/main/java/com/nexonai/unpruuf/domain/network/P2PNetworkManager.kt:2769) is the same-Wi-Fi shortcut for direct (onion) contacts. It is never used for Business or Node-Mesh contacts, and not at all in the whistleblower edition (see SECURITY_CLAIMS.md, 2026-10-01).",
         "Only if the user is on a network that blocks Tor does the app fall back to bridges. The Snowflake path then contacts a broker through a CDN front and STUN servers (see ConnectionPaths.kt). That is Tor's own circumvention, but it IS contact with third-party infrastructure, so \"the app talks only to Tor\" holds for the direct path and must be worded carefully for the fallback path."
       ],
       "findings": []
@@ -441,7 +441,7 @@
         {
           "name": "tags look uniformly random: share of 1-bits over 4000 tags is within 0.5 ± 0.005",
           "ok": true,
-          "detail": "share 0.5002"
+          "detail": "share 0.4997"
         }
       ],
       "notes": [

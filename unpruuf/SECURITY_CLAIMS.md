@@ -188,7 +188,9 @@ between a proof and a strong mitigation.
   for 30 s, doubling per further wrong try up to 1 h, and the stored hashes
   are encrypted under the phone's Keystore key, so a copy of the app files
   alone does not allow guessing the PIN offline. The counter lives in the app
-  storage and the device clock; someone with root can reset it, and then the
+  storage; the pause is timed by the wall clock and, since 25 Oct 2026, also
+  by the monotonic clock, so moving the date forward does not shorten it (until
+  the phone is restarted). Someone with root can reset the counter, and then the
   PIN's own entropy is the limit (see the math in the Limitations section).
   If the phone's key is lost (restore, lock-screen reset on some devices), the
   PIN hashes cannot be opened and the app says so; the only way out is
@@ -198,7 +200,9 @@ between a proof and a strong mitigation.
   reduced size (`SafeImage`). Before 2026‑10‑19 a contact with a modified app
   could crash the app with a tiny file that claimed a huge picture.
 - **Clipboard.** Group codes, case numbers and (debug/whistleblower) pairing
-  codes are copied marked sensitive and removed after 60 s if still ours.
+  codes are copied marked sensitive and removed after 60 s, unless the clipboard can be read
+  and holds something else (since 25 Oct 2026; before, an app in the background could not read it
+  and left the code there). Not yet tested on a device.
   Android 12 and older cannot hide a clip from other foreground apps; the
   automatic removal is the only protection there.
 - **Debug builds are not for customers.** They are debuggable (data readable
