@@ -15,6 +15,7 @@ Die ZIP-Dateien hat Gabriel im Chat bekommen. Sie liegen nicht im Repo (zu groß
 | `unpruuf_TeamBriefing_2026-10-22_v2.zip` | Team-Briefing EN/RO vom 11.10. | Text ersetzt |
 | `unpruuf_UAB-Pitch-Kurz_2026-10-22_v12.zip` | `…2026-10-14_v11.zip` | nur PPTX, kein PDF |
 | `unpruuf_Compliance_Kundendeck_2026-10-22_v1.zip` | `safeline`-Deck EN/RO | |
+| `unpruuf_2026-10-25_v32.zip` (Projekt + alle sieben APKs im selben ZIP) | v31 und die APKs vom 22.10. | Client-Import, Audit-Runde R1 (13 von 17), Prüfcode für eingefügte Gast-Codes, nur Onion-Adressen. **APKs mit neuem Debug-Schlüssel** (Container-Reset, Testschlüssel nicht mehr in der Umgebung): nicht über bestehende Installationen installierbar. |
 | `unpruuf_2026-10-22_v31.zip` und sieben APKs | v30 und APKs vom 21.10. | mit Temp-Node-Fix |
 
 Nicht neu gebaut (Quellen fehlen): Business-Pitch und Press-Pitch (13.10.), Compliance-Video, Press-Ein-Seiter, alle Online-Artefakte und Dokumente aus früheren Sitzungen.
