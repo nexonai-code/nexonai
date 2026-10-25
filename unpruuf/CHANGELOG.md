@@ -16,6 +16,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Release process document
+
+- `handover/PROCESS_RELEASE_2026-10-25.md` (also published as a page in the NexonAI design): 13 steps from the prepared version to the record after delivery, with a suggested RACI, exceptions and metrics. It uses what exists (`sign-release.js`, `verify-release`, Control bundle, release key, evidence scripts) and marks what does not exist yet: the extended signed file list (M8), a reproducible build, a bill of materials, a release record script.
+- Found while writing it: every app build, debug and release, stops running about 180 days after it was compiled (`BUILD_EXPIRY_MS`); the process puts a reminder 150 days after each build.
+
+---
+
 ## 2026‑10‑25 · Audit readiness checklist (shared page)
 
 - `design/pages/audit_readiness.py` builds the page "Audit readiness" in the NexonAI design: 17 items in four groups with status (open, in progress, done, needs decision), suggested owner and a note per item, what we ask the auditor for, what raises the result and what to expect. The team's status and notes live in the artifact's shared database (`audit_items`); without it the page shows the defaults read-only.
