@@ -62,11 +62,11 @@ export interface CaseRow {
   acknowledgedAt: number | null;
   closedAt: number | null;
   lastActivityAt: number;
-  /** safeline Press: the research (own code) this tip came in through. Null = the general code. */
+  /** unpruuf Press: the research (own code) this tip came in through. Null = the general code. */
   rechercheId: string | null;
 }
 
-/** safeline Press: one research (an article, a topic) with its own contact code. Each has its
+/** unpruuf Press: one research (an article, a topic) with its own contact code. Each has its
  *  own officer identity, so the code differs, the letterbox differs and two researches cannot be
  *  tied together from the code alone. */
 export interface RechercheRow {
@@ -153,7 +153,7 @@ export class CaseStore {
         generation INTEGER NOT NULL,
         PRIMARY KEY (case_id, identity, generation)
       );
-      -- safeline Press: researches with their own contact code. The officer identity of each
+      -- unpruuf Press: researches with their own contact code. The officer identity of each
       -- research (its private key and message key) is stored encrypted like every other secret.
       CREATE TABLE IF NOT EXISTS recherchen (
         id TEXT PRIMARY KEY,
@@ -169,7 +169,7 @@ export class CaseStore {
     if (!columns.has("case_number")) this.db.exec(`ALTER TABLE cases ADD COLUMN case_number TEXT`);
     if (!columns.has("reporter_ref")) this.db.exec(`ALTER TABLE cases ADD COLUMN reporter_ref TEXT`);
     if (!columns.has("signal_pending")) this.db.exec(`ALTER TABLE cases ADD COLUMN signal_pending INTEGER NOT NULL DEFAULT 0`);
-    // Column added with the per-research codes of safeline Press. Older databases get it on first start.
+    // Column added with the per-research codes of unpruuf Press. Older databases get it on first start.
     if (!columns.has("recherche_id")) this.db.exec(`ALTER TABLE cases ADD COLUMN recherche_id TEXT`);
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_cases_reporter_ref ON cases(reporter_ref)`);
   }
@@ -248,7 +248,7 @@ export class CaseStore {
     return row;
   }
 
-  // ───────── safeline Press: researches with their own code ─────────
+  // ───────── unpruuf Press: researches with their own code ─────────
 
   createRecherche(name: string, identity: OfficerIdentity): RechercheRow {
     const row: RechercheRow = { id: randomUUID(), name, active: true, createdAt: Date.now() };

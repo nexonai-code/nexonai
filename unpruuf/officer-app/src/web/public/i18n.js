@@ -79,12 +79,12 @@ const I18N = {
     copied: "Codul a fost copiat", copied_sub: "Poți să-l lipești în aplicația raportorului.", selected: "Selectat", selected_sub: "Apasă Ctrl+C pentru a copia codul.",
     added: "Cazul a fost adăugat", added_sub: "Confirmarea de primire a fost trimisă.",
     lang_label: "Limba",
-    /* safeline Press: new texts */
+    /* unpruuf Press: new texts */
     nav_settings: "Setări", dismiss: "Am înțeles", save: "Salvează", saved: "Salvat",
     web_h: "Pentru site-ul tău", web_note: "Pune codul QR pe site-ul tău. Sursa îl scanează cu aplicația unpruuf gratuită și scrie direct.",
     web_png: "Descarcă QR (PNG)", web_embed: "Copiază codul HTML",
     web_caption: "Scanează cu aplicația unpruuf gratuită pentru a ne trimite un pont. Fără nume, fără cont.", web_alt: "Cod QR pentru ponturi securizate",
-    web_embed_ok: "Codul HTML a fost copiat", web_embed_ok_sub: "Lipește-l în pagina ta.", web_png_name: "safeline-press-qr.png",
+    web_embed_ok: "Codul HTML a fost copiat", web_embed_ok_sub: "Lipește-l în pagina ta.", web_png_name: "unpruuf-press-qr.png",
     del_h: "Ștergere", del_note: "Șterge definitiv acest mesaj și toată conversația de pe acest calculator.", del_btn: "Șterge definitiv",
     del_confirm: "Ștergi definitiv acest mesaj și toată conversația? Nu se poate anula.", del_done: "Șters",
     del_note_c: "Descarcă cazul ca fișier sau șterge-l definitiv de pe acest calculator, cu toată conversația. Păstrează cazul cât timp este necesar (Directiva 2019/1937, Art. 18); ștergerea nu se poate anula.",
@@ -101,8 +101,8 @@ const I18N = {
     warn_now: "Nicio preluare reușită de {h} ore. Mesajele așteaptă pe server cel mult 24 de ore.",
     kp_open: "Ponturi deschise", kp_pickup: "Ultima preluare", kp_keep: "Păstrare", kp_none_yet: "încă niciuna", kp_forever: "până șterg eu", kp_days: "{n} zile",
     page_settings: "Setări", page_settings_sub: "Păstrare și avertizări",
-    /* safeline Press: overlay (p_ replaces the key without p_ in the press version) */
-    p_title: "safeline Press — Panoul redacției", p_role: "Presă", p_nav_cases: "Ponturi", p_cases: "Ponturi", p_nav_code: "Codul tău", p_code_h: "Codul tău",
+    /* unpruuf Press: overlay (p_ replaces the key without p_ in the press version) */
+    p_title: "unpruuf Press — Panoul redacției", p_role: "Presă", p_nav_cases: "Ponturi", p_cases: "Ponturi", p_nav_code: "Codul tău", p_code_h: "Codul tău",
     p_search_ph: "Caută după număr de pont", p_th_nr: "Nr. pont", p_sorted_by: "Cele mai recente primele", p_all_cases: "Toate ponturile",
     p_weeks_h: "Ponturi noi pe săptămână", p_cats_h: "Ponturi pe subiecte",
     p_start_h: "Începe aici: arată codul tău", p_start_1: "Apasă <b>Afișează mare</b> sau pune codul pe site-ul tău.",
@@ -122,7 +122,7 @@ const I18N = {
     p_none_in_tab: "Niciun pont în această categorie.", p_open_fail: "Pontul nu a putut fi deschis", p_added: "Pontul a fost adăugat",
     p_cases_foot: "Se afișează {a} din {b} ponturi · cele mai recente primele", p_shown_of: "Se afișează {a} din {b}. Toate ponturile",
     p_c_ok_t: "Releul răspunde. Ultima verificare: {ago}. Baza de date este criptată.", p_back: "← Înapoi la ponturi",
-    /* safeline Press: a code per research */
+    /* unpruuf Press: a code per research */
     nav_rech: "Investigații", page_rech: "Investigații", page_rech_sub: "Un cod pentru fiecare articol sau temă",
     rech_h: "Un cod pentru fiecare investigație",
     rech_note: "Creează un cod separat pentru un articol sau o temă. Fiecare cod are propriile chei și propria cutie poștală: pontul ajunge deja sortat la investigația potrivită, iar două coduri nu pot fi legate între ele după cod. Codul tău general rămâne neschimbat. <b>Limită:</b> aceeași sursă care scrie la două investigații din aceeași aplicație este recunoscută în redacție ca aceeași aplicație.",
@@ -213,12 +213,12 @@ const I18N = {
     copied: "The code was copied", copied_sub: "You can paste it into the reporter's app.", selected: "Selected", selected_sub: "Press Ctrl+C to copy the code.",
     added: "The case was added", added_sub: "The confirmation of receipt was sent.",
     lang_label: "Language",
-    /* safeline Press: new texts */
+    /* unpruuf Press: new texts */
     nav_settings: "Settings", dismiss: "Understood", save: "Save", saved: "Saved",
     web_h: "For your website", web_note: "Put the QR code on your website. The source scans it with the free unpruuf app and writes directly.",
     web_png: "Download QR (PNG)", web_embed: "Copy HTML code",
     web_caption: "Scan with the free unpruuf app to send us a tip. No name, no account.", web_alt: "QR code for secure tips",
-    web_embed_ok: "The HTML code was copied", web_embed_ok_sub: "Paste it into your page.", web_png_name: "safeline-press-qr.png",
+    web_embed_ok: "The HTML code was copied", web_embed_ok_sub: "Paste it into your page.", web_png_name: "unpruuf-press-qr.png",
     del_h: "Delete", del_note: "Permanently deletes this tip and the whole conversation from this computer.", del_btn: "Delete permanently",
     del_confirm: "Permanently delete this tip and the whole conversation? This cannot be undone.", del_done: "Deleted",
     del_note_c: "Download the case as a file, or delete it permanently from this computer together with the whole conversation. Keep a case only as long as necessary (Directive 2019/1937, Art. 18); deleting cannot be undone.",
@@ -235,8 +235,8 @@ const I18N = {
     warn_now: "No successful pickup for {h} hours. Tips wait on the server for 24 hours at most.",
     kp_open: "Open tips", kp_pickup: "Last pickup", kp_keep: "Retention", kp_none_yet: "none yet", kp_forever: "until I delete", kp_days: "{n} days",
     page_settings: "Settings", page_settings_sub: "Retention and warnings",
-    /* safeline Press: overlay */
-    p_title: "safeline Press — Editorial dashboard", p_role: "Press", p_nav_cases: "Tips", p_cases: "Tips", p_nav_code: "Your code", p_code_h: "Your code",
+    /* unpruuf Press: overlay */
+    p_title: "unpruuf Press — Editorial dashboard", p_role: "Press", p_nav_cases: "Tips", p_cases: "Tips", p_nav_code: "Your code", p_code_h: "Your code",
     p_search_ph: "Search by tip number", p_th_nr: "Tip no.", p_sorted_by: "Most recent first", p_all_cases: "All tips",
     p_weeks_h: "New tips per week", p_cats_h: "Tips by topic",
     p_start_h: "Start here: show your code", p_start_1: "Press <b>Show large</b> or put the code on your website.",
@@ -256,7 +256,7 @@ const I18N = {
     p_none_in_tab: "No tips in this category.", p_open_fail: "The tip could not be opened", p_added: "The tip was added",
     p_cases_foot: "Showing {a} of {b} tips · most recent first", p_shown_of: "Showing {a} of {b}. All tips",
     p_c_ok_t: "The relay answers. Last check: {ago}. The database is encrypted.", p_back: "← Back to tips",
-    /* safeline Press: a code per research */
+    /* unpruuf Press: a code per research */
     nav_rech: "Researches", page_rech: "Researches", page_rech_sub: "One code for each article or topic",
     rech_h: "One code for each research",
     rech_note: "Create a separate code for an article or a topic. Every code has its own keys and its own letterbox: a tip arrives already filed under the right research, and two codes cannot be tied together from the codes alone. Your general code stays unchanged. <b>Limit:</b> the same source writing to two researches from the same app is recognisable in the newsroom as the same app.",
@@ -285,7 +285,7 @@ const SERVER_ERRORS_EN = {
 };
 
 let LANG = "ro";
-/** "compliance" (safeline) or "press" (safeline Press). Press texts live under the p_ prefix. */
+/** "compliance" (unpruuf Compliance) or "press" (unpruuf Press). Press texts live under the p_ prefix. */
 let EDITION = "compliance";
 try { const saved = localStorage.getItem("lang"); if (saved === "en" || saved === "ro") LANG = saved;; } catch { /* no storage: Romanian */ }
 

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-/** What a journalist can set in safeline Press. Kept in a small JSON file next to the case
+/** What a journalist can set in unpruuf Press. Kept in a small JSON file next to the case
  *  database. It holds no case content: only how long tips are kept and when the app last
  *  fetched from the server. */
 export interface PressSettings {

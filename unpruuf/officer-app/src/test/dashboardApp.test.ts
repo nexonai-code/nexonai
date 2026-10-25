@@ -157,7 +157,7 @@ test("the standard dashboard reports itself as compliance, exports and deletes a
   });
 });
 
-test("safeline Press: edition info, settings with validation, and deleting a tip for good", async () => {
+test("unpruuf Press: edition info, settings with validation, and deleting a tip for good", async () => {
   await withPressApp(async (base, store, _settings, file) => {
     const e = (await (await fetch(`${base}/api/edition`)).json()) as any;
     assert.equal(e.edition, "press");
@@ -182,7 +182,7 @@ test("safeline Press: edition info, settings with validation, and deleting a tip
   });
 });
 
-test("safeline Press: tips older than the retention period are removed, newer ones stay", async () => {
+test("unpruuf Press: tips older than the retention period are removed, newer ones stay", async () => {
   await withPressApp(async (_base, store) => {
     const old = store.createCase(SECRETS, "HW-OLD-0001");
     const fresh = store.createCase(SECRETS, "HW-NEW-0001");
@@ -195,7 +195,7 @@ test("safeline Press: tips older than the retention period are removed, newer on
   });
 });
 
-test("safeline Press: the settings file remembers the last pickup, so a restart shows how long the app was off", () => {
+test("unpruuf Press: the settings file remembers the last pickup, so a restart shows how long the app was off", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "press-settings-"));
   const file = path.join(dir, "settings.json");
   try {

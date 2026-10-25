@@ -44,7 +44,7 @@ test("the officer app accepts the reporter app of the press edition, and still r
   }
 });
 
-test("the status signal carries deadlines in safeline and none in safeline Press", () => {
+test("the status signal carries deadlines in unpruuf Compliance and none in unpruuf Press", () => {
   const row = { id: "x", caseNumber: "HW-AAAA-BBBB", signalPending: false, status: "new" as const, category: null, openedAt: 1000, ackDueAt: 2000, feedbackDueAt: 3000, acknowledgedAt: null, closedAt: null, lastActivityAt: 1000, rechercheId: null };
   const standard = JSON.parse(caseSignalText(row, "HW-AAAA-BBBB", "acknowledged", 5000, true).slice(CASE_SIGNAL_PREFIX.length));
   assert.equal(standard.a, 2000);

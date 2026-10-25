@@ -17,5 +17,5 @@ Gilt für alle Projekte in diesem Repo.
 
 ## Geltungsbereich
 
-- Die unpruuf-Regeln (Sprachen EN + RO, Aufbau der Kundenmaterialien, Briefkastenbild ohne Zahlen, Lizenzmodell, safeline, GDPR-Formulierungen usw.) stehen in `unpruuf/CLAUDE.md` und gelten **nur für unpruuf**.
+- Die unpruuf-Regeln (Sprachen EN + RO, Aufbau der Kundenmaterialien, Briefkastenbild ohne Zahlen, Lizenzmodell, Produktnamen, GDPR-Formulierungen usw.) stehen in `unpruuf/CLAUDE.md` und gelten **nur für unpruuf**.
 - Neue Projekte außerhalb von unpruuf (zum Beispiel der Kurier-Motor „Conditional Handover Engine“ vom 14.10.2026) sind nicht an die unpruuf-Regeln gebunden. Sprache und Aufbau dort nach Gabriels Vorgabe im jeweiligen Auftrag.

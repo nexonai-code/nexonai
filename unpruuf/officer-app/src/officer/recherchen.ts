@@ -5,7 +5,7 @@ import { OfficerIdentity } from "./officerIdentity";
 import { myPairingPayloadJson } from "./intake";
 
 /**
- * safeline Press: a contact code per research (an article, a topic).
+ * unpruuf Press: a contact code per research (an article, a topic).
  *
  * Every research gets its own officer identity (its own keys). That is the whole mechanism, and
  * the reason the reporter apps need no change: a code is the same kind of QR as the general one,

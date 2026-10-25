@@ -1,6 +1,6 @@
-# safeline Press
+# unpruuf Press
 
-The editorial version of the officer app: a tip line for journalists and newsrooms. Same engine as safeline (one QR code, the tip arrives in the dashboard, you can answer in the conversation), with the legal-deadline parts removed and a few additions. Romanian and English, switch at the bottom left.
+The editorial version of the officer app: a tip line for journalists and newsrooms. Same engine as unpruuf Compliance (one QR code, the tip arrives in the dashboard, you can answer in the conversation), with the legal-deadline parts removed and a few additions. Romanian and English, switch at the bottom left.
 
 Status: pilot. Not audited by an independent party, not tested against real Tor with a source in the field. Do not promise sources more than that.
 
@@ -10,9 +10,9 @@ Status: pilot. Not audited by an independent party, not tested against real Tor 
 2. Scans your QR code (on your website, in an article, on a card) and writes. No name, no phone number, no account.
 3. The tip appears in your dashboard with a number. The source gets a confirmation automatically. You can answer in the conversation.
 
-## What is different from safeline (compliance)
+## What is different from unpruuf Compliance
 
-| | safeline | safeline Press |
+| | unpruuf Compliance | unpruuf Press |
 |---|---|---|
 | Legal deadlines (7 days, 3 months) | yes | off |
 | Wording | cases, reporter | tips, source |
@@ -30,7 +30,7 @@ A newsroom can create a separate code for an article or a topic (left menu **Res
 - **Pause and resume.** A paused code ignores new tips (the source's app keeps retrying for a while and the tip is picked up after you resume). Tips already received stay fully usable.
 - **Rename** a research any time. Deleting a research is not offered, because its keys are needed for the tips it already received. Delete single tips instead.
 - **General code unchanged.** "Your code" keeps working exactly as before.
-- **For the tip page.** The *Download code list* button gives a text file with one line per code ("label | code", the general code first as "*"). Paste it into the tip page builder (safeline Press tip page builder).
+- **For the tip page.** The *Download code list* button gives a text file with one line per code ("label | code", the general code first as "*"). Paste it into the tip page builder (the unpruuf Press tip page builder).
 - **Limit.** One reporter app has one app identity. If the same source writes to two researches from the same app, the newsroom can recognise that it is the same app. Say so if a source asks.
 - **Data.** Research identities live in the same encrypted database as the tips (`recherchen` table). Older databases get the new column on first start.
 
@@ -39,7 +39,7 @@ Not tested with a real reporter app on a phone yet: the codes follow the same fo
 ## Start (Windows)
 
 1. `install.bat` (first time only).
-2. `start-press.bat`. It asks for the relay connection code and your password, then opens `http://localhost:3001`. Data lives in `data-press/`, apart from a safeline installation on the same computer.
+2. `start-press.bat`. It asks for the relay connection code and your password, then opens `http://localhost:3001`. Data lives in `data-press/`, apart from a unpruuf Compliance installation on the same computer.
 
 Linux/macOS: `OFFICER_EDITION=press npm start`.
 

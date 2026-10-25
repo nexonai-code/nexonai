@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 chcp 65001 >nul
 cd /d "%~dp0"
 
-echo safeline Press - redactie / newsroom
+echo unpruuf Press - redactie / newsroom
 
 if not exist dist (
   echo Nu este inca construit - ruleaza install.bat mai intai. / Not built yet - run install.bat first.

@@ -78,7 +78,7 @@ async function main() {
 
   const status: DashboardStatus = { viaTor: Boolean(torClient), lastPollAt: null, lastPollOk: true };
   const press = config.edition === "press" ? new PressSettingsStore(config.settingsPath) : undefined;
-  if (press) console.log("[startup] safeline Press: fără termene legale, păstrare reglabilă, ștergere pe caz.");
+  if (press) console.log("[startup] unpruuf Press: fără termene legale, păstrare reglabilă, ștergere pe caz.");
   const app = createDashboardApp(identity, store, relay, config.relayConnectionString, relayReachableBaseUrl, () => status, config.edition, press);
   app.listen(config.dashboardPort, () => {
     console.log(`[startup] Panoul ascultă pe http://localhost:${config.dashboardPort}`);
@@ -100,7 +100,7 @@ async function main() {
   setInterval(pollTick, config.pollIntervalMs).unref();
   void pollTick();
 
-  // safeline Press: tips with no activity for the chosen number of days are deleted for good.
+  // unpruuf Press: tips with no activity for the chosen number of days are deleted for good.
   if (press) {
     const sweep = () => {
       const days = press.get().retentionDays;
