@@ -13,6 +13,6 @@ if exist node.env.bat call node.env.bat
 if "%NODE_SLOT%"=="" set NODE_SLOT=1
 
 echo Hole die Node-Liste von Server %NODE_SLOT% ^(der Server muss laufen^) ...
-node dist\exportListCli.js %NODE_SLOT% "%~dp0"
+node dist\exportListCli.js %NODE_SLOT% "%~dp0."
 echo.
 pause

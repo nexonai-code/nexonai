@@ -5,13 +5,15 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
-## 2026‑10‑25 · Node list without a browser (`export-list`)
+## 2026‑10‑25 · Node list without a browser (`export-list`), exe and Control button
 
 - **Why:** the list of all nodes of a server (for the import in the app) was only reachable through the setup page, which on a VPS means an SSH tunnel and a browser. Control already fetched it with one click (Distribute); a server without Control had no easy way.
 - **New:** `node-mesh-server/export-list.bat` / `export-list.sh` (`src/exportListCli.ts`): asks the running server's setup page on loopback with the access token from the data folder, waits while the addresses are still being created (409), and writes `unpruuf-nodes-server-<slot>.txt` readable for the owner only. Clear messages for a locked server and for a wrong token. The start output and `start.bat`/`start.sh` point to it.
 - **Decision (finding):** nothing is written at start. A sealed server holds its write key only in memory (`nodeIdentity.ts`), so a list file at start would put the key on the disk and undo the sealing. The file exists only on request.
 - `.gitignore` excludes `unpruuf-nodes-*.txt` (contains the write key). 3 new tests (127 in total). Checked by hand against a stub server: file written with mode 600, waiting on 409, wrong token gives exit 1.
-- **Not done:** the exe build (`build-exe.js`) does not yet ship the script. Control and the app are unchanged.
+- **Standalone exe:** `unpruuf-node-mesh.exe --export-list [folder]` (via `sea-entry.ts`), and `export-list.bat` is part of the exe folder (`exe-templates/`, `build-exe.js`); `start.bat` of the exe points to it. Built on Linux and run against a stub server (file written, mode 600). The Windows `.exe` itself is still not run on a real Windows machine.
+- **Control:** after the installation wizard has finished, the "Download node list" button appears right in the dialog (EN/RO), with the hint to wait a minute if the addresses are not there yet. It uses the existing list download. Control tests 63/63.
+- Fixed on the way: the batch file passed `"%~dp0"` (trailing backslash) to node, which Windows reads as an escaped quote. Now `"%~dp0."`.
 
 ---
 

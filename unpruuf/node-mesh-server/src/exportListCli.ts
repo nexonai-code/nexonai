@@ -4,6 +4,7 @@
  * key only in memory (nodeIdentity.ts) — so nothing is written at start, only on request.
  *
  *   export-list.bat | ./export-list.sh [slot 1-3] [target folder]
+ *   unpruuf-node-mesh.exe --export-list [target folder]   (standalone build, see sea-entry.ts)
  *
  * It asks the setup page on this computer (loopback) with the access token from the data folder,
  * waits while the server is still creating its addresses, and saves the file readable for the
@@ -46,8 +47,8 @@ export function explain(a: ExportAnswer): string | null {
   return `Unerwartete Antwort vom Server (${a.status}).`;
 }
 
-async function main(): Promise<void> {
-  const target = path.resolve(process.argv[3] ?? process.cwd());
+export async function main(targetDir?: string): Promise<void> {
+  const target = path.resolve(targetDir ?? process.cwd());
   const tokenFile = path.join(DATA_DIR, ADMIN_TOKEN_FILE);
   let token: string;
   try { token = fs.readFileSync(tokenFile, "utf8").trim(); }
@@ -77,4 +78,4 @@ async function main(): Promise<void> {
   }
 }
 
-if (require.main === module) void main();
+if (require.main === module) void main(process.argv[3]);
