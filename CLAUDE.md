@@ -2,7 +2,7 @@
 
 **Gedächtnis:** `.claude/memory/MEMORY.md` ist der Index (Gabriel, Team, Arbeitsweise, Stand, Entscheidungen, offene Punkte, Orte). Nach jeder Entscheidung `decisions.md` ergänzen, am Tagesende `project_state.md` und `open_items.md` aktualisieren.
 
-**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-22.md` lesen** (ersetzt die vom 20.10.) (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
+**Neue Sitzung: zuerst `unpruuf/handover/UEBERGABE_2026-10-25.md` lesen** (ersetzt die vom 22.10.) (Stand, offene Entscheidungen, nächste Schritte), dann `unpruuf/handover/LIEFERUNGEN.md`. Quellen von Präsentation, Dokumenten, Seiten und Artefakten liegen in `unpruuf/handover/quellen`.
 
 Diese Datei wird in jeder neuen Sitzung geladen. Sie hält fest, was Gabriel ausdrücklich verlangt hat.
 
