@@ -5,6 +5,12 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑26 · Competitive comparison, scenario after the independent audit (EN and RO)
+
+- `handover/COMPETITIVE_COMPARISON_AFTER_AUDIT_2026-10-26.md` and `_RO.md` (and two artifacts): the same comparison redone on the premise that the independent audit is finished and passed and every statement is backed by proof. Labelled as a scenario, not today's state. Contents: the exact premise (including what stays outside round one: Control, Officer app, Press, Compliance parts, iOS), a table "what we may say, and the proof we hand over" per claim (mapped to `CLAIMS_TO_EVIDENCE.md`, the evidence scripts and the audit report), our position against the messengers and against the reporting channels, an honest note that the audit moves us to parity on the entry requirement and does not make us better than audited competitors, the scope decision that changes the reporting-channel comparison most (Compliance app and Officer app in round one), the conversation per competitor, the wording ladder and the conditions before the page may be used.
+
+---
+
 ## 2026‑10‑26 · Competitive comparison
 
 - `handover/COMPETITIVE_COMPARISON_2026-10-26.md` (and artifact): what unpruuf actually offers today with an honest status per product, what it does not offer, and a comparison with SimpleX, Session, Briar, Cwtch, Threema OnPrem, Wire, Matrix/Element (messengers) and SecureDrop, GlobaLeaks, EQS Integrity Line (reporting channels). Every competitor cell is tagged: checked on the web on 26 October (low to medium source quality), general knowledge not rechecked, or unknown. Includes where we have a case, where we are weaker, trap questions per competitor, allowed wording, and the list of cells to verify first. No CRM data exists, so this is a capability comparison, not a win/loss analysis. English only; Romanian version on request.
