@@ -1,0 +1,84 @@
+# Builds the unpruuf Windows installer (Setup.exe with Node.js included) and a portable ZIP on a real
+# Windows runner. Run it by hand: Actions > "Windows installer" > Run workflow. Result: artifact
+# "unpruuf-windows" on the run page.
+name: Windows installer
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label (default: today as yyyy.MM.dd)"
+        required: false
+        default: ""
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.0"
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+      - name: Build the staged tree (all apps, production dependencies, runtime)
+        shell: pwsh
+        working-directory: unpruuf/windows-installer
+        run: ./build-stage.ps1 -Out "$env:RUNNER_TEMP\unpruuf-build"
+      - name: Smoke test, programs start from the staged tree
+        shell: pwsh
+        run: |
+          $stage = "$env:RUNNER_TEMP\unpruuf-build\stage"
+          $node = "$stage\runtime\node.exe"
+          function Probe($dir, $script, $url) {
+            $p = Start-Process -FilePath $node -ArgumentList $script -WorkingDirectory "$stage\$dir" -PassThru -WindowStyle Hidden
+            $ok = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              Start-Sleep -Seconds 1
+              try { $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3; $ok = $true; break } catch {
+                if ($_.Exception.Response) { $ok = $true; break }   # any HTTP answer (401, 403, 404) = it is listening
+              }
+            }
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            if (-not $ok) { throw "$dir did not answer at $url" }
+            Write-Host "$dir answers at $url"
+          }
+          Probe "control" "dist\index.js" "http://127.0.0.1:8860/"
+          Probe "web-reporter" "serve.js" "http://127.0.0.1:5173/"
+          Probe "license-tool\gui" "server.js" "http://127.0.0.1:4321/"
+      - name: Compile the installer
+        shell: pwsh
+        run: |
+          $v = "${{ github.event.inputs.version }}"
+          if (-not $v) { $v = Get-Date -Format "yyyy.MM.dd" }
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $out = "$env:RUNNER_TEMP\unpruuf-out"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          & $iscc "/DAppVersion=$v" "/DStageDir=$env:RUNNER_TEMP\unpruuf-build\stage" "/DOutDir=$out" "unpruuf/windows-installer/unpruuf.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+          Compress-Archive -Path "$env:RUNNER_TEMP\unpruuf-build\stage\*" -DestinationPath "$out\unpruuf-Windows-portable-$v.zip"
+          Get-ChildItem $out | ForEach-Object { "{0}  {1:N1} MB" -f $_.Name, ($_.Length/1MB) }
+          Get-ChildItem $out -File | ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash + "  " + $_.Name } | Out-File "$out\SHA256.txt" -Encoding ascii
+          "OUT=$out" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding ascii
+      - name: Silent install and uninstall test
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem "$env:OUT\unpruuf-Setup-*.exe" | Select-Object -First 1
+          $dir = "$env:RUNNER_TEMP\inst"
+          Start-Process -FilePath $setup.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$dir" -Wait
+          foreach ($f in "runtime\node.exe","launch-node-server.cmd","launch-control.cmd","node-mesh-server\dist\index.js","officer-app\dist\index.js","control\dist\index.js","control\bundle\node-server.tgz","web-reporter\public\bundle.js","license-tool\gui\server.js","INSTALL_INFO.txt") {
+            if (-not (Test-Path "$dir\$f")) { throw "missing after install: $f" }
+          }
+          & "$dir\runtime\node.exe" -e "require('$($dir -replace '\\','/')/node-mesh-server/node_modules/better-sqlite3')(':memory:')"
+          if ($LASTEXITCODE -ne 0) { throw "installed node server cannot load sqlite" }
+          Write-Host "install ok"
+          $un = Get-ChildItem "$dir\unins*.exe" | Select-Object -First 1
+          Start-Process -FilePath $un.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES" -Wait
+          Write-Host "uninstall ok"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unpruuf-windows
+          path: ${{ env.OUT }}
+          retention-days: 30
