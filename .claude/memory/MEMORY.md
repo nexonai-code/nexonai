@@ -7,5 +7,6 @@ Zuerst lesen: `CLAUDE.md` (feste Regeln), dann diese Datei. Jede Zeile = eine Da
 - [feedback_arbeitsweise.md](feedback_arbeitsweise.md): wie geantwortet und geliefert wird (aus seinen Korrekturen)
 - [project_state.md](project_state.md): Produkte, Stand, Branches, letzte Lieferungen
 - [decisions.md](decisions.md): Entscheidungen mit Datum, neueste oben
+- [ideas.md](ideas.md): Ideenliste mit Status, gepflegt vom Skill `/brainstorm`
 - [open_items.md](open_items.md): offene Entscheidungen und nächste Schritte
 - [reference_orte.md](reference_orte.md): wo was liegt, Build- und Testbefehle, Pipelines
