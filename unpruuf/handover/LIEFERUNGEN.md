@@ -16,6 +16,7 @@ Die ZIP-Dateien hat Gabriel im Chat bekommen. Sie liegen nicht im Repo (zu groß
 | `unpruuf_UAB-Pitch-Kurz_2026-10-22_v12.zip` | `…2026-10-14_v11.zip` | nur PPTX, kein PDF |
 | `unpruuf_Compliance_Kundendeck_2026-10-22_v1.zip` | `safeline`-Deck EN/RO | |
 | `unpruuf_Windows_2026-10-26_v1.zip` | `unpruuf_Control_2026-10-22_v2.zip`, `unpruuf_OfficerApp_2026-10-22_v2.zip` | Alles, was auf Windows läuft, in einem Paket: Node-Server, Officer-App (Compliance + Press), Control mit Server-Bundle (unsigniert), Lizenz-Tool mit GUI, Web-Reporter, Relay, Relaypool-Tool. Mit Audit-Runde R1. Tests auf Linux grün, nicht auf Windows gelaufen. Ohne Schlüssel und ohne `.exe` (auf Windows bauen). |
+| `unpruuf_2026-10-26_v33.zip` (Projekt + alle sieben APKs) | v32 | GRANT_RENEW (automatische Verlängerung von Gast-Grants, Room v16). Gleicher neuer Debug-Schlüssel wie v32 (`431e9992…`): v32 lässt sich überinstallieren, ältere Installationen mit dem alten Testschlüssel nicht. |
 | `unpruuf_2026-10-25_v32.zip` (Projekt + alle sieben APKs im selben ZIP) | v31 und die APKs vom 22.10. | Client-Import, Audit-Runde R1 (13 von 17), Prüfcode für eingefügte Gast-Codes, nur Onion-Adressen. **APKs mit neuem Debug-Schlüssel** (Container-Reset, Testschlüssel nicht mehr in der Umgebung): nicht über bestehende Installationen installierbar. |
 | `unpruuf_2026-10-22_v31.zip` und sieben APKs | v30 und APKs vom 21.10. | mit Temp-Node-Fix |
 
