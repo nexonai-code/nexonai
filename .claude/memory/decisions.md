@@ -3,6 +3,7 @@ name: Entscheidungen
 type: project
 ---
 Neueste oben. Details in `CLAUDE.md` und `unpruuf/handover/`.
+- 2026-10-26: **Produktentwicklung entscheidet allein Gabriel** (Team-Vorbehalt bei F1, Format und Audit-Befunden entfällt; Gabriel entscheidet, Norbert setzt iOS um). GRANT_RENEW gebaut (automatische Verlängerung von Gast-Grants, neuer Nachrichtentyp, Room v16).
 - 2026-10-25: Sicherheitsprüfung 24.10.: Punkte 2 (Rückfrage mit Prüfcode bei eingefügtem Gast-Code) und 3 (nur v3-Onion-Adressen) behoben und gebaut; Punkt 1 (Gast vor Ablauf sperren) wartet auf das Team (Format).
 - 2026-10-24: Memory-Struktur unter `.claude/memory/` angelegt.
 - 2026-10-23: Spamschutz-Konzept als Entwurf; Stufe A (nichts am Wire-Format) zuerst empfohlen, B und C zusammen mit F1 entscheiden. Wartet auf das Team.

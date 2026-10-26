@@ -15,7 +15,7 @@ Schau nach, was es schon gibt, statt aus dem Kopf zu raten: `unpruuf/STATUS.md`,
 2. **Was heute schon da ist** (mit Datei oder Feature).
 3. **Wo ich zweifle**: nummeriert, direkt, höchstens fünf Punkte.
 4. **Bessere Variante**: nur wenn du eine hast, sonst weglassen.
-5. **Kleinster nächster Schritt**: ein bis drei Optionen, Empfehlung zuerst. Was das Team entscheiden muss, getrennt nennen („das Team“, „wir drei“, nie „Gabriel entscheidet“).
+5. **Kleinster nächster Schritt**: ein bis drei Optionen, Empfehlung zuerst. Was Gabriel entscheiden muss, getrennt nennen: Produktentwicklung entscheidet er allein (26.10.2026), nicht „das Team“. Organisation, Strategie und Marketing sind „das Team“ / „wir drei“.
 
 Zuerst genau liefern, was er verlangt hat. Meinung am Ende.
 
