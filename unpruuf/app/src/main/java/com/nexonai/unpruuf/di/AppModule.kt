@@ -47,7 +47,7 @@ object AppModule {
         return when (result) {
             is DbKeyResult.Ready -> Room.databaseBuilder(context, AppDatabase::class.java, DB_NAME)
                 .openHelperFactory(SupportFactory(result.passphrase, SecureDeleteHook))
-                .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12, com.nexonai.unpruuf.data.db.MIGRATION_12_13, com.nexonai.unpruuf.data.db.MIGRATION_13_14, com.nexonai.unpruuf.data.db.MIGRATION_14_15)
+                .addMigrations(com.nexonai.unpruuf.data.db.MIGRATION_10_11, com.nexonai.unpruuf.data.db.MIGRATION_11_12, com.nexonai.unpruuf.data.db.MIGRATION_12_13, com.nexonai.unpruuf.data.db.MIGRATION_13_14, com.nexonai.unpruuf.data.db.MIGRATION_14_15, com.nexonai.unpruuf.data.db.MIGRATION_15_16)
                 .fallbackToDestructiveMigration()
                 .build()
             is DbKeyResult.Lost -> {

@@ -47,7 +47,9 @@ import com.nexonai.unpruuf.data.model.GroupEntity
     // Plain ADD COLUMN with a default (MIGRATION_13_14) — contacts survive.
     // v15: Contact.guestGrants (the Client app's guest grants for this inviter, see GuestClient).
     // One nullable ADD COLUMN (MIGRATION_14_15) — contacts survive.
-    version = 15,
+    // v16: Contact.guestRenewal / guestRenewedAtMs (GRANT_RENEW, Pro side). Two nullable ADD COLUMNs
+    // (MIGRATION_15_16) — contacts survive.
+    version = 16,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -87,6 +89,14 @@ val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
 val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
     override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE contacts ADD COLUMN tempNodeOnPhone INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/** v15 → v16: two nullable columns for the owner's automatic guest renewal, existing contacts are kept. */
+val MIGRATION_15_16 = object : androidx.room.migration.Migration(15, 16) {
+    override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE contacts ADD COLUMN guestRenewal TEXT")
+        db.execSQL("ALTER TABLE contacts ADD COLUMN guestRenewedAtMs INTEGER")
     }
 }
 

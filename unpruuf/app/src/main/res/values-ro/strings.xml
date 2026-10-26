@@ -482,6 +482,12 @@ Această acțiune nu poate fi anulată.</string>
     <string name="guest_confirm_title">Cod lipit: verifică mai întâi</string>
     <string name="guest_confirm_body">Acest cod a fost lipit, nu scanat. Oricine a văzut invitația ta ar fi putut trimite un cod propriu. Roagă-l pe %1$s să citească codul de verificare de sub codul său QR. Trebuie să fie exact acesta:</string>
     <string name="guest_confirm_add">Corespunde, adaugă contactul</string>
+    <string name="chat_cd_guest_access">Acces oaspete</string>
+    <string name="guest_access_title">Acces oaspete</string>
+    <string name="guest_access_renewing">Acest oaspete poate scrie pe serverele tale. Accesul i se reînnoiește automat și este mereu valabil încă %1$d zile, cât timp aplicația rulează. Dacă oprești reînnoirea, accesul expiră singur; mesajele deja trimise rămân.</string>
+    <string name="guest_access_stopped">Reînnoirea este oprită. Oaspetele poate scrie până expiră ultimul acces, apoi nu mai poate. Poate citi în continuare ce îi trimiți.</string>
+    <string name="guest_access_stop">Oprește reînnoirea</string>
+    <string name="guest_access_resume">Reînnoiește din nou</string>
     <string name="qr_client_scan_invitation">Scanează invitația contactului tău Pro</string>
     <string name="qr_client_scan_invitation_body">Aplicația Client gratuită nu are un server propriu. Contactul tău Pro creează o invitație pentru tine; scanează-o aici, apoi arată-i propriul tău cod.</string>
     <string name="guest_status_expiring">Invitația ta expiră în curând. Cere contactului tău una nouă.</string>

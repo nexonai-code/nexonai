@@ -65,6 +65,20 @@ interface ContactDao {
     @Query("UPDATE contacts SET myNodeAddresses = :addresses WHERE id = :id")
     suspend fun updateMyNodeAddresses(id: String, addresses: String)
 
+    /** Guest (Client app): new nodes and grants from a GRANT_RENEW; both node columns hold the inviter's nodes. */
+    @Query("UPDATE contacts SET myNodeAddresses = :nodes, theirNodeAddresses = :nodes, guestGrants = :grants WHERE id = :id")
+    suspend fun updateGuestNodesAndGrants(id: String, nodes: String, grants: String)
+
+    /** Owner (Pro): the renewal promise for a guest (`7:NORMAL`, `!…` = stopped). */
+    @Query("UPDATE contacts SET guestRenewal = :renewal WHERE id = :id")
+    suspend fun updateGuestRenewal(id: String, renewal: String?)
+
+    @Query("UPDATE contacts SET guestRenewedAtMs = :at WHERE id = :id")
+    suspend fun updateGuestRenewedAt(id: String, at: Long)
+
+    @Query("SELECT * FROM contacts WHERE guestRenewal IS NOT NULL")
+    suspend fun getGuestContacts(): List<Contact>
+
     /** Sets or clears (pass null) the manual relay-owner override — see
      *  P2PNetworkManager.switchRelayOwner()/IdentityManager.relayOwnerIsMine(). [owner] is
      *  "mine", "theirs", or null to fall back to the automatic rhythm. */

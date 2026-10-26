@@ -120,6 +120,11 @@ data class Contact(
     // none) — see GuestClient and GUEST_LOCKERS_BUILD_SPEC.md. Null for every other contact.
     // The DB itself is encrypted (see AppModule), same as the temp node owner secret below.
     val guestGrants: String? = null,
+    // Pro app only, guests it invited (GRANT_RENEW, GuestRenewal.kt): what it promised this guest
+    // (`7:NORMAL`, `!7:NORMAL` after "stop renewing") and when it last sent new grants. Null for
+    // every other contact.
+    val guestRenewal: String? = null,
+    val guestRenewedAtMs: Long? = null,
 
     // ─── Temp Node (NODE_MESH_SPEC.md §7, Node-Mesh only) ───────────────────────────────────
     // Exceptional, per-chat, one-off additional own node — e.g. a second device run just for

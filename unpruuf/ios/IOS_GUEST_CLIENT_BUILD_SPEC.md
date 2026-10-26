@@ -37,7 +37,7 @@ The iOS Business client (Node-Mesh) must exist first: pairing code `v,p,k,s,n,e`
 - Remove the grants when the contact is deleted.
 
 ### 3.5 Renewal
-- New control message `GRANT_RENEW` through the existing encrypted channel (same shape as the other control signals in `ControlSignals.swift`). Payload: the new tokens, index-aligned. The owner app sends it before expiry; the Client replaces the stored tokens.
+- New control message `GRANT_RENEW` through the existing encrypted channel (same shape as the other control signals in `ControlSignals.swift`). **Built on Android 26.10.2026, iOS must match byte for byte.** Plain text: `UNPRUUF_GRANTRENEW_V1:` followed by up to 3 entries joined with `;`, each entry `<v3 onion address>,<grant token>` (address without the `unpruuf-node:v1:` prefix). The owner app sends it every quarter of the grant validity (7-day grants: every 42 hours), long before expiry; a lost renewal is covered by the next one. The Client accepts it only from a contact that already holds guest grants, drops every entry whose address is not a v3 onion or whose token does not read as a grant or has run out, and replaces BOTH node lists and the stored tokens with exactly the remaining entries (so a renewal also moves the guest to new nodes). Nothing usable left: ignore. Reference: `GuestRenewal.kt` and `GuestRenewalTest.kt` in the Android app.
 - Client side check on each app start and before each deposit: `needsRenewal` true means show a quiet hint; expired means stop depositing and show "Ask your contact to renew your access". No silent retry loop.
 
 ### 3.6 Client edition rules

@@ -355,6 +355,12 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    /** Pro app, guest contacts: stop or resume the automatic renewal of this guest's access. */
+    fun setGuestRenewing(renewing: Boolean) {
+        val contact = _contact.value ?: return
+        p2pNetworkManager.setGuestRenewing(contact.id, renewing)
+    }
+
     fun renameContact(newName: String) {
         val contact = _contact.value ?: return
         viewModelScope.launch {
