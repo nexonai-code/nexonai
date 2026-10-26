@@ -5,6 +5,12 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑26 · Audit plan for the team
+
+- `handover/AUDIT_PLAN_2026-10-26.md` (and artifact): where we stand after R1/R2, the three decisions the team has to take first (F1 with M6 and L12, M5, M8), five phases with tasks, owners as proposals, effort estimates and done-criteria, a calendar (earliest final report mid-January 2027 if F1 is built first), the risks to a good result and the counter-moves, and the open points for the team.
+
+---
+
 ## 2026‑10‑25 · Hardening of the guest exchange and node addresses
 
 - Only v3 onion names are accepted as node addresses (same ground as pre-audit fix M7 on the audit line; both lines merged, the audit line's version kept): dropped at decoding of a code, when a stored address is parsed, and refused once more before any connection. A code with no valid address is rejected. Header injection through an address is impossible (test).
