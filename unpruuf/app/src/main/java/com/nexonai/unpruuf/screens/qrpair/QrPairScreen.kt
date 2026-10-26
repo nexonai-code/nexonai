@@ -54,6 +54,9 @@ fun QrPairScreen(
     var pendingPayload by remember { mutableStateOf<QrPairingPayload?>(null) }
     var pendingCrossPlatformPayload by remember { mutableStateOf<CrossPlatformPairingPayload?>(null) }
     var pendingNodeMeshPayload by remember { mutableStateOf<NodeMeshPairingPayload?>(null) }
+    // True when pendingNodeMeshPayload came through the paste field rather than the camera.
+    var pendingNodeMeshPasted by remember { mutableStateOf(false) }
+    val guestAnswerToConfirm by viewModel.guestAnswerToConfirm.collectAsState()
     var contactName by remember { mutableStateOf("") }
     // Debug-build-only fallback for testers who can't be scanned in person (see the copy/paste
     // UI below) — the same JSON string the QR encodes, just also offered as text.
@@ -96,6 +99,7 @@ fun QrPairScreen(
                     if (nodeMeshPayload != null) {
                         contactName = ""
                         pendingNodeMeshPayload = nodeMeshPayload
+                        pendingNodeMeshPasted = false
                     } else {
                         viewModel.showUnreadableQrError()
                     }
@@ -488,6 +492,7 @@ fun QrPairScreen(
                                 if (nodeMeshPayload != null) {
                                     contactName = ""
                                     pendingNodeMeshPayload = nodeMeshPayload
+                                    pendingNodeMeshPasted = true
                                     pastedCode = ""
                                 } else {
                                     viewModel.showUnreadableQrError()
@@ -660,7 +665,7 @@ fun QrPairScreen(
                 TextButton(
                     onClick = {
                         if (contactName.isNotBlank()) {
-                            viewModel.handleScannedNodeMeshQr(payload, contactName.trim())
+                            viewModel.handleScannedNodeMeshQr(payload, contactName.trim(), pasted = pendingNodeMeshPasted)
                             pendingNodeMeshPayload = null
                         }
                     },
@@ -693,10 +698,37 @@ fun QrPairScreen(
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(stringResource(R.string.guest_code_body), style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.guest_code_fingerprint, code.fingerprint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearGuestCode() }) { Text(stringResource(R.string.guest_code_done)) }
+            }
+        )
+    }
+
+    guestAnswerToConfirm?.let { answer ->
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { viewModel.cancelGuestAnswer() },
+            title = { Text(stringResource(R.string.guest_confirm_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.guest_confirm_body, answer.displayName), style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(10.dp))
+                    Text(answer.fingerprint, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmGuestAnswer() }) { Text(stringResource(R.string.guest_confirm_add)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelGuestAnswer() }) { Text(stringResource(R.string.qr_cancel)) }
             }
         )
     }

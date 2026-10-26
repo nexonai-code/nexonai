@@ -501,6 +501,10 @@ and wiped when the screen locks</string>
     <string name="guest_code_title">Show this code to %1$s</string>
     <string name="guest_code_body">Your contact scans this code to finish the connection. Nothing is sent before that. Show it only to this person.</string>
     <string name="guest_code_done">Done, hide the code</string>
+    <string name="guest_code_fingerprint">Check code: %1$s. Your contact only needs it if they paste your code instead of scanning it.</string>
+    <string name="guest_confirm_title">Pasted code: check it first</string>
+    <string name="guest_confirm_body">This code was pasted, not scanned. Anyone who saw your invitation could have sent a code of their own. Ask %1$s to read out the check code under their QR code. It must be exactly this:</string>
+    <string name="guest_confirm_add">It matches, add contact</string>
     <string name="qr_client_scan_invitation">Scan the invitation of your Pro contact</string>
     <string name="qr_client_scan_invitation_body">The free Client app has no server of its own. Your Pro contact creates an invitation for you; scan it here, then show your own code in return.</string>
     <string name="guest_status_expiring">Your invitation runs out soon. Ask your contact for a new one.</string>

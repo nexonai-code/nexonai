@@ -64,4 +64,16 @@ object GuestClient {
     /** The latest expiry over all grants (ms), or null if none reads as a grant. */
     fun expiryMs(stored: String?): Long? =
         stored?.split(";")?.mapNotNull { GuestGrant.parse(it)?.notAfterMs }?.maxOrNull()
+    /**
+     * Short check code for a guest's answer (GUEST_LOCKERS_BUILD_SPEC.md §15.1): the guest's
+     * phone shows it under its own code, the inviter compares it before adding a PASTED code.
+     * Whoever photographed the invitation and sent a code of their own cannot produce the same
+     * check code without the guest's keys. A scanned code needs none: the phones were together.
+     */
+    fun fingerprint(messageKeyB64: String, ratchetPublicKeyB64: String, inviteId: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+            .digest("unpruuf-guest-answer|$messageKeyB64|$ratchetPublicKeyB64|$inviteId".toByteArray(Charsets.UTF_8))
+        val hex = digest.take(5).joinToString("") { "%02X".format(it) }
+        return hex.substring(0, 5) + "-" + hex.substring(5)
+    }
 }

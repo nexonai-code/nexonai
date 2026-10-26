@@ -74,7 +74,7 @@ class QrPairViewModel @Inject constructor(
 
     /** Client app: after an invitation is accepted, the guest's own code the inviter has to scan
      *  (GUEST_LOCKERS_BUILD_SPEC.md §4). Shown once; rebuilt from the contact if needed. */
-    data class GuestCode(val json: String, val inviterName: String)
+    data class GuestCode(val json: String, val inviterName: String, val fingerprint: String)
 
     private val _guestCode = MutableStateFlow<GuestCode?>(null)
     val guestCode = _guestCode.asStateFlow()
@@ -419,7 +419,25 @@ class QrPairViewModel @Inject constructor(
         )
     }
 
-    fun handleScannedNodeMeshQr(payload: NodeMeshPairingPayload, displayName: String) {
+    /** Pro app: a guest's answer that was PASTED, waiting for the inviter to compare the check
+     *  code with the one on the guest's phone (GUEST_LOCKERS_BUILD_SPEC.md §15.1). */
+    data class GuestAnswerToConfirm(val payload: NodeMeshPairingPayload, val displayName: String, val fingerprint: String)
+
+    private val _guestAnswerToConfirm = MutableStateFlow<GuestAnswerToConfirm?>(null)
+    val guestAnswerToConfirm = _guestAnswerToConfirm.asStateFlow()
+
+    fun cancelGuestAnswer() { _guestAnswerToConfirm.value = null }
+
+    /** The inviter has compared the check code and it matches: add the guest now. */
+    fun confirmGuestAnswer() {
+        val pending = _guestAnswerToConfirm.value ?: return
+        _guestAnswerToConfirm.value = null
+        handleScannedNodeMeshQr(pending.payload, pending.displayName, pasted = false)
+    }
+
+    /** [pasted] = the code came through the paste field, not the camera: a guest's answer then
+     *  needs the check-code confirmation first, because nobody verified the phones were together. */
+    fun handleScannedNodeMeshQr(payload: NodeMeshPairingPayload, displayName: String, pasted: Boolean = false) {
         viewModelScope.launch {
             if (!AppEdition.canAdd(payload.appEdition)) {
                 _errorState.value = AppEdition.blockReason(context, payload.appEdition)
@@ -433,7 +451,14 @@ class QrPairViewModel @Inject constructor(
             }
             // The guest's own code answering one of our invitations (Client → Pro).
             if (payload.guestInviteId.isNotEmpty() && payload.appEdition == AppEdition.CLIENT) {
-                bindGuestInvitation(payload, displayName)
+                if (pasted) {
+                    _guestAnswerToConfirm.value = GuestAnswerToConfirm(
+                        payload, displayName,
+                        GuestClient.fingerprint(payload.messageKeyBase64, payload.x25519RatchetPublicKeyBase64, payload.guestInviteId)
+                    )
+                } else {
+                    bindGuestInvitation(payload, displayName)
+                }
                 return@launch
             }
             if (payload.nodeAddresses.isEmpty()) {
@@ -553,7 +578,10 @@ class QrPairViewModel @Inject constructor(
         )
         contactDao.insert(contact)
         ratchetSessionManager.createSession(contact)
-        _guestCode.value = GuestCode(guestCodeJson(contact, payload.guestInviteId), displayName)
+        _guestCode.value = GuestCode(
+            guestCodeJson(contact, payload.guestInviteId), displayName,
+            GuestClient.fingerprint(contact.myPairMessageKey ?: "", contact.myPairRatchetPublicKey ?: "", payload.guestInviteId)
+        )
         _successState.value = str(R.string.msg_guest_invite_accepted, displayName)
     }
 
@@ -581,11 +609,6 @@ class QrPairViewModel @Inject constructor(
             _errorState.value = str(R.string.msg_qr_old_version)
             return
         }
-        val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
-        if (existing != null) {
-            _successState.value = str(R.string.msg_contact_exists, displayName)
-            return
-        }
         val invitation = identityManager.guestInvitation(payload.guestInviteId) ?: run {
             _errorState.value = str(R.string.msg_guest_code_unknown)
             return
@@ -595,6 +618,11 @@ class QrPairViewModel @Inject constructor(
         val answeredNodes = payload.nodeAddresses.mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
         if (answeredNodes.isEmpty() || !invitedNodes.containsAll(answeredNodes)) {
             _errorState.value = str(R.string.msg_guest_code_unknown)
+            return
+        }
+        val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
+        if (existing != null) {
+            _successState.value = str(R.string.msg_contact_exists, displayName)
             return
         }
         val mine = invitation.pairing

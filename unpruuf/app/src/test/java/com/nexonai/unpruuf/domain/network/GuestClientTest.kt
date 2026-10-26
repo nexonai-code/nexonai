@@ -78,4 +78,13 @@ class GuestClientTest {
         assertTrue(GuestGrant.parse(a) != null && GuestGrant.parse(b) != null)
         assertTrue(a != b)
     }
+
+    @Test fun `check code is stable, short and changes with every input`() {
+        val a = GuestClient.fingerprint("mk", "rk", "inviteId1")
+        assertEquals(a, GuestClient.fingerprint("mk", "rk", "inviteId1"))
+        assertTrue(a.matches(Regex("^[0-9A-F]{5}-[0-9A-F]{5}$")))
+        assertTrue(a != GuestClient.fingerprint("mk2", "rk", "inviteId1"))
+        assertTrue(a != GuestClient.fingerprint("mk", "rk2", "inviteId1"))
+        assertTrue(a != GuestClient.fingerprint("mk", "rk", "inviteId2"))
+    }
 }

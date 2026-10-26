@@ -478,6 +478,10 @@ Această acțiune nu poate fi anulată.</string>
     <string name="guest_code_title">Arată acest cod lui %1$s</string>
     <string name="guest_code_body">Contactul tău scanează acest cod ca să termine conexiunea. Nimic nu se trimite înainte. Arată-l doar acestei persoane.</string>
     <string name="guest_code_done">Gata, ascunde codul</string>
+    <string name="guest_code_fingerprint">Cod de verificare: %1$s. Contactul tău are nevoie de el doar dacă lipește codul tău în loc să îl scaneze.</string>
+    <string name="guest_confirm_title">Cod lipit: verifică mai întâi</string>
+    <string name="guest_confirm_body">Acest cod a fost lipit, nu scanat. Oricine a văzut invitația ta ar fi putut trimite un cod propriu. Roagă-l pe %1$s să citească codul de verificare de sub codul său QR. Trebuie să fie exact acesta:</string>
+    <string name="guest_confirm_add">Corespunde, adaugă contactul</string>
     <string name="qr_client_scan_invitation">Scanează invitația contactului tău Pro</string>
     <string name="qr_client_scan_invitation_body">Aplicația Client gratuită nu are un server propriu. Contactul tău Pro creează o invitație pentru tine; scanează-o aici, apoi arată-i propriul tău cod.</string>
     <string name="guest_status_expiring">Invitația ta expiră în curând. Cere contactului tău una nouă.</string>

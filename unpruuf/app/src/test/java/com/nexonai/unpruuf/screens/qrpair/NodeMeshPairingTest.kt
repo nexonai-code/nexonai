@@ -96,4 +96,27 @@ class NodeMeshPairingTest {
         assertEquals(payload.nodeAddresses, answered.nodeAddresses)
         assertEquals(emptyList<String>(), answered.guestGrants)
     }
+
+    @Test
+    fun `only v3 onion names survive decoding, a code with none is refused`() {
+        val mixed = payload.copy(nodeAddresses = listOf(
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "evil.example.com",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "abcdefghijklmnop.onion:80",
+            NodeMeshManager.NODE_ADDRESS_PREFIX + "127.0.0.1"
+        ))
+        val parsed = jsonToNodeMeshPayload(nodeMeshPayloadToJson(mixed))!!
+        assertEquals(listOf(NodeMeshManager.NODE_ADDRESS_PREFIX + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.onion"), parsed.nodeAddresses)
+        val none = payload.copy(nodeAddresses = listOf(NodeMeshManager.NODE_ADDRESS_PREFIX + "evil.example.com"))
+        assertEquals(null, jsonToNodeMeshPayload(nodeMeshPayloadToJson(none)))
+    }
+
+    @Test
+    fun `a header injection in an address never reaches the host line`() {
+        val good = payload.nodeAddresses[0].removePrefix(NodeMeshManager.NODE_ADDRESS_PREFIX)
+        val json = nodeMeshPayloadToJson(payload.copy(nodeAddresses = listOf(payload.nodeAddresses[0])))
+            .replace(good, "x.onion\\r\\nX-Evil: 1;" + good)
+        val parsed = jsonToNodeMeshPayload(json)
+        assertEquals(listOf(NodeMeshManager.NODE_ADDRESS_PREFIX + good), parsed?.nodeAddresses)
+    }
 }

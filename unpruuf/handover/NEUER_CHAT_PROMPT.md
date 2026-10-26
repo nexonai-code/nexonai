@@ -2,7 +2,7 @@ Hallo, ich bin Gabriel Hategan, NexonAI Consulting SRL, Alba Iulia. Wir arbeiten
 
 Lies zuerst, in dieser Reihenfolge:
 1. `CLAUDE.md` (meine festen Regeln)
-2. `unpruuf/handover/UEBERGABE_2026-10-22.md` (wo wir stehen, offene Entscheidungen, nächste Schritte; für die Zeit davor `UEBERGABE_2026-10-20.md`)
+2. `unpruuf/handover/UEBERGABE_2026-10-25.md` (wo wir stehen, offene Entscheidungen, nächste Schritte; für die Zeit davor `UEBERGABE_2026-10-22.md`)
 3. `unpruuf/handover/LIEFERUNGEN.md` (was geliefert wurde, Artefakt-Links)
 4. `unpruuf/handover/F1_ENTSCHEIDUNG.md` (offene Team-Entscheidung zum Paketformat)
 Bei Bedarf: `unpruuf/STATUS.md`, `unpruuf/SECURITY_CLAIMS.md`, `unpruuf/evidence/CLAIMS_TO_EVIDENCE.md`, die zwei Audit-Briefs in `unpruuf/evidence/`, `unpruuf/ios/IOS_BUSINESS_BUILD_SPEC.md`.
@@ -13,7 +13,8 @@ Kurz das Wichtigste, falls du es nicht lesen kannst:
 - Kundenmaterial immer auf Englisch und Rumänisch, zuerst „Wie unpruuf funktioniert“ (Briefkasten, ohne Zahlen), danach keine Technik. Für Floretta nur Englisch.
 - Ehrlich bleiben: nicht auditiert, nicht zertifiziert, Press ist Pilot. Nie „unknackbar“, „DSGVO-konform“, „als Erste“, „sicherer als“. Gesetze und Fristen vor jeder Aussage prüfen.
 - Offener Befund F1: die Nachrichtenlänge ist im gespeicherten Paket für den Server-Betreiber lesbar. Nur sagen „für Beobachter des Netzes versteckt“. Ich habe „noch nicht“ gesagt: nichts am Format ändern, bis das Team zugestimmt hat.
-- Schlüssel (Test und Release) liegen nur bei mir, nie im Git. Frag mich zuerst, ob ich das Release-Passwort geändert habe.
+- Schlüssel (Test und Release) liegen nur bei mir, nie im Git, und sind seit dem Container-Reset vom 25.10. nicht mehr in der Umgebung. Frag mich zuerst, ob ich das Release-Passwort geändert habe und ob ich den Testschlüssel hochlade.
+- Das Projekt-ZIP enthält immer alle sieben APKs.
 - Fertige Apps, kein Dummy-Code. Mehrere Dateien als ZIP mit CHANGELOG.md (`unpruuf_<Datum>_v<N>.zip`). Dokumente im Chat nur als Text. Android-Projekt immer komplett für Android Studio. Vor größeren Umbauten an Funktionierendem sagen, wie es werden soll, und auf mein Ja warten.
 
 Heute will ich: [HIER EINTRAGEN]

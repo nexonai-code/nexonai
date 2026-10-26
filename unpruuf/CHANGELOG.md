@@ -11,6 +11,15 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑25 · Hardening of the guest exchange and node addresses
+
+- Only v3 onion names are accepted as node addresses (same ground as pre-audit fix M7 on the audit line; both lines merged, the audit line's version kept): dropped at decoding of a code, when a stored address is parsed, and refused once more before any connection. A code with no valid address is rejected. Header injection through an address is impossible (test).
+- A pasted guest answer (Pro app) now needs a check code: the guest's phone shows it under its own code, the inviter confirms it before the contact is added. Scanned answers are unchanged.
+- Order in the guest binding fixed: unknown invitation is reported before "contact exists".
+- Tests: `NodeMeshAddressTest` (new), `NodeMeshPairingTest` (+2, fixtures now real-length onions), `GuestClientTest` (+1). All flavours compile, Standard and Client unit tests pass.
+- Build environment was reset: Android SDK reinstalled; the signing keys are not in this environment any more (they were never in git).
+---
+
 ## 2026‑10‑25 · Security audit R1 (scanners plus review) and first fix round
 
 - **Audit:** Gitleaks, Semgrep, OSV-Scanner, npm audit and Checkov over the whole code base, plus a review of the hotspots. 17 findings: 0 Critical, 0 High, 6 Medium, 7 Low, 4 Info; no live secret anywhere; 0 dependency advisories outside the licence tool. The register (`.security-audit/`) stays with the owner and is not in git (team rule of 22 Oct); the report is an artifact.
