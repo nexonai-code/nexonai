@@ -5,6 +5,12 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑26 · Audit plan for the team
+
+- `handover/AUDIT_PLAN_2026-10-26.md` (and artifact): where we stand after R1/R2, the three decisions the team has to take first (F1 with M6 and L12, M5, M8), five phases with tasks, owners as proposals, effort estimates and done-criteria, a calendar (earliest final report mid-January 2027 if F1 is built first), the risks to a good result and the counter-moves, and the open points for the team.
+
+---
+
 ## 2026‑10‑25 · Security audit R1 (scanners plus review) and first fix round
 
 - **Audit:** Gitleaks, Semgrep, OSV-Scanner, npm audit and Checkov over the whole code base, plus a review of the hotspots. 17 findings: 0 Critical, 0 High, 6 Medium, 7 Low, 4 Info; no live secret anywhere; 0 dependency advisories outside the licence tool. The register (`.security-audit/`) stays with the owner and is not in git (team rule of 22 Oct); the report is an artifact.
