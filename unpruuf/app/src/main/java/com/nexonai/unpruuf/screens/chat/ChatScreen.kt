@@ -90,6 +90,7 @@ fun ChatScreen(
     var showRevokeDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showTtlDialog by remember { mutableStateOf(false) }
+    var showGuestDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf("") }
     var cameraPermissionDenied by remember { mutableStateOf(false) }
     var fullscreenImage by remember { mutableStateOf<RamMessage?>(null) }
@@ -251,6 +252,32 @@ fun ChatScreen(
         )
     }
 
+    if (showGuestDialog && contact?.guestRenewal != null) {
+        val policy = com.nexonai.unpruuf.domain.network.GuestRenewal.decodePolicy(contact?.guestRenewal)
+        val renewing = policy?.renewing == true
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { showGuestDialog = false },
+            title = { Text(stringResource(R.string.guest_access_title)) },
+            text = {
+                Text(
+                    if (renewing) stringResource(R.string.guest_access_renewing, policy?.validityDays ?: 7)
+                    else stringResource(R.string.guest_access_stopped),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setGuestRenewing(!renewing)
+                    showGuestDialog = false
+                }) { Text(stringResource(if (renewing) R.string.guest_access_stop else R.string.guest_access_resume)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGuestDialog = false }) { Text(stringResource(R.string.chat_cancel)) }
+            }
+        )
+    }
+
     if (showRenameDialog) {
         AlertDialog(
             properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
@@ -400,6 +427,16 @@ fun ChatScreen(
                                 Icon(
                                     Icons.Default.Timer,
                                     contentDescription = stringResource(R.string.chat_cd_ttl),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        // Pro app: a guest I invited. Shows and controls the automatic renewal of its access.
+                        if (contact?.guestRenewal != null) {
+                            IconButton(onClick = { showGuestDialog = true }) {
+                                Icon(
+                                    Icons.Default.Autorenew,
+                                    contentDescription = stringResource(R.string.chat_cd_guest_access),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }

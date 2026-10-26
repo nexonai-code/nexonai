@@ -11,6 +11,16 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑26 · GRANT_RENEW: guests keep their access automatically
+
+- The Pro app renews each guest's grants by itself through the encrypted chat (a quarter of the validity after the last renewal, so a 7-day grant is replaced every 42 hours). The renewal carries address and grant pairs, so it also follows the owner's nodes when they change. The Client accepts it only from its inviter, drops unusable entries, replaces its nodes and grants, and clears the "refused" banner.
+- Pro: icon in a guest's chat with "Stop renewing" / "Renew again" (soft revocation). Invitations store their promise (validity and sending limit); automatic renewal is on by default.
+- Room v16 (`guestRenewal`, `guestRenewedAtMs`, explicit migration 15→16). New message type `UNPRUUF_GRANTRENEW_V1`: iOS must follow (`ios/IOS_GUEST_CLIENT_BUILD_SPEC.md` §3.5).
+- Tests: `GuestRenewalTest` (6 new). All flavours compile; Standard and Client unit tests pass (258 each).
+- Not done: hard revocation on the server, guest list overview, Control, relay-android guest auth, phone test.
+
+---
+
 ## 2026‑10‑25 · Hardening of the guest exchange and node addresses
 
 - Only v3 onion names are accepted as node addresses (same ground as pre-audit fix M7 on the audit line; both lines merged, the audit line's version kept): dropped at decoding of a code, when a stored address is parsed, and refused once more before any connection. A code with no valid address is rejected. Header injection through an address is impossible (test).

@@ -642,7 +642,12 @@ class QrPairViewModel @Inject constructor(
             myNodeAddresses = mine.nodeAddresses.joinToString(";") { NodeMeshManager.buildAddressConnectionString(it) },
             theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
             // The guest writes on these (our own) nodes, so we read them there.
-            theirNodeAddresses = NodeMeshManager.buildNodeConnectionStringList(payload.nodeAddresses)
+            theirNodeAddresses = NodeMeshManager.buildNodeConnectionStringList(payload.nodeAddresses),
+            // Automatic renewal as promised in the invitation; the first grants were issued when
+            // the invitation was made, which is its expiry minus the validity.
+            guestRenewal = invitation.renewal.ifEmpty { null },
+            guestRenewedAtMs = com.nexonai.unpruuf.domain.network.GuestRenewal.decodePolicy(invitation.renewal)
+                ?.let { invitation.expiresAtMs - it.validityDays * 24L * 3600 * 1000 }
         )
         contactDao.insert(contact)
         identityManager.removeGuestInvitation(invitation.id)

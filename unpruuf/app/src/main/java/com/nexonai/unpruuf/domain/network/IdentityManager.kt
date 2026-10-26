@@ -554,7 +554,7 @@ class IdentityManager @Inject constructor(
     // or the invitation expires. Several invitations may be open at once; the guest's code
     // repeats the invitation id so the right one is found.
 
-    data class GuestInvitation(val id: String, val expiresAtMs: Long, val pairing: PendingNodeMeshPairing)
+    data class GuestInvitation(val id: String, val expiresAtMs: Long, val pairing: PendingNodeMeshPairing, val renewal: String = "")
 
     /** Fresh pairing values (never persisted by itself) for [nodes]: used for an invitation (Pro)
      *  and for the guest's own side of one (Client). */
@@ -570,12 +570,13 @@ class IdentityManager @Inject constructor(
         )
     }
 
-    fun createGuestInvitation(nodes: List<String>, expiresAtMs: Long): GuestInvitation {
+    fun createGuestInvitation(nodes: List<String>, expiresAtMs: Long, renewal: String = ""): GuestInvitation {
         val random = java.security.SecureRandom()
         val inv = GuestInvitation(
             id = android.util.Base64.encodeToString(ByteArray(9).also { random.nextBytes(it) }, android.util.Base64.NO_WRAP or android.util.Base64.URL_SAFE),
             expiresAtMs = expiresAtMs,
-            pairing = freshNodeMeshPairing(nodes)
+            pairing = freshNodeMeshPairing(nodes),
+            renewal = renewal
         )
         saveGuestInvitations(loadGuestInvitations(System.currentTimeMillis()) + inv)
         return inv
@@ -598,7 +599,7 @@ class IdentityManager @Inject constructor(
             val expires = o.optLong("x", 0L)
             if (expires <= nowMs) continue
             runCatching { parsePending(o.getJSONObject("p").toString()) }.getOrNull()?.let {
-                out.add(GuestInvitation(o.getString("i"), expires, it))
+                out.add(GuestInvitation(o.getString("i"), expires, it, o.optString("r", "")))
             }
         }
         return out
@@ -609,7 +610,7 @@ class IdentityManager @Inject constructor(
         val array = org.json.JSONArray()
         // At most ten open invitations; the oldest fall away first.
         for (inv in list.takeLast(10)) {
-            array.put(org.json.JSONObject().put("i", inv.id).put("x", inv.expiresAtMs).put("p", org.json.JSONObject(serializePending(inv.pairing))))
+            array.put(org.json.JSONObject().put("i", inv.id).put("x", inv.expiresAtMs).put("r", inv.renewal).put("p", org.json.JSONObject(serializePending(inv.pairing))))
         }
         prefs.edit().putString("guest_invitations", encryptSecret(array.toString().toByteArray(Charsets.UTF_8))).apply()
     }

@@ -505,6 +505,12 @@ and wiped when the screen locks</string>
     <string name="guest_confirm_title">Pasted code: check it first</string>
     <string name="guest_confirm_body">This code was pasted, not scanned. Anyone who saw your invitation could have sent a code of their own. Ask %1$s to read out the check code under their QR code. It must be exactly this:</string>
     <string name="guest_confirm_add">It matches, add contact</string>
+    <string name="chat_cd_guest_access">Guest access</string>
+    <string name="guest_access_title">Guest access</string>
+    <string name="guest_access_renewing">This guest can write on your servers. Their access is renewed automatically and is always valid for %1$d more days, as long as this app runs. If you stop renewing, it runs out on its own; messages they already sent stay.</string>
+    <string name="guest_access_stopped">Renewing is stopped. The guest can write until the last access runs out, then no more. They can still read what you send them.</string>
+    <string name="guest_access_stop">Stop renewing</string>
+    <string name="guest_access_resume">Renew again</string>
     <string name="qr_client_scan_invitation">Scan the invitation of your Pro contact</string>
     <string name="qr_client_scan_invitation_body">The free Client app has no server of its own. Your Pro contact creates an invitation for you; scan it here, then show your own code in return.</string>
     <string name="guest_status_expiring">Your invitation runs out soon. Ask your contact for a new one.</string>

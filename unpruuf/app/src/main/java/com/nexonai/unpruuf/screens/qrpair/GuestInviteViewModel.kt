@@ -78,7 +78,13 @@ class GuestInviteViewModel @Inject constructor(
         val expiresAt = GuestInvite.expiryMs(now, _validityDays.value)
         // Fresh pairing values for this guest only, kept encrypted until the guest's own code is
         // scanned (see IdentityManager.createGuestInvitation): nobody else ever shares them.
-        val invitation = identityManager.createGuestInvitation(chosen, expiresAt)
+        val invitation = identityManager.createGuestInvitation(
+            chosen, expiresAt,
+            // Automatic renewal is on by default (spec §4.4); it can be stopped per guest in the chat.
+            renewal = com.nexonai.unpruuf.domain.network.GuestRenewal.encodePolicy(
+                com.nexonai.unpruuf.domain.network.GuestRenewal.Policy(_validityDays.value, _quota.value, true)
+            )
+        )
         val payload = NodeMeshPairingPayload(
             messageKeyBase64 = invitation.pairing.messageKey,
             x25519RatchetPublicKeyBase64 = invitation.pairing.ratchetPublicKey,

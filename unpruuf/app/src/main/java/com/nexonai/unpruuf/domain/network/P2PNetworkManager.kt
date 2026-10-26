@@ -132,6 +132,7 @@ class P2PNetworkManager @Inject constructor(
         // above already encodes for a different subsystem), short enough that a genuinely
         // closed Temp Node tool doesn't leave messages stuck for long before the fallback kicks
         // in and standard nodes take back over.
+        private const val GUEST_RENEWAL_CHECK_MS = 30 * 60_000L
         private const val TEMP_NODE_HEARTBEAT_INTERVAL_MS = 2 * 60_000L
         private const val TEMP_NODE_HEARTBEAT_FAILURE_THRESHOLD = 3
         // v3 onion service IDs are exactly 56 base32 characters before the ".onion" suffix.
@@ -438,6 +439,7 @@ class P2PNetworkManager @Inject constructor(
         startOfficerIntakeLoop()
         startNodeMeshCoverTraffic()
         startNodePoolRefresh()
+        startGuestRenewal()
         startFeedRefresh()
         startLockedServerCheck()
         startTempNodeHeartbeat()
@@ -589,6 +591,86 @@ class P2PNetworkManager @Inject constructor(
             val added = if (ready == null) 0 else runCatching { nodeMeshManager.importSiblings(nodeMeshClient) }.getOrDefault(0)
             onDone(added)
         }
+    }
+
+    // ─── GRANT_RENEW (GUEST_LOCKERS_BUILD_SPEC.md §4.4, GuestRenewal.kt) ─────────────────────────
+
+    /** Owner (Pro): every half hour, send new grants to each guest whose renewal is due. */
+    private fun startGuestRenewal() {
+        scope.launch {
+            while (isActive) {
+                runCatching { renewDueGuests() }
+                delay(GUEST_RENEWAL_CHECK_MS)
+            }
+        }
+    }
+
+    private suspend fun renewDueGuests() {
+        val now = System.currentTimeMillis()
+        for (c in contactDao.getGuestContacts()) {
+            val policy = GuestRenewal.decodePolicy(c.guestRenewal) ?: continue
+            if (GuestRenewal.due(policy, c.guestRenewedAtMs, now)) sendGrantRenewal(c, policy, now)
+        }
+    }
+
+    /**
+     * Owner: new grants for the nodes this guest polls me at, through the normal encrypted channel.
+     * Never sends over a node that is no longer in my pool (no secret to sign with) and never
+     * reuses an old grant id. The renewed-at time is only stored once the packet is queued.
+     */
+    private suspend fun sendGrantRenewal(contact: com.nexonai.unpruuf.data.model.Contact, policy: GuestRenewal.Policy, now: Long) {
+        if (!contact.nodeMesh) return
+        val contactKey = runCatching {
+            android.util.Base64.decode(contact.publicKey, android.util.Base64.DEFAULT)
+        }.getOrNull()?.takeIf { it.size == 32 } ?: return
+        val pool = nodeMeshManager.getMyNodePool().associate { it.address to it.ownerSecret }
+        val nodes = (myNodesFor(contact) ?: return).filter { it in pool }
+        if (nodes.isEmpty()) return
+        val grants = runCatching {
+            GuestInvite.issueGrants(nodes.map { GuestInvite.OwnNode(it, pool.getValue(it)) }, now, policy.validityDays, policy.quota)
+        }.getOrNull() ?: return
+        val signal = GuestRenewal.encodeSignal(nodes.zip(grants) { a, g -> GuestRenewal.Entry(a, g) }).toByteArray(Charsets.UTF_8)
+        val encrypted = runCatching { cryptoManager.encryptForContact(signal, contactKey) }.getOrNull() ?: return
+        if (encrypted.size > NetworkObfuscation.PACKET_SIZE - 8) return
+        deliveryQueue.add(
+            PendingDelivery(
+                null, contact.id, NetworkObfuscation.padPacket(encrypted), contact.publicKey,
+                nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                nodeMeshNodes = nodes
+            )
+        )
+        contactDao.updateGuestRenewedAt(contact.id, now)
+        wakeSignal.trySend(Unit)
+        flushQueue()
+    }
+
+    /** Owner: "stop renewing" / "renew again" for one guest. Stopping lets the grants run out. */
+    fun setGuestRenewing(contactId: String, renewing: Boolean) {
+        scope.launch {
+            val c = contactDao.getContactById(contactId) ?: return@launch
+            val policy = GuestRenewal.decodePolicy(c.guestRenewal) ?: return@launch
+            contactDao.updateGuestRenewal(contactId, GuestRenewal.encodePolicy(policy.copy(renewing = renewing)))
+            if (renewing) {
+                // Renewing again starts right away instead of waiting for the next quarter.
+                contactDao.updateGuestRenewedAt(contactId, 0L)
+                runCatching { renewDueGuests() }
+            }
+        }
+    }
+
+    /**
+     * Guest (Client app): the inviter sent new grants. Only a contact that already holds guest
+     * grants accepts one, only from that contact (the channel is keyed per contact), and only
+     * onion addresses with grants that read as unexpired. The contact's nodes become exactly the
+     * renewed ones, so a renewal also follows the inviter's nodes when they changed.
+     */
+    private suspend fun applyGrantRenewal(senderId: String, plaintext: String) {
+        val contact = contactDao.getContactById(senderId) ?: return
+        if (!contact.nodeMesh || contact.guestGrants.isNullOrEmpty()) return
+        val entries = GuestRenewal.parseSignal(plaintext, System.currentTimeMillis()) ?: return
+        val nodes = entries.joinToString(";") { NodeMeshManager.buildAddressConnectionString(it.address) }
+        contactDao.updateGuestNodesAndGrants(senderId, nodes, GuestGrant.encodeList(entries.map { it.token }))
+        setGuestIssue(senderId, null)
     }
 
     // Picks up nodes a server owner added later (more NODE_MESH_NODES) without a new scan.
@@ -1547,6 +1629,11 @@ class P2PNetworkManager @Inject constructor(
                     .map { NodeMeshManager.buildAddressConnectionString(it) }
                 contactDao.updateTheirNodeAddresses(senderId, NodeMeshManager.buildNodeConnectionStringList(updated))
             }
+            return true
+        }
+
+        if (plaintextStr != null && plaintextStr.startsWith(GuestRenewal.SIGNAL_PREFIX)) {
+            applyGrantRenewal(senderId, plaintextStr)
             return true
         }
 
