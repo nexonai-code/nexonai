@@ -47,7 +47,17 @@ jobs:
           }
           Probe "control" "dist\index.js" "http://127.0.0.1:8860/"
           Probe "web-reporter" "serve.js" "http://127.0.0.1:5173/"
-          Probe "license-tool\gui" "server.js" "http://127.0.0.1:4321/"
+          # The licence GUI refuses to start without a key pair (by design). Use a throw-away pair for
+          # this test only and delete everything it creates, so no key can ever end up in the installer.
+          try {
+            Push-Location "$stage\license-tool"; & $node keygen.js | Out-Null; Pop-Location
+            Probe "license-tool\gui" "server.js" "http://127.0.0.1:4321/"
+          } finally {
+            Remove-Item -Force -ErrorAction SilentlyContinue "$stage\license-tool\private-key.json"
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$stage\license-tool\gui\data"
+          }
+          $leak = Get-ChildItem -Recurse -Force $stage -Include private-key.json,customers.json,*.jks -ErrorAction SilentlyContinue
+          if ($leak) { throw "secret file in the staged tree: $($leak.FullName -join ', ')" }
       - name: Compile the installer
         shell: pwsh
         run: |
