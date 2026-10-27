@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexonGraph</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='10' r='5' fill='%23307098'/%3E%3Ccircle cx='23' cy='9' r='4' fill='%2390c8e8'/%3E%3Ccircle cx='17' cy='24' r='6' fill='%230f2a3a'/%3E%3Cpath d='M9 10L23 9M9 10L17 24M23 9L17 24' stroke='%23307098' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+@font-face{font-family:"DejaVu Sans Mono";src:url(/static/DejaVuMono-subset.woff2) format("woff2")}
+:root{--primary:#307098;--navy:#0f2a3a;--tint:#e3eef6;--sky:#90c8e8;--soft:rgba(48,112,152,.10);--warm:#a8500f;--warm-t:#f8e7d6;
+--surface:#f7f9fa;--low:#f2f4f6;--mid:#eaedef;--high:#e3e8eb;--white:#fff;--ink:#172733;--var:#505b63;--line:#d9dfe3;--ok:#2f8f6b;
+--sans:"Open Sans","Segoe UI",Arial,sans-serif;--mono:"DejaVu Sans Mono",ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:14px/1.5 var(--sans);color:var(--ink);background:var(--surface);display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--primary)}
+header{height:68px;flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:0 22px;background:rgba(247,249,250,.95);border-bottom:1px solid var(--high);position:relative;z-index:5}
+.logo{position:relative;width:132px;aspect-ratio:1485/600;overflow:hidden;flex-shrink:0}
+.logo img{position:absolute;width:119.46%;left:-10.1%;top:-30%;mix-blend-mode:multiply}
+.appname{font-weight:800;font-size:18px;color:var(--navy);letter-spacing:-.02em}
+.appname small{font:10px var(--mono);color:var(--var);margin-left:8px;letter-spacing:0;font-weight:400}
+.hspace{flex:1}
+.hbtn{border:0;background:transparent;color:var(--var);padding:8px 12px;border-radius:9px;cursor:pointer;font-weight:600;font-size:13px}
+.hbtn:hover{background:var(--mid);color:var(--ink)}
+.lang{display:inline-flex;background:var(--mid);border-radius:8px;padding:3px;gap:2px}
+.lang button{border:0;background:transparent;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;color:var(--var)}
+.lang button.on{background:var(--primary);color:#fff}
+.strip{flex:0 0 auto;background:var(--high);border-bottom:1px solid var(--line);padding:8px 22px;font:11px var(--mono);color:var(--var);display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.strip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:7px;vertical-align:1px}
+.strip.warn{background:var(--warm-t);color:var(--warm)}.strip.warn .dot{background:var(--warm)}
+.layout{flex:1;display:flex;min-height:0}
+.side{width:320px;flex:0 0 auto;background:var(--low);border-right:1px solid var(--line);overflow:auto;padding:18px}
+.content{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+.chip{display:inline-flex;align-items:center;gap:6px;font:11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--primary);background:var(--mid);border-radius:4px;padding:3px 9px}
+.btn{border:0;background:var(--primary);color:#fff;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.5;cursor:default}
+.btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.sec:hover{background:var(--tint)}
+.btn.ghost{background:transparent;color:var(--var);padding:8px 10px}
+.btn.danger{background:#fff;color:var(--warm);border:1px solid var(--warm-t)}
+.btn.small{padding:6px 10px;font-size:12px;border-radius:8px}
+.inp{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:#fff;outline:none}
+.inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--soft)}
+select.inp{padding:0 8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}
+.proj{cursor:pointer;margin-top:10px;transition:border-color .15s,box-shadow .15s}
+.proj:hover{border-color:var(--sky)}
+.proj.on{border-color:var(--primary);box-shadow:0 0 0 3px var(--soft)}
+.proj b{display:block;color:var(--navy);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj .path{font:10px var(--mono);color:var(--var);word-break:break-all;margin:2px 0 8px}
+.proj .meta{font:10px var(--mono);color:var(--var)}
+.proj .missing{color:var(--warm)}
+.addbox{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lbl{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--var);cursor:pointer}
+.lbl input{accent-color:var(--primary);width:16px;height:16px}
+.phead{padding:18px 22px 0;background:#fff;border-bottom:1px solid var(--line)}
+.phead h1{margin:6px 0 2px;font-size:24px;letter-spacing:-.02em;color:var(--navy)}
+.phead .path{font:11px var(--mono);color:var(--var);word-break:break-all}
+.phead .stats{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0 12px;font:11px var(--mono);color:var(--var)}
+.phead .stats b{color:var(--ink);font:600 14px var(--sans);margin-right:4px}
+.tabs{display:flex;gap:4px}
+.tabs button{border:0;background:transparent;padding:10px 14px;font-weight:600;color:var(--var);border-bottom:3px solid transparent;cursor:pointer}
+.tabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
+.pane{flex:1;min-height:0;overflow:auto;display:none}
+.pane.on{display:block}
+#pane-graph.on{display:flex}
+#pane-graph iframe{flex:1;border:0;width:100%;height:100%}
+.pad{padding:24px 28px;max-width:1100px}
+.md h1{font-size:26px;color:var(--navy);margin:0 0 6px}.md h2{font-size:19px;color:var(--navy);margin:26px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+.md table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px;background:#fff}.md th,.md td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+.md th{font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--var);background:var(--low)}
+.md code{font:12px var(--mono);background:var(--mid);padding:1px 5px;border-radius:4px}
+.md pre{background:var(--navy);color:#e8f0f6;padding:12px 14px;border-radius:12px;overflow:auto}.md pre code{background:none;color:inherit}
+.md li{margin:3px 0}
+.welcome{padding:48px 40px;max-width:980px}
+.welcome h1{font-size:clamp(30px,3.6vw,46px);line-height:1.1;letter-spacing:-.04em;color:var(--navy);margin:14px 0 14px}
+.welcome p.lead{font-size:17px;color:var(--var);max-width:720px;margin:0 0 26px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:10px}
+.steps .card h3{margin:10px 0 6px;font-size:16px;color:var(--navy)}.steps .card p{margin:0;color:var(--var);font-size:13px}
+.num{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
+.qbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.qbar .inp{flex:1;min-width:260px}
+.res .item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer}
+.res .item:hover{border-color:var(--primary)}
+.res .item b{color:var(--navy)}.res .item .k{font:10px var(--mono);color:var(--primary);text-transform:uppercase;margin-left:6px}
+.res .item .f{font:11px var(--mono);color:var(--var)}.res .item .i{font-size:12px;color:var(--var);margin-top:3px}
+.answer{background:#fff;border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:12px;padding:14px 16px;white-space:pre-wrap;margin-bottom:14px}
+pre.ctx{background:var(--low);border:1px solid var(--line);border-radius:12px;padding:12px;font:11px/1.5 var(--mono);white-space:pre-wrap;max-height:420px;overflow:auto}
+.pathline{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;line-height:2}
+.pathline .n{background:var(--tint);border-radius:6px;padding:2px 8px;font-weight:600;color:var(--navy);cursor:pointer}
+.pathline .r{font:11px var(--mono);color:var(--var);margin:0 4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--var)}
+.hint{font-size:12px;color:var(--var)}
+.warnbox{background:var(--warm-t);color:var(--warm);border-radius:12px;padding:10px 14px;font-size:13px;margin:10px 0}
+.okbox{background:var(--tint);color:#1f5578;border-radius:12px;padding:10px 14px;font-size:13px;margin:10px 0;white-space:pre-wrap}
+.overlay{position:fixed;inset:0;background:rgba(15,42,58,.35);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.overlay.on{display:flex}
+.dialog{background:#fff;border-radius:18px;width:min(640px,100%);max-height:90vh;overflow:auto;padding:24px;box-shadow:0 30px 80px rgba(15,42,58,.35)}
+.dialog.wide{width:min(860px,100%)}
+.dialog h2{margin:8px 0 14px;color:var(--navy)}
+.bar{height:10px;background:var(--mid);border-radius:99px;overflow:hidden;margin:14px 0}
+.bar i{display:block;height:100%;width:0;background:var(--primary);transition:width .3s}
+.log{background:var(--low);border-radius:10px;padding:10px;font:11px/1.6 var(--mono);height:180px;overflow:auto;color:var(--var);white-space:pre-wrap}
+.empty{color:var(--var);font-size:13px;padding:10px 2px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;display:none;z-index:60;max-width:90vw}
+@media(max-width:860px){.side{width:100%;border-right:0}.layout{flex-direction:column;overflow:auto}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><img src="/static/nexonai-logo.webp" alt="NexonAI"></div>
+  <div class="appname">NexonGraph<small>v__VERSION__</small></div>
+  <div class="hspace"></div>
+  <button class="hbtn" id="bSettings" data-t="settings"></button>
+  <button class="hbtn" id="bAssist" data-t="assist"></button>
+  <div class="lang"><button data-l="de">DE</button><button data-l="en">EN</button></div>
+  <button class="hbtn" id="bQuit" data-t="quit"></button>
+</header>
+<div class="strip" id="strip"></div>
+<div class="layout">
+  <aside class="side">
+    <span class="chip" data-t="projects"></span>
+    <div class="addbox">
+      <button class="btn" id="bPick"><span>＋</span><span data-t="addFolder"></span></button>
+      <div class="row"><input class="inp" id="iPath" data-ph="pathPh" style="flex:1"><button class="btn sec" id="bPath" data-t="build"></button></div>
+      <label class="lbl"><input type="checkbox" id="cSem"> <span data-t="semantic"></span></label>
+      <div class="hint" id="semHint"></div>
+    </div>
+    <div id="plist"></div>
+  </aside>
+  <section class="content" id="content"></section>
+</div>
+
+<div class="overlay" id="ovBuild"><div class="dialog">
+  <span class="chip" data-t="building"></span>
+  <h2 id="bTitle"></h2>
+  <div id="bMsg" class="hint"></div>
+  <div class="bar"><i id="bBar"></i></div>
+  <div class="log" id="bLog"></div>
+  <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn sec" id="bCancel" data-t="cancel"></button><button class="btn" id="bClose" data-t="close" style="display:none"></button></div>
+</div></div>
+
+<div class="overlay" id="ovSettings"><div class="dialog wide">
+  <span class="chip" data-t="settings"></span>
+  <h2 data-t="modelTitle"></h2>
+  <div class="hint" data-t="modelHint"></div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="field"><label data-t="provider"></label><select class="inp" id="sProv"></select></div>
+    <div class="field"><label data-t="model"></label><input class="inp" id="sModel"></div>
+    <div class="field"><label data-t="apikey"></label><input class="inp" id="sKey" type="password" autocomplete="off"></div>
+    <div class="field"><label data-t="baseurl"></label><input class="inp" id="sBase"></div>
+  </div>
+  <div id="sWarn"></div>
+  <div class="row"><button class="btn sec" id="sTest" data-t="test"></button><span id="sTestRes" class="hint"></span></div>
+  <h2 data-t="general" style="margin-top:22px"></h2>
+  <div class="grid2">
+    <div class="field"><label data-t="outMode"></label><select class="inp" id="sOut"><option value="project"></option><option value="appdata"></option></select></div>
+    <div class="field"><label data-t="semDefault"></label><select class="inp" id="sSem"><option value="0"></option><option value="1"></option></select></div>
+  </div>
+  <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sec" id="sCancel" data-t="cancel"></button><button class="btn" id="sSave" data-t="save"></button></div>
+</div></div>
+
+<div class="overlay" id="ovAssist"><div class="dialog">
+  <span class="chip" data-t="assist"></span>
+  <h2 data-t="assistTitle"></h2>
+  <p class="hint" data-t="assistText"></p>
+  <div id="aRes"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn danger" id="aRemove" data-t="remove"></button><button class="btn sec" id="aClose" data-t="close"></button><button class="btn" id="aGo" data-t="connect"></button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const I18N = {
+de:{settings:"Einstellungen",assist:"KI-Assistenten verbinden",quit:"Beenden",projects:"Projekte",addFolder:"Ordner auswählen und bauen",pathPh:"oder Pfad einfügen, z. B. C:\\Projekte\\Kunde",
+ build:"Bauen",semantic:"Dokumente zusätzlich mit dem Modell auswerten",semOff:"Kein Modell eingestellt: nur lokale Analyse (Einstellungen).",
+ semLocal:"Lokales Modell: die Texte bleiben auf diesem Rechner.",semOnline:"Achtung: Online-Modell. Dokumenttexte werden an {p} gesendet.",
+ building:"Graph wird gebaut",cancel:"Abbrechen",close:"Schließen",noProjects:"Noch keine Projekte. Wähle oben einen Ordner.",
+ nodes:"Knoten",edges:"Verbindungen",files:"Dateien",areas:"Bereiche",built:"gebaut",missing:"Ordner oder Graph fehlt",
+ tGraph:"Graph",tReport:"Bericht",tAsk:"Fragen",rebuild:"Neu bauen",openFolder:"Ordner öffnen",openHtml:"graph.html öffnen",watch:"Automatisch aktualisieren",remove:"Entfernen",
+ qPh:"Frage oder Suchbegriff, z. B. „Wo wird die Lizenz geprüft?“",search:"Suchen",ask:"Fragen (Modell)",sub:"Teilgraph als Text",
+ pathTitle:"Weg zwischen zwei Dingen",from:"Von",to:"Nach",find:"Weg finden",noResults:"Keine Treffer.",steps:"Schritte",nopath:"Kein Weg gefunden.",
+ noModel:"Kein Modell eingestellt. Hier ist der passende Teilgraph, den du z. B. in Claude einfügen kannst:",sources:"Quellen",
+ modelTitle:"Sprachmodell (optional)",modelHint:"Ohne Modell arbeitet NexonGraph komplett lokal: Code wird deterministisch analysiert, Dokumente nach Überschriften und gemeinsamen Begriffen verknüpft. Mit Modell kommen Begriffe und Beziehungen aus den Dokumenten dazu, und du kannst Fragen in Sätzen beantworten lassen.",
+ provider:"Anbieter",model:"Modell",apikey:"API-Schlüssel",baseurl:"Server-Adresse",test:"Verbindung testen",general:"Allgemein",
+ outMode:"Ergebnisse speichern",outProject:"im Projektordner (nexongraph-out)",outAppdata:"in meinem Benutzerprofil (Projektordner bleibt unberührt)",
+ semDefault:"Semantischer Durchlauf standardmäßig",no:"aus",yes:"an",save:"Speichern",saved:"Gespeichert.",
+ onlineWarn:"Online-Anbieter: Beim semantischen Durchlauf und bei Fragen gehen Textauszüge an {p}. Für vertrauliche Unterlagen ein lokales Modell (Ollama, LM Studio) wählen.",
+ assistTitle:"Claude Code, Claude Desktop und Cursor verbinden",assistText:"Trägt NexonGraph als Skill in Claude Code und als MCP-Server in Claude Desktop und Cursor ein. Danach können die Assistenten den Graphen direkt abfragen, statt Dateien zu durchsuchen. Bestehende Einstellungen werden vorher gesichert.",
+ connect:"Verbinden",localStrip:"Lokal: Code und Dokumente verlassen diesen Rechner nicht",onlineStrip:"Online-Modell aktiv ({p}): Textauszüge gehen beim Fragen und beim semantischen Durchlauf an den Anbieter",
+ welcomeChip:"Willkommen",welcomeH:"Dein Projekt als Wissensgraph.",welcomeP:"NexonGraph liest einen Ordner mit Code, Markdown, PDF, Word und HTML und baut daraus einen Graphen: wer ruft wen auf, was hängt woran, welches Dokument beschreibt welchen Teil. Statt Dateien zu durchsuchen, fragst du den Graphen.",
+ s1:"Ordner wählen",s1p:"Links „Ordner auswählen“. Projekte, Kundenakten, Dokumentation: alles, was Text enthält.",s2:"Graph ansehen",s2p:"Bereiche, zentrale Knoten, überraschende Verbindungen. Klick auf einen Knoten zeigt alle Beziehungen.",
+ s3:"Fragen stellen",s3p:"Suchen, Wege zwischen zwei Dingen finden oder, mit Modell, Fragen in Sätzen beantworten lassen.",s4:"KI anbinden",s4p:"Claude & Cursor fragen den Graphen direkt per MCP, das spart Zeit und Tokens.",
+ quitQ:"NexonGraph beenden?",bye:"NexonGraph wurde beendet. Du kannst dieses Fenster schließen.",confirmRemove:"Projekt aus der Liste entfernen? Die Dateien bleiben erhalten.",
+ parser:"Parser",tsOn:"tree-sitter (über 20 Sprachen)",tsOff:"Regex-Fallback (tree-sitter nicht installiert)",working:"läuft …",done:"Fertig",reused:"aus dem Cache",errorsN:"Fehler",
+ explainT:"Details"},
+en:{settings:"Settings",assist:"Connect AI assistants",quit:"Quit",projects:"Projects",addFolder:"Choose a folder and build",pathPh:"or paste a path, e.g. C:\\Projects\\Client",
+ build:"Build",semantic:"Also analyse documents with the model",semOff:"No model set: local analysis only (Settings).",
+ semLocal:"Local model: texts stay on this computer.",semOnline:"Note: online model. Document texts are sent to {p}.",
+ building:"Building graph",cancel:"Cancel",close:"Close",noProjects:"No projects yet. Choose a folder above.",
+ nodes:"nodes",edges:"edges",files:"files",areas:"areas",built:"built",missing:"folder or graph missing",
+ tGraph:"Graph",tReport:"Report",tAsk:"Ask",rebuild:"Rebuild",openFolder:"Open folder",openHtml:"Open graph.html",watch:"Update automatically",remove:"Remove",
+ qPh:"Question or search term, e.g. “Where is the licence checked?”",search:"Search",ask:"Ask (model)",sub:"Subgraph as text",
+ pathTitle:"Path between two things",from:"From",to:"To",find:"Find path",noResults:"No results.",steps:"steps",nopath:"No path found.",
+ noModel:"No model set. Here is the matching subgraph, which you can paste into Claude, for example:",sources:"Sources",
+ modelTitle:"Language model (optional)",modelHint:"Without a model NexonGraph runs fully local: code is analysed deterministically, documents are linked by headings and shared terms. With a model you also get concepts and relations from documents, and answers to questions in sentences.",
+ provider:"Provider",model:"Model",apikey:"API key",baseurl:"Server address",test:"Test connection",general:"General",
+ outMode:"Store results",outProject:"in the project folder (nexongraph-out)",outAppdata:"in my user profile (project folder untouched)",
+ semDefault:"Semantic pass by default",no:"off",yes:"on",save:"Save",saved:"Saved.",
+ onlineWarn:"Online provider: the semantic pass and questions send text excerpts to {p}. For confidential material choose a local model (Ollama, LM Studio).",
+ assistTitle:"Connect Claude Code, Claude Desktop and Cursor",assistText:"Registers NexonGraph as a skill in Claude Code and as an MCP server in Claude Desktop and Cursor. The assistants can then query the graph instead of searching files. Existing settings are backed up first.",
+ connect:"Connect",localStrip:"Local: code and documents do not leave this computer",onlineStrip:"Online model active ({p}): text excerpts go to the provider when asking and in the semantic pass",
+ welcomeChip:"Welcome",welcomeH:"Your project as a knowledge graph.",welcomeP:"NexonGraph reads a folder with code, Markdown, PDF, Word and HTML and builds a graph: what calls what, what depends on what, which document describes which part. Instead of searching files, you ask the graph.",
+ s1:"Choose a folder",s1p:"“Choose a folder” on the left. Projects, client files, documentation: anything with text.",s2:"Explore the graph",s2p:"Areas, central nodes, surprising links. Click a node to see all its relations.",
+ s3:"Ask questions",s3p:"Search, find paths between two things or, with a model, get answers in sentences.",s4:"Connect AI",s4p:"Claude & Cursor query the graph directly via MCP, which saves time and tokens.",
+ quitQ:"Quit NexonGraph?",bye:"NexonGraph has stopped. You can close this window.",confirmRemove:"Remove the project from the list? Files are kept.",
+ parser:"Parser",tsOn:"tree-sitter (20+ languages)",tsOff:"regex fallback (tree-sitter not installed)",working:"running …",done:"Done",reused:"from cache",errorsN:"errors",
+ explainT:"Details"}};
+let LANG = "de", STATE = null, CUR = null, TAB = "graph", POLL = null;
+const T = (k, p) => { let s = (I18N[LANG]||I18N.de)[k] ?? k; if(p) for(const [a,b] of Object.entries(p)) s = s.replace("{"+a+"}", b); return s; };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function api(path, body){
+  const opt = {headers:{"X-NG-Token":TOKEN}};
+  if(body !== undefined){ opt.method="POST"; opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(body); }
+  const r = await fetch(path, opt); const j = await r.json().catch(()=>({error:"HTTP "+r.status}));
+  if(!r.ok && !j.error) j.error = "HTTP "+r.status; return j;
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",3500); }
+function provLabel(){ const p = STATE?.config?.llm?.provider || "none"; return (STATE?.providers?.[p]?.label) || p; }
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = T(el.dataset.t));
+  document.querySelectorAll("[data-ph]").forEach(el => el.placeholder = T(el.dataset.ph));
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("on", b.dataset.l===LANG));
+  const so = $("sOut").options; so[0].textContent=T("outProject"); so[1].textContent=T("outAppdata");
+  const ss = $("sSem").options; ss[0].textContent=T("no"); ss[1].textContent=T("yes");
+  renderStrip(); renderProjects(); renderContent();
+}
+function renderStrip(){
+  if(!STATE) return; const s = $("strip"); const local = STATE.local;
+  s.className = "strip" + (local ? "" : " warn");
+  s.innerHTML = `<span><span class="dot"></span>${esc(local ? T("localStrip") : T("onlineStrip",{p:provLabel()}))}</span><span>${T("parser")}: ${esc(STATE.treesitter?T("tsOn"):T("tsOff"))}</span>`;
+  const has = (STATE.config.llm.provider||"none") !== "none";
+  $("cSem").disabled = !has; if(!has) $("cSem").checked = false;
+  $("semHint").textContent = !has ? T("semOff") : (local ? T("semLocal") : T("semOnline",{p:provLabel()}));
+  $("semHint").style.color = (!has||local) ? "" : "var(--warm)";
+}
+function renderProjects(){
+  const el = $("plist"); if(!STATE) return;
+  if(!STATE.projects.length){ el.innerHTML = `<div class="empty">${T("noProjects")}</div>`; return; }
+  el.innerHTML = STATE.projects.map(p => `<div class="card proj ${CUR===p.root?"on":""}" data-r="${esc(p.root)}">
+    <b>${esc(p.name)}</b><div class="path">${esc(p.root)}</div>
+    <div class="meta">${p.exists ? `${p.nodes} ${T("nodes")} · ${p.edges} ${T("edges")} · ${T("built")} ${esc((p.built||"").replace("T"," ").slice(0,16))}` : `<span class="missing">${T("missing")}</span>`}${p.watching?" · ⟳":""}</div></div>`).join("");
+  el.querySelectorAll(".proj").forEach(c => c.onclick = () => { CUR = c.dataset.r; TAB = "graph"; renderProjects(); renderContent(); });
+}
+function curProject(){ return STATE?.projects.find(p => p.root===CUR); }
+function renderContent(){
+  const el = $("content"); const p = curProject();
+  if(!p){
+    el.innerHTML = `<div class="welcome"><span class="chip">${T("welcomeChip")}</span><h1>${T("welcomeH")}</h1><p class="lead">${T("welcomeP")}</p>
+      <div class="steps">${[["1","s1"],["2","s2"],["3","s3"],["4","s4"]].map(([n,k])=>`<div class="card"><div class="num">${n}</div><h3>${T(k)}</h3><p>${T(k+"p")}</p></div>`).join("")}</div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="phead"><span class="chip">${T("projects")}</span><h1>${esc(p.name)}</h1><div class="path">${esc(p.root)}</div>
+    <div class="stats"><span><b>${p.nodes??"–"}</b>${T("nodes")}</span><span><b>${p.edges??"–"}</b>${T("edges")}</span><span><b>${p.files??"–"}</b>${T("files")}</span><span><b>${p.communities??"–"}</b>${T("areas")}</span><span>${T("built")} ${esc((p.built||"").replace("T"," "))}${p.semantic?" · "+esc(p.semantic):""}</span></div>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn small" id="pRebuild">⟳ ${T("rebuild")}</button>
+      <button class="btn sec small" id="pFolder">${T("openFolder")}</button>
+      <button class="btn sec small" id="pHtml">${T("openHtml")}</button>
+      <label class="lbl"><input type="checkbox" id="pWatch" ${p.watching?"checked":""}> ${T("watch")}</label>
+      <span class="hspace"></span><button class="btn ghost small" id="pRemove">${T("remove")}</button></div>
+    <div class="tabs"><button data-tab="graph">${T("tGraph")}</button><button data-tab="report">${T("tReport")}</button><button data-tab="ask">${T("tAsk")}</button></div></div>
+    <div class="pane" id="pane-graph"></div><div class="pane" id="pane-report"><div class="pad md" id="report"></div></div>
+    <div class="pane" id="pane-ask"><div class="pad">
+      <div class="qbar"><input class="inp" id="qText" placeholder="${esc(T("qPh"))}"><button class="btn" id="qSearch">${T("search")}</button><button class="btn sec" id="qAsk">${T("ask")}</button><button class="btn ghost" id="qSub">${T("sub")}</button></div>
+      <div id="qOut" class="res"></div>
+      <h3 style="color:var(--navy);margin:26px 0 8px">${T("pathTitle")}</h3>
+      <div class="qbar"><input class="inp" id="pA" placeholder="${T("from")}"><input class="inp" id="pB" placeholder="${T("to")}"><button class="btn sec" id="pGo">${T("find")}</button></div>
+      <div id="pOut"></div></div></div>`;
+  $("pRebuild").onclick = () => startBuild(p.root);
+  $("pFolder").onclick = () => api("/api/open",{root:p.root, what:"folder"});
+  $("pHtml").onclick = () => api("/api/open",{root:p.root, what:"html"});
+  $("pRemove").onclick = async () => { if(confirm(T("confirmRemove"))){ await api("/api/forget",{root:p.root}); CUR=null; await refresh(); } };
+  $("pWatch").onchange = async e => { await api("/api/watch",{root:p.root,on:e.target.checked}); await refresh(); };
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  $("qText").onkeydown = e => { if(e.key==="Enter") doSearch(); };
+  $("qSearch").onclick = doSearch; $("qAsk").onclick = doAsk; $("qSub").onclick = doSub; $("pGo").onclick = doPath;
+  [$("pA"),$("pB")].forEach(i => i.onkeydown = e => { if(e.key==="Enter") doPath(); });
+  showTab(TAB);
+}
+function showTab(t){
+  TAB = t; const p = curProject(); if(!p) return;
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab===t));
+  document.querySelectorAll(".pane").forEach(x => x.classList.toggle("on", x.id==="pane-"+t));
+  if(t==="graph" && p.exists){
+    const pg = $("pane-graph"); const src = `/viewer?t=${encodeURIComponent(TOKEN)}&root=${encodeURIComponent(p.root)}&v=${encodeURIComponent(p.built||"")}`;
+    if(!pg.querySelector("iframe") || pg.dataset.src!==src){ pg.dataset.src=src; pg.innerHTML = `<iframe src="${src}" title="Graph"></iframe>`; }
+  }
+  if(t==="report" && p.exists){ api("/api/report?root="+encodeURIComponent(p.root)).then(j => $("report").innerHTML = j.markdown ? md(j.markdown) : esc(j.error)); }
+}
+function focusNode(id){ showTab("graph"); const f = $("pane-graph").querySelector("iframe"); const send = () => f.contentWindow.postMessage({ng:"focus", id}, "*"); setTimeout(send, 300); }
+async function doSearch(){
+  const text = $("qText").value.trim(); if(!text) return; const out = $("qOut"); out.innerHTML = `<div class="hint">${T("working")}</div>`;
+  const j = await api("/api/search",{root:CUR,text});
+  if(j.error){ out.innerHTML = `<div class="warnbox">${esc(j.error)}</div>`; return; }
+  out.innerHTML = j.results.length ? j.results.map(r => `<div class="item" data-id="${esc(r.id)}"><b>${esc(r.label)}</b><span class="k">${esc(r.kind)}</span><div class="f">${esc(r.file)}${r.line?":"+r.line:""}</div>${r.info?`<div class="i">${esc(String(r.info).slice(0,220))}</div>`:""}</div>`).join("") : `<div class="empty">${T("noResults")}</div>`;
+  out.querySelectorAll(".item").forEach(i => i.onclick = () => focusNode(i.dataset.id));
+}
+async function doAsk(){
+  const text = $("qText").value.trim(); if(!text) return; const out = $("qOut"); out.innerHTML = `<div class="hint">${T("working")}</div>`;
+  const j = await api("/api/ask",{root:CUR,text});
+  if(j.error){ out.innerHTML = `<div class="warnbox">${esc(j.error)}</div>`; return; }
+  if(j.answer){ out.innerHTML = `<div class="answer">${esc(j.answer)}</div><div class="hint">${T("sources")}: ${esc((j.sources||[]).filter(Boolean).join(" · "))}</div>`; }
+  else out.innerHTML = `<div class="okbox">${T("noModel")}</div><pre class="ctx">${esc(j.context)}</pre>`;
+}
+async function doSub(){
+  const text = $("qText").value.trim(); if(!text) return; const j = await api("/api/query",{root:CUR,text});
+  $("qOut").innerHTML = `<pre class="ctx">${esc(j.text || j.error)}</pre>`;
+}
+async function doPath(){
+  const a = $("pA").value.trim(), b = $("pB").value.trim(); if(!a||!b) return; const out = $("pOut");
+  const j = await api("/api/path",{root:CUR,a,b});
+  if(j.error){ out.innerHTML = `<div class="warnbox">${esc(j.error)}</div>`; return; }
+  if(!j.path.length){ out.innerHTML = `<div class="warnbox">${T("nopath")}</div>`; return; }
+  let h = `<div class="pathline"><b>${j.steps.length} ${T("steps")}:</b> <span class="n" data-id="${esc(j.path[0])}">${esc(j.labels[j.path[0]])}</span>`;
+  j.steps.forEach(s => { h += `<span class="r">${s.dir==="->" ? "—"+esc(s.relation)+"→" : "←"+esc(s.relation)+"—"}</span><span class="n" data-id="${esc(s.b)}">${esc(j.labels[s.b])}</span>`; });
+  out.innerHTML = h + "</div>"; out.querySelectorAll(".n").forEach(n => n.onclick = () => focusNode(n.dataset.id));
+}
+function md(src){
+  const lines = src.split("\n"); let out = "", i = 0, inList = false;
+  const inline = s => esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>");
+  const closeList = () => { if(inList){ out += "</ul>"; inList=false; } };
+  while(i < lines.length){
+    const l = lines[i];
+    if(l.startsWith("```")){ closeList(); let code=[]; i++; while(i<lines.length && !lines[i].startsWith("```")){ code.push(lines[i]); i++; } out += `<pre><code>${esc(code.join("\n"))}</code></pre>`; i++; continue; }
+    if(/^\|/.test(l)){ closeList(); const rows=[]; while(i<lines.length && /^\|/.test(lines[i])){ rows.push(lines[i]); i++; }
+      const cells = r => r.replace(/^\||\|$/g,"").split(/(?<!\\)\|/).map(c=>c.trim().replace(/\\\|/g,"|"));
+      const body = rows.filter(r=>!(/^\|[\s\-|:]+\|$/.test(r) && r.includes("-")));
+      out += "<table>" + body.map((r,k)=>"<tr>"+cells(r).map(c=>k===0?`<th>${inline(c)}</th>`:`<td>${inline(c)}</td>`).join("")+"</tr>").join("") + "</table>"; continue; }
+    let m;
+    if((m = /^(#{1,3})\s+(.*)/.exec(l))){ closeList(); out += `<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`; i++; continue; }
+    if((m = /^\s*[-*]\s+(.*)/.exec(l))){ if(!inList){ out += "<ul>"; inList=true; } out += `<li>${inline(m[1])}</li>`; i++; continue; }
+    closeList(); if(l.trim()) out += `<p>${inline(l)}</p>`; i++;
+  }
+  closeList(); return out;
+}
+// build
+async function startBuild(root){
+  const j = await api("/api/build",{root, semantic:$("cSem").checked});
+  if(j.error){ toast(j.error); return; }
+  openBuild(root);
+}
+function openBuild(root){
+  $("ovBuild").classList.add("on"); $("bTitle").textContent = root; $("bClose").style.display="none"; $("bCancel").style.display="";
+  clearInterval(POLL); POLL = setInterval(pollJob, 500); pollJob();
+}
+async function pollJob(){
+  const j = await api("/api/job"); if(!j) return;
+  $("bMsg").textContent = j.msg || ""; $("bBar").style.width = Math.round((j.frac||0)*100)+"%";
+  const lg = $("bLog"); lg.textContent = (j.log||[]).join("\n"); lg.scrollTop = lg.scrollHeight;
+  if(!j.running){ clearInterval(POLL); POLL=null; $("bCancel").style.display="none"; $("bClose").style.display="";
+    if(j.result){ const r=j.result; $("bMsg").textContent = `${T("done")}: ${r.nodes} ${T("nodes")}, ${r.edges} ${T("edges")}, ${r.communities} ${T("areas")} · ${r.files} ${T("files")} (${r.reused} ${T("reused")}) · ${r.seconds}s${r.errors?` · ${r.errors} ${T("errorsN")}`:""}`;
+      CUR = j.root; await refresh(); TAB="graph"; renderContent(); setTimeout(()=>$("ovBuild").classList.remove("on"), 900); }
+    else if(j.error){ $("bMsg").innerHTML = `<span style="color:var(--warm)">${esc(j.error)}</span>`; } }
+}
+$("bCancel").onclick = () => api("/api/cancel",{});
+$("bClose").onclick = () => $("ovBuild").classList.remove("on");
+$("bPick").onclick = async () => { const j = await api("/api/pick",{}); if(j.path){ $("iPath").value = j.path; startBuild(j.path); } };
+$("bPath").onclick = () => { const v = $("iPath").value.trim().replace(/^"|"$/g,""); if(v) startBuild(v); };
+$("iPath").onkeydown = e => { if(e.key==="Enter") $("bPath").click(); };
+// settings
+function fillSettings(){
+  const c = STATE.config, sel = $("sProv");
+  sel.innerHTML = Object.entries(STATE.providers).map(([k,v]) => `<option value="${k}">${esc(v.label)}</option>`).join("");
+  sel.value = c.llm.provider || "none"; $("sModel").value = c.llm.model || ""; $("sKey").value = c.llm.api_key || ""; $("sBase").value = c.llm.base_url || "";
+  $("sOut").value = c.out_mode || "project"; $("sSem").value = c.semantic ? "1" : "0"; $("sTestRes").textContent = ""; provChanged(false);
+}
+function provChanged(reset){
+  const p = $("sProv").value, d = STATE.providers[p] || {};
+  $("sModel").placeholder = d.model || ""; $("sBase").placeholder = d.base_url || "";
+  if(reset){ $("sModel").value = ""; $("sBase").value = ""; }
+  const none = p==="none"; ["sModel","sKey","sBase","sTest"].forEach(id => $(id).disabled = none);
+  $("sKey").disabled = none || !!d.local && p!=="local";
+  $("sWarn").innerHTML = (!none && !d.local) ? `<div class="warnbox">${esc(T("onlineWarn",{p:d.label}))}</div>` : "";
+}
+$("sProv").onchange = () => provChanged(true);
+$("bSettings").onclick = () => { fillSettings(); $("ovSettings").classList.add("on"); };
+$("sCancel").onclick = () => $("ovSettings").classList.remove("on");
+async function saveSettings(){
+  const body = {out_mode:$("sOut").value, semantic:$("sSem").value==="1", lang:LANG, llm:{provider:$("sProv").value, model:$("sModel").value, base_url:$("sBase").value, api_key:$("sKey").value}};
+  const j = await api("/api/settings", body); await refresh(); return j;
+}
+$("sSave").onclick = async () => { await saveSettings(); $("ovSettings").classList.remove("on"); toast(T("saved")); };
+$("sTest").onclick = async () => { $("sTestRes").textContent = T("working"); await saveSettings(); const j = await api("/api/test-llm",{}); $("sTestRes").textContent = j.ok ? "✓ " + j.answer : "✗ " + j.error; $("sTestRes").style.color = j.ok ? "var(--ok)" : "var(--warm)"; };
+// assistants
+$("bAssist").onclick = () => { $("aRes").innerHTML=""; $("ovAssist").classList.add("on"); };
+$("aClose").onclick = () => $("ovAssist").classList.remove("on");
+$("aGo").onclick = async () => { const j = await api("/api/integrate",{}); $("aRes").innerHTML = `<div class="okbox">${esc((j.messages||[j.error]).join("\n"))}</div>`; };
+$("aRemove").onclick = async () => { const j = await api("/api/integrate",{remove:true}); $("aRes").innerHTML = `<div class="okbox">${esc((j.messages||[j.error]).join("\n"))}</div>`; };
+$("bQuit").onclick = async () => { if(confirm(T("quitQ"))){ await api("/api/quit",{}); document.body.innerHTML = `<div class="welcome"><h1>${T("bye")}</h1></div>`; } };
+document.querySelectorAll(".lang button").forEach(b => b.onclick = async () => { LANG = b.dataset.l; await api("/api/settings",{lang:LANG}); applyLang();
+  const f = document.querySelector("#pane-graph iframe"); if(f) f.contentWindow.postMessage({ng:"lang", lang:LANG}, "*"); });
+async function refresh(){
+  STATE = await api("/api/state"); if(STATE.error){ document.body.innerHTML = `<div class="welcome"><h1>${esc(STATE.error)}</h1></div>`; return; }
+  LANG = STATE.config.lang || LANG;
+  $("cSem").checked = $("cSem").checked || !!STATE.config.semantic;
+  if(CUR && !STATE.projects.some(p=>p.root===CUR)) CUR = null;
+  if(!CUR && STATE.projects.length) CUR = STATE.projects[0].root;
+  if(STATE.job && STATE.job.running && !POLL) openBuild(STATE.job.root);
+  renderStrip(); renderProjects();
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = T(el.dataset.t));
+}
+refresh().then(applyLang);
+</script>
+</body>
+</html>

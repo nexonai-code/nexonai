@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexonGraph</title>
+<style>
+:root{--primary:#307098;--navy:#0f2a3a;--tint:#e3eef6;--sky:#90c8e8;--warm:#a8500f;--warm-t:#f8e7d6;--surface:#f7f9fa;--low:#f2f4f6;--mid:#eaedef;--high:#e3e8eb;--white:#fff;
+--ink:#172733;--var:#505b63;--line:#d9dfe3;--sans:"Open Sans","Segoe UI",Arial,sans-serif;--mono:"DejaVu Sans Mono","DejaVu Mono",ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:13px/1.45 var(--sans);color:var(--ink);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+header{height:58px;flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:0 16px;background:rgba(247,249,250,.95);border-bottom:1px solid var(--high)}
+.logo{position:relative;width:118px;aspect-ratio:1485/600;overflow:hidden;flex-shrink:0}
+.logo img{position:absolute;width:119.46%;left:-10.1%;top:-30%;mix-blend-mode:multiply}
+.brand{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.brand b{font-size:15px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand span{font:10px var(--mono);color:var(--var);white-space:nowrap}
+.search{position:relative;flex:1;max-width:460px;margin-left:auto}
+.search input{width:100%;height:36px;border:1px solid var(--line);border-radius:10px;padding:0 12px 0 34px;background:#fff;outline:none}
+.search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(48,112,152,.12)}
+.search svg{position:absolute;left:11px;top:10px;width:16px;height:16px;stroke:var(--var);fill:none;stroke-width:2}
+.results{position:absolute;top:40px;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(23,39,51,.12);max-height:60vh;overflow:auto;display:none;z-index:20}
+.results div{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--low)}.results div:hover,.results div.on{background:var(--tint)}
+.results small{display:block;color:var(--var);font:10px var(--mono)}
+.lang{display:inline-flex;background:var(--mid);border-radius:8px;padding:3px;gap:2px}
+.lang button{border:0;background:transparent;padding:5px 9px;border-radius:6px;cursor:pointer;font-weight:600;font-size:11px;color:var(--var)}
+.lang button.on{background:var(--primary);color:#fff}
+main{flex:1;display:flex;min-height:0;position:relative}
+aside{width:270px;flex:0 0 auto;background:var(--low);border-right:1px solid var(--line);overflow:auto;padding:14px}
+aside.right{border-right:0;border-left:1px solid var(--line);width:340px;background:#fff;display:none}
+aside.right.open{display:block}
+.chip{display:inline-block;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--primary);background:var(--mid);border-radius:4px;padding:3px 8px;margin:6px 0 8px}
+.box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+label.chk{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;user-select:none}
+label.chk input{accent-color:var(--primary)}
+.sw{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.legend{max-height:300px;overflow:auto}
+.legend div{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;cursor:pointer}
+.legend div:hover{background:var(--tint)}.legend div.off{opacity:.35}
+.legend span.n{margin-left:auto;font:10px var(--mono);color:var(--var)}
+.legend span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{border:0;background:var(--primary);color:#fff;border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}
+.btn.sec{background:var(--mid);color:var(--ink)}
+.inp{width:100%;height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;margin-bottom:6px;background:#fff}
+#cv{flex:1;min-width:0;display:block;cursor:grab;background:var(--surface)}
+#cv.drag{cursor:grabbing}
+.tip{position:absolute;pointer-events:none;background:var(--navy);color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;max-width:340px;display:none;z-index:30}
+.tip small{display:block;color:var(--sky);font:10px var(--mono)}
+.det h2{font-size:18px;line-height:1.25;margin:2px 0 6px;color:var(--navy);word-break:break-word}
+.det .meta{font:11px var(--mono);color:var(--var);margin-bottom:10px;word-break:break-all}
+.det .info{background:var(--low);border-radius:10px;padding:10px;margin-bottom:12px;white-space:pre-wrap;max-height:220px;overflow:auto}
+.det h3{font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--primary);margin:14px 0 6px}
+.det ul{list-style:none;margin:0;padding:0}
+.det li{padding:5px 6px;border-radius:8px;cursor:pointer;display:flex;gap:6px;align-items:baseline}
+.det li:hover{background:var(--tint)}
+.det li .r{font:10px var(--mono);color:var(--var);flex:0 0 auto}
+.det li .c{font:9px var(--mono);border-radius:4px;padding:0 4px;flex:0 0 auto}
+.c-E{background:var(--tint);color:#1f5578}.c-I{background:var(--mid);color:var(--var)}.c-A{background:var(--warm-t);color:var(--warm)}
+.close{float:right;border:0;background:var(--mid);border-radius:8px;width:28px;height:28px;cursor:pointer}
+.stat{font:10px var(--mono);color:var(--var)}
+.pathres{font-size:12px;margin-top:6px;word-break:break-word}
+.pathres b{color:var(--primary)}
+.zoom{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px}
+aside.right.open ~ .zoom{right:354px}
+.zoom button{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:16px}
+.foot{position:absolute;left:284px;bottom:10px;font:10px var(--mono);color:var(--var);pointer-events:none}
+body.embedded header{display:none}
+body.embedded .foot{left:284px}
+@media(max-width:900px){aside{display:none}aside.right.open{position:absolute;right:0;top:0;bottom:0;z-index:15;width:min(340px,100%)}.foot{left:12px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><img src="__LOGO__" alt="NexonAI"></div>
+  <div class="brand"><b id="pname">NexonGraph</b><span id="pstat"></span></div>
+  <div class="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" autocomplete="off" placeholder="">
+    <div class="results" id="res"></div>
+  </div>
+  <div class="lang"><button data-l="de">DE</button><button data-l="en">EN</button></div>
+</header>
+<main>
+  <aside id="left">
+    <div class="chip" data-t="filter"></div>
+    <div class="box" id="kinds"></div>
+    <div class="box">
+      <label class="chk"><input type="checkbox" id="fE" checked> <span class="c c-E" style="font:9px var(--mono);padding:0 4px;border-radius:4px">EXTRACTED</span></label>
+      <label class="chk"><input type="checkbox" id="fI" checked> <span class="c c-I" style="font:9px var(--mono);padding:0 4px;border-radius:4px">INFERRED</span></label>
+      <label class="chk"><input type="checkbox" id="fA" checked> <span class="c c-A" style="font:9px var(--mono);padding:0 4px;border-radius:4px">AMBIGUOUS</span></label>
+      <label class="chk"><input type="checkbox" id="fS"> <span data-t="structural"></span></label>
+      <label class="chk"><input type="checkbox" id="fL" checked> <span data-t="labels"></span></label>
+    </div>
+    <div class="chip" data-t="path"></div>
+    <div class="box">
+      <input class="inp" id="pa" list="names" data-ph="from">
+      <input class="inp" id="pb" list="names" data-ph="to">
+      <button class="btn" id="pgo" data-t="find"></button> <button class="btn sec" id="pclr" data-t="clear"></button>
+      <div class="pathres" id="pres"></div>
+      <datalist id="names"></datalist>
+    </div>
+    <div class="chip" data-t="areas"></div>
+    <div class="box legend" id="legend"></div>
+  </aside>
+  <canvas id="cv"></canvas>
+  <div class="tip" id="tip"></div>
+  <aside class="right" id="right"><button class="close" id="xclose">×</button><div class="det" id="det"></div></aside>
+  <div class="zoom"><button id="zin" title="+">+</button><button id="zout" title="−">−</button><button id="zfit" title="Fit">⤢</button></div>
+  <div class="foot" id="foot"></div>
+</main>
+<script>
+const DATA = /*__DATA__*/null;
+const I18N = {
+ de:{filter:"Filter",structural:"Strukturkanten (enthält)",labels:"Beschriftungen",path:"Weg finden",from:"Von …",to:"Nach …",find:"Suchen",clear:"Löschen",
+   areas:"Bereiche",search:"Suchen: Klasse, Funktion, Dokument, Begriff …",nodes:"Knoten",edges:"Verbindungen",out:"Ausgehend",in:"Eingehend",
+   nopath:"Kein Weg gefunden.",notfound:"Nicht gefunden:",steps:"Schritte",source:"Quelle",area:"Bereich",degree:"Grad",
+   hint:"Mausrad: zoomen · Ziehen: verschieben · Klick: Details · Doppelklick: hinzoomen",
+   kind:{file:"Code-Dateien",class:"Klassen",interface:"Schnittstellen",function:"Funktionen",method:"Methoden",doc:"Dokumente",section:"Abschnitte",concept:"Begriffe",note:"Hinweise im Code",external:"Externe Pakete"}},
+ en:{filter:"Filter",structural:"Structural edges (contains)",labels:"Labels",path:"Find a path",from:"From …",to:"To …",find:"Find",clear:"Clear",
+   areas:"Areas",search:"Search: class, function, document, term …",nodes:"nodes",edges:"edges",out:"Outgoing",in:"Incoming",
+   nopath:"No path found.",notfound:"Not found:",steps:"steps",source:"Source",area:"Area",degree:"Degree",
+   hint:"Wheel: zoom · Drag: pan · Click: details · Double click: zoom in",
+   kind:{file:"Code files",class:"Classes",interface:"Interfaces",function:"Functions",method:"Methods",doc:"Documents",section:"Sections",concept:"Terms",note:"Notes in code",external:"External packages"}}
+};
+let LANG = (DATA && DATA.meta && DATA.meta.lang) || "de";
+try{ LANG = localStorage.getItem("ng-lang") || LANG }catch(e){}
+const T = k => (I18N[LANG]||I18N.de)[k] ?? k;
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+const N = DATA ? DATA.nodes : [], E = DATA ? DATA.edges : [];
+const PAL = DATA ? DATA.palette : ["#307098"];
+const colorOf = n => n.c >= 0 ? PAL[n.c % PAL.length] : "#9aa3a9";
+const STRUCT = new Set(["contains","method"]);
+N.forEach((n,i)=>{ n.i_ = i; n.r = Math.min(26, 3 + Math.sqrt(n.g||0)*1.7) * (n.k==="section"||n.k==="note"?0.75:1) * (n.k==="external"?0.7:1); n.out=[]; n.inn=[]; });
+E.forEach((e,j)=>{ N[e[0]].out.push(j); N[e[1]].inn.push(j); });
+const kindsPresent = {}; N.forEach(n => kindsPresent[n.k]=(kindsPresent[n.k]||0)+1);
+const hiddenKinds = new Set(["external"]);
+if((kindsPresent.section||0) > 600) hiddenKinds.add("section");
+const hiddenComm = new Set();
+let view = {x:0,y:0,s:1}, sel = null, hover = null, pathSet = null, pathEdges = null, focusSet = null;
+
+function visibleNode(n){ return !hiddenKinds.has(n.k) && !hiddenComm.has(n.c); }
+function visibleEdge(e){
+  const c = e[3]; if((c==="E"&&!fE.checked)||(c==="I"&&!fI.checked)||(c==="A"&&!fA.checked)) return false;
+  if(STRUCT.has(e[2]) && !fS.checked && !(sel && (e[0]===sel.i_||e[1]===sel.i_))) return false;
+  return visibleNode(N[e[0]]) && visibleNode(N[e[1]]);
+}
+function resize(){ const r = cv.getBoundingClientRect(); const dpr = window.devicePixelRatio||1; cv.width = r.width*dpr; cv.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); draw(); }
+function fit(nodes){
+  nodes = (nodes||N).filter(visibleNode); if(!nodes.length) return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; nodes.forEach(n=>{x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x);y1=Math.max(y1,n.y)});
+  const r = cv.getBoundingClientRect(); const w = Math.max(60,x1-x0), h = Math.max(60,y1-y0);
+  view.s = Math.min(4, 0.9*Math.min(r.width/w, r.height/h)); view.x = r.width/2 - (x0+w/2)*view.s; view.y = r.height/2 - (y0+h/2)*view.s; draw();
+}
+const sx = x => x*view.s+view.x, sy = y => y*view.s+view.y;
+function draw(){
+  const r = cv.getBoundingClientRect(); ctx.clearRect(0,0,r.width,r.height);
+  const nb = new Set(); if(sel){ nb.add(sel.i_); sel.out.forEach(j=>nb.add(E[j][1])); sel.inn.forEach(j=>nb.add(E[j][0])); }
+  const dimOthers = !!(sel || pathSet || focusSet);
+  const active = i => pathSet ? pathSet.has(i) : sel ? nb.has(i) : focusSet ? focusSet.has(i) : true;
+  // edges
+  ctx.lineWidth = Math.max(0.4, Math.min(1.4, view.s*0.8));
+  const groups = {};
+  for(let j=0;j<E.length;j++){
+    const e = E[j]; if(!visibleEdge(e)) continue;
+    const a = N[e[0]], b = N[e[1]];
+    const x1=sx(a.x),y1=sy(a.y),x2=sx(b.x),y2=sy(b.y);
+    if((x1<-50&&x2<-50)||(y1<-50&&y2<-50)||(x1>r.width+50&&x2>r.width+50)||(y1>r.height+50&&y2>r.height+50)) continue;
+    let key;
+    if(pathEdges && pathEdges.has(j)) key = "path";
+    else if(sel && (e[0]===sel.i_||e[1]===sel.i_)) key = "sel";
+    else if(dimOthers) key = "dim";
+    else key = e[3]==="A" ? "amb" : "n";
+    (groups[key] = groups[key] || []).push(x1,y1,x2,y2);
+  }
+  const styles = {n:"rgba(80,91,99,.16)", amb:"rgba(168,80,15,.35)", dim:"rgba(80,91,99,.05)", sel:"rgba(48,112,152,.75)", path:"#a8500f"};
+  for(const k of ["dim","n","amb","sel","path"]){ const g = groups[k]; if(!g) continue; ctx.strokeStyle = styles[k]; if(k==="path") ctx.lineWidth=3; ctx.beginPath(); for(let i=0;i<g.length;i+=4){ctx.moveTo(g[i],g[i+1]);ctx.lineTo(g[i+2],g[i+3]);} ctx.stroke(); }
+  // nodes
+  const labelMin = view.s > 1.6 ? 0 : view.s > .8 ? 6 : view.s > .4 ? 11 : 16;
+  const toLabel = [];
+  for(const n of N){
+    if(!visibleNode(n)) continue;
+    const x = sx(n.x), y = sy(n.y), rr = Math.max(1.6, n.r*Math.min(1.6, Math.max(.45,view.s)));
+    if(x<-30||y<-30||x>r.width+30||y>r.height+30) continue;
+    const on = active(n.i_);
+    ctx.globalAlpha = on ? 1 : .12;
+    ctx.fillStyle = colorOf(n);
+    ctx.beginPath();
+    if(n.k==="doc"||n.k==="section"){ ctx.rect(x-rr,y-rr,rr*2,rr*2); }
+    else if(n.k==="concept"){ ctx.moveTo(x,y-rr*1.2); ctx.lineTo(x+rr*1.2,y); ctx.lineTo(x,y+rr*1.2); ctx.lineTo(x-rr*1.2,y); ctx.closePath(); }
+    else if(n.k==="note"){ ctx.moveTo(x,y-rr*1.2); ctx.lineTo(x+rr*1.1,y+rr*.9); ctx.lineTo(x-rr*1.1,y+rr*.9); ctx.closePath(); }
+    else ctx.arc(x,y,rr,0,Math.PI*2);
+    ctx.fill();
+    if(n.k==="file"||n.k==="doc"){ ctx.lineWidth=1.5; ctx.strokeStyle="#fff"; ctx.stroke(); }
+    if(sel===n || hover===n){ ctx.lineWidth=3; ctx.strokeStyle="#0f2a3a"; ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    if(fL.checked && on && (n.r >= labelMin || sel===n || (sel && nb.has(n.i_)) || (pathSet && pathSet.has(n.i_)))) toLabel.push([n,x,y,rr]);
+  }
+  ctx.font = "600 11px Open Sans, Segoe UI, Arial"; ctx.textBaseline = "middle";
+  const placed = [];
+  toLabel.sort((a,b)=>b[0].r-a[0].r);
+  for(const [n,x,y,rr] of toLabel.slice(0, 700)){
+    const t = n.l.length>42 ? n.l.slice(0,40)+"…" : n.l; const w = ctx.measureText(t).width;
+    const bx = x+rr+4, by = y-8;
+    if(placed.some(p => bx < p[0]+p[2] && bx+w > p[0] && by < p[1]+16 && by+16 > p[1]) && sel!==n) continue;
+    placed.push([bx,by,w]);
+    ctx.fillStyle = "rgba(247,249,250,.85)"; ctx.fillRect(bx-2,by,w+4,16);
+    ctx.fillStyle = "#172733"; ctx.fillText(t,bx,y);
+  }
+}
+// interaction
+let drag = null, moved = false;
+cv.addEventListener("mousedown", ev => { drag = {x:ev.clientX, y:ev.clientY, vx:view.x, vy:view.y}; moved=false; cv.classList.add("drag"); });
+window.addEventListener("mouseup", ev => { cv.classList.remove("drag"); if(drag && !moved){ const n = pick(ev); select(n); } drag=null; });
+window.addEventListener("mousemove", ev => {
+  if(drag){ const dx=ev.clientX-drag.x, dy=ev.clientY-drag.y; if(Math.abs(dx)+Math.abs(dy)>3) moved=true; view.x=drag.vx+dx; view.y=drag.vy+dy; draw(); return; }
+  if(ev.target!==cv){ tip.style.display="none"; return; }
+  const n = pick(ev); if(n!==hover){ hover=n; draw(); }
+  if(n){ const r = cv.parentElement.getBoundingClientRect(); tip.style.display="block"; tip.style.left=(ev.clientX-r.left+14)+"px"; tip.style.top=(ev.clientY-r.top+14)+"px";
+    tip.innerHTML = esc(n.l)+`<small>${esc(T("kind")[n.k]||n.k)}${n.f?" · "+esc(n.f)+(n.n?":"+n.n:""):""}</small>`; }
+  else tip.style.display="none";
+});
+cv.addEventListener("dblclick", ev => { const n = pick(ev); if(n){ zoomTo(n, 2.2); } });
+cv.addEventListener("wheel", ev => { ev.preventDefault(); const r = cv.getBoundingClientRect(); const mx=ev.clientX-r.left, my=ev.clientY-r.top; const f = Math.exp(-ev.deltaY*0.0015); const ns=Math.min(12,Math.max(0.02,view.s*f)); view.x = mx-(mx-view.x)*ns/view.s; view.y = my-(my-view.y)*ns/view.s; view.s=ns; draw(); }, {passive:false});
+function pick(ev){ const r = cv.getBoundingClientRect(); const mx=ev.clientX-r.left, my=ev.clientY-r.top; let best=null, bd=1e9;
+  for(const n of N){ if(!visibleNode(n)) continue; const dx=sx(n.x)-mx, dy=sy(n.y)-my, d=dx*dx+dy*dy; const rr=Math.max(5,n.r*Math.min(1.6,Math.max(.45,view.s)))+3; if(d<rr*rr && d<bd){bd=d;best=n;} } return best; }
+function zoomTo(n, s){ const r = cv.getBoundingClientRect(); view.s = Math.max(view.s, s||1.5); view.x = r.width/2 - n.x*view.s; view.y = r.height/2 - n.y*view.s; draw(); }
+const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function select(n){
+  sel = n; const R = document.getElementById("right");
+  if(!n){ R.classList.remove("open"); draw(); setTimeout(resize,0); return; }
+  if(hiddenKinds.has(n.k)){ hiddenKinds.delete(n.k); renderKinds(); }
+  const lst = (arr, dir) => arr.map(j => { const e = E[j], o = N[dir==="out"?e[1]:e[0]]; return `<li data-i="${o.i_}"><span class="r">${dir==="out"?"→":"←"} ${esc(e[2])}</span><span>${esc(o.l)}</span><span class="c c-${e[3]}">${e[3]}</span></li>`; }).join("");
+  const outs = n.out.slice().sort((a,b)=>STRUCT.has(E[a][2])-STRUCT.has(E[b][2])), ins = n.inn.slice().sort((a,b)=>STRUCT.has(E[a][2])-STRUCT.has(E[b][2]));
+  const area = (DATA.legend.find(l=>l.c===n.c)||{}).label || n.c;
+  document.getElementById("det").innerHTML = `<div class="chip">${esc(T("kind")[n.k]||n.k)}${n.t?" · "+esc(n.t):""}</div><h2>${esc(n.l)}</h2>
+    <div class="meta">${n.f?esc(T("source"))+": "+esc(n.f)+(n.n?":"+n.n:"")+"<br>":""}${esc(T("area"))}: ${esc(area)} · ${esc(T("degree"))}: ${n.g}</div>
+    ${n.i?`<div class="info">${esc(n.i)}</div>`:""}
+    ${outs.length?`<h3>${T("out")} (${outs.length})</h3><ul>${lst(outs.slice(0,200),"out")}</ul>`:""}
+    ${ins.length?`<h3>${T("in")} (${ins.length})</h3><ul>${lst(ins.slice(0,200),"in")}</ul>`:""}`;
+  document.querySelectorAll("#det li").forEach(li => li.onclick = () => { const o = N[+li.dataset.i]; select(o); zoomTo(o); });
+  R.classList.add("open"); setTimeout(resize,0); draw();
+  try{ parent.postMessage({ng:"select", id:n.id}, "*"); }catch(e){}
+}
+document.getElementById("xclose").onclick = () => select(null);
+// search
+const q = document.getElementById("q"), res = document.getElementById("res");
+let hits = [], hi = 0;
+function score(n, s){ const l = n.l.toLowerCase(); if(l===s||l.replace(/[.()]/g,"")===s) return 100; if(l.startsWith(s)) return 60; if(l.includes(s)) return 40; if((n.f||"").toLowerCase().includes(s)) return 12; if((n.i||"").toLowerCase().includes(s)) return 6; return 0; }
+q.addEventListener("input", () => { const s = q.value.trim().toLowerCase(); if(!s){ res.style.display="none"; focusSet=null; draw(); return; }
+  hits = N.map(n=>[n,score(n,s)+Math.log(1+n.g)]).filter(x=>x[1]>=6).sort((a,b)=>b[1]-a[1]).slice(0,30).map(x=>x[0]); hi=0;
+  res.innerHTML = hits.map((n,i)=>`<div data-i="${n.i_}" class="${i===0?"on":""}">${esc(n.l)}<small>${esc(T("kind")[n.k]||n.k)}${n.f?" · "+esc(n.f):""}</small></div>`).join("") || `<div>${T("notfound")} ${esc(q.value)}</div>`;
+  res.style.display="block"; focusSet = new Set(hits.map(n=>n.i_)); draw();
+  res.querySelectorAll("div[data-i]").forEach(d => d.onclick = () => { const n = N[+d.dataset.i]; res.style.display="none"; focusSet=null; select(n); zoomTo(n); });
+});
+q.addEventListener("keydown", ev => { if(ev.key==="Enter" && hits[hi]){ const n = hits[hi]; res.style.display="none"; focusSet=null; select(n); zoomTo(n); }
+  if(ev.key==="Escape"){ q.value=""; res.style.display="none"; focusSet=null; draw(); }
+  if(ev.key==="ArrowDown"||ev.key==="ArrowUp"){ ev.preventDefault(); hi = Math.max(0,Math.min(hits.length-1, hi+(ev.key==="ArrowDown"?1:-1))); res.querySelectorAll("div[data-i]").forEach((d,i)=>d.classList.toggle("on",i===hi)); } });
+// filters
+const fE = document.getElementById("fE"), fI = document.getElementById("fI"), fA = document.getElementById("fA"), fS = document.getElementById("fS"), fL = document.getElementById("fL");
+[fE,fI,fA,fS,fL].forEach(x => x.onchange = draw);
+const KORDER = ["file","class","interface","function","method","doc","section","concept","note","external"];
+function renderKinds(){
+  const el = document.getElementById("kinds");
+  el.innerHTML = KORDER.filter(k=>kindsPresent[k]).map(k=>`<label class="chk"><input type="checkbox" data-k="${k}" ${hiddenKinds.has(k)?"":"checked"}> ${esc(T("kind")[k]||k)} <span class="stat" style="margin-left:auto">${kindsPresent[k]}</span></label>`).join("");
+  el.querySelectorAll("input").forEach(i => i.onchange = () => { i.checked ? hiddenKinds.delete(i.dataset.k) : hiddenKinds.add(i.dataset.k); draw(); });
+}
+function renderLegend(){
+  const el = document.getElementById("legend");
+  el.innerHTML = DATA.legend.slice(0,80).map(l=>`<div data-c="${l.c}" class="${hiddenComm.has(l.c)?"off":""}" title="${esc(l.label)}"><span class="sw" style="background:${l.color}"></span><span class="t">${esc(l.label)}</span><span class="n">${l.n}</span></div>`).join("");
+  el.querySelectorAll("div").forEach(d => { const c = +d.dataset.c;
+    d.onclick = ev => { if(ev.shiftKey||ev.ctrlKey||ev.metaKey){ hiddenComm.has(c)?hiddenComm.delete(c):hiddenComm.add(c); renderLegend(); draw(); } else { fit(N.filter(n=>n.c===c)); } };
+    d.oncontextmenu = ev => { ev.preventDefault(); hiddenComm.has(c)?hiddenComm.delete(c):hiddenComm.add(c); renderLegend(); draw(); }; });
+}
+// path
+function findNode(s){ s = s.trim().toLowerCase(); if(!s) return null; let best=null,bs=0; for(const n of N){ const v = score(n,s)+Math.log(1+n.g)*.1; if(v>bs){bs=v;best=n;} } return bs>=6?best:null; }
+document.getElementById("pgo").onclick = () => {
+  const a = findNode(pa.value), b = findNode(pb.value), out = document.getElementById("pres");
+  if(!a||!b){ out.textContent = T("notfound")+" "+(!a?pa.value:pb.value); return; }
+  const prev = new Map([[a.i_, null]]), qq=[a.i_];
+  while(qq.length){ const i = qq.shift(); if(i===b.i_) break; const n = N[i];
+    for(const j of n.out.concat(n.inn)){ const e=E[j]; const o = e[0]===i?e[1]:e[0]; if(!prev.has(o)){ prev.set(o,[i,j]); qq.push(o);} } }
+  if(!prev.has(b.i_)){ out.textContent = T("nopath"); pathSet=null; pathEdges=null; draw(); return; }
+  const nodes=[b.i_], edges=[]; let cur=b.i_; while(prev.get(cur)){ const [p,j]=prev.get(cur); edges.push(j); nodes.push(p); cur=p; }
+  nodes.reverse(); edges.reverse(); pathSet = new Set(nodes); pathEdges = new Set(edges);
+  [...pathSet].forEach(i => { const n = N[i]; hiddenKinds.delete(n.k); hiddenComm.delete(n.c); }); renderKinds(); renderLegend();
+  out.innerHTML = `<b>${edges.length} ${T("steps")}</b><br>` + nodes.map((i,k)=> esc(N[i].l) + (k<edges.length ? ` <span class="stat">${E[edges[k]][0]===i?"—"+esc(E[edges[k]][2])+"→":"←"+esc(E[edges[k]][2])+"—"}</span> ` : "")).join("");
+  sel=null; document.getElementById("right").classList.remove("open"); setTimeout(()=>{resize(); fit(nodes.map(i=>N[i]));},0);
+};
+document.getElementById("pclr").onclick = () => { pathSet=null; pathEdges=null; pa.value=""; pb.value=""; document.getElementById("pres").textContent=""; draw(); };
+const pa = document.getElementById("pa"), pb = document.getElementById("pb");
+document.getElementById("zin").onclick = () => { const r=cv.getBoundingClientRect(); const f=1.4; view.x=r.width/2-(r.width/2-view.x)*f; view.y=r.height/2-(r.height/2-view.y)*f; view.s*=f; draw(); };
+document.getElementById("zout").onclick = () => { const r=cv.getBoundingClientRect(); const f=1/1.4; view.x=r.width/2-(r.width/2-view.x)*f; view.y=r.height/2-(r.height/2-view.y)*f; view.s*=f; draw(); };
+document.getElementById("zfit").onclick = () => fit();
+// language
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = T(el.dataset.t));
+  document.querySelectorAll("[data-ph]").forEach(el => el.placeholder = T(el.dataset.ph));
+  q.placeholder = T("search");
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("on", b.dataset.l===LANG));
+  if(DATA){ document.getElementById("pname").textContent = DATA.meta.name || "NexonGraph";
+    document.getElementById("pstat").textContent = `${N.length} ${T("nodes")} · ${E.length} ${T("edges")} · ${(DATA.meta.built||"").replace("T"," ")}`;
+    document.getElementById("foot").textContent = T("hint"); document.title = (DATA.meta.name||"") + " · NexonGraph"; }
+  renderKinds(); if(sel) select(sel);
+}
+document.querySelectorAll(".lang button").forEach(b => b.onclick = () => { LANG=b.dataset.l; try{localStorage.setItem("ng-lang",LANG)}catch(e){} applyLang(); });
+window.addEventListener("message", ev => { const m = ev.data||{}; if(m.ng==="focus"){ const n = N.find(x=>x.id===m.id); if(n){ select(n); zoomTo(n); } } if(m.ng==="lang"){ LANG=m.lang; applyLang(); } });
+window.addEventListener("resize", resize);
+if(DATA){ document.getElementById("names").innerHTML = N.filter(n=>n.k!=="section"&&n.k!=="external").slice(0,5000).map(n=>`<option value="${esc(n.l)}">`).join("");
+  applyLang(); renderLegend(); resize(); fit(); }
+</script>
+</body>
+</html>
