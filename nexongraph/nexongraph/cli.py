@@ -61,6 +61,10 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--no-browser", action="store_true")
     m = sub.add_parser("mcp", help="MCP-Server (stdio) für Claude, Cursor & Co.")
     m.add_argument("--dir", default=None)
+    br = sub.add_parser("brief", help="Kurzlage der Wissensbasis")
+    br.add_argument("dir", nargs="?", default=".")
+    br.add_argument("--today", default=None)
+    br.add_argument("--full", action="store_true")
     c = sub.add_parser("check", help="Wissenskarten prüfen (Exit 1 bei Fehlern)")
     c.add_argument("dir", nargs="?", default=".")
     c.add_argument("--today", default=None)
@@ -123,6 +127,11 @@ def main(argv: list[str] | None = None) -> None:
     elif a.cmd == "mcp":
         from .mcp import run
         run(a.dir)
+    elif a.cmd == "brief":
+        import datetime as _dt
+        from .brief import brief
+        t = _dt.date.fromisoformat(a.today) if a.today else _dt.date.today()
+        print(brief(Path(a.dir), t, max_lines=0 if a.full else 60))
     elif a.cmd == "check":
         from .check import run_cli
         code = run_cli(a.dir, a.today)
