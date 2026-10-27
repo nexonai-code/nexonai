@@ -50,6 +50,7 @@ Source: "{#StageDir}\node-mesh-server\*"; DestDir: "{app}\node-mesh-server"; Fla
 Source: "{#StageDir}\launch-node-server.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: nodeserver
 Source: "{#StageDir}\launch-temp-node.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: nodeserver
 Source: "{#StageDir}\launch-export-node-list.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: nodeserver
+Source: "{#StageDir}\launch-license-paste.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: nodeserver
 Source: "{#StageDir}\officer-app\*"; DestDir: "{app}\officer-app"; Flags: recursesubdirs ignoreversion; Components: officer
 Source: "{#StageDir}\launch-compliance.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: officer
 Source: "{#StageDir}\launch-press.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: officer
@@ -64,6 +65,7 @@ Source: "{#StageDir}\launch-relay.cmd"; DestDir: "{app}"; Flags: ignoreversion; 
 
 [Icons]
 Name: "{group}\unpruuf Node Server"; Filename: "{app}\launch-node-server.cmd"; WorkingDir: "{app}\node-mesh-server"; Components: nodeserver
+Name: "{group}\unpruuf Paste server licence"; Filename: "{app}\launch-license-paste.cmd"; WorkingDir: "{app}\node-mesh-server"; Components: nodeserver
 Name: "{group}\unpruuf Temp Node"; Filename: "{app}\launch-temp-node.cmd"; WorkingDir: "{app}\node-mesh-server"; Components: nodeserver
 Name: "{group}\unpruuf Export node list"; Filename: "{app}\launch-export-node-list.cmd"; WorkingDir: "{app}\node-mesh-server"; Components: nodeserver
 Name: "{group}\unpruuf Compliance"; Filename: "{app}\launch-compliance.cmd"; WorkingDir: "{app}\officer-app"; Components: officer

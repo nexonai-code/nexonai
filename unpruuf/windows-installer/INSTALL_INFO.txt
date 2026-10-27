@@ -14,6 +14,8 @@ optional relay. Node.js is included, nothing else has to be installed.
   program folders when you first start a program. Uninstalling does not delete it. If you delete the
   folder by hand, the node identity and its onion address are gone for good. Back it up first.
 * Start the programs from the Start menu, group "unpruuf".
+* The node server needs a server licence from NexonAI. Paste it with "unpruuf Paste server licence"
+  (or on the setup page). Without a licence you can only try the "unpruuf Temp Node".
 
 ROMANA
 Aceasta instalează programele unpruuf care rulează pe un PC sau server Windows: propriul server de
@@ -28,3 +30,5 @@ web-reporter și releul opțional. Node.js este inclus, nu trebuie instalat nimi
   folderele programelor la prima pornire. Dezinstalarea nu le șterge. Dacă ștergi folderul manual,
   identitatea nodului și adresa onion dispar definitiv. Fă mai întâi o copie de siguranță.
 * Pornește programele din meniul Start, grupul „unpruuf".
+* Serverul de noduri are nevoie de o licență de server de la NexonAI. Lipește-o cu „unpruuf Paste server
+  licence" (sau pe pagina de configurare). Fără licență poți încerca doar „unpruuf Temp Node".

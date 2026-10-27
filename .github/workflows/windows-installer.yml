@@ -79,7 +79,7 @@ jobs:
           $setup = Get-ChildItem "$env:OUT\unpruuf-Setup-*.exe" | Select-Object -First 1
           $dir = "$env:RUNNER_TEMP\inst"
           Start-Process -FilePath $setup.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$dir" -Wait
-          foreach ($f in "runtime\node.exe","launch-node-server.cmd","launch-control.cmd","node-mesh-server\dist\index.js","officer-app\dist\index.js","control\dist\index.js","control\bundle\node-server.tgz","web-reporter\public\bundle.js","license-tool\gui\server.js","INSTALL_INFO.txt") {
+          foreach ($f in "runtime\node.exe","launch-node-server.cmd","launch-control.cmd","launch-license-paste.cmd","node-mesh-server\apply-license.js","node-mesh-server\dist\index.js","officer-app\dist\index.js","control\dist\index.js","control\bundle\node-server.tgz","web-reporter\public\bundle.js","license-tool\gui\server.js","INSTALL_INFO.txt") {
             if (-not (Test-Path "$dir\$f")) { throw "missing after install: $f" }
           }
           & "$dir\runtime\node.exe" -e "require('$($dir -replace '\\','/')/node-mesh-server/node_modules/better-sqlite3')(':memory:')"

@@ -51,7 +51,7 @@ echo Starte Server %NODE_SLOT%, Profil %NODE_PROFILE%, Pakete: %NODE_MESH_STORE%
 echo Die Zahl der Nodes steckt in der Lizenz - sie startet automatisch mit allen lizenzierten Nodes.
 echo Die Einrichtungsseite oeffnet sich gleich im Browser (mit einem Zugangs-Schluessel, der bei jedem Start neu ist).
 echo Falls nicht: den Link beginnend mit http://localhost:%ADMIN_PORT_DEFAULT%/?t= aus diesem Fenster in den Browser kopieren.
-echo Beim ersten Start fragt die Seite nach dem Lizenzcode von NexonAI.
+echo Beim ersten Start fragt die Seite nach dem Lizenzcode von NexonAI. Oder vorher: apply-license.bat doppelklicken ^(Startmenue: Lizenz einfuegen^).
 echo Node-Liste fuer deine App: export-list.bat doppelklicken, waehrend dieses Fenster offen ist.
 echo Dieses Fenster offen lassen - schliessen stoppt den Node.
 set NODE_MESH_OPEN_BROWSER=1
