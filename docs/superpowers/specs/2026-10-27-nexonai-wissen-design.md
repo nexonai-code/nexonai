@@ -44,6 +44,7 @@ Jede Karte ist eine Markdown-Datei mit Kopfdaten (YAML-Frontmatter) und Stichpun
 | `wissen/angebote/` | `offer` | Angebot oder Preisstand | `status`, `customer`, `products`, `price`, `currency`, `valid_until`, `drive` |
 | `wissen/partner/` | `partner` | Partner oder Lieferant | `status`, `role` (z. B. Hosting, Vertrieb), `products`, `drive` |
 | `wissen/entscheidungen/` | `decision` | Entscheidung oder Regel | `status` (`valid`/`superseded`), `date`, `scope` (z. B. `unpruuf`, `all`), `supersedes` |
+| `wissen/gabriel/` | `profile`, `preference` | Profil (eine Karte) und je Vorliebe/Arbeitsregel eine Karte | `status` (`valid`/`superseded`), `date`, `topic`, `supersedes`; Beispiele: Antwortstil, Sprache, Format der Lieferungen (.bat, ZIP), was er nicht will, Arbeitszeiten, persönliche Änderungen |
 | `wissen/eingang/` | beliebig | Dokument, dessen Zuordnung unklar ist | `question` |
 
 ### 3.2 Pflichtfelder für alle Karten
@@ -72,7 +73,8 @@ Verweise auf Drive sind Listen mit Titel, Link und Änderungsdatum: `drive: [{ti
 | `pilot` | `planned`, `running`, `done`, `stopped` |
 | `offer` | `draft`, `sent`, `accepted`, `declined`, `expired` |
 | `partner` | `candidate`, `active`, `paused`, `ended` |
-| `decision` | `valid`, `superseded` |
+| `decision`, `preference` | `valid`, `superseded` |
+| `profile` | `valid` |
 
 ### 3.4 Was nie auf eine Karte kommt
 
@@ -113,7 +115,7 @@ NexonGraph 1.0 (`nexongraph/`) bleibt die Grundlage. Neu kommt hinzu:
 - Unbekannte IDs werden nicht verworfen. Sie erzeugen einen Prüffehler, siehe 4.3.
 
 ### 4.2 Kurzlage (`nexongraph brief`)
-Ausgabe auf Englisch, höchstens etwa 60 Zeilen. Inhalt:
+Ausgabe auf Englisch, höchstens etwa 60 Zeilen. Zuerst Gabriels gültige Vorlieben (kompakt, eine Zeile je Karte), danach:
 - Produkte und Apps mit Status.
 - Laufende Piloten.
 - Offene Angebote mit Frist, überfällige zuerst.
@@ -161,6 +163,7 @@ Läuft der Start nicht durch, kommt eine Zeile „Wissensbasis nicht verfügbar:
 - Vor jeder Aufgabe zu einem Produkt, einer App, einer Lösung, einem Material, einem Kunden, einem Piloten, einem Angebot oder einem Partner zuerst im Graphen nachschlagen (`nexongraph query/explain/search`).
 - Am Ende jeder Arbeitssitzung die betroffenen Karten aktualisieren (`status`, `updated`, Fakten, Links) und mit der Arbeit committen.
 - Neue Regeln aus dem Chat sofort als `decision`-Karte mit Datum anlegen. Ersetzte Regeln auf `superseded` setzen.
+- Persönliche Vorlieben und Änderungen von Gabriel (Antwortstil, Lieferformat, Sprache, was er nicht will) sofort als `preference`-Karte in `wissen/gabriel/` pflegen; ersetzte auf `superseded`.
 - Nichts aus Drive als Volltext ins Repo.
 
 ### 5.3 Pflege-Wächter (automatisch)
@@ -192,6 +195,7 @@ Gabriel bekommt nur dann eine kurze Meldung, wenn eine Frage offen ist oder ein 
 | Lösungen | je Lösung Problem, Produkt, Status |
 | Kunden · Piloten · Angebote · Partner | Listen mit Status, ein Klick öffnet die Karte mit den Drive-Links |
 | Regeln & Entscheidungen | gültige Regeln mit Datum, ersetzte eingeklappt |
+| Über mich | Gabriels Profil und Vorlieben mit Datum, Änderungsverlauf |
 | Graph | interaktive Ansicht wie `graph.html` |
 | Suche | über alle Karten |
 

@@ -12,9 +12,9 @@
 
 ## Global Constraints
 
-- Karten liegen unter `wissen/<bereich>/<id>.md`. Die Bereichsordner sind `produkte`, `apps`, `loesungen`, `material`, `kunden`, `piloten`, `angebote`, `partner`, `entscheidungen` und `eingang`.
+- Karten liegen unter `wissen/<bereich>/<id>.md`. Die Bereichsordner sind `produkte`, `apps`, `loesungen`, `material`, `kunden`, `piloten`, `angebote`, `partner`, `entscheidungen`, `gabriel` (types `profile`, `preference`) und `eingang`.
 - Pflichtfelder jeder Karte: `type`, `id`, `title`, `status`, `updated` (ISO-Datum `JJJJ-MM-TT`) und `summary`.
-- `type` ∈ {`product`, `app`, `solution`, `material`, `customer`, `pilot`, `offer`, `partner`, `decision`}.
+- `type` ∈ {`product`, `app`, `solution`, `material`, `customer`, `pilot`, `offer`, `partner`, `decision`, `profile`, `preference`}. `preference`: `valid`/`superseded`; `profile`: `valid`.
 - Statuswerte genau wie in Spec 3.3.
 - `id` besteht aus Kleinbuchstaben, Ziffern und `-` und ist gleich dem Dateinamen ohne `.md`.
 - Kanten aus Kartenfeldern: `products` → `concerns`, `customer` → `for_customer`, `supersedes` → `supersedes`, `partner` → `with_partner`, `material` → `has_material`, `code` → `implemented_in`. Herkunft ist immer EXTRACTED.
@@ -145,7 +145,7 @@ def test_search_kind_filter(tmp_path): # main(["search","relay","--dir",root,"--
 | `offer-expired` | warning | `type: offer`, `status: sent`, `valid_until` < today |
 | `pilot-overdue` | warning | `type: pilot`, `status: running`, `end` < today |
 | `stale` | warning | `status` ∈ {in-progress, pilot, running, talking, offer-sent} und `updated` älter als 90 Tage |
-| `decision-conflict` | error | zwei Karten `decision`, `status: valid`, gleiches `scope` und gleiches `topic` |
+| `decision-conflict` | error | zwei Karten `decision` (oder zwei `preference`), `status: valid`, gleiches `scope` und gleiches `topic` |
 | `status-conflict` | error | Material-Karte mit `states: {produkt-id: status}`, deren Status von der Produktkarte abweicht |
 | `forbidden-term` | error | Begriff aus `forbidden_terms` gültiger Entscheidungen (Standard, falls keine: `safeline`, `certified`, `GDPR-compliant`, `unbreakable`) als ganzes Wort in title, summary, body von `customer`-, `material`-, `offer`- und `solution`-Karten. Ausgenommen, wenn direkt `not `, `nicht ` oder `ne` davor steht (Groß- und Kleinschreibung egal). |
 | `inbox-open` | warning | Karte in `eingang/` |
@@ -184,7 +184,7 @@ def test_cli_exit_codes(tmp_path): # mit Fehler → SystemExit 1; nur Warnungen 
     - `mark_synced(state: dict, items: list[dict], today: date) -> dict`: setzt `last_sync` und löscht `pending_since`.
     - `mark_pending(state: dict, today: date) -> dict`: setzt `pending_since`, falls es noch leer ist.
   - `brief(root: Path, today: date, max_lines: int = 60) -> str` mit diesen Überschriften in dieser Reihenfolge, leere Abschnitte entfallen:
-    `# NexonAI brief <JJJJ-MM-TT>`, `## Products & apps`, `## Running pilots`, `## Open offers`, `## Changed (7 days)`, `## New rules (30 days)`, `## Open questions`, `## Check`, `## Drive sync`.
+    `# NexonAI brief <JJJJ-MM-TT>`, `## Gabriel's preferences` (alle gültigen `preference`-Karten, eine Zeile `- <title>: <summary>`), `## Products & apps`, `## Running pilots`, `## Open offers`, `## Changed (7 days)`, `## New rules (30 days)`, `## Open questions`, `## Check`, `## Drive sync`.
     - Angebote mit Status `draft` oder `sent`: überfällige zuerst, markiert mit `OVERDUE`.
     - `## Check` zeigt die Anzahl der Fehler und Warnungen und höchstens 5 Zeilen.
     - `## Drive sync` zeigt `last <Datum>`, `pending since <Datum>` oder `never`.
@@ -261,7 +261,7 @@ def test_start_script_never_fails(tmp_path): # wissen-start.sh in einem Ordner o
   - `site_payload(root: Path, today: date) -> dict`: `{"built", "cards": [{id,type,title,status,updated,summary,fields,body}], "overdue": [ids], "issues": [...], "drive": state}`
   - `export_site(root: Path, out_dir: Path, today: date) -> Path`: schreibt `index.html` (Template `site.html`, die Daten ersetzen `/*__DATA__*/null`) und `graph.html` (Viewer) nach `out_dir` und gibt den Pfad von `index.html` zurück.
   - Seite:
-    - Tabs: Lage, Produkte & Apps, Lösungen, Kunden, Piloten, Angebote, Partner, Regeln, Graph (Link auf `graph.html`), Suche.
+    - Tabs: Lage, Produkte & Apps, Lösungen, Kunden, Piloten, Angebote, Partner, Regeln, Über mich (Profil, gültige und ersetzte Vorlieben mit Datum), Graph (Link auf `graph.html`), Suche.
     - Sprachumschalter RO/EN, Standard RO.
     - Die Statuswerte sind in beiden Sprachen übersetzt.
     - Karteninhalt bleibt Englisch. Body als Markdown, mit demselben kleinen Renderer wie `app.html`.
@@ -304,6 +304,7 @@ def test_no_drive_fulltext_fields(tmp_path): # payload enthält nur die Felder d
   - **Lösungen:** Polizei, Klinik, Hinweisgeber und die weiteren aus dem Lösungs-Artefakt
   - **Material:** Website, Landingpage-Design, Whitepaper v7 EN/RO, Compliance-Film, Präsentationen (Auditor RO, Compliance EN), Kundenleitfaden, Vergleichsseite, Polizei-Konzept. Jeweils mit Artefakt-Link oder Pfad.
   - **Entscheidungen:** je Regel aus beiden `CLAUDE.md` eine Karte, z. B. `naming-unpruuf-compliance` (25.10.2026) oder `design-blue` (19.10.2026). Dazu `claims-forbidden` mit `forbidden_terms`.
+  - **Gabriel:** `profile` (Rolle, Hintergrund, Sprachen, Wohnort, wie er arbeitet) und je Vorliebe eine `preference`-Karte aus den Nutzer-Vorlieben und `CLAUDE.md` (kurze Antworten, Meinung am Ende, .bat-Skripte, ZIP + Changelog, keine Personen-Zuweisungen, RO/EN für Kunden, Anrede ohne „Gabriel, “ am Anfang …) mit Datum.
   - **Kunden, Piloten, Angebote, Partner:** nur, was belegbar im Repo oder in Drive steht. Nichts erfinden. Bereiche ohne Belege bekommen keine Karte. Die Ordner bleiben mit `.gitkeep` angelegt.
 - [ ] **Step 3: Prüfen.** `nexongraph check .` muss `0 errors` melden. Gemeldete Fehler beheben und erneut prüfen.
 - [ ] **Step 4: Kurzlage ansehen.** `nexongraph brief .`: Prüfen, ob Produkte mit Status, Regeln und `Drive sync: never` erscheinen.
