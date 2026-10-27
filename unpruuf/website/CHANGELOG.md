@@ -1,3 +1,13 @@
+# v13 — 2026-10-27
+
+**Einstieg mit Tile-Feld:** Hinter der Überschrift liegt jetzt ein Feld aus Kacheln (Canvas, `hero-field.js`) statt des Fotos. Die Kacheln sind wie Federn mit ihren Nachbarn verbunden. Der Mauszeiger schickt Wellen durch das Feld, Klick drückt es ein und lässt es beim Loslassen zurückschlagen, Wischen und Tippen auf dem Handy wirken ebenso. Nach einigen Sekunden beruhigt sich das Feld, die Animation stoppt dann und braucht keine Rechenleistung mehr. Auf dem Handy fällt ab und zu ein sanfter Tropfen ins Feld, weil es dort kein Hovern gibt.
+
+**Bewegung reduzieren:** Ist im System „Bewegung reduzieren“ gesetzt, steht das Feld still (eingefrorenes Wellenmuster), der Mauszeiger hebt nur die Kacheln darunter an. Der Schalter „Feldbewegung an/aus“ unten rechts im Einstieg überschreibt die Systemeinstellung (DE/EN/RO, per Tastatur bedienbar).
+
+Geändert: `index.html` (Canvas, Schalter, ein Skript; der Hinweis „Konzeptillustration“ entfällt, weil das Foto nicht mehr angezeigt wird), `styles.css` (Abschnitt v13 am Ende), neu `hero-field.js`. Texte, Farben und alle anderen Bereiche unverändert. Das Foto `assets/original-1.webp` bleibt in der Datei; zurück zur alten Ansicht: in `index.html` `has-field` aus der Klasse des Einstiegs entfernen.
+
+Geprüft in Chromium (Desktop, Handy-Breite, Bewegung reduziert): keine Konsolenfehler, kein seitliches Scrollen. Nicht geprüft: echtes Handy, Safari, Firefox.
+
 # v12 — 2026-10-22
 
 **Umbenennung:** „safeline“ heißt auf der Seite jetzt „unpruuf Compliance“, „safeline Press“ heißt „unpruuf Press“. Der Anker #safeline ist zu #compliance geworden. Die CSS-Klasse safeline-art bleibt (technisch).

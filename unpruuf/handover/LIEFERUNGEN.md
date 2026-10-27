@@ -30,6 +30,7 @@ Nicht neu gebaut (Quellen fehlen): Business-Pitch und Press-Pitch (13.10.), Comp
 | `unpruuf_Business_2026-10-22_v3.zip` | Business-Deck EN + RO | 22.10. |
 | `unpruuf_Decks_2026-10-22_v4.zip` | Business EN + RO, Compliance RO + DE, Testzahlen korrigiert | 22.10. |
 | `unpruuf_Website_2026-10-22_v12.zip` | Website mit NexonAI-Logo, Blau, neuem Abschnitt (liegt auch in `unpruuf/website/`) | 22.10. |
+| `unpruuf_Website_2026-10-27_v13.zip` | Website mit Tile-Feld im Einstieg (Canvas-Wellen, Bewegung-reduzieren-Fallback, Schalter DE/EN/RO); Quelle in `unpruuf/website/` | 27.10. |
 
 Artefakt: Tagesabschluss 22.10.: https://claude.ai/artifact/JZh8xsHJ7wyLEMsMowipZD
 

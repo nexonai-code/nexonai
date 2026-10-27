@@ -57,3 +57,16 @@
 
 .brandlink{display:inline-flex;align-items:center;gap:16px}.brand-logo{height:46px;width:auto;display:block}.brand-product{font-size:26px;font-weight:800;letter-spacing:-.06em;line-height:1;padding-left:16px;border-left:1px solid var(--line);color:var(--ink)}.brand-product .brand-dot{color:var(--green)}
 @media(max-width:767px){.brandlink{gap:10px}.brand-logo{height:34px}.brand-product{font-size:21px;padding-left:10px}}
+
+/* v13 — hero tile field: canvas of spring-linked tiles replaces the photo behind the headline */
+.hero.has-field{touch-action:pan-y}
+.hero-field{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:-2}
+.hero.has-field .hero-image{display:none}
+.hero.has-field .hero-shade{background:linear-gradient(90deg,rgba(15,42,58,.78) 0%,rgba(15,42,58,.45) 48%,rgba(15,42,58,0) 85%)}
+.field-toggle{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:14px;display:inline-flex;align-items:center;gap:8px;font:500 11px/1 var(--mono);letter-spacing:.04em;color:#e0e5e8;background:rgba(15,42,58,.55);border:1px solid rgba(144,200,232,.45);border-radius:999px;padding:9px 13px;cursor:pointer}
+.field-toggle:before{content:"";width:8px;height:8px;border-radius:50%;background:#90c8e8}
+.field-toggle[aria-pressed="false"]:before{background:transparent;border:1.5px solid #90c8e8}
+.field-toggle[aria-pressed="true"] .ft-off,.field-toggle[aria-pressed="false"] .ft-on{display:none}
+.field-toggle:hover{border-color:#90c8e8;color:#fff}
+.field-toggle:focus-visible{outline:3px solid #90c8e8;outline-offset:3px}
+@media print{.hero-field,.field-toggle{display:none!important}}
