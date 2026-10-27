@@ -61,6 +61,9 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--no-browser", action="store_true")
     m = sub.add_parser("mcp", help="MCP-Server (stdio) für Claude, Cursor & Co.")
     m.add_argument("--dir", default=None)
+    c = sub.add_parser("check", help="Wissenskarten prüfen (Exit 1 bei Fehlern)")
+    c.add_argument("dir", nargs="?", default=".")
+    c.add_argument("--today", default=None)
     sub.add_parser("install", help="in Claude Code, Claude Desktop und Cursor eintragen")
     sub.add_parser("uninstall", help="aus Claude Code, Claude Desktop und Cursor entfernen")
     w = sub.add_parser("watch", help="Ordner beobachten und bei Änderungen neu bauen")
@@ -120,6 +123,11 @@ def main(argv: list[str] | None = None) -> None:
     elif a.cmd == "mcp":
         from .mcp import run
         run(a.dir)
+    elif a.cmd == "check":
+        from .check import run_cli
+        code = run_cli(a.dir, a.today)
+        if code:
+            sys.exit(code)
     elif a.cmd == "install":
         from .integrate import install_all
         for line in install_all():
