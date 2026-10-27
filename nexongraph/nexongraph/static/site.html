@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexonAI Knowledge</title>
+<style>
+:root{--primary:#307098;--navy:#0f2a3a;--tint:#e3eef6;--sky:#90c8e8;--warm:#a8500f;--warm-t:#f8e7d6;--surface:#f7f9fa;--low:#f2f4f6;--mid:#eaedef;--high:#e3e8eb;
+--ink:#172733;--var:#505b63;--line:#d9dfe3;--sans:"Open Sans","Segoe UI",Arial,sans-serif;--mono:"DejaVu Sans Mono","DejaVu Mono",ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--surface);color:var(--ink);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--primary)}
+header{position:sticky;top:0;z-index:10;background:rgba(247,249,250,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--high)}
+.hin{max-width:1280px;margin:0 auto;height:64px;display:flex;align-items:center;gap:14px;padding:0 16px}
+.logo{position:relative;width:128px;aspect-ratio:1485/600;overflow:hidden;flex-shrink:0}
+.logo img{position:absolute;width:119.46%;left:-10.1%;top:-30%;mix-blend-mode:multiply}
+.ttl{font-weight:800;color:var(--navy);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp{flex:1}
+.lang{display:inline-flex;background:var(--mid);border-radius:8px;padding:3px;gap:2px;flex-shrink:0}
+.lang button{border:0;background:transparent;padding:6px 10px;border-radius:6px;cursor:pointer;font:600 12px var(--sans);color:var(--var)}
+.lang button.on{background:var(--primary);color:#fff}
+.strip{background:var(--high);border-bottom:1px solid var(--line);font:11px/1.5 var(--mono);color:var(--var)}
+.sin{max-width:1280px;margin:0 auto;padding:9px 16px;display:flex;gap:16px;flex-wrap:wrap}
+.sin b{color:var(--primary);font-weight:400}
+nav{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:64px;z-index:9}
+.nin{max-width:1280px;margin:0 auto;display:flex;gap:2px;overflow-x:auto;padding:0 10px;scrollbar-width:none}
+.nin button{border:0;background:transparent;padding:12px 12px;font:600 13px var(--sans);color:var(--var);border-bottom:3px solid transparent;white-space:nowrap;cursor:pointer}
+.nin button.on{color:var(--primary);border-bottom-color:var(--primary)}
+section{padding:32px 16px}
+section.alt{background:var(--low)}
+.wrap{max-width:1280px;margin:0 auto}
+.chip{display:inline-block;font:11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--primary);background:var(--mid);border-radius:4px;padding:3px 9px}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.15;letter-spacing:-.03em;color:var(--navy);margin:10px 0 6px}
+h2{font-size:20px;color:var(--navy);margin:0 0 12px}
+.lead{color:var(--var);margin:0 0 18px;max-width:760px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0;cursor:pointer;transition:border-color .15s}
+.card:hover{border-color:var(--sky)}
+.card h3{font-size:16px;margin:6px 0 4px;color:var(--navy);overflow-wrap:anywhere}
+.card p{margin:0;color:var(--var);font-size:14px}
+.card .meta{font:11px var(--mono);color:var(--var);margin-top:8px}
+.pill{display:inline-block;font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 8px;background:var(--tint);color:#1f5578}
+.pill.warm{background:var(--warm-t);color:var(--warm)}
+.pill.grey{background:var(--mid);color:var(--var)}
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:22px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+.stat b{display:block;font-size:28px;color:var(--navy);line-height:1.1}
+.stat span{font:11px var(--mono);color:var(--var);text-transform:uppercase;letter-spacing:.05em}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;cursor:pointer}
+.row:hover{border-color:var(--sky)}
+.row .t{font-weight:600;color:var(--navy);overflow-wrap:anywhere}
+.row .d{font:11px var(--mono);color:var(--var);margin-left:auto}
+.row.over{border-left:4px solid var(--warm)}
+.row.over .d{color:var(--warm)}
+.empty{color:var(--var);font-size:14px}
+details{margin-top:14px}summary{cursor:pointer;color:var(--var);font-size:13px}
+.search{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 14px;font:inherit;background:#fff;margin-bottom:14px}
+.search:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(48,112,152,.12)}
+.issue{font:12px var(--mono);color:var(--var);overflow-wrap:anywhere}.issue.err{color:var(--warm)}
+.gframe{width:100%;height:72vh;border:1px solid var(--line);border-radius:16px;background:#fff}
+.ov{position:fixed;inset:0;background:rgba(15,42,58,.4);display:none;align-items:flex-start;justify-content:center;z-index:30;padding:20px 12px;overflow:auto}
+.ov.on{display:flex}
+.dlg{background:#fff;border-radius:18px;width:min(760px,100%);padding:22px;box-shadow:0 30px 80px rgba(15,42,58,.35)}
+.dlg h2{font-size:22px;margin:8px 0 4px;overflow-wrap:anywhere}
+.dlg .sum{color:var(--var);margin:0 0 12px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13px;margin:12px 0}
+.kv dt{font:11px var(--mono);color:var(--var);text-transform:uppercase;padding-top:2px}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.md{font-size:14px;overflow-wrap:anywhere}.md ul{padding-left:20px}.md code{font:12px var(--mono);background:var(--mid);padding:1px 4px;border-radius:4px}
+.md table{border-collapse:collapse;width:100%;font-size:13px}.md td,.md th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}
+.x{float:right;border:0;background:var(--mid);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px}
+footer{border-top:1px solid var(--line);background:#fff}
+.fin{max-width:1280px;margin:0 auto;padding:18px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font:11px var(--mono);color:var(--var)}
+@media(max-width:600px){.kv{grid-template-columns:1fr}.kv dt{padding-top:6px}.ttl{display:none}}
+</style>
+</head>
+<body>
+<header><div class="hin"><div class="logo"><img src="__LOGO__" alt="NexonAI"></div><div class="ttl" data-t="title"></div><div class="sp"></div>
+<div class="lang"><button data-l="ro">RO</button><button data-l="en">EN</button></div></div></header>
+<div class="strip"><div class="sin" id="strip"></div></div>
+<nav><div class="nin" id="tabs"></div></nav>
+<main id="main"></main>
+<footer><div class="fin"><div class="logo" style="width:96px"><img src="__LOGO__" alt="NexonAI"></div><span id="foot"></span></div></footer>
+<div class="ov" id="ov"><div class="dlg" id="dlg"></div></div>
+<script>
+const D = /*__DATA__*/null;
+const L = {
+ ro:{title:"Baza de cunoștințe NexonAI",tabs:{lage:"Situație",products:"Produse & aplicații",solutions:"Soluții",customers:"Clienți",pilots:"Piloți",offers:"Oferte",partners:"Parteneri",rules:"Reguli",me:"Despre mine",material:"Materiale",graph:"Graf",search:"Căutare"},
+  built:"Actualizat",cards:"carduri",issues:"probleme",drive:"Sincronizare Drive",never:"niciodată",pending:"în așteptare din",last:"ultima",
+  lageH:"Situația pe scurt",lageL:"Ce este activ, ce arde și ce s-a schimbat.",products:"Produse",apps:"Aplicații",running:"Piloți activi",open:"Oferte deschise",overdue:"Depășit",
+  changed:"Modificat în ultimele 7 zile",questions:"Întrebări deschise",check:"Verificare",none:"Nimic aici încă.",superseded:"Reguli înlocuite",
+  meH:"Despre mine",meL:"Profilul și preferințele lui Gabriel, cu data. Cele înlocuite rămân ca istoric.",prefs:"Preferințe valabile",
+  searchPh:"Caută în toate cardurile …",validUntil:"valabil până la",until:"până la",updated:"actualizat",source:"Fișier",drive_l:"Documente Drive",code:"Cod",
+  graphL:"Graful complet: cod, documente și carduri. Click pe un nod pentru detalii.",open_new:"Deschide în fereastră nouă",foot:"Generat automat din wissen/ · numai citire, modificările se fac în chat",
+  status:{planned:"planificat","in-progress":"în lucru",pilot:"pilot",tested:"testat",live:"live",paused:"pauză",retired:"retras",lead:"lead",talking:"în discuții","offer-sent":"ofertă trimisă",customer:"client",lost:"pierdut",
+   running:"în desfășurare",done:"încheiat",stopped:"oprit",draft:"ciornă",sent:"trimisă",accepted:"acceptată",declined:"refuzată",expired:"expirată",candidate:"candidat",active:"activ",ended:"încheiat",valid:"valabil",superseded:"înlocuit"},
+  type:{product:"Produs",app:"Aplicație",solution:"Soluție",material:"Material",customer:"Client",pilot:"Pilot",offer:"Ofertă",partner:"Partener",decision:"Regulă",preference:"Preferință",profile:"Profil"}},
+ en:{title:"NexonAI Knowledge",tabs:{lage:"Situation",products:"Products & apps",solutions:"Solutions",customers:"Customers",pilots:"Pilots",offers:"Offers",partners:"Partners",rules:"Rules",me:"About me",material:"Material",graph:"Graph",search:"Search"},
+  built:"Updated",cards:"cards",issues:"issues",drive:"Drive sync",never:"never",pending:"pending since",last:"last",
+  lageH:"The situation in brief",lageL:"What is active, what is urgent and what changed.",products:"Products",apps:"Apps",running:"Running pilots",open:"Open offers",overdue:"Overdue",
+  changed:"Changed in the last 7 days",questions:"Open questions",check:"Check",none:"Nothing here yet.",superseded:"Superseded rules",
+  meH:"About me",meL:"Gabriel's profile and preferences, with dates. Superseded ones stay as history.",prefs:"Valid preferences",
+  searchPh:"Search all cards …",validUntil:"valid until",until:"until",updated:"updated",source:"File",drive_l:"Drive documents",code:"Code",
+  graphL:"The full graph: code, documents and cards. Click a node for details.",open_new:"Open in a new window",foot:"Generated from wissen/ · read only, changes go through the chat",
+  status:{},type:{product:"Product",app:"App",solution:"Solution",material:"Material",customer:"Customer",pilot:"Pilot",offer:"Offer",partner:"Partner",decision:"Rule",preference:"Preference",profile:"Profile"}}};
+let LANG = "ro"; try{ LANG = localStorage.getItem("nx-lang") || "ro"; }catch(e){}
+let TAB = "lage"; try{ TAB = (location.hash||"").slice(1) || "lage"; }catch(e){}
+const t = k => L[LANG][k] ?? L.en[k] ?? k;
+const st = s => (L[LANG].status[s] || s);
+const ty = s => (L[LANG].type[s] || s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const C = (D && D.cards) || [];
+const byType = (...ts) => C.filter(c => ts.includes(c.type));
+const OVER = new Set((D && D.overdue) || []);
+const today = D ? D.today : "";
+const pillCls = s => ["paused","retired","lost","stopped","declined","expired","ended","superseded"].includes(s) ? "grey" : ["pilot","planned","in-progress","draft","lead","candidate"].includes(s) ? "warm" : "";
+function daysAgo(d){ if(!d||!today) return 999; return (new Date(today) - new Date(d))/864e5; }
+function md(src){ const lines = String(src||"").split("\n"); let out="", inL=false;
+  const il = s => esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  for(const l of lines){ let m; if((m=/^\s*[-*]\s+(.*)/.exec(l))){ if(!inL){out+="<ul>";inL=true;} out+=`<li>${il(m[1])}</li>`; continue; }
+    if(inL){out+="</ul>";inL=false;} if((m=/^#{1,4}\s+(.*)/.exec(l))) out+=`<h4>${il(m[1])}</h4>`; else if(l.trim()) out+=`<p>${il(l)}</p>`; }
+  if(inL) out+="</ul>"; return out; }
+function cardTile(c){ return `<div class="card" data-id="${esc(c.id)}"><span class="pill ${pillCls(c.status)}">${esc(st(c.status))}</span><h3>${esc(c.title)}</h3><p>${esc(c.summary)}</p><div class="meta">${esc(ty(c.type))} · ${t("updated")} ${esc(c.updated)}</div></div>`; }
+function rowOf(c, right, cls){ return `<div class="row ${cls||""}" data-id="${esc(c.id)}"><span class="pill ${pillCls(c.status)}">${esc(st(c.status))}</span><span class="t">${esc(c.title)}</span><span class="d">${right||""}</span></div>`; }
+function grid(cards){ return cards.length ? `<div class="grid">${cards.map(cardTile).join("")}</div>` : `<p class="empty">${t("none")}</p>`; }
+function sec(h, lead, body, alt){ return `<section class="${alt?"alt":""}"><div class="wrap"><span class="chip">${esc(t("tabs")[TAB]||"")}</span><h1>${esc(h)}</h1>${lead?`<p class="lead">${esc(lead)}</p>`:""}${body}</div></section>`; }
+function offersSorted(){ return byType("offer").filter(c=>["draft","sent"].includes(c.status)).sort((a,b)=> (OVER.has(b.id)-OVER.has(a.id)) || String(a.fields.valid_until||"9").localeCompare(String(b.fields.valid_until||"9"))); }
+const VIEWS = {
+ lage(){
+  const prods = byType("product"), apps = byType("app"), pilots = byType("pilot").filter(c=>c.status==="running"), offers = offersSorted();
+  const changed = C.filter(c=>daysAgo(c.updated)<=7).sort((a,b)=>String(b.updated).localeCompare(a.updated));
+  const inbox = C.filter(c=>c.rel.split("/")[1]==="eingang"); const errs = (D.issues||[]).filter(i=>i.level==="error").length;
+  const stats = [[prods.length,t("products")],[apps.length,t("apps")],[pilots.length,t("running")],[offers.length,t("open")],[(D.issues||[]).length,t("issues")]];
+  let b = `<div class="stats">${stats.map(([n,l])=>`<div class="stat"><b>${n}</b><span>${esc(l)}</span></div>`).join("")}</div>`;
+  b += `<h2>${t("open")}</h2>` + (offers.length ? `<div class="list">${offers.map(c=>rowOf(c,(OVER.has(c.id)?t("overdue")+" · ":"")+(c.fields.valid_until?t("validUntil")+" "+esc(c.fields.valid_until):""),OVER.has(c.id)?"over":"")).join("")}</div>` : `<p class="empty">${t("none")}</p>`);
+  b += `<h2 style="margin-top:22px">${t("running")}</h2>` + (pilots.length ? `<div class="list">${pilots.map(c=>rowOf(c,c.fields.end?t("until")+" "+esc(c.fields.end):"")).join("")}</div>` : `<p class="empty">${t("none")}</p>`);
+  b += `<h2 style="margin-top:22px">${t("products")} & ${t("apps")}</h2><div class="list">${prods.concat(apps).map(c=>rowOf(c,esc(ty(c.type)))).join("")}</div>`;
+  b += `<h2 style="margin-top:22px">${t("changed")}</h2>` + (changed.length ? `<div class="list">${changed.map(c=>rowOf(c,esc(ty(c.type))+" · "+esc(c.updated))).join("")}</div>` : `<p class="empty">${t("none")}</p>`);
+  if(inbox.length) b += `<h2 style="margin-top:22px">${t("questions")}</h2><div class="list">${inbox.map(c=>rowOf(c,esc(c.fields.question||""))).join("")}</div>`;
+  if((D.issues||[]).length) b += `<h2 style="margin-top:22px">${t("check")}</h2>` + D.issues.slice(0,20).map(i=>`<div class="issue ${i.level==="error"?"err":""}">${esc(i.level.toUpperCase())} ${esc(i.rel)} · ${esc(i.rule)}: ${esc(i.message)}</div>`).join("");
+  return sec(t("lageH"), t("lageL"), b);
+ },
+ products(){ return sec(t("tabs").products, "", `<h2>${t("products")}</h2>${grid(byType("product"))}<h2 style="margin-top:24px">${t("apps")}</h2>${grid(byType("app"))}`); },
+ solutions(){ return sec(t("tabs").solutions, "", grid(byType("solution"))); },
+ material(){ return sec(t("tabs").material, "", grid(byType("material"))); },
+ customers(){ return sec(t("tabs").customers, "", grid(byType("customer"))); },
+ pilots(){ return sec(t("tabs").pilots, "", grid(byType("pilot"))); },
+ offers(){ const o = byType("offer").sort((a,b)=>(OVER.has(b.id)-OVER.has(a.id))); return sec(t("tabs").offers, "", o.length ? `<div class="list">${o.map(c=>rowOf(c,(OVER.has(c.id)?t("overdue")+" · ":"")+esc(c.fields.price!=null?c.fields.price+" "+(c.fields.currency||""):""),OVER.has(c.id)?"over":"")).join("")}</div>` : `<p class="empty">${t("none")}</p>`); },
+ partners(){ return sec(t("tabs").partners, "", grid(byType("partner"))); },
+ rules(){ const v = byType("decision").filter(c=>c.status==="valid").sort((a,b)=>String(b.fields.date||b.updated).localeCompare(String(a.fields.date||a.updated)));
+  const s = byType("decision").filter(c=>c.status!=="valid");
+  return sec(t("tabs").rules, "", `<div class="list">${v.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("") || `<p class="empty">${t("none")}</p>`}</div>` + (s.length?`<details><summary>${t("superseded")} (${s.length})</summary><div class="list" style="margin-top:10px">${s.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("")}</div></details>`:"")); },
+ me(){ const prof = byType("profile"); const v = byType("preference").filter(c=>c.status==="valid").sort((a,b)=>String(b.fields.date||b.updated).localeCompare(String(a.fields.date||a.updated)));
+  const s = byType("preference").filter(c=>c.status!=="valid");
+  return sec(t("meH"), t("meL"), (prof.length?grid(prof):"") + `<h2 style="margin-top:22px">${t("prefs")}</h2><div class="list">${v.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("") || `<p class="empty">${t("none")}</p>`}</div>` + (s.length?`<details><summary>${t("superseded")} (${s.length})</summary><div class="list" style="margin-top:10px">${s.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("")}</div></details>`:"")); },
+ graph(){ return sec(t("tabs").graph, t("graphL"), `<p><a href="graph.html" target="_blank" rel="noopener">${t("open_new")}</a></p><iframe class="gframe" src="graph.html" title="Graph"></iframe>`); },
+ search(){ return sec(t("tabs").search, "", `<input class="search" id="q" placeholder="${esc(t("searchPh"))}"><div class="list" id="qres"></div>`); },
+};
+const ORDER = ["lage","products","solutions","material","customers","pilots","offers","partners","rules","me","graph","search"];
+function render(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("on", b.dataset.l===LANG));
+  if(!VIEWS[TAB]) TAB = "lage";
+  document.getElementById("tabs").innerHTML = ORDER.map(k=>`<button data-k="${k}" class="${k===TAB?"on":""}">${esc(t("tabs")[k])}</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => { TAB = b.dataset.k; try{history.replaceState(null,"","#"+TAB);}catch(e){} render(); window.scrollTo(0,0); });
+  const dr = D.drive||{}; const drive = dr.pending_since ? `${t("pending")} ${dr.pending_since}` : dr.last_sync ? `${t("last")} ${dr.last_sync}` : t("never");
+  document.getElementById("strip").innerHTML = `<span><b>●</b> ${t("built")} ${esc(String(D.built).replace("T"," "))}</span><span>${C.length} ${t("cards")}</span><span>${(D.issues||[]).length} ${t("issues")}</span><span>${t("drive")}: ${esc(drive)}</span>`;
+  document.getElementById("foot").textContent = t("foot");
+  document.getElementById("main").innerHTML = VIEWS[TAB]();
+  bindCards();
+  const q = document.getElementById("q");
+  if(q){ q.oninput = () => { const s = q.value.trim().toLowerCase(); const r = !s ? [] : C.filter(c => [c.title,c.summary,c.body,c.id,JSON.stringify(c.fields)].join(" ").toLowerCase().includes(s));
+    document.getElementById("qres").innerHTML = r.map(c=>rowOf(c,esc(ty(c.type)))).join("") || (s?`<p class="empty">${t("none")}</p>`:""); bindCards(); }; q.focus(); }
+}
+function bindCards(){ document.querySelectorAll("[data-id]").forEach(el => el.onclick = () => openCard(el.dataset.id)); }
+function openCard(id){
+  const c = C.find(x=>x.id===id); if(!c) return; const f = c.fields||{};
+  const skip = new Set(["type","id","title","status","updated","summary","drive"]);
+  const val = v => Array.isArray(v) ? v.map(x => typeof x==="object" ? esc(JSON.stringify(x)) : (C.find(y=>y.id===String(x)) ? `<a href="#" data-go="${esc(x)}">${esc(C.find(y=>y.id===String(x)).title)}</a>` : esc(x))).join(", ")
+    : (v && typeof v === "object") ? esc(JSON.stringify(v)) : (C.find(y=>y.id===String(v)) ? `<a href="#" data-go="${esc(v)}">${esc(C.find(y=>y.id===String(v)).title)}</a>` : /^https?:/.test(String(v)) ? `<a href="${esc(v)}" target="_blank" rel="noopener">${esc(v)}</a>` : esc(v));
+  const rows = Object.entries(f).filter(([k])=>!skip.has(k)).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${val(v)}</dd>`).join("");
+  const drive = (Array.isArray(f.drive)?f.drive:[]).map(d=>`<li><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title||d.url)}</a> <span class="issue">${esc(d.modified||"")}</span></li>`).join("");
+  document.getElementById("dlg").innerHTML = `<button class="x" id="x">×</button><span class="pill ${pillCls(c.status)}">${esc(st(c.status))}</span> <span class="chip">${esc(ty(c.type))}</span>
+    <h2>${esc(c.title)}</h2><p class="sum">${esc(c.summary)}</p><dl class="kv"><dt>${t("updated")}</dt><dd>${esc(c.updated)}</dd>${rows}<dt>${t("source")}</dt><dd class="issue">${esc(c.rel)}</dd></dl>
+    ${drive?`<h4>${t("drive_l")}</h4><ul>${drive}</ul>`:""}<div class="md">${md(c.body)}</div>`;
+  const ov = document.getElementById("ov"); ov.classList.add("on");
+  document.getElementById("x").onclick = () => ov.classList.remove("on");
+  document.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); openCard(a.dataset.go); });
+}
+document.getElementById("ov").onclick = e => { if(e.target.id==="ov") e.currentTarget.classList.remove("on"); };
+document.addEventListener("keydown", e => { if(e.key==="Escape") document.getElementById("ov").classList.remove("on"); });
+document.querySelectorAll(".lang button").forEach(b => b.onclick = () => { LANG = b.dataset.l; try{localStorage.setItem("nx-lang",LANG);}catch(e){} render(); });
+if(D) render();
+</script>
+</body>
+</html>

@@ -62,6 +62,10 @@ def main(argv: list[str] | None = None) -> None:
     m = sub.add_parser("mcp", help="MCP-Server (stdio) für Claude, Cursor & Co.")
     m.add_argument("--dir", default=None)
     sub.add_parser("guard", help="Pflege-Wächter (Stop-Hook)").add_argument("dir", nargs="?", default=".")
+    es = sub.add_parser("export-site", help="Seite der Wissensbasis (RO/EN) exportieren")
+    es.add_argument("dir", nargs="?", default=".")
+    es.add_argument("--out", default=None)
+    es.add_argument("--today", default=None)
     br = sub.add_parser("brief", help="Kurzlage der Wissensbasis")
     br.add_argument("dir", nargs="?", default=".")
     br.add_argument("--today", default=None)
@@ -128,6 +132,12 @@ def main(argv: list[str] | None = None) -> None:
     elif a.cmd == "mcp":
         from .mcp import run
         run(a.dir)
+    elif a.cmd == "export-site":
+        import datetime as _dt
+        from .site import export_site
+        root = Path(a.dir).resolve()
+        t = _dt.date.fromisoformat(a.today) if a.today else _dt.date.today()
+        print(export_site(root, Path(a.out) if a.out else root / "wissen" / "site", t))
     elif a.cmd == "guard":
         from .guard import guard_main
         sys.exit(guard_main(Path(a.dir)))
