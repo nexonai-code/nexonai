@@ -70,7 +70,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
           Compress-Archive -Path "$env:RUNNER_TEMP\unpruuf-build\stage\*" -DestinationPath "$out\unpruuf-Windows-portable-$v.zip"
           Get-ChildItem $out | ForEach-Object { "{0}  {1:N1} MB" -f $_.Name, ($_.Length/1MB) }
-          Get-ChildItem $out -File | ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash + "  " + $_.Name } | Out-File "$out\SHA256.txt" -Encoding ascii
+          $hashes = Get-ChildItem $out -File | ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash + "  " + $_.Name }
+          $hashes | Out-File "$out\SHA256.txt" -Encoding ascii
           "OUT=$out" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding ascii
       - name: Silent install and uninstall test
         shell: pwsh
