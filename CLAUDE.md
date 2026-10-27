@@ -29,3 +29,7 @@ Gilt für alle Projekte in diesem Repo.
 - Neue Regeln aus dem Chat sofort als `decision`-Karte mit Datum anlegen, ersetzte auf `superseded` setzen.
 - Persönliche Vorlieben und Änderungen von Gabriel (Antwortstil, Lieferformat, Sprache, was er nicht will) sofort als `preference`-Karte in `wissen/gabriel/` pflegen, ersetzte auf `superseded`.
 - Aus Google Drive (Ordner „Claude“ von gabriel@nexonai.ro) kommen nur Fakten und Links ins Repo, nie Volltexte. Ablauf: `wissen/DRIVE-SYNC.md`.
+
+## Lieferungen (27.10.2026, von Gabriel festgelegt)
+
+- Jede fertige Lieferung (ZIP, PDF, PPTX, DOCX) zusätzlich unter `lieferungen/` im Repo ablegen, Ordner wie in Drive („Claude“), nur die letzte Version, ältere über die Git-Historie. Dateien über 50 MB nur in Drive, in `lieferungen/README.md` vermerken. Mit der Arbeit committen und pushen.
