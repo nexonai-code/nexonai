@@ -14,7 +14,7 @@ import type { LicenseRecord, ServerRecord } from "./vault";
  * licence" stays in the contract.
  */
 
-export const LICENSE_PUBLIC_KEY_B64 = "67A_r4YeFkvYoXDF30gar2gRBcufokgvYQd5dVeEwKE";
+export const LICENSE_PUBLIC_KEY_B64 = "t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4";
 const SERVER_PREFIX = "unpruuf-server-license:v1:";
 const APP_PREFIX = "unpruuf-license:v1:";
 const SERVER_DOMAIN = "unpruuf-server-license-v1\n";

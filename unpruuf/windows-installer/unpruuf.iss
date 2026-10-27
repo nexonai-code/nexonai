@@ -58,6 +58,8 @@ Source: "{#StageDir}\control\*"; DestDir: "{app}\control"; Flags: recursesubdirs
 Source: "{#StageDir}\launch-control.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: control
 Source: "{#StageDir}\license-tool\*"; DestDir: "{app}\license-tool"; Flags: recursesubdirs ignoreversion; Components: licensetool
 Source: "{#StageDir}\launch-license-tool.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: licensetool
+Source: "{#StageDir}\launch-license-keygen.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: licensetool
+Source: "{#StageDir}\launch-license-publickey.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: licensetool
 Source: "{#StageDir}\web-reporter\*"; DestDir: "{app}\web-reporter"; Flags: recursesubdirs ignoreversion; Components: webreporter
 Source: "{#StageDir}\launch-web-reporter.cmd"; DestDir: "{app}"; Flags: ignoreversion; Components: webreporter
 Source: "{#StageDir}\server\*"; DestDir: "{app}\server"; Flags: recursesubdirs ignoreversion; Components: relay
@@ -72,6 +74,8 @@ Name: "{group}\unpruuf Compliance"; Filename: "{app}\launch-compliance.cmd"; Wor
 Name: "{group}\unpruuf Press"; Filename: "{app}\launch-press.cmd"; WorkingDir: "{app}\officer-app"; Components: officer
 Name: "{group}\unpruuf Control"; Filename: "{app}\launch-control.cmd"; WorkingDir: "{app}\control"; Components: control
 Name: "{group}\unpruuf Licence tool"; Filename: "{app}\launch-license-tool.cmd"; WorkingDir: "{app}\license-tool\gui"; Components: licensetool
+Name: "{group}\unpruuf Licence key, create new"; Filename: "{app}\launch-license-keygen.cmd"; WorkingDir: "{app}\license-tool"; Components: licensetool
+Name: "{group}\unpruuf Licence key, show public key"; Filename: "{app}\launch-license-publickey.cmd"; WorkingDir: "{app}\license-tool"; Components: licensetool
 Name: "{group}\unpruuf Web reporter"; Filename: "{app}\launch-web-reporter.cmd"; WorkingDir: "{app}\web-reporter"; Components: webreporter
 Name: "{group}\unpruuf Relay"; Filename: "{app}\launch-relay.cmd"; WorkingDir: "{app}\server"; Components: relay
 Name: "{group}\Read me first"; Filename: "{app}\INSTALL_INFO.txt"; Components: runtime

@@ -184,6 +184,6 @@ class LicenseManager @Inject constructor(
         // it can only VERIFY signatures, never create new ones. Rotating it (running keygen.js
         // again) invalidates every license issued under the old key; every future app build
         // would need the new value here.
-        const val PUBLIC_KEY_B64 = "67A_r4YeFkvYoXDF30gar2gRBcufokgvYQd5dVeEwKE"
+        const val PUBLIC_KEY_B64 = "t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4"
     }
 }

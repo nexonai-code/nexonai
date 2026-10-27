@@ -29,6 +29,10 @@ device it's activated on (copying one activated seat's app data to a second phon
 detected and rejected). "Exactly 350 seats" stays a contractual limit — issue exactly 350
 codes and don't hand out more.
 
+## Key rotation (27 October 2026)
+
+The key pair was replaced because the old private key was lost. After a new `node keygen.js`, run `node rotate-public-key.js <public key>` (the public key is printed by keygen, or by `node public-key.js`) and rebuild the apps, relay-android, the node server and Control. All licences of the old key stop working.
+
 ## First-time setup
 
 ```bash

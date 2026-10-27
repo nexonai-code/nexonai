@@ -43,3 +43,6 @@ console.log('you cannot issue new licenses under the same public key ever again.
 console.log('');
 console.log('Public key — paste this into LicenseManager.PUBLIC_KEY_B64 in the Android app:');
 console.log(pub.x);
+console.log('');
+console.log('Der oeffentliche Schluessel ist nicht geheim. Gib ihn weiter, damit er in Apps, Server und Control');
+console.log('eingebaut wird (node rotate-public-key.js <Schluessel>). private-key.json NIE weitergeben.');
