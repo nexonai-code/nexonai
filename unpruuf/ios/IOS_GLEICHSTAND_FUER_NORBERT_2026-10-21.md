@@ -55,7 +55,7 @@ Diese Verhaltensweisen sind auf Android Stand der Technik und gehören auf iOS, 
 
 **Aussagen:** Nie „zertifiziert“, „unknackbar“, „DSGVO-konform“, „als Erste“, „einzigartig“. Nicht auditiert. Nachrichten, die nicht gesendet werden können, warten nur im Speicher; wird die App beendet, sind sie weg (so sagen). Lebensdauer: nach Ablauf (höchstens 24 Stunden, Standard 6) ist ein Paket für niemanden mehr lesbar und wird binnen etwa einer Minute auch aus den Dateien überschrieben.
 
-**Lizenz:** App-Lizenzen sind an das Gerät gebunden (erste Aktivierung bindet den Code); Server-Codes nicht. Die App hält höchstens 1000 eigene Nodes. Kontakt-Pool: je Kontakt 3 Nodes aus der gewählten Liste. Lizenzformat `unpruuf-license:v1` unverändert, Ed25519-Pubkey `67A_r4YeFkvYoXDF30gar2gRBcufokgvYQd5dVeEwKE`.
+**Lizenz:** App-Lizenzen sind an das Gerät gebunden (erste Aktivierung bindet den Code); Server-Codes nicht. Die App hält höchstens 1000 eigene Nodes. Kontakt-Pool: je Kontakt 3 Nodes aus der gewählten Liste. Lizenzformat `unpruuf-license:v1` unverändert, Ed25519-Pubkey `t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4`.
 
 **Control (Kunden-Admin-PC):** Node-Listen kommen als ZIP aus „unpruuf Control“; iOS importiert Datei für Datei (`unpruuf-node-list:v1`). Der Lizenz-Vorrat wird in Control verwaltet, kein neues Lizenzformat, iOS bleibt unberührt.
 

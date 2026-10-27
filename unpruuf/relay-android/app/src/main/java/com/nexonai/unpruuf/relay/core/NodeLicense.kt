@@ -29,7 +29,7 @@ object NodeLicense {
     const val EXPIRY_WARNING_DAYS = 30L
 
     /** Same Ed25519 public key as the app's LicenseManager.PUBLIC_KEY_B64 and the PC server. */
-    const val PUBLIC_KEY_B64 = "67A_r4YeFkvYoXDF30gar2gRBcufokgvYQd5dVeEwKE"
+    const val PUBLIC_KEY_B64 = "t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4"
 
     data class Info(val serial: String, val customer: String, val maxNodes: Int, val issuedAtMs: Long, val expiresAtMs: Long)
 

@@ -20,7 +20,7 @@ import { MAX_NODES_PER_SERVER } from "./profiles";
  */
 
 /** Same Ed25519 public key the Android app's LicenseManager.PUBLIC_KEY_B64 carries. */
-export const LICENSE_PUBLIC_KEY_B64 = "67A_r4YeFkvYoXDF30gar2gRBcufokgvYQd5dVeEwKE";
+export const LICENSE_PUBLIC_KEY_B64 = "t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4";
 export const SERVER_LICENSE_PREFIX = "unpruuf-server-license:v1:";
 export const APP_LICENSE_PREFIX = "unpruuf-license:v1:";
 const SIGN_DOMAIN = "unpruuf-server-license-v1\n";

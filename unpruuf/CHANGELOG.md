@@ -29,6 +29,33 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑27 · iOS handover for Norbert (document, vectors, reference package)
+
+- New `ios/IOS_UEBERGABE_FUER_NORBERT_2026-10-27.md`: everything that changed since the list of 21.10. that iOS needs (new public licence key, free Client app with guest invitations, `GRANT_RENEW`, check code, server contract M1 to M3, v3-onion rule, receive window M4, Tor stream isolation, database key and panic wipe equivalents, F1 status), with an order of work and open questions for Gabriel.
+- New `ios/vectors/ios-vectors-2026-10-27.json` (check code, `GRANT_RENEW` cases, pairing codes with `g` and `i`, onion addresses with valid and invalid cases, licence codes signed with a throw-away key) and `NorbertVectorsTest.kt` that proves the Android code reproduces them (4 tests pass).
+- Package `unpruuf_iOS_Norbert_2026-10-27_v1.zip` carries the document, specs, vectors, Android reference sources and tests. Only the public licence key is in it.
+
+---
+
+## 2026‑10‑27 · New licence key pair (old private key lost), licence tool additions
+
+- The old `private-key.json` could not be found anywhere (not in this environment, not in Git, not in Drive or Gmail by name). New Ed25519 key pair made; public key replaced in the Android app (`LicenseManager`), relay-android (`NodeLicense`), the node server (`license.ts`) and Control (`licenses.ts`), and quoted in the iOS spec files. **Every licence signed with the old key (`67A_r4Y…`) stops working; iOS must embed the new key `t7ZQMSMx…`.**
+- New: `license-tool/rotate-public-key.js` (replaces the public key in all four places and the iOS docs from one command), `public-key.js` (prints the public key of `private-key.json`), Start menu entries "Licence key, create new" (asks for JA, refuses if a key exists) and "Licence key, show public key".
+- Private key: created in the build environment at Gabriel's explicit request, handed over once as a file, then shredded here. Never in Git, never printed. Backup is Gabriel's job (two places).
+- Test licences issued with the new key (server 5 nodes, 2 each for Standard, Pro, Group; one year), handed over as a file.
+- Checks: node server 138 pass, Control 63 pass; a licence signed with the new key verifies, the old key rejects it.
+
+---
+
+## 2026‑10‑27 · Windows installer (Setup.exe with Node.js included)
+
+- New: `unpruuf/windows-installer/` and the workflow `.github/workflows/windows-installer.yml`. A real Windows runner builds every Windows program (production dependencies, native SQLite for Windows), bundles `runtime\node.exe`, compiles an Inno Setup installer and a portable ZIP, and tests before handing over: SQLite loads, Control, web reporter and licence GUI answer on their ports, no secret file inside, silent install, all programs present, uninstall.
+- Per-user install, no administrator rights, Start menu group "unpruuf"; component choice (node server, officer app, Control, licence tool, web reporter, relay).
+- Found on the way: the licence GUI refuses to start without `private-key.json`; its launcher now says what to do instead of silently closing. The test uses a throw-away key and deletes it.
+- Limits: not code-signed (SmartScreen), data stays in the program folders (not removed on uninstall, no update path yet), not run on a customer PC.
+
+---
+
 ## 2026‑10‑26 · GRANT_RENEW: guests keep their access automatically
 
 - The Pro app renews each guest's grants by itself through the encrypted chat (a quarter of the validity after the last renewal, so a 7-day grant is replaced every 42 hours). The renewal carries address and grant pairs, so it also follows the owner's nodes when they change. The Client accepts it only from its inviter, drops unusable entries, replaces its nodes and grants, and clears the "refused" banner.

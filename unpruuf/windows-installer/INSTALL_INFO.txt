@@ -1,0 +1,34 @@
+unpruuf for Windows / unpruuf pentru Windows
+=============================================
+
+ENGLISH
+This installs the unpruuf programs that run on a Windows PC or server: your own node server, the
+Compliance dashboard and Press newsroom, unpruuf Control, the licence tool, the web reporter and the
+optional relay. Node.js is included, nothing else has to be installed.
+
+* Pilot phase, not independently audited. Do not describe it as certified.
+* This installer is not code-signed yet. Windows may show "Windows protected your PC": click
+  "More info", then "Run anyway".
+* Everything is installed into your own user folder (no administrator rights needed).
+* Your data (node identity and onion address, case files, licence stock) is created INSIDE the
+  program folders when you first start a program. Uninstalling does not delete it. If you delete the
+  folder by hand, the node identity and its onion address are gone for good. Back it up first.
+* Start the programs from the Start menu, group "unpruuf".
+* The node server needs a server licence from NexonAI. Paste it with "unpruuf Paste server licence"
+  (or on the setup page). Without a licence you can only try the "unpruuf Temp Node".
+
+ROMANA
+Aceasta instalează programele unpruuf care rulează pe un PC sau server Windows: propriul server de
+noduri, tabloul de bord Compliance și redacția Press, unpruuf Control, instrumentul de licențe,
+web-reporter și releul opțional. Node.js este inclus, nu trebuie instalat nimic altceva.
+
+* Fază pilot, fără audit independent. Nu o prezenta ca certificată.
+* Acest instalator nu este încă semnat digital. Windows poate afișa „Windows a protejat computerul":
+  apasă „Mai multe informații", apoi „Execută oricum".
+* Totul se instalează în folderul tău de utilizator (fără drepturi de administrator).
+* Datele tale (identitatea nodului și adresa onion, dosarele de caz, stocul de licențe) se creează ÎN
+  folderele programelor la prima pornire. Dezinstalarea nu le șterge. Dacă ștergi folderul manual,
+  identitatea nodului și adresa onion dispar definitiv. Fă mai întâi o copie de siguranță.
+* Pornește programele din meniul Start, grupul „unpruuf".
+* Serverul de noduri are nevoie de o licență de server de la NexonAI. Lipește-o cu „unpruuf Paste server
+  licence" (sau pe pagina de configurare). Fără licență poți încerca doar „unpruuf Temp Node".
