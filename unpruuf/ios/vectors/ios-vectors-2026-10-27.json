@@ -1,0 +1,175 @@
+{
+  "description": "iOS test vectors of 27.10.2026 (guest invitation check code, GRANT_RENEW, pairing codes with g and i, licence format). Reproduced by the Android JVM test NorbertVectorsTest. The licence key below is a THROW-AWAY key for tests only; the production public key is in the handover document.",
+  "onionAddresses": {
+    "valid": [
+      "p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion",
+      "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion",
+      "52ce2llezfboqynb6cspi737fjqc47z6s7oniawodtcwbcx3yv7dsfad.onion"
+    ],
+    "invalid": [
+      "evil.example.com",
+      "127.0.0.1",
+      "p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion:80",
+      "P5NCNAM7FXML4MFDBZ4NFR6PKKYS2AF73YEFVOPOXVKKE2DTLI2LDFAD.ONION",
+      "x.onion",
+      "",
+      " p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion"
+    ]
+  },
+  "fingerprint": {
+    "algorithm": "SHA-256 over UTF-8 \"unpruuf-guest-answer|\"+messageKeyB64+\"|\"+ratchetPublicKeyB64+\"|\"+inviteId; first 5 bytes as upper-case hex (10 characters); shown as XXXXX-XXXXX. The strings are used exactly as they appear in the pairing code.",
+    "cases": [
+      {
+        "messageKey": "mk",
+        "ratchetKey": "rk",
+        "inviteId": "inviteId1",
+        "expected": "E4B9F-34479"
+      },
+      {
+        "messageKey": "bWVzc2FnZUtleQ==",
+        "ratchetKey": "cmF0Y2hldEtleQ==",
+        "inviteId": "abcDEF123_-xy",
+        "expected": "D0211-35A38"
+      }
+    ]
+  },
+  "grantRenew": {
+    "nowMs": 1800000000000,
+    "note": "Entries are address,token joined by semicolon. Keep at most 3, onion address only, token must parse and not be expired, no duplicate address, nothing usable = ignore the message.",
+    "cases": [
+      {
+        "name": "two good entries",
+        "payload": "UNPRUUF_GRANTRENEW_V1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg;ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion,Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU",
+        "expected": [
+          {
+            "address": "p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion",
+            "token": "AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg"
+          },
+          {
+            "address": "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion",
+            "token": "Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU"
+          }
+        ]
+      },
+      {
+        "name": "plain host dropped",
+        "payload": "UNPRUUF_GRANTRENEW_V1:evil.example.com,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg;ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion,Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU",
+        "expected": [
+          {
+            "address": "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion",
+            "token": "Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU"
+          }
+        ]
+      },
+      {
+        "name": "expired token dropped",
+        "payload": "UNPRUUF_GRANTRENEW_V1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion,AQARIjNEVWZ3iJmqu8zd7v8AAAGLz-VoAAA8ABAAAAA.D9eKWoMVgVzdFlvD3Ymi4JCb93Gd_-vi1_-O1KzGgRg;ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion,Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU",
+        "expected": [
+          {
+            "address": "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion",
+            "token": "Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU"
+          }
+        ]
+      },
+      {
+        "name": "not a token dropped",
+        "payload": "UNPRUUF_GRANTRENEW_V1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion,not-a-grant;ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion,Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU",
+        "expected": [
+          {
+            "address": "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion",
+            "token": "Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU"
+          }
+        ]
+      },
+      {
+        "name": "duplicate address dropped",
+        "payload": "UNPRUUF_GRANTRENEW_V1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg;p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion,Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU",
+        "expected": [
+          {
+            "address": "p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion",
+            "token": "AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg"
+          }
+        ]
+      },
+      {
+        "name": "at most three",
+        "payload": "UNPRUUF_GRANTRENEW_V1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg;ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg;52ce2llezfboqynb6cspi737fjqc47z6s7oniawodtcwbcx3yv7dsfad.onion,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg;u4ba6455zmadypu2j4nez3jxsxuewuips2ws4php36tolimorsycjhid.onion,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg",
+        "expected": [
+          {
+            "address": "p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion",
+            "token": "AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg"
+          },
+          {
+            "address": "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion",
+            "token": "AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg"
+          },
+          {
+            "address": "52ce2llezfboqynb6cspi737fjqc47z6s7oniawodtcwbcx3yv7dsfad.onion",
+            "token": "AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg"
+          }
+        ]
+      },
+      {
+        "name": "nothing usable",
+        "payload": "UNPRUUF_GRANTRENEW_V1:evil.example.com,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg",
+        "expected": null
+      },
+      {
+        "name": "wrong prefix",
+        "payload": "UNPRUUF_OTHER_V1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion,AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg",
+        "expected": null
+      }
+    ]
+  },
+  "pairingInvitation": {
+    "note": "Invitation from a Pro user (g and i present) and the guest answer (i repeated, no g, e=client). n holds the addresses WITHOUT the unpruuf-node:v1: prefix. Decoders must drop addresses that are not v3 onions.",
+    "invitation": {
+      "json": "{\"v\":2,\"p\":\"bWVzc2FnZUtleQ==\",\"k\":\"cmF0Y2hldEtleQ==\",\"s\":\"cm91dGluZ1NlZWQ=\",\"n\":\"p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion;ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion\",\"e\":\"pro\",\"g\":\"AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg;Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU\",\"i\":\"inviteId123\"}",
+      "expected": {
+        "nodes": [
+          "p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion",
+          "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion"
+        ],
+        "grants": [
+          "AQABAgMEBQYHCAkKCwwNDg8AAAG42sW0AAA8ABAAAAA.BKCFyEO5jz9lifGZwOqrdRG1PU8Aqq35YNDHUxx6gHg",
+          "Af_u3cy7qpmId2ZVRDMiEQAAAAG42sW0AAB4ACAAAAMKCww.f1LKDtsI1YMSrToOJU4OfVtXvhHNdTm2H3Nle3t80zU"
+        ],
+        "inviteId": "inviteId123",
+        "edition": "pro"
+      }
+    },
+    "answer": {
+      "json": "{\"v\":2,\"p\":\"Z3Vlc3RLZXk=\",\"k\":\"Z3Vlc3RSYXRjaGV0\",\"s\":\"Z3Vlc3RTZWVk\",\"n\":\"p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion;ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion\",\"e\":\"client\",\"i\":\"inviteId123\"}",
+      "expected": {
+        "nodes": [
+          "p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion",
+          "ehjcr5vonk2mftfwkmmuynlbmdzjcjukxtawymfgfz5ewrk3ey5aqiad.onion"
+        ],
+        "grants": [],
+        "inviteId": "inviteId123",
+        "edition": "client"
+      }
+    }
+  },
+  "licence": {
+    "publicKeyB64": "_ExMlHvAuTgBbHC_tSK--xzDkXZJm4jdftjp6kHPd2Q",
+    "appCode": "unpruuf-license:v1:MXxwcm98VkVDLTAwMDF8VGVzdCBWZWN0b3J8MTgwMDAwMDAwMDAwMHwxODMxNTM2MDAwMDAw:rgArGa61h34Krn_WMlMJXMFbFA2zmG8uhoXJgfaw3TUdHfDeuOf3WZZm1dl-dilVjzJNihzygEfwdMnA15drDw",
+    "appCodeExpected": {
+      "edition": "pro",
+      "serial": "VEC-0001",
+      "customer": "Test Vector",
+      "issuedAtMs": 1800000000000,
+      "expiresAtMs": 1831536000000
+    },
+    "serverCode": "unpruuf-server-license:v1:MXxWRUMtU1JWLTF8VGVzdCBWZWN0b3J8MjUwfDE4MDAwMDAwMDAwMDB8MTgzMTUzNjAwMDAwMA:wnr0xC68_A-1lTzfUPAVpcPHO1DnAkueLH4-8WJvFT9nc9t1V0bgmeAz_CELOw_sV-4VkkYg9uV0YC0y8X6oCA",
+    "serverCodeExpected": {
+      "serial": "VEC-SRV-1",
+      "customer": "Test Vector",
+      "maxNodes": 250,
+      "issuedAtMs": 1800000000000,
+      "expiresAtMs": 1831536000000
+    },
+    "tamperedAppCode": "unpruuf-license:v1:MXxwcm98VkVDLTAwMDF8VGVzdCBWZWN0b3J8MTgwMDAwMDAwMDAwMHwxODMxNTM2MDAwMDAw:rgArGa61h34Krn_WMlMJXMFbFA2zmG8uhoXJgfaw3TUdHfDeuOf3WZZm1dl-dilVjzJNihzygEfwdMnA15dAAA",
+    "format": "unpruuf-license:v1:<b64url(payload)>:<b64url(sig)>; payload 1|edition|serial|customer|issuedAtMs|expiresAtMs; Ed25519 over the raw payload bytes. Server: unpruuf-server-license:v1:, payload 1|serial|customer|maxNodes|issuedAtMs|expiresAtMs, signature over \"unpruuf-server-license-v1\\n\"+payload."
+  }
+}

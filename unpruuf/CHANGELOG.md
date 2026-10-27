@@ -23,6 +23,14 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑27 · iOS handover for Norbert (document, vectors, reference package)
+
+- New `ios/IOS_UEBERGABE_FUER_NORBERT_2026-10-27.md`: everything that changed since the list of 21.10. that iOS needs (new public licence key, free Client app with guest invitations, `GRANT_RENEW`, check code, server contract M1 to M3, v3-onion rule, receive window M4, Tor stream isolation, database key and panic wipe equivalents, F1 status), with an order of work and open questions for Gabriel.
+- New `ios/vectors/ios-vectors-2026-10-27.json` (check code, `GRANT_RENEW` cases, pairing codes with `g` and `i`, onion addresses with valid and invalid cases, licence codes signed with a throw-away key) and `NorbertVectorsTest.kt` that proves the Android code reproduces them (4 tests pass).
+- Package `unpruuf_iOS_Norbert_2026-10-27_v1.zip` carries the document, specs, vectors, Android reference sources and tests. Only the public licence key is in it.
+
+---
+
 ## 2026‑10‑27 · New licence key pair (old private key lost), licence tool additions
 
 - The old `private-key.json` could not be found anywhere (not in this environment, not in Git, not in Drive or Gmail by name). New Ed25519 key pair made; public key replaced in the Android app (`LicenseManager`), relay-android (`NodeLicense`), the node server (`license.ts`) and Control (`licenses.ts`), and quoted in the iOS spec files. **Every licence signed with the old key (`67A_r4Y…`) stops working; iOS must embed the new key `t7ZQMSMx…`.**
