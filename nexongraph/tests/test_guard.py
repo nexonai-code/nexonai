@@ -93,3 +93,14 @@ def test_guard_script_without_nexongraph(tmp_path):
     r = subprocess.run(["/bin/bash", str(REPO / "scripts" / "wissen-guard.sh")], cwd=tmp_path, env=env,
                        capture_output=True, text=True, timeout=60)
     assert r.returncode == 0
+
+
+def test_start_hook_keeps_base_on_compact(repo):
+    base_file = repo / ".git" / "wissen-session-base"
+    base_file.write_text("keep-me")
+    subprocess.run(["/bin/bash", str(REPO / "scripts" / "wissen-start.sh")], cwd=repo, input='{"source":"compact"}',
+                   capture_output=True, text=True, timeout=120, env={**os.environ, "CLAUDE_PROJECT_DIR": str(repo)})
+    assert base_file.read_text() == "keep-me"
+    subprocess.run(["/bin/bash", str(REPO / "scripts" / "wissen-start.sh")], cwd=repo, input='{"source":"startup"}',
+                   capture_output=True, text=True, timeout=120, env={**os.environ, "CLAUDE_PROJECT_DIR": str(repo)})
+    assert base_file.read_text().strip() == git(repo, "rev-parse", "HEAD")

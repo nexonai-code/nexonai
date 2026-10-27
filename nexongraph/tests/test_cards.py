@@ -60,3 +60,19 @@ def test_load_cards_skips_site_and_readme(tmp_path):
 
 def test_load_cards_without_folder(tmp_path):
     assert load_cards(tmp_path) == ([], [])
+
+
+def test_impossible_date_is_parse_error():
+    with pytest.raises(CardError) as e:
+        parse_card(GOOD.replace("updated: 2026-10-27", "updated: 2026-02-30"), "wissen/produkte/unpruuf-press.md")
+    assert e.value.rule == "parse-error"
+
+
+def test_area_file_that_is_not_a_card_is_reported(tmp_path):
+    w = tmp_path / "wissen" / "produkte"
+    w.mkdir(parents=True)
+    (w / "no-dashes.md").write_text("type: product\nid: no-dashes\n")
+    (w / "typo.md").write_text("---\ntyp: product\nid: typo\n---\n")
+    (tmp_path / "wissen" / "DRIVE-SYNC.md").write_text("# not an area file\n")
+    cards, errors = load_cards(tmp_path)
+    assert cards == [] and sorted(e.rel for e in errors) == ["wissen/produkte/no-dashes.md", "wissen/produkte/typo.md"]

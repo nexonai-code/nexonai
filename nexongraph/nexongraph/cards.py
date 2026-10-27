@@ -111,6 +111,8 @@ def parse_card(text: str, rel: str) -> Card | None:
         data = yaml.safe_load("\n".join(lines[1:end])) or {}
     except yaml.YAMLError as err:
         raise CardError(rel, "parse-error", f"invalid YAML: {str(err).splitlines()[0]}") from None
+    except (ValueError, TypeError) as err:  # e.g. impossible dates like 2026-02-30
+        raise CardError(rel, "parse-error", f"invalid value: {err}") from None
     if not isinstance(data, dict) or "type" not in data:
         return None
     body = "\n".join(lines[end + 1:])
@@ -147,4 +149,6 @@ def load_cards(root: Path) -> tuple[list[Card], list[CardError]]:
             continue
         if c is not None:
             cards.append(c)
+        elif len(parts) > 1 and parts[0] in AREAS:
+            errors.append(CardError(rel, "parse-error", "not a card: front matter between --- lines with 'type:' is missing"))
     return cards, errors

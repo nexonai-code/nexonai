@@ -171,3 +171,8 @@ def test_open_conflict_is_warning(tmp_path):
     write(tmp_path, "angebote/o1.md", type="offer", status="draft", extra="conflicts: ['price: card 4800 vs Drive 5200 (Offer.pdf)']\n")
     issues = check(tmp_path, TODAY)
     assert [(i.rule, i.level) for i in issues] == [("open-conflict", "warning")] and "5200" in issues[0].message
+
+
+def test_hyphenated_forbidden_term(tmp_path):
+    write(tmp_path, "material/m1.md", type="material", summary="ISO-certified hosting")
+    assert rules(check(tmp_path, TODAY)) == {"forbidden-term"}

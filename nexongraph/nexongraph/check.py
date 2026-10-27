@@ -66,7 +66,7 @@ def _structure(c: Card, out: list[Issue]) -> bool:
 
 
 def _term_hits(text: str, term: str) -> bool:
-    pat = re.compile(r"(?<![\w-])" + re.escape(term) + r"(?![\w-])", re.I)
+    pat = re.compile(r"(?<!\w)" + re.escape(term) + r"(?![\w-])", re.I)
     for m in pat.finditer(text):
         before = text[max(0, m.start() - 6):m.start()].lower()
         if not before.endswith(NEGATIONS):
