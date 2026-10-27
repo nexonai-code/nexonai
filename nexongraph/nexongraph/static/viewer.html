@@ -116,12 +116,12 @@ const I18N = {
    areas:"Bereiche",search:"Suchen: Klasse, Funktion, Dokument, Begriff …",nodes:"Knoten",edges:"Verbindungen",out:"Ausgehend",in:"Eingehend",
    nopath:"Kein Weg gefunden.",notfound:"Nicht gefunden:",steps:"Schritte",source:"Quelle",area:"Bereich",degree:"Grad",
    hint:"Mausrad: zoomen · Ziehen: verschieben · Klick: Details · Doppelklick: hinzoomen",
-   kind:{file:"Code-Dateien",class:"Klassen",interface:"Schnittstellen",function:"Funktionen",method:"Methoden",doc:"Dokumente",section:"Abschnitte",concept:"Begriffe",note:"Hinweise im Code",external:"Externe Pakete"}},
+   kind:{file:"Code-Dateien",class:"Klassen",interface:"Schnittstellen",function:"Funktionen",method:"Methoden",doc:"Dokumente",section:"Abschnitte",concept:"Begriffe",note:"Hinweise im Code",external:"Externe Pakete",folder:"Ordner",product:"Produkte",app:"Apps",solution:"Lösungen",material:"Material",customer:"Kunden",pilot:"Piloten",offer:"Angebote",partner:"Partner",decision:"Entscheidungen",preference:"Vorlieben",profile:"Profil"}},
  en:{filter:"Filter",structural:"Structural edges (contains)",labels:"Labels",path:"Find a path",from:"From …",to:"To …",find:"Find",clear:"Clear",
    areas:"Areas",search:"Search: class, function, document, term …",nodes:"nodes",edges:"edges",out:"Outgoing",in:"Incoming",
    nopath:"No path found.",notfound:"Not found:",steps:"steps",source:"Source",area:"Area",degree:"Degree",
    hint:"Wheel: zoom · Drag: pan · Click: details · Double click: zoom in",
-   kind:{file:"Code files",class:"Classes",interface:"Interfaces",function:"Functions",method:"Methods",doc:"Documents",section:"Sections",concept:"Terms",note:"Notes in code",external:"External packages"}}
+   kind:{file:"Code files",class:"Classes",interface:"Interfaces",function:"Functions",method:"Methods",doc:"Documents",section:"Sections",concept:"Terms",note:"Notes in code",external:"External packages",folder:"Folders",product:"Products",app:"Apps",solution:"Solutions",material:"Material",customer:"Customers",pilot:"Pilots",offer:"Offers",partner:"Partners",decision:"Decisions",preference:"Preferences",profile:"Profile"}}
 };
 let LANG = (DATA && DATA.meta && DATA.meta.lang) || "de";
 try{ LANG = localStorage.getItem("ng-lang") || LANG }catch(e){}
@@ -187,11 +187,12 @@ function draw(){
     ctx.fillStyle = colorOf(n);
     ctx.beginPath();
     if(n.k==="doc"||n.k==="section"){ ctx.rect(x-rr,y-rr,rr*2,rr*2); }
+    else if(CARDK.has(n.k)){ const q=rr*1.35; ctx.moveTo(x,y-q); ctx.lineTo(x+q,y); ctx.lineTo(x,y+q); ctx.lineTo(x-q,y); ctx.closePath(); }
     else if(n.k==="concept"){ ctx.moveTo(x,y-rr*1.2); ctx.lineTo(x+rr*1.2,y); ctx.lineTo(x,y+rr*1.2); ctx.lineTo(x-rr*1.2,y); ctx.closePath(); }
     else if(n.k==="note"){ ctx.moveTo(x,y-rr*1.2); ctx.lineTo(x+rr*1.1,y+rr*.9); ctx.lineTo(x-rr*1.1,y+rr*.9); ctx.closePath(); }
     else ctx.arc(x,y,rr,0,Math.PI*2);
     ctx.fill();
-    if(n.k==="file"||n.k==="doc"){ ctx.lineWidth=1.5; ctx.strokeStyle="#fff"; ctx.stroke(); }
+    if(n.k==="file"||n.k==="doc"||CARDK.has(n.k)){ ctx.lineWidth=1.5; ctx.strokeStyle="#fff"; ctx.stroke(); }
     if(sel===n || hover===n){ ctx.lineWidth=3; ctx.strokeStyle="#0f2a3a"; ctx.stroke(); }
     ctx.globalAlpha = 1;
     if(fL.checked && on && (n.r >= labelMin || sel===n || (sel && nb.has(n.i_)) || (pathSet && pathSet.has(n.i_)))) toLabel.push([n,x,y,rr]);
@@ -259,7 +260,8 @@ q.addEventListener("keydown", ev => { if(ev.key==="Enter" && hits[hi]){ const n 
 // filters
 const fE = document.getElementById("fE"), fI = document.getElementById("fI"), fA = document.getElementById("fA"), fS = document.getElementById("fS"), fL = document.getElementById("fL");
 [fE,fI,fA,fS,fL].forEach(x => x.onchange = draw);
-const KORDER = ["file","class","interface","function","method","doc","section","concept","note","external"];
+const KORDER = ["product","app","solution","material","customer","pilot","offer","partner","decision","preference","profile","folder","file","class","interface","function","method","doc","section","concept","note","external"];
+const CARDK = new Set(["product","app","solution","material","customer","pilot","offer","partner","decision","preference","profile"]);
 function renderKinds(){
   const el = document.getElementById("kinds");
   el.innerHTML = KORDER.filter(k=>kindsPresent[k]).map(k=>`<label class="chk"><input type="checkbox" data-k="${k}" ${hiddenKinds.has(k)?"":"checked"}> ${esc(T("kind")[k]||k)} <span class="stat" style="margin-left:auto">${kindsPresent[k]}</span></label>`).join("");

@@ -7,7 +7,10 @@ from collections import defaultdict
 
 import networkx as nx
 
+from .cards import TYPES as CARD_TYPES
 from .model import AMBIGUOUS, EXTRACTED, INFERRED
+
+MENTION_KINDS = {"section"} | CARD_TYPES
 
 SYMBOL_KINDS = {"class", "interface", "function", "method"}
 JS_EXTS = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".d.ts", "/index.ts", "/index.tsx", "/index.js", "/index.jsx"]
@@ -344,7 +347,7 @@ def link_mentions(G: nx.DiGraph, max_per_section: int = 30) -> int:
     freq: dict[str, int] = defaultdict(int)
     sections = 0
     for n, d in list(G.nodes(data=True)):
-        if d.get("kind") != "section":
+        if d.get("kind") not in MENTION_KINDS:
             continue
         sections += 1
         text = (d.get("label", "") + "\n" + d.get("text", ""))

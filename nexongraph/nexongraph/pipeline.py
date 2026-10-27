@@ -13,13 +13,15 @@ from .analyze import analyze
 from .build import add_extraction, link_mentions, merge, resolve
 from .concepts import local_concepts, semantic_pass
 from .export import layout, to_html, to_json
+from .cards import CARD_DIR, load_cards
+from .extract_cards import cards_extraction
 from .extract_docs import extract_document, read_text
 from .extract_python import extract_python
 from .extract_treesitter import extract_generic, treesitter_available
 from .report import generate
 from .scan import scan
 
-EXTRACTOR_VERSION = "1"
+EXTRACTOR_VERSION = "2"
 
 
 class Cancelled(Exception):
@@ -64,11 +66,15 @@ def build(root: str | Path, semantic: bool | None = None, out_dir: Path | None =
 
     say("Ordner wird gelesen …", 0.02)
     sr = scan(root)
+    cards, card_errors = load_cards(root)
+    card_rels = {c.rel for c in cards} | {e.rel for e in card_errors}
+    # cards are read by the card reader, not as documents; the exported site is output, not input
+    sr.files = [f for f in sr.files if f.rel not in card_rels and not f.rel.startswith(f"{CARD_DIR}/site/")]
     files = sr.files
-    if not files:
+    if not files and not cards:
         raise ValueError("Keine unterstützten Dateien gefunden (Code, Markdown, PDF, Word, HTML, Text).")
 
-    extractions, errors, reused = [], [], 0
+    extractions, errors, reused = [], [f"{e.rel}: {e.message}" for e in card_errors], 0
     keep_cache = set()
     for i, f in enumerate(files, start=1):
         if stop():
@@ -109,7 +115,9 @@ def build(root: str | Path, semantic: bool | None = None, out_dir: Path | None =
 
     say("Verbindungen werden aufgelöst …", 0.62)
     G, refs = merge(extractions)
+    add_extraction(G, cards_extraction(cards, {n for n, d in G.nodes(data=True) if d.get("kind") in ("file", "doc")}))
     stats = resolve(G, refs)
+    stats["cards"] = len(cards)
     stats["mentions"] = link_mentions(G)
 
     say("Dokumente werden verknüpft …", 0.68)

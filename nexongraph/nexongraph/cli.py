@@ -45,6 +45,8 @@ def main(argv: list[str] | None = None) -> None:
         p = sub.add_parser(name, help=hlp)
         p.add_argument("text")
         p.add_argument("--dir", default=".")
+        if name == "search":
+            p.add_argument("--kind", default="", help="nur diese Arten, z. B. customer,offer")
     p = sub.add_parser("path", help="kürzester Weg zwischen zwei Knoten")
     p.add_argument("a")
     p.add_argument("b")
@@ -97,7 +99,8 @@ def main(argv: list[str] | None = None) -> None:
     elif a.cmd == "search":
         from .query import Searcher
         G = _graph(a.dir)
-        for n, sc in Searcher(G).search(a.text, 20):
+        kinds = {k.strip() for k in a.kind.split(",") if k.strip()} or None
+        for n, sc in Searcher(G).search(a.text, 20, kinds=kinds):
             d = G.nodes[n]
             print(f"{sc:6.1f}  {d.get('label', n)} [{d.get('kind')}] {d.get('source_file', '')}{':' + str(d['line']) if d.get('line') else ''}")
     elif a.cmd == "explain":
