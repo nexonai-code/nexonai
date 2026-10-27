@@ -36,7 +36,7 @@ Jede Karte ist eine Markdown-Datei mit Kopfdaten (YAML-Frontmatter) und Stichpun
 | Ordner | `type` | Eine Karte je … | Wichtige Felder |
 |---|---|---|---|
 | `wissen/produkte/` | `product` | Produkt oder Edition | `status`, `products` (Editionen), `code`, `material`, `claims_allowed`, `claims_forbidden` |
-| `wissen/apps/` | `app` | App oder Baustein | `status`, `code` (Repo-Pfade), `build`, `start`, `products` |
+| `wissen/apps/` | `app` | App oder Baustein | `status`, `code` (Repo-Pfade), `build`, `run`, `products` |
 | `wissen/loesungen/` | `solution` | Branchenlösung | `status`, `products`, `industry` |
 | `wissen/material/` | `material` | Website, Seite, Whitepaper, Präsentation, Film, Artefakt | `status`, `url` oder `path`, `languages`, `version`, `products` |
 | `wissen/kunden/` | `customer` | Kunde oder Interessent | `status`, `industry`, `country`, `contacts` (Rollen), `products`, `drive` |

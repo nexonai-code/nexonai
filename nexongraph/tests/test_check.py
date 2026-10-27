@@ -165,3 +165,9 @@ def test_cli_exit_codes(tmp_path, capsys):
         main(["check", str(tmp_path), "--today", "2026-10-27"])
     assert e.value.code == 1
     assert "ERROR wissen/apps/a1.md unknown-ref" in capsys.readouterr().out
+
+
+def test_open_conflict_is_warning(tmp_path):
+    write(tmp_path, "angebote/o1.md", type="offer", status="draft", extra="conflicts: ['price: card 4800 vs Drive 5200 (Offer.pdf)']\n")
+    issues = check(tmp_path, TODAY)
+    assert [(i.rule, i.level) for i in issues] == [("open-conflict", "warning")] and "5200" in issues[0].message

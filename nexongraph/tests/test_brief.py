@@ -69,8 +69,19 @@ def test_brief_changed_and_rules(tmp_path):
 
 def test_brief_truncates(tmp_path):
     for i in range(80):
-        write(tmp_path, f"produkte/p{i}.md")
+        write(tmp_path, f"gabriel/p{i}.md", type="preference", status="valid", topic=f"t{i}")
     out = brief(tmp_path, TODAY, max_lines=60)
     lines = out.splitlines()
     assert len(lines) <= 60 and "more lines" in lines[-1]
     assert len(brief(tmp_path, TODAY, max_lines=0).splitlines()) > 80
+
+
+def test_brief_products_compact_and_capped_changes(tmp_path):
+    for i in range(12):
+        write(tmp_path, f"produkte/p{i}.md", title=f"Prod {i}")
+    write(tmp_path, "loesungen/s1.md", type="solution", title="Some solution")
+    out = brief(tmp_path, TODAY)
+    prod = out.split("## Products & apps")[1].split("##")[0].strip().splitlines()
+    assert len(prod) == 1 and prod[0].startswith("- Products: Prod 0 (tested)")
+    assert "Some solution" not in out.split("## Changed")[0]
+    assert "- (+5 more)" in out.split("## Changed (7 days)")[1]

@@ -15,6 +15,10 @@ def _line(c: Card, extra: str = "") -> str:
     return f"- {c.title or c.id}" + (f" {extra}" if extra else "")
 
 
+def _capped(lines: list[str], n: int) -> list[str]:
+    return lines if len(lines) <= n else lines[:n] + [f"- (+{len(lines) - n} more)"]
+
+
 def brief(root: Path, today: _dt.date, max_lines: int = 60) -> str:
     root = Path(root)
     cards, _ = load_cards(root)
@@ -24,9 +28,13 @@ def brief(root: Path, today: _dt.date, max_lines: int = 60) -> str:
     prefs.sort(key=lambda c: (c.type != "profile", c.title.lower()))
     sections.append(("Gabriel's preferences", [f"- {c.title}: {c.summary}" for c in prefs]))
 
-    prods = [c for c in cards if c.type in PRODUCT_TYPES and c.status != "retired"]
-    prods.sort(key=lambda c: (PRODUCT_TYPES.index(c.type), c.title.lower()))
-    sections.append(("Products & apps", [_line(c, f"[{c.type}] {c.status}") for c in prods]))
+    # compact: one line per type, solutions are left to the graph
+    prod_lines = []
+    for label, typ in (("Products", "product"), ("Apps", "app")):
+        items = sorted((c for c in cards if c.type == typ and c.status != "retired"), key=lambda c: c.title.lower())
+        if items:
+            prod_lines.append(f"- {label}: " + ", ".join(f"{c.title} ({c.status})" for c in items))
+    sections.append(("Products & apps", prod_lines))
 
     pilots = [c for c in cards if c.type == "pilot" and c.status == "running"]
     sections.append(("Running pilots", [_line(c, f"(until {c.date('end').isoformat()})" if c.date("end") else "") for c in pilots]))
@@ -43,7 +51,7 @@ def brief(root: Path, today: _dt.date, max_lines: int = 60) -> str:
 
     recent = [c for c in cards if c.updated and 0 <= (today - c.updated).days <= 7]
     recent.sort(key=lambda c: (c.updated, c.title), reverse=True)
-    sections.append(("Changed (7 days)", [_line(c, f"[{c.type}] {c.updated.isoformat()}") for c in recent]))
+    sections.append(("Changed (7 days)", _capped([_line(c, f"[{c.type}] {c.updated.isoformat()}") for c in recent], 8)))
 
     rules = []
     for c in cards:
@@ -52,7 +60,7 @@ def brief(root: Path, today: _dt.date, max_lines: int = 60) -> str:
             if d and 0 <= (today - d).days <= 30:
                 rules.append((d, c))
     rules.sort(key=lambda x: (x[0], x[1].title), reverse=True)
-    sections.append(("New rules (30 days)", [_line(c, d.isoformat()) for d, c in rules]))
+    sections.append(("New rules (30 days)", _capped([_line(c, d.isoformat()) for d, c in rules], 8)))
 
     inbox = [c for c in cards if c.rel.split("/")[1:2] == ["eingang"]]
     sections.append(("Open questions", [f"- {c.title or c.id}: {c.fields.get('question', '')}".rstrip(": ") for c in inbox]))

@@ -104,6 +104,8 @@ def check(root: Path, today: _dt.date) -> list[Issue]:
             out.append(Issue("warning", c.rel, "pilot-overdue", f"end {end.isoformat()} passed, still 'running'"))
         if c.status in ACTIVE_STATES and c.updated and (today - c.updated).days > STALE_DAYS:
             out.append(Issue("warning", c.rel, "stale", f"status '{c.status}' not updated since {c.updated.isoformat()}"))
+        for conflict in as_list(c.fields.get("conflicts")):
+            out.append(Issue("warning", c.rel, "open-conflict", str(conflict)))
         states = c.fields.get("states")
         if c.type == "material" and isinstance(states, dict):
             for pid, st in states.items():
