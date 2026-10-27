@@ -5,6 +5,12 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑27 · Whistleblower hurdles and unpruuf comparison: corrected
+
+- `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27.md` and `.docx`: Gabriel's German document corrected where it was wrong about unpruuf. Twelve corrections: product name (unpruuf Compliance, not safeline), installation is needed (app, QR scan; browser variant only as fallback), no "Fallcode" (case number and conversation in the app), cases can be exported and deleted (no tamper-proof audit log), server run by the customer with only encrypted packets for at most 24 hours and case files local on the officer's computer, limits of "IT administrators cannot read" and "basis for retaliation disappears", deadlines are shown not guaranteed, no "legally compliant" claim, no "guaranteed" and "uncompromising" wording, unpruuf Business wording. Added rows "effort for reporters" and "maturity" (pilot, not independently audited) and a section "Stand und Grenzen". External statistics and statements about other systems left unchanged and flagged; two weak sources noted.
+
+---
+
 ## 2026‑10‑26 · Competitive comparison, scenario after the independent audit (EN and RO)
 
 - `handover/COMPETITIVE_COMPARISON_AFTER_AUDIT_2026-10-26.md` and `_RO.md` (and two artifacts): the same comparison redone on the premise that the independent audit is finished and passed and every statement is backed by proof. Labelled as a scenario, not today's state. Contents: the exact premise (including what stays outside round one: Control, Officer app, Press, Compliance parts, iOS), a table "what we may say, and the proof we hand over" per claim (mapped to `CLAIMS_TO_EVIDENCE.md`, the evidence scripts and the audit report), our position against the messengers and against the reporting channels, an honest note that the audit moves us to parity on the entry requirement and does not make us better than audited competitors, the scope decision that changes the reporting-channel comparison most (Compliance app and Officer app in round one), the conversation per competitor, the wording ladder and the conditions before the page may be used.
