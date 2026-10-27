@@ -41,3 +41,7 @@ summary: One sentence.
 - Only facts that are documented in the repo, in artifacts or in Drive. Nothing invented. Unknown stays out.
 - A replaced rule or preference is set to `superseded` and the new card names it in `supersedes`.
 - Drive sync: `DRIVE-SYNC.md`, state in `.drive-stand.json`, sources in `drive-quellen.md`.
+
+## Weekly upkeep
+
+Scheduled task `trig_01V88P2VWhyGqFBEksAqNGTg` ("NexonAI Wissen: wöchentlicher Pflege-Lauf"), Mondays 06:47 Europe/Bucharest, new session per run: Drive sync, check, export and republish the page (https://claude.ai/artifact/HjwV6rrSqWc4drrDnnXMQ9), commit and push. It was created without connectors: the Google Drive connector has to be added to the task in the claude.ai routines UI, otherwise the Drive step is marked pending.

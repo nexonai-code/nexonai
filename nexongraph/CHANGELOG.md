@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 (27.10.2026)
+
+Wissensbasis für NexonAI.
+
+- Karten in `wissen/`: Markdown mit Kopfdaten für Produkte, Apps, Lösungen, Material, Kunden, Piloten, Angebote, Partner, Entscheidungen und Gabriel (Profil und Vorlieben). Die Karten werden Knoten im Graphen, mit Verbindungen untereinander und zum Code (Datei- und Ordner-Knoten).
+- `nexongraph check`: 18 Regeln, darunter Pflichtfelder, Statuswerte, Datumsformat, unbekannte Verweise, fehlende Code-Pfade, keine Personen-Zuweisungen, abgelaufene Angebote, überfällige Piloten, veraltete Karten, widersprüchliche Regeln und Vorlieben, Status-Widersprüche, verbotene Begriffe (mit Ausnahme für Verneinungen) und offene Konflikte.
+- `nexongraph brief`: Kurzlage für den Sitzungsstart. Zuerst kommen Gabriels Vorlieben, danach Produkte und Apps, Piloten, Angebote (überfällige zuerst), Änderungen, neue Regeln, offene Fragen, die Prüfung und der Drive-Stand.
+- `nexongraph guard` und die Hooks `scripts/wissen-start.sh` und `scripts/wissen-guard.sh` (`.claude/settings.json`): Der Graph und die Kurzlage entstehen beim Sitzungsstart. Wurde Code geändert und die Karte nicht, wird das Ende der Sitzung einmal angehalten.
+- `nexongraph export-site`: eigenständige RO/EN-Seite im NexonAI-Design mit Graph.
+- `nexongraph search --kind`; Drive-Stand `wissen/.drive-stand.json`; Abhängigkeit PyYAML.
+
 ## 1.0.0 (27.10.2026)
 
 Erste Version.
