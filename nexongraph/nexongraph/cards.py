@@ -23,10 +23,11 @@ AREAS: dict[str, str] = {
     "angebote": "offer",
     "partner": "partner",
     "entscheidungen": "decision",
-    "gabriel": "preference",   # also holds the single "profile" card
+    "gabriel": "preference",   # each person's folder also holds their single "profile" card
+    "norbert": "preference",
     "eingang": "",             # unclear cards, any type
 }
-AREA_EXTRA_TYPES = {"gabriel": {"profile"}}
+AREA_EXTRA_TYPES = {"gabriel": {"profile"}, "norbert": {"profile"}}
 
 _BUILD_STATES = {"planned", "in-progress", "pilot", "tested", "live", "paused", "retired"}
 STATUSES: dict[str, set[str]] = {
@@ -52,6 +53,11 @@ REF_FIELDS: dict[str, str] = {
     "material": "has_material",
 }
 DATE_FIELDS = ("updated", "valid_until", "start", "end", "date")
+
+
+def area_of(rel: str) -> str:
+    parts = rel.split("/")
+    return parts[1] if len(parts) > 2 and parts[0] == CARD_DIR else ""
 
 
 class CardError(Exception):

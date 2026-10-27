@@ -86,21 +86,21 @@ footer{border-top:1px solid var(--line);background:#fff}
 <script>
 const D = /*__DATA__*/null;
 const L = {
- ro:{title:"Baza de cunoștințe NexonAI",tabs:{lage:"Situație",products:"Produse & aplicații",solutions:"Soluții",customers:"Clienți",pilots:"Piloți",offers:"Oferte",partners:"Parteneri",rules:"Reguli",me:"Despre mine",material:"Materiale",graph:"Graf",search:"Căutare"},
+ ro:{title:"Baza de cunoștințe NexonAI",tabs:{lage:"Situație",products:"Produse & aplicații",solutions:"Soluții",customers:"Clienți",pilots:"Piloți",offers:"Oferte",partners:"Parteneri",rules:"Reguli",me:"Despre noi",material:"Materiale",graph:"Graf",search:"Căutare"},
   built:"Actualizat",cards:"carduri",issues:"probleme",drive:"Sincronizare Drive",never:"niciodată",pending:"în așteptare din",last:"ultima",
   lageH:"Situația pe scurt",lageL:"Ce este activ, ce arde și ce s-a schimbat.",products:"Produse",apps:"Aplicații",running:"Piloți activi",open:"Oferte deschise",overdue:"Depășit",
   changed:"Modificat în ultimele 7 zile",questions:"Întrebări deschise",check:"Verificare",none:"Nimic aici încă.",superseded:"Reguli înlocuite",
-  meH:"Despre mine",meL:"Profilul și preferințele lui Gabriel, cu data. Cele înlocuite rămân ca istoric.",prefs:"Preferințe valabile",
+  meH:"Despre noi",meL:"Profilul și preferințele fiecăruia, cu data. Cele înlocuite rămân ca istoric.",prefs:"Preferințe valabile",openq:"Întrebări deschise",
   searchPh:"Caută în toate cardurile …",validUntil:"valabil până la",until:"până la",updated:"actualizat",source:"Fișier",drive_l:"Documente Drive",code:"Cod",
   graphL:"Graful complet: cod, documente și carduri. Click pe un nod pentru detalii.",open_new:"Deschide în fereastră nouă",foot:"Generat automat din wissen/ · numai citire, modificările se fac în chat",
   status:{planned:"planificat","in-progress":"în lucru",pilot:"pilot",tested:"testat",live:"live",paused:"pauză",retired:"retras",lead:"lead",talking:"în discuții","offer-sent":"ofertă trimisă",customer:"client",lost:"pierdut",
    running:"în desfășurare",done:"încheiat",stopped:"oprit",draft:"ciornă",sent:"trimisă",accepted:"acceptată",declined:"refuzată",expired:"expirată",candidate:"candidat",active:"activ",ended:"încheiat",valid:"valabil",superseded:"înlocuit"},
   type:{product:"Produs",app:"Aplicație",solution:"Soluție",material:"Material",customer:"Client",pilot:"Pilot",offer:"Ofertă",partner:"Partener",decision:"Regulă",preference:"Preferință",profile:"Profil"}},
- en:{title:"NexonAI Knowledge",tabs:{lage:"Situation",products:"Products & apps",solutions:"Solutions",customers:"Customers",pilots:"Pilots",offers:"Offers",partners:"Partners",rules:"Rules",me:"About me",material:"Material",graph:"Graph",search:"Search"},
+ en:{title:"NexonAI Knowledge",tabs:{lage:"Situation",products:"Products & apps",solutions:"Solutions",customers:"Customers",pilots:"Pilots",offers:"Offers",partners:"Partners",rules:"Rules",me:"About us",material:"Material",graph:"Graph",search:"Search"},
   built:"Updated",cards:"cards",issues:"issues",drive:"Drive sync",never:"never",pending:"pending since",last:"last",
   lageH:"The situation in brief",lageL:"What is active, what is urgent and what changed.",products:"Products",apps:"Apps",running:"Running pilots",open:"Open offers",overdue:"Overdue",
   changed:"Changed in the last 7 days",questions:"Open questions",check:"Check",none:"Nothing here yet.",superseded:"Superseded rules",
-  meH:"About me",meL:"Gabriel's profile and preferences, with dates. Superseded ones stay as history.",prefs:"Valid preferences",
+  meH:"About us",meL:"Each person's profile and preferences, with dates. Superseded ones stay as history.",prefs:"Valid preferences",openq:"Open questions",
   searchPh:"Search all cards …",validUntil:"valid until",until:"until",updated:"updated",source:"File",drive_l:"Drive documents",code:"Code",
   graphL:"The full graph: code, documents and cards. Click a node for details.",open_new:"Open in a new window",foot:"Generated from wissen/ · read only, changes go through the chat",
   status:{},type:{product:"Product",app:"App",solution:"Solution",material:"Material",customer:"Customer",pilot:"Pilot",offer:"Offer",partner:"Partner",decision:"Rule",preference:"Preference",profile:"Profile"}}};
@@ -151,13 +151,21 @@ const VIEWS = {
  rules(){ const v = byType("decision").filter(c=>c.status==="valid").sort((a,b)=>String(b.fields.date||b.updated).localeCompare(String(a.fields.date||a.updated)));
   const s = byType("decision").filter(c=>c.status!=="valid");
   return sec(t("tabs").rules, "", `<div class="list">${v.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("") || `<p class="empty">${t("none")}</p>`}</div>` + (s.length?`<details><summary>${t("superseded")} (${s.length})</summary><div class="list" style="margin-top:10px">${s.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("")}</div></details>`:"")); },
- me(){ const prof = byType("profile"); const v = byType("preference").filter(c=>c.status==="valid").sort((a,b)=>String(b.fields.date||b.updated).localeCompare(String(a.fields.date||a.updated)));
-  const s = byType("preference").filter(c=>c.status!=="valid");
-  return sec(t("meH"), t("meL"), (prof.length?grid(prof):"") + `<h2 style="margin-top:22px">${t("prefs")}</h2><div class="list">${v.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("") || `<p class="empty">${t("none")}</p>`}</div>` + (s.length?`<details><summary>${t("superseded")} (${s.length})</summary><div class="list" style="margin-top:10px">${s.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("")}</div></details>`:"")); },
- graph(){ return sec(t("tabs").graph, t("graphL"), `<p><a href="graph.html" target="_blank" rel="noopener">${t("open_new")}</a></p><iframe class="gframe" src="graph.html" title="Graph"></iframe>`); },
+ me(){ const people = [...new Set(C.filter(c=>["profile","preference"].includes(c.type)).map(c=>c.rel.split("/")[1]))].sort();
+  const byDate = (a,b)=>String(b.fields.date||b.updated).localeCompare(String(a.fields.date||a.updated));
+  let out = "";
+  for(const p of people){ const mine = C.filter(c=>c.rel.split("/")[1]===p); const prof = mine.filter(c=>c.type==="profile");
+   const v = mine.filter(c=>c.type==="preference"&&c.status==="valid").sort(byDate), s = mine.filter(c=>c.type==="preference"&&c.status!=="valid");
+   const q = prof.flatMap(c=>Array.isArray(c.fields.open_questions)?c.fields.open_questions:[]);
+   out += `<h2 style="margin-top:26px;text-transform:capitalize">${esc(p)}</h2>` + (prof.length?grid(prof):"")
+     + `<h3 style="color:var(--navy);margin:16px 0 8px">${t("prefs")}</h3><div class="list">${v.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("") || `<p class="empty">${t("none")}</p>`}</div>`
+     + (q.length?`<h3 style="color:var(--navy);margin:16px 0 8px">${t("openq")}</h3><ul>${q.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"")
+     + (s.length?`<details><summary>${t("superseded")} (${s.length})</summary><div class="list" style="margin-top:10px">${s.map(c=>rowOf(c,esc(c.fields.date||c.updated))).join("")}</div></details>`:""); }
+  return sec(t("meH"), t("meL"), out || `<p class="empty">${t("none")}</p>`); },
+graph(){ if(D.no_graph) return sec(t("tabs").graph, "", `<p class="empty">${t("none")}</p>`); return sec(t("tabs").graph, t("graphL"), `<p><a href="graph.html" target="_blank" rel="noopener">${t("open_new")}</a></p><iframe class="gframe" src="graph.html" title="Graph"></iframe>`); },
  search(){ return sec(t("tabs").search, "", `<input class="search" id="q" placeholder="${esc(t("searchPh"))}"><div class="list" id="qres"></div>`); },
 };
-const ORDER = ["lage","products","solutions","material","customers","pilots","offers","partners","rules","me","graph","search"];
+const ORDER = ["lage","products","solutions","material","customers","pilots","offers","partners","rules","me","graph","search"].filter(k=>!(k==="graph"&&D&&D.no_graph));
 function render(){
   document.documentElement.lang = LANG;
   document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));

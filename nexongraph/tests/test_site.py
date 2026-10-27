@@ -48,3 +48,11 @@ def test_no_drive_fulltext_fields(tmp_path):
     assert offer["fields"]["drive"] == [{"title": "Offer PDF", "url": "https://drive.google.com/x", "modified": "2026-10-01"}]
     assert set(offer) == {"id", "type", "title", "status", "updated", "summary", "fields", "body", "rel"}
     json.dumps(p)  # serialisable, dates as strings
+
+
+def test_export_without_graph_is_single_file(tmp_path):
+    root = project(tmp_path)
+    out = tmp_path / "single"
+    f = export_site(root, out, TODAY, with_graph=False, name="NexonAI_Wissen.html")
+    assert [p.name for p in out.iterdir()] == ["NexonAI_Wissen.html"]
+    assert '"no_graph": true' in f.read_text(encoding="utf-8")

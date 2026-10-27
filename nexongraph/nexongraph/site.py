@@ -53,14 +53,17 @@ def _graph_html(root: Path) -> str:
     return render_viewer(viewer_payload(G, labels, meta))
 
 
-def export_site(root: Path, out_dir: Path, today: _dt.date) -> Path:
+def export_site(root: Path, out_dir: Path, today: _dt.date, with_graph: bool = True, name: str = "index.html") -> Path:
     root = Path(root).resolve()
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     tpl = resources.files("nexongraph").joinpath("static/site.html").read_text(encoding="utf-8")
-    data = json.dumps(site_payload(root, today), ensure_ascii=False).replace("</", "<\\/")
+    payload = site_payload(root, today)
+    payload["no_graph"] = not with_graph
+    data = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
     html = tpl.replace("__LOGO__", _logo_uri()).replace("/*__DATA__*/null", data)
-    index = out_dir / "index.html"
+    index = out_dir / name
     index.write_text(html, encoding="utf-8")
-    (out_dir / "graph.html").write_text(_graph_html(root), encoding="utf-8")
+    if with_graph:
+        (out_dir / "graph.html").write_text(_graph_html(root), encoding="utf-8")
     return index

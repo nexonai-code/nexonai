@@ -9,8 +9,8 @@ Regeln:
 
 | Ordner | Inhalt |
 |---|---|
-| 02_Apps_Software | NexonGraph 1.1, Android-Screenshot-Paket, Guest Lockers, Press-Oberfläche, Press-Tippseite |
-| 03_Material | Whitepaper v7 (EN+RO), Präsentationen (RO, Compliance EN wortgetreu und regelkonform), Compliance-Video v2, Architekturvideo v1, Website v12, Press-Einseiter v2 |
+| 02_Apps_Software | NexonGraph 1.2 (Windows + macOS), Android-Screenshot-Paket, Guest Lockers, Press-Oberfläche, Press-Tippseite |
+| 03_Material | Whitepaper v7 (EN+RO), Präsentationen (RO, Compliance EN wortgetreu und regelkonform), Compliance-Video v2, Architekturvideo v1, Website v12, Press-Einseiter v2, Wissensseite als Einzeldatei (für Floretta) |
 | 05_Piloten | Alba Carolina TV: Leitfaden DE/RO, Pilotvereinbarung EN/RO (Entwurf), Audit-Liste DE/EN |
 | 08_Audit_Sicherheit | Brief für den Auditor (RO), Security-Audit-Roadmap (EN) |
 | 09_Vorlagen_CI | CI-Paket v2, Dokumentvorlagen komplett v2 (DE/EN/RO) |

@@ -118,7 +118,8 @@ def check(root: Path, today: _dt.date) -> list[Issue]:
     groups: dict[tuple, list[Card]] = defaultdict(list)
     for c in cards:
         if c.type in ("decision", "preference") and c.status == "valid" and c.fields.get("topic"):
-            key = (c.type == "preference", str(c.fields.get("scope", "")) if c.type == "decision" else "", str(c.fields["topic"]))
+            # preferences only clash within one person's folder
+            key = (c.type == "preference", str(c.fields.get("scope", "")) if c.type == "decision" else _area(c), str(c.fields["topic"]))
             groups[key].append(c)
     for key, cs in groups.items():
         for c in cs[1:]:

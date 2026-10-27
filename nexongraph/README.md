@@ -19,7 +19,7 @@ Eigenentwicklung der NexonAI Consulting SRL, angelehnt an die Idee von Graphify.
 | `KI_verbinden.bat` | NexonGraph in Claude Code (Skill + MCP), Claude Desktop und Cursor (MCP) eintragen |
 | `deinstallieren.bat` | Einträge entfernen, `.venv` und Verknüpfung löschen |
 
-macOS/Linux: `python3 -m venv .venv && .venv/bin/pip install -e .`, dann `.venv/bin/nexongraph`.
+macOS: `install.command` doppelklicken (fragt im nexonai-Repo, wer an diesem Mac arbeitet), dann `start.command`. `KI_verbinden.command` trägt NexonGraph in Claude und Cursor ein. Linux: `python3 -m venv .venv && .venv/bin/pip install -e .`, dann `.venv/bin/nexongraph`.
 
 ## Was herauskommt
 

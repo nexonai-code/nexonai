@@ -16,7 +16,8 @@ updated: 2026-10-27      # last change of content, ISO date
 summary: One sentence.
 # optional, by type: products, customer, partner, material, supersedes (card ids),
 # code (repo paths), url, path, drive [{title, url, modified, id}], date, scope, topic,
-# valid_until, price, currency, start, end, states {product-id: status}, forbidden_terms, question, conflicts
+# valid_until, price, currency, start, end, states {product-id: status}, forbidden_terms, question, conflicts,
+# open_questions (profile: questions Claude still has to ask that person)
 ---
 - short facts as bullet points
 ```
@@ -32,7 +33,7 @@ summary: One sentence.
 | `angebote/` | offer | draft, sent, accepted, declined, expired |
 | `partner/` | partner | candidate, active, paused, ended |
 | `entscheidungen/` | decision | valid, superseded |
-| `gabriel/` | profile, preference | valid (profile); valid, superseded (preference) |
+| `gabriel/`, `norbert/` | profile, preference | valid (profile); valid, superseded (preference) |
 | `eingang/` | any | unclear cards, with `question` |
 
 ## Rules

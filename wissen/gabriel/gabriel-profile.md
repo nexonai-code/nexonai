@@ -1,6 +1,6 @@
 ---
 type: profile
-id: profile
+id: gabriel-profile
 title: Gabriel Hategan
 status: valid
 updated: '2026-10-27'

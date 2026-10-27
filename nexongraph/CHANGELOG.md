@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 (27.10.2026)
+
+- Personen: Gabriel und Norbert im selben Konto. Die aktive Person kommt aus `NEXON_PERSON` oder der lokalen Datei `.nexon-person`, sonst Gabriel. Bereiche `wissen/gabriel/` und `wissen/norbert/`. Die Kurzlage zeigt nur die Vorlieben der aktiven Person und deren offene Fragen („Questions for …“). Gleiche Themen bei zwei Personen gelten nicht mehr als Widerspruch.
+- Seite: „Despre noi / About us“ mit allen Personen, Vorlieben und offenen Fragen. `export-site --no-graph --name` erzeugt eine einzelne Datei zum Weitergeben (für Floretta).
+- macOS: `install.command` (fragt im Repo, wer an diesem Mac arbeitet), `start.command`, `KI_verbinden.command`. Das Start-Skript der Wissensbasis braucht kein `timeout` mehr.
+
 ## 1.1.0 (27.10.2026)
 
 Wissensbasis für NexonAI.

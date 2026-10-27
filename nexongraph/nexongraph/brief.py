@@ -4,7 +4,8 @@ from __future__ import annotations
 import datetime as _dt
 from pathlib import Path
 
-from .cards import Card, as_date, load_cards
+from .cards import Card, area_of, as_date, as_list, load_cards
+from .persons import PERSONS, active_person
 from .check import check
 from .drive_state import load_state
 
@@ -24,9 +25,15 @@ def brief(root: Path, today: _dt.date, max_lines: int = 60) -> str:
     cards, _ = load_cards(root)
     sections: list[tuple[str, list[str]]] = []
 
-    prefs = [c for c in cards if c.type in ("profile", "preference") and c.status == "valid"]
-    prefs.sort(key=lambda c: (c.type != "profile", c.title.lower()))
-    sections.append(("Gabriel's preferences", [f"- {c.title}: {c.summary}" for c in prefs]))
+    person = active_person(root)
+    name = PERSONS[person]
+    mine = [c for c in cards if area_of(c.rel) == person and c.status == "valid"]
+    prefs = sorted((c for c in mine if c.type in ("profile", "preference")), key=lambda c: (c.type != "profile", c.title.lower()))
+    sections.append((f"{name}'s preferences", [f"- {c.title}: {c.summary}" for c in prefs] or
+                     [f"- No profile yet: ask {name} how he wants to work and create wissen/{person}/ cards."]))
+    questions = [str(q) for c in mine if c.type == "profile" for q in as_list(c.fields.get("open_questions"))]
+    sections.append((f"Questions for {name} (ask early in the session, then store answers as preference cards and remove them from open_questions)",
+                     [f"- {q}" for q in questions]))
 
     # compact: one line per type, solutions are left to the graph
     prod_lines = []

@@ -27,7 +27,10 @@ Gilt für alle Projekte in diesem Repo.
 - Vor jeder Aufgabe zu einem Produkt, einer App, einer Lösung, einem Material, einem Kunden, einem Piloten, einem Angebot oder einem Partner zuerst nachschlagen: `nexongraph query "<Frage>"`, `nexongraph explain "<Name>"`, `nexongraph search "<Wörter>" --kind <art>`. Erst danach Dateien lesen oder Gabriel fragen.
 - Am Ende jeder Arbeitssitzung die betroffenen Karten aktualisieren (`status`, `updated`, Fakten, Links), `nexongraph check .` ohne Fehler, mit der Arbeit committen. Der Stop-Hook `scripts/wissen-guard.sh` erinnert daran.
 - Neue Regeln aus dem Chat sofort als `decision`-Karte mit Datum anlegen, ersetzte auf `superseded` setzen.
-- Persönliche Vorlieben und Änderungen von Gabriel (Antwortstil, Lieferformat, Sprache, was er nicht will) sofort als `preference`-Karte in `wissen/gabriel/` pflegen, ersetzte auf `superseded`.
+- Gabriel und Norbert arbeiten im selben Claude- und GitHub-Konto. Wer gerade schreibt, zeigt die Kurzlage („Active person“): Umgebungsvariable `NEXON_PERSON`, sonst die lokale Datei `.nexon-person` (auf Norberts Mac von `nexongraph/install.command` angelegt, nie committen), sonst Gabriel. Sagt jemand im Chat, wer er ist („hier ist Norbert“), gilt das für die Sitzung.
+- Persönliche Vorlieben und Änderungen der aktiven Person (Antwortstil, Lieferformat, Sprache, was sie nicht will) sofort als `preference`-Karte in `wissen/<person>/` pflegen (`gabriel/`, `norbert/`), ersetzte auf `superseded`. Gemeinsame Regeln gelten für beide.
+- Steht in der Kurzlage „Questions for <Name>“, diese Fragen früh in der Sitzung stellen, nicht alle auf einmal, die Antworten als `preference`-Karten speichern und die beantwortete Frage aus `open_questions` im Profil entfernen.
+- Floretta hat keinen Zugang zu Claude. Sie bekommt die Wissensseite als einzelne Datei (`lieferungen/03_Material/Wissensseite/NexonAI_Wissen.html`) über Drive.
 - Aus Google Drive (Ordner „Claude“ von gabriel@nexonai.ro) kommen nur Fakten und Links ins Repo, nie Volltexte. Ablauf: `wissen/DRIVE-SYNC.md`.
 
 ## Lieferungen (27.10.2026, von Gabriel festgelegt)

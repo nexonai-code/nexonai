@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexongraph"
-version = "1.1.0"
+version = "1.2.0"
 description = "Turns a folder (code, Markdown, PDF, Word, HTML) into a queryable knowledge graph. Local first, optional LLM pass (Ollama or online APIs)."
 readme = "README.md"
 requires-python = ">=3.10"
