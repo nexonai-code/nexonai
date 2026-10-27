@@ -16,4 +16,4 @@ build: Android Studio, open unpruuf/
 - Flavors: standard, pro, client, group, whistleblower, press (each with own install ID).
 - Version 1.14 per STATUS.md; Tor hidden services, Double Ratchet, fixed 4096-byte packets, RAM-only messages.
 - Build: open unpruuf/ in Android Studio, Build Variants; AGP 8.2.2, Kotlin 1.9.22, compileSdk 34.
-- Development environment has no Android SDK: code was reasoned and structurally checked, real builds happen on Gabriel's machine.
+- Development environment has no Android SDK: code was reasoned and structurally checked, real builds happen outside it (Android Studio).
