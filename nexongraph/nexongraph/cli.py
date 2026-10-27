@@ -61,6 +61,7 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--no-browser", action="store_true")
     m = sub.add_parser("mcp", help="MCP-Server (stdio) für Claude, Cursor & Co.")
     m.add_argument("--dir", default=None)
+    sub.add_parser("guard", help="Pflege-Wächter (Stop-Hook)").add_argument("dir", nargs="?", default=".")
     br = sub.add_parser("brief", help="Kurzlage der Wissensbasis")
     br.add_argument("dir", nargs="?", default=".")
     br.add_argument("--today", default=None)
@@ -127,6 +128,9 @@ def main(argv: list[str] | None = None) -> None:
     elif a.cmd == "mcp":
         from .mcp import run
         run(a.dir)
+    elif a.cmd == "guard":
+        from .guard import guard_main
+        sys.exit(guard_main(Path(a.dir)))
     elif a.cmd == "brief":
         import datetime as _dt
         from .brief import brief

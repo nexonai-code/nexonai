@@ -19,3 +19,13 @@ Gilt für alle Projekte in diesem Repo.
 
 - Die unpruuf-Regeln (Sprachen EN + RO, Aufbau der Kundenmaterialien, Briefkastenbild ohne Zahlen, Lizenzmodell, Produktnamen, GDPR-Formulierungen usw.) stehen in `unpruuf/CLAUDE.md` und gelten **nur für unpruuf**.
 - Neue Projekte außerhalb von unpruuf (zum Beispiel der Kurier-Motor „Conditional Handover Engine“ vom 14.10.2026) sind nicht an die unpruuf-Regeln gebunden. Sprache und Aufbau dort nach Gabriels Vorgabe im jeweiligen Auftrag.
+
+## Wissensbasis (27.10.2026, von Gabriel festgelegt)
+
+- Das Wissen über NexonAI steht als Karten in `wissen/` (Produkte, Apps, Lösungen, Material, Kunden, Piloten, Angebote, Partner, Entscheidungen, Gabriel). Format und Pflichtfelder: `wissen/README.md`. NexonGraph verknüpft die Karten mit dem Code.
+- Beim Sitzungsstart baut `scripts/wissen-start.sh` den Graphen und zeigt die Kurzlage. Die Kurzlage zuerst lesen, besonders „Gabriel's preferences“.
+- Vor jeder Aufgabe zu einem Produkt, einer App, einer Lösung, einem Material, einem Kunden, einem Piloten, einem Angebot oder einem Partner zuerst nachschlagen: `nexongraph query "<Frage>"`, `nexongraph explain "<Name>"`, `nexongraph search "<Wörter>" --kind <art>`. Erst danach Dateien lesen oder Gabriel fragen.
+- Am Ende jeder Arbeitssitzung die betroffenen Karten aktualisieren (`status`, `updated`, Fakten, Links), `nexongraph check .` ohne Fehler, mit der Arbeit committen. Der Stop-Hook `scripts/wissen-guard.sh` erinnert daran.
+- Neue Regeln aus dem Chat sofort als `decision`-Karte mit Datum anlegen, ersetzte auf `superseded` setzen.
+- Persönliche Vorlieben und Änderungen von Gabriel (Antwortstil, Lieferformat, Sprache, was er nicht will) sofort als `preference`-Karte in `wissen/gabriel/` pflegen, ersetzte auf `superseded`.
+- Aus Google Drive (Ordner „Claude“ von gabriel@nexonai.ro) kommen nur Fakten und Links ins Repo, nie Volltexte. Ablauf: `wissen/DRIVE-SYNC.md`.
