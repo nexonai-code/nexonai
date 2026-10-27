@@ -23,6 +23,15 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑27 · Windows installer (Setup.exe with Node.js included)
+
+- New: `unpruuf/windows-installer/` and the workflow `.github/workflows/windows-installer.yml`. A real Windows runner builds every Windows program (production dependencies, native SQLite for Windows), bundles `runtime\node.exe`, compiles an Inno Setup installer and a portable ZIP, and tests before handing over: SQLite loads, Control, web reporter and licence GUI answer on their ports, no secret file inside, silent install, all programs present, uninstall.
+- Per-user install, no administrator rights, Start menu group "unpruuf"; component choice (node server, officer app, Control, licence tool, web reporter, relay).
+- Found on the way: the licence GUI refuses to start without `private-key.json`; its launcher now says what to do instead of silently closing. The test uses a throw-away key and deletes it.
+- Limits: not code-signed (SmartScreen), data stays in the program folders (not removed on uninstall, no update path yet), not run on a customer PC.
+
+---
+
 ## 2026‑10‑26 · GRANT_RENEW: guests keep their access automatically
 
 - The Pro app renews each guest's grants by itself through the encrypted chat (a quarter of the validity after the last renewal, so a 7-day grant is replaced every 42 hours). The renewal carries address and grant pairs, so it also follows the owner's nodes when they change. The Client accepts it only from its inviter, drops unusable entries, replaces its nodes and grants, and clears the "refused" banner.

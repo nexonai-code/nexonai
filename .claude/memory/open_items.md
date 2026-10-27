@@ -9,6 +9,7 @@ updated: 2026-10-25
 - Schlüsseldateien (Test und Release) sind seit dem Container-Reset am 25.10. nicht mehr in der Umgebung; für APKs mit dem bekannten Testschlüssel muss Gabriel `unpruuf-test.jks` + `keystore.properties` neu hochladen.
 - Reihenfolge der Tester-Fixes (AND-1, REL-1/2, AND-4/3/2, CLM-1, SRV-1); AND-8 (destruktive Migration).
 - Release-Passwort geändert? Zuerst fragen.
+- Windows-Installer: Code-Signing-Zertifikat (Gabriel entscheidet), fester Datenordner für Updates/Deinstallation (noch nicht gebaut), Test auf einem echten Kunden-PC.
 - Echter Telefontest Pro/Client/Press (v32-APKs liegen vor, neuer Debug-Schlüssel).
 - Gast-Funktionen offen: Gästeliste, harter Widerruf, Control, Gast-Auth im Android-Node, iOS (Norbert: Feld `i`, Zwei-Scan, Prüfcode, GRANT_RENEW-Format).
 - Audit R1: 4 von 17 Befunden offen (SEC-004/F1, SEC-005, SEC-006 und ein weiterer laut CHANGELOG), Gabriel entscheidet.
