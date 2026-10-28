@@ -1,6 +1,6 @@
 # Cerere de ofertă: audit independent de securitate al sistemului unpruuf
 
-NexonAI Consulting SRL, Alba Iulia, România · 28 octombrie 2026 · Contact: Gabriel Hategan, unpruuf@nexonai.ro
+NexonAI Consulting SRL, Alba Iulia, România · 28 octombrie 2026 · Contact: Gabriel Hategan, gabriel@nexonai.ro
 
 Solicităm unui număr mic de firme de securitate o ofertă pentru un audit independent de securitate al sistemului unpruuf, un sistem de comunicare fără identități de utilizator, în care fiecare server este operat de client. Documentul arată ce dorim să fie auditat, ce vă livrăm, ce așteptăm de la dumneavoastră și cum alegem. Nu conține detalii de protocol: codul sursă, lista afirmațiilor, lista limitelor pe care le cunoaștem deja și constatările noastre din pre-audit se transmit firmei selectate, pe baza unui acord de confidențialitate pe care îl trimitem la cerere.
 
@@ -125,4 +125,4 @@ Vom publica doar ce susține raportul dumneavoastră, cu perimetrul și versiune
 
 ---
 
-NexonAI Consulting SRL, Alba Iulia · fază pilot, neauditat independent · unpruuf@nexonai.ro
+NexonAI Consulting SRL, Alba Iulia · fază pilot, neauditat independent · gabriel@nexonai.ro
