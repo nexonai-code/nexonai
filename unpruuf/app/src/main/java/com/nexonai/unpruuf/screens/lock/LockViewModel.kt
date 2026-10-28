@@ -51,6 +51,7 @@ class LockViewModel @Inject constructor(
 
     /** Ersteinrichtung: normale PIN + Panik-PIN festlegen. */
     fun setupPins(pin: String, panicPin: String): Boolean {
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("lock: setupPins called pinLen=${pin.length} panicLen=${panicPin.length}")
         // Phone key gone: the contacts database cannot be opened; same answer as an unreadable PIN.
         if (dbKeyState.lost) { _error.value = LockError.PIN_STORE_LOST; return false }
         // Same minimum for both: a short panic PIN is easy to hit by accident (or to guess).

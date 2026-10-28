@@ -114,8 +114,22 @@ class TorManager @Inject constructor(
     fun start() {
         if (started) return
         started = true
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: start()")
+        // Diagnosis (debug builds only): let Tor write its own log next to the app's data, so the
+        // reason of a startup failure is readable in the debug report. The user torrc is ours to write.
+        if (com.nexonai.unpruuf.BuildConfig.DEBUG) runCatching {
+            val log = java.io.File(context.filesDir, "tor-debug.log")
+            if (log.length() > 200_000) log.delete()
+            val rc = TorService.getTorrc(context)
+            rc.parentFile?.mkdirs()
+            val line = "Log notice file ${log.absolutePath}\n"
+            val text = if (rc.exists()) rc.readText() else ""
+            if (!text.contains("tor-debug.log")) rc.writeText(text + (if (text.isEmpty() || text.endsWith("\n")) "" else "\n") + line)
+            com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: debug log on, torrc=${rc.absolutePath}")
+        }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
+                com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: status=${intent.getStringExtra(TorService.EXTRA_STATUS)}")
                 when (intent.getStringExtra(TorService.EXTRA_STATUS)) {
                     TorService.STATUS_ON -> scope.launch { onTorUp() }
                     TorService.STATUS_OFF, TorService.STATUS_STOPPING -> _isReady.value = false
@@ -130,6 +144,7 @@ class TorManager @Inject constructor(
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
                 torService = (binder as TorService.LocalBinder).service
+                com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: service connected")
                 // Tor has begun bootstrapping by itself (direct). The assistant watches that and,
                 // if the network blocks it, tries the other paths. See runAssistant().
                 startAssistant(preferRemembered = true)
@@ -322,8 +337,10 @@ class TorManager @Inject constructor(
 
     /** Waits until Tor says "Bootstrapped 100%" or [seconds] have passed. */
     private suspend fun waitForBootstrap(ctrl: TorControlConnection, path: TorPath, seconds: Int): Boolean {
+        var lastLogged = -2
         repeat(seconds) {
             val p = bootstrapProgress(ctrl)
+            if (p != lastLogged) { lastLogged = p; com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: bootstrap $p% on $path") }
             _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, path, p.coerceAtLeast(0))
             if (p >= 100) return true
             delay(1_000)
@@ -355,7 +372,9 @@ class TorManager @Inject constructor(
             return
         }
         val order = ConnectionPaths.order(bridgeManager.lastPath(), bridgeManager.companyLines().isNotEmpty(), preferRemembered)
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: assistant order=$order")
         for (path in order) {
+            com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: try path=$path")
             _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, path, 0)
             if (!applyPath(ctrl, path)) continue
             if (waitForBootstrap(ctrl, path, ConnectionPaths.budgetSeconds(path))) {

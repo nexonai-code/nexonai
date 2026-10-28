@@ -67,6 +67,7 @@ class PluggableTransportManager @Inject constructor(
     private fun stateDir(): String = context.getDir("pt", Context.MODE_PRIVATE).absolutePath
 
     private fun startObfs4(): Int? = runCatching {
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("pt: starting obfs4")
         // Confirmed against a real Android Studio build: controller.start(name, bridges) and
         // controller.port(name) both exist and resolve — the only thing wrong in the previous
         // pass was port()'s return type (Long, not Int; gomobile maps Go's int to Kotlin Long).
@@ -83,6 +84,7 @@ class PluggableTransportManager @Inject constructor(
      * servers are the values from Tor Browser's Snowflake bridge lines ([ConnectionPaths]).
      */
     private fun startSnowflake(): Int? = runCatching {
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("pt: starting snowflake")
         controller.snowflakeBrokerUrl = ConnectionPaths.SNOWFLAKE_BROKER_URL
         controller.snowflakeFrontDomains = ConnectionPaths.SNOWFLAKE_FRONT_DOMAINS
         controller.snowflakeIceServers = ConnectionPaths.SNOWFLAKE_ICE_SERVERS

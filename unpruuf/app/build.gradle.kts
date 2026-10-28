@@ -209,7 +209,10 @@ dependencies {
     implementation("androidx.sqlite:sqlite-ktx:2.4.0")
 
     // Tor (Guardian Project — bindet Tor-Binary + jtorctl transitiv)
-    implementation("info.guardianproject:tor-android:0.4.8.16")
+    implementation("info.guardianproject:tor-android:0.4.9.8") {
+        // The library asks for Kotlin 2.2 stdlib; this project compiles with Kotlin 1.9 and brings its own.
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    }
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     // Pluggable transports (obfs4/Snowflake) for DPI-censored networks — see
@@ -241,4 +244,13 @@ dependencies {
 
 kapt {
     correctErrorTypes = true
+}
+
+// tor-android 0.4.9.8 (newest the Java-21 toolchain of AGP 8.2.2 can dex; 0.4.9.9+ are built with Java 24) is needed because the Tor network now requires protocols (Desc=3, Microdesc=3)
+// that 0.4.8.x lacks: Tor 0.4.8.16 ended the whole app process at start (28.10.2026 debug reports).
+// The library is built against Android API 37 and declares that as minCompileSdk, but we only use
+// its stable Java surface (TorService, jtorctl) and compile against 34 with AGP 8.2.2, so the
+// metadata version check is switched off. The runtime needs no newer Android.
+tasks.configureEach {
+    if (name.endsWith("AarMetadata")) enabled = false
 }
