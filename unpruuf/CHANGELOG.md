@@ -5,6 +5,12 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑28 · Whistleblower hurdles and unpruuf comparison: English version
+
+- `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27_EN.md` and `.docx`: English translation of the corrected German document (same structure, tables and corrections). Romanian not yet made.
+
+---
+
 ## 2026‑10‑27 · Whistleblower hurdles and unpruuf comparison: corrected
 
 - `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27.md` and `.docx`: Gabriel's German document corrected where it was wrong about unpruuf. Twelve corrections: product name (unpruuf Compliance, not safeline), installation is needed (app, QR scan; browser variant only as fallback), no "Fallcode" (case number and conversation in the app), cases can be exported and deleted (no tamper-proof audit log), server run by the customer with only encrypted packets for at most 24 hours and case files local on the officer's computer, limits of "IT administrators cannot read" and "basis for retaliation disappears", deadlines are shown not guaranteed, no "legally compliant" claim, no "guaranteed" and "uncompromising" wording, unpruuf Business wording. Added rows "effort for reporters" and "maturity" (pilot, not independently audited) and a section "Stand und Grenzen". External statistics and statements about other systems left unchanged and flagged; two weak sources noted.
