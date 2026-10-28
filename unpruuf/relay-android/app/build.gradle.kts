@@ -115,7 +115,10 @@ dependencies {
     // Tor (Guardian Project) — the exact same hidden-service mechanism the main unpruuf app
     // already uses (TorService + jtorctl's TorControlConnection), reused here for a single
     // fixed hidden service instead of a per-contact one.
-    implementation("info.guardianproject:tor-android:0.4.8.16")
+    implementation("info.guardianproject:tor-android:0.4.9.8") {
+        // The library asks for Kotlin 2.2 stdlib; this project compiles with Kotlin 1.9 and brings its own.
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    }
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     // Pluggable transports (obfs4/Snowflake) for DPI-censored networks — same dependency and
@@ -139,4 +142,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+// tor-android 0.4.9.8 (newest the Java-21 toolchain of AGP 8.2.2 can dex; 0.4.9.9+ are built with Java 24) is needed because the Tor network now requires protocols (Desc=3, Microdesc=3)
+// that 0.4.8.x lacks: Tor 0.4.8.16 ended the whole app process at start (28.10.2026 debug reports).
+// The library is built against Android API 37 and declares that as minCompileSdk, but we only use
+// its stable Java surface (TorService, jtorctl) and compile against 34 with AGP 8.2.2, so the
+// metadata version check is switched off. The runtime needs no newer Android.
+tasks.configureEach {
+    if (name.endsWith("AarMetadata")) enabled = false
 }
