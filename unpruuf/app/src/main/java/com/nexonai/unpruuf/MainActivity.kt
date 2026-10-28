@@ -11,6 +11,15 @@ import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.nexonai.unpruuf.ui.DebugCrashReport
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -165,6 +174,31 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             UnpruufTheme {
+                // Debug builds only: the trace of the last crash, with one tap to send it.
+                var crashReport by androidx.compose.runtime.remember {
+                    androidx.compose.runtime.mutableStateOf(DebugCrashReport.read(this@MainActivity))
+                }
+                crashReport?.let { text ->
+                    DebugCrashDialog(
+                        text = text,
+                        onShare = {
+                            appLockManager.beginExternalIntentGrace()
+                            startActivity(
+                                Intent.createChooser(
+                                    Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, text)
+                                    },
+                                    "Send crash report"
+                                )
+                            )
+                        },
+                        onDismiss = {
+                            DebugCrashReport.clear(this@MainActivity)
+                            crashReport = null
+                        }
+                    )
+                }
                 if (isRooted) {
                     // Caught by the onStart re-check above, not just the onCreate gate at the
                     // top of this function — same screen, same refusal, no way past it.
@@ -254,6 +288,28 @@ class MainActivity : FragmentActivity() {
             )
         }
     }
+}
+
+// Debug builds only (DebugCrashReport.read is null in a release build).
+@OptIn(ExperimentalMaterial3Api::class)
+@androidx.compose.runtime.Composable
+private fun DebugCrashDialog(text: String, onShare: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+        onDismissRequest = onDismiss,
+        title = { Text("The app crashed last time") },
+        text = {
+            androidx.compose.foundation.layout.Column(
+                Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())
+            ) {
+                Text("Debug build only. Tap Send and pick Gmail or Drive to pass this to Claude.")
+                Spacer(Modifier.height(8.dp))
+                Text(text.take(3000), style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = { TextButton(onClick = onShare) { Text("Send") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Delete") } }
+    )
 }
 
 // Shown once, right after unlocking, for every current build of every edition

@@ -20,6 +20,10 @@
     <string name="lock_err_store_lost">The PIN can no longer be read on this phone (its key is gone). Clear the app data in Android Settings and set up again.</string>
     <string name="lock_err_pins_mismatch">PINs do not match.</string>
     <string name="lock_save_pin">Save PIN</string>
+    <string name="lock_setup_panic_description">Now choose a separate panic PIN, different from your PIN. Entering it instantly deletes all contacts and opens the app empty. Remember it, nothing recovers it.</string>
+    <string name="lock_setup_step">Step %1$d of 2</string>
+    <string name="lock_setup_next">Next</string>
+    <string name="lock_setup_back">Back</string>
     <string name="lock_setup_title">Set up PIN · B2</string>
     <string name="lock_setup_description">Set a PIN to open the app and a separate panic PIN. Entering the panic PIN instantly deletes all contacts and opens the app empty.</string>
     <string name="lock_field_pin">PIN (min. 4 digits)</string>

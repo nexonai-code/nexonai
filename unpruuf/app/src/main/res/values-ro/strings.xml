@@ -18,6 +18,10 @@
     <string name="lock_err_store_lost">PIN-ul nu mai poate fi citit pe acest telefon (cheia lui a dispărut). Șterge datele aplicației din Setările Android și configurează din nou.</string>
     <string name="lock_err_pins_mismatch">Codurile PIN nu coincid.</string>
     <string name="lock_save_pin">Salvează codul PIN</string>
+    <string name="lock_setup_panic_description">Alege acum un cod PIN de panică separat, diferit de PIN-ul tău. Introducerea lui șterge instantaneu toate contactele și deschide aplicația goală. Ține-l minte, nimic nu îl poate recupera.</string>
+    <string name="lock_setup_step">Pasul %1$d din 2</string>
+    <string name="lock_setup_next">Mai departe</string>
+    <string name="lock_setup_back">Înapoi</string>
     <string name="lock_setup_title">Configurează codul PIN · B2</string>
     <string name="lock_setup_description">Stabilește un cod PIN pentru a deschide aplicația și un cod PIN de panică separat. Introducerea codului PIN de panică șterge instantaneu toate contactele și deschide aplicația goală.</string>
     <string name="lock_field_pin">Cod PIN (minim 4 cifre)</string>

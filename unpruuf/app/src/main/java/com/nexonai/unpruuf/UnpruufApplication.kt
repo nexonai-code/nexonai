@@ -9,6 +9,7 @@ import dagger.hilt.android.HiltAndroidApp
 class UnpruufApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        com.nexonai.unpruuf.ui.DebugCrashReport.install(this)
         createNotificationChannels()
     }
 
