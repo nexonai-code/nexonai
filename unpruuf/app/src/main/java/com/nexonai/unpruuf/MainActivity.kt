@@ -168,6 +168,13 @@ class MainActivity : FragmentActivity() {
             }
         })
 
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                DebugCrashReport.trail(this@MainActivity, "BACK pressed")
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+            }
+        })
         DebugCrashReport.trail(this, "onCreate saved=${savedInstanceState != null} pinSet=${runCatching { getSharedPreferences("app_flags", MODE_PRIVATE).all.size }.getOrNull()}")
         deepLinkContactId = intent?.getStringExtra("contactId")
         showBetaNotice = !getSharedPreferences("app_flags", MODE_PRIVATE)
@@ -252,6 +259,15 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    // Diagnosis (debug builds only): who ends this screen? Logs the caller of finish() and a Back press.
+    override fun finish() {
+        DebugCrashReport.trail(
+            this,
+            "finish() called from: " + Throwable().stackTrace.drop(1).take(8).joinToString(" < ") { "${it.className.substringAfterLast('.')}.${it.methodName}" }
+        )
+        super.finish()
+    }
+    override fun onUserLeaveHint() { super.onUserLeaveHint(); DebugCrashReport.trail(this, "onUserLeaveHint (home/recents/other app in front)") }
     override fun onStart() { super.onStart(); DebugCrashReport.trail(this, "onStart") }
     override fun onResume() { super.onResume(); DebugCrashReport.trail(this, "onResume") }
     override fun onPause() { super.onPause(); DebugCrashReport.trail(this, "onPause") }

@@ -54,13 +54,9 @@ object DebugCrashReport {
             val am = context.getSystemService(android.app.ActivityManager::class.java) ?: return null
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val seen = prefs.getLong(KEY_SEEN, 0L)
-            val normal = setOf(
-                android.app.ApplicationExitInfo.REASON_USER_REQUESTED,
-                android.app.ApplicationExitInfo.REASON_USER_STOPPED,
-                android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE
-            )
+            // Diagnosis build: every process end since the last report is listed, normal ones too.
             val bad = am.getHistoricalProcessExitReasons(context.packageName, 0, 6)
-                .filter { it.timestamp > seen && it.reason !in normal }
+                .filter { it.timestamp > seen }
             if (bad.isEmpty()) return null
             prefs.edit().putLong(KEY_SEEN, bad.maxOf { it.timestamp }).apply()
             bad.joinToString("\n") {
@@ -81,6 +77,9 @@ object DebugCrashReport {
         android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "DEPENDENCY_DIED"
         android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "EXCESSIVE_RESOURCE_USAGE"
         android.app.ApplicationExitInfo.REASON_OTHER -> "OTHER"
+        android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "USER_REQUESTED (swiped away or force-stopped)"
+        android.app.ApplicationExitInfo.REASON_USER_STOPPED -> "USER_STOPPED"
+        android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "PERMISSION_CHANGE (a permission was changed in Settings, Android restarts the app)"
         else -> "reason $r"
     }
 
