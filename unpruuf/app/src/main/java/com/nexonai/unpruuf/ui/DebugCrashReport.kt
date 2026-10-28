@@ -25,6 +25,13 @@ object DebugCrashReport {
         val app = context.applicationContext ?: context
         appContext = app
         trail(app, "process start pid=${android.os.Process.myPid()}")
+        // The dialog can vanish within a second when the app ends again at once. So the whole report
+        // is also written as a text file into the phone's Downloads folder, on a background thread,
+        // right at the start: the tester opens Files > Downloads and shares it from there.
+        Thread {
+            runCatching { captureLogcat(app) }
+            runCatching { writeReportToDownloads(app) }
+        }.apply { name = "debug-report"; isDaemon = true }.start()
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             runCatching {
@@ -49,7 +56,7 @@ object DebugCrashReport {
         val trace = runCatching { File(context.filesDir, FILE).takeIf { it.isFile }?.readText() }.getOrNull()?.takeIf { it.isNotBlank() }
         val exit = lastAbnormalExit(context)
         if (trace == null && exit == null) return null
-        return listOfNotNull(exit, trace, trailText(context)?.let { "trail (NEWEST FIRST):\n$it" }, torLogTail(context)).joinToString("\n\n")
+        return listOfNotNull(exit, trace, trailText(context)?.let { "trail (NEWEST FIRST):\n$it" }, torLogTail(context), logcatTail(context)).joinToString("\n\n")
     }
 
     private const val PREFS = "debug_crash_report"
@@ -90,6 +97,39 @@ object DebugCrashReport {
         else -> "reason $r"
     }
 
+    private const val LOGCAT = "debug-logcat.txt"
+
+    /**
+     * The app's own system log (Android lets an app read only its own), which still holds the last
+     * words of a process that has ended: native messages of Tor, the C library and the runtime.
+     */
+    private fun captureLogcat(context: Context) {
+        val p = ProcessBuilder("logcat", "-d", "-v", "time", "-t", "600").redirectErrorStream(true).start()
+        val noise = listOf("Choreographer", "ViewRootImpl", "OpenGLRenderer", "InputMethod", "InsetsController", "SurfaceView", "BufferQueue", "HwViewRootImpl")
+        val lines = p.inputStream.bufferedReader().readLines().filter { l -> noise.none { l.contains(it) } }.takeLast(220)
+        File(context.filesDir, LOGCAT).writeText(lines.joinToString("\n").takeLast(24_000))
+    }
+
+    private fun logcatTail(context: Context): String? =
+        runCatching { File(context.filesDir, LOGCAT).takeIf { it.isFile }?.readText() }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?.let { "system log of this app (oldest first):\n$it" }
+
+    @Volatile private var reportWritten = false
+
+    private fun writeReportToDownloads(context: Context) {
+        if (reportWritten || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
+        val text = read(context) ?: ("(no earlier run recorded)\n\n" + (logcatTail(context) ?: "(no system log)"))
+        val name = "unpruuf-debug-" + java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US).format(java.util.Date()) + ".txt"
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
+            put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
+            put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+        }
+        val uri = context.contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
+        context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+        reportWritten = true
+    }
+
     /** Last lines of Tor's own log (debug builds), newest first; written by TorManager.start(). */
     private fun torLogTail(context: Context): String? =
         runCatching { File(context.filesDir, "tor-debug.log").takeIf { it.isFile }?.readText() }.getOrNull()
@@ -123,5 +163,6 @@ object DebugCrashReport {
         runCatching { File(context.filesDir, FILE).delete() }
         runCatching { File(context.filesDir, TRAIL).delete() }
         runCatching { File(context.filesDir, "tor-debug.log").delete() }
+        runCatching { File(context.filesDir, LOGCAT).delete() }
     }
 }
