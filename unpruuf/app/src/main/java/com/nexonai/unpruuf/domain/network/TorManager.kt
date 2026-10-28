@@ -115,6 +115,18 @@ class TorManager @Inject constructor(
         if (started) return
         started = true
         com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: start()")
+        // Diagnosis (debug builds only): let Tor write its own log next to the app's data, so the
+        // reason of a startup failure is readable in the debug report. The user torrc is ours to write.
+        if (com.nexonai.unpruuf.BuildConfig.DEBUG) runCatching {
+            val log = java.io.File(context.filesDir, "tor-debug.log")
+            if (log.length() > 200_000) log.delete()
+            val rc = TorService.getTorrc(context)
+            rc.parentFile?.mkdirs()
+            val line = "Log notice file ${log.absolutePath}\n"
+            val text = if (rc.exists()) rc.readText() else ""
+            if (!text.contains("tor-debug.log")) rc.writeText(text + (if (text.isEmpty() || text.endsWith("\n")) "" else "\n") + line)
+            com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: debug log on, torrc=${rc.absolutePath}")
+        }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: status=${intent.getStringExtra(TorService.EXTRA_STATUS)}")

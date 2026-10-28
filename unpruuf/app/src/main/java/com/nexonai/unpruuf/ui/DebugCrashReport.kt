@@ -49,7 +49,7 @@ object DebugCrashReport {
         val trace = runCatching { File(context.filesDir, FILE).takeIf { it.isFile }?.readText() }.getOrNull()?.takeIf { it.isNotBlank() }
         val exit = lastAbnormalExit(context)
         if (trace == null && exit == null) return null
-        return listOfNotNull(exit, trace, trailText(context)?.let { "trail (NEWEST FIRST):\n$it" }).joinToString("\n\n")
+        return listOfNotNull(exit, trace, trailText(context)?.let { "trail (NEWEST FIRST):\n$it" }, torLogTail(context)).joinToString("\n\n")
     }
 
     private const val PREFS = "debug_crash_report"
@@ -90,6 +90,12 @@ object DebugCrashReport {
         else -> "reason $r"
     }
 
+    /** Last lines of Tor's own log (debug builds), newest first; written by TorManager.start(). */
+    private fun torLogTail(context: Context): String? =
+        runCatching { File(context.filesDir, "tor-debug.log").takeIf { it.isFile }?.readText() }.getOrNull()
+            ?.lines()?.filter { it.isNotBlank() }?.takeLast(40)?.reversed()?.joinToString("\n")
+            ?.let { "tor log (NEWEST FIRST):\n$it" }
+
     private const val TRAIL = "debug-trail.txt"
     private const val TRAIL_MAX = 6_000
     private val trailLock = Any()
@@ -116,5 +122,6 @@ object DebugCrashReport {
     fun clear(context: Context) {
         runCatching { File(context.filesDir, FILE).delete() }
         runCatching { File(context.filesDir, TRAIL).delete() }
+        runCatching { File(context.filesDir, "tor-debug.log").delete() }
     }
 }
