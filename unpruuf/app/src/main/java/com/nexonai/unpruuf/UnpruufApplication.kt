@@ -7,9 +7,14 @@ import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 class UnpruufApplication : Application() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(base)
+        // Earliest possible: also catches a failure while Hilt builds the object graph (debug builds only).
+        com.nexonai.unpruuf.ui.DebugCrashReport.install(base)
+    }
+
     override fun onCreate() {
         super.onCreate()
-        com.nexonai.unpruuf.ui.DebugCrashReport.install(this)
         createNotificationChannels()
     }
 

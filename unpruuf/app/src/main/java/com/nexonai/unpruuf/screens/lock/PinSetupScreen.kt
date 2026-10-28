@@ -40,6 +40,8 @@ fun PinSetupScreen(viewModel: LockViewModel) {
     val firstField = remember { FocusRequester() }
     val panicField = remember { FocusRequester() }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(step) { com.nexonai.unpruuf.ui.DebugCrashReport.trail(context, "pin setup step $step shown") }
     BackHandler(enabled = step == 2) { step = 1; viewModel.clearError() }
     LaunchedEffect(step) {
         runCatching { if (step == 1) firstField.requestFocus() else panicField.requestFocus() }
@@ -114,6 +116,24 @@ fun PinSetupScreen(viewModel: LockViewModel) {
                 TextButton(onClick = { step = 1; viewModel.clearError() }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.lock_setup_back))
                 }
+            }
+            if (com.nexonai.unpruuf.BuildConfig.DEBUG) {
+                Spacer(Modifier.height(16.dp))
+                TextButton(onClick = {
+                    val text = com.nexonai.unpruuf.ui.DebugCrashReport.read(context)
+                        ?: com.nexonai.unpruuf.ui.DebugCrashReport.trailText(context) ?: "(nothing recorded yet)"
+                    (context as? androidx.activity.ComponentActivity)?.let { act ->
+                        act.startActivity(
+                            android.content.Intent.createChooser(
+                                android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_TEXT, text)
+                                },
+                                "Send debug log"
+                            )
+                        )
+                    }
+                }) { Text("Debug: send log") }
             }
             Spacer(Modifier.height(48.dp))
         }

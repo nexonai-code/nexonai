@@ -168,6 +168,7 @@ class MainActivity : FragmentActivity() {
             }
         })
 
+        DebugCrashReport.trail(this, "onCreate saved=${savedInstanceState != null} pinSet=${runCatching { getSharedPreferences("app_flags", MODE_PRIVATE).all.size }.getOrNull()}")
         deepLinkContactId = intent?.getStringExtra("contactId")
         showBetaNotice = !getSharedPreferences("app_flags", MODE_PRIVATE)
             .getBoolean("beta_notice_shown", false)
@@ -251,12 +252,30 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onStart() { super.onStart(); DebugCrashReport.trail(this, "onStart") }
+    override fun onResume() { super.onResume(); DebugCrashReport.trail(this, "onResume") }
+    override fun onPause() { super.onPause(); DebugCrashReport.trail(this, "onPause") }
+    override fun onStop() { super.onStop(); DebugCrashReport.trail(this, "onStop locked=${!appLockManager.unlocked.value}") }
+    override fun onDestroy() {
+        DebugCrashReport.trail(this, "onDestroy finishing=$isFinishing changingConfig=$isChangingConfigurations")
+        super.onDestroy()
+    }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        DebugCrashReport.trail(this, "focus=$hasFocus")
+    }
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        DebugCrashReport.trail(this, "config changed")
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.getStringExtra("contactId")?.let { deepLinkContactId = it }
     }
 
     private fun requestNotificationPermission() {
+        DebugCrashReport.trail(this, "asking notification permission")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -278,6 +297,7 @@ class MainActivity : FragmentActivity() {
         val pm = getSystemService(PowerManager::class.java) ?: return
         if (pm.isIgnoringBatteryOptimizations(packageName)) return
         prefs.edit().putBoolean("battery_asked", true).apply()
+        DebugCrashReport.trail(this, "asking battery exemption")
         runCatching {
             @Suppress("BatteryLife")
             startActivity(
