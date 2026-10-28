@@ -31,9 +31,12 @@ class P2PListenerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: P2PListenerService onCreate")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: P2P foreground started, calling p2p.start()")
         p2pNetworkManager.start()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: p2p.start() returned")
     }
 
     private fun buildNotification(): Notification {

@@ -15,9 +15,16 @@ object DebugCrashReport {
     private const val FILE = "debug-last-crash.txt"
     private const val MAX_CHARS = 12_000
 
+    @Volatile private var appContext: Context? = null
+
+    /** Short form for code without a Context at hand; debug builds only. */
+    fun t(event: String) { appContext?.let { trail(it, event) } }
+
     fun install(context: Context) {
         if (!BuildConfig.DEBUG) return
-        val app = context.applicationContext
+        val app = context.applicationContext ?: context
+        appContext = app
+        trail(app, "process start pid=${android.os.Process.myPid()}")
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             runCatching {
@@ -42,7 +49,7 @@ object DebugCrashReport {
         val trace = runCatching { File(context.filesDir, FILE).takeIf { it.isFile }?.readText() }.getOrNull()?.takeIf { it.isNotBlank() }
         val exit = lastAbnormalExit(context)
         if (trace == null && exit == null) return null
-        return listOfNotNull(exit, trace, trailText(context)?.let { "trail (newest last):\n$it" }).joinToString("\n\n")
+        return listOfNotNull(exit, trace, trailText(context)?.let { "trail (NEWEST FIRST):\n$it" }).joinToString("\n\n")
     }
 
     private const val PREFS = "debug_crash_report"
@@ -103,6 +110,7 @@ object DebugCrashReport {
     fun trailText(context: Context): String? {
         if (!BuildConfig.DEBUG) return null
         return runCatching { File(context.filesDir, TRAIL).takeIf { it.isFile }?.readText() }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?.lines()?.filter { it.isNotBlank() }?.takeLast(60)?.reversed()?.joinToString("\n")
     }
 
     fun clear(context: Context) {

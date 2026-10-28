@@ -35,7 +35,9 @@ object AppModule {
         crypto: CryptoManager,
         keyState: DbKeyState
     ): AppDatabase {
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("db: provider start")
         SQLiteDatabase.loadLibs(context)
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("db: sqlcipher libs loaded")
         // The SQLCipher key is sealed under the phone-bound key; a plain key from an older version
         // is migrated here once (rekey to a fresh key, with a file copy as safety net). See DbKeyVault.
         val result = DbKeyVault(
@@ -44,6 +46,7 @@ object AppModule {
             seal = { crypto.encrypt(it) },
             open = { crypto.decrypt(it) }
         ).resolve()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("db: key result=${result::class.simpleName}")
         return when (result) {
             is DbKeyResult.Ready -> Room.databaseBuilder(context, AppDatabase::class.java, DB_NAME)
                 .openHelperFactory(SupportFactory(result.passphrase, SecureDeleteHook))

@@ -407,7 +407,9 @@ class P2PNetworkManager @Inject constructor(
     fun start() {
         if (started) return
         started = true
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("p2p: start() begin")
         startServer()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("p2p: server started")
         startLanDiscoveryLoop()
         clearOrphanPhoneTempNodes()
 

@@ -51,6 +51,7 @@ class TorForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: TorForegroundService onCreate")
         createNotificationChannel()
         acquireWakeLock()
     }
@@ -71,6 +72,7 @@ class TorForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 startForeground(NOTIFICATION_ID, buildNotification("Connecting to Tor…"))
+                com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: Tor foreground started, calling torManager.start()")
                 torManager.start()
                 observeTorStatus()
             }
