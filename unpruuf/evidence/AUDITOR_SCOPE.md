@@ -1,5 +1,8 @@
 # Proposed scope for an independent security review
 
+> **Update, 28 October 2026:** the scope for round one is now set out in `handover/AUDIT_RFQ_2026-10-28.md` (EN and RO): base scope = node server and Business app (pro, then group), build and release chain, cryptography review, network and metadata; Control (here work package 5), the Officer app (work package 6), Compliance, Press, the guest edition and the Android node are options priced separately; iOS and the old consumer relay are out. This file stays the detailed, confidential scope for the shortlisted firm under NDA.
+
+
 Status 14 October 2026. A proposal for the team to send to an auditor. **Internal.** It contains protocol details
 (patent check running); share it only under a confidentiality agreement.
 

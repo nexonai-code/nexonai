@@ -5,6 +5,28 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑28 · Audit request for quotation and reply to DOCISIA/VĂZDUH
+
+- `handover/AUDIT_RFQ_2026-10-28.md/.docx` (EN) and `_RO`: current request for quotation for further audit firms (Lot A base, options B to F, out of scope, deliverables, questions 1 to 11, timeline, weights). No protocol details, so it can go out before an NDA.
+- `handover/AUDIT_ANTWORT_DOCISIA_VAZDUH_2026-10-28_RO.md/.docx`: Romanian reply draft to the DOCISIA/VĂZDUH offer (perimeter, frozen version, team and crypto competence, DNSC attestation questions, independence, report conditions, NDA with patent clause, missing commercial offer).
+- `evidence/AUDITOR_SCOPE.md`: note at the top pointing to the new scope.
+- `design/md_to_docx.py`: files named `*_RO` get the Romanian honesty line in the footer.
+- Open before sending: Lot B placement, December 2026 start assumption, weights, DNSC check on dnsc.ro.
+
+---
+
+## 2026‑10‑28 · Whistleblower hurdles and unpruuf comparison: English version
+
+- `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27_EN.md` and `.docx`: English translation of the corrected German document (same structure, tables and corrections). Romanian not yet made.
+
+---
+
+## 2026‑10‑27 · Whistleblower hurdles and unpruuf comparison: corrected
+
+- `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27.md` and `.docx`: Gabriel's German document corrected where it was wrong about unpruuf. Twelve corrections: product name (unpruuf Compliance, not safeline), installation is needed (app, QR scan; browser variant only as fallback), no "Fallcode" (case number and conversation in the app), cases can be exported and deleted (no tamper-proof audit log), server run by the customer with only encrypted packets for at most 24 hours and case files local on the officer's computer, limits of "IT administrators cannot read" and "basis for retaliation disappears", deadlines are shown not guaranteed, no "legally compliant" claim, no "guaranteed" and "uncompromising" wording, unpruuf Business wording. Added rows "effort for reporters" and "maturity" (pilot, not independently audited) and a section "Stand und Grenzen". External statistics and statements about other systems left unchanged and flagged; two weak sources noted.
+
+---
+
 ## 2026‑10‑26 · Competitive comparison, scenario after the independent audit (EN and RO)
 
 - `handover/COMPETITIVE_COMPARISON_AFTER_AUDIT_2026-10-26.md` and `_RO.md` (and two artifacts): the same comparison redone on the premise that the independent audit is finished and passed and every statement is backed by proof. Labelled as a scenario, not today's state. Contents: the exact premise (including what stays outside round one: Control, Officer app, Press, Compliance parts, iOS), a table "what we may say, and the proof we hand over" per claim (mapped to `CLAIMS_TO_EVIDENCE.md`, the evidence scripts and the audit report), our position against the messengers and against the reporting channels, an honest note that the audit moves us to parity on the entry requirement and does not make us better than audited competitors, the scope decision that changes the reporting-channel comparison most (Compliance app and Officer app in round one), the conversation per competitor, the wording ladder and the conditions before the page may be used.

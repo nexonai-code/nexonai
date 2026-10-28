@@ -111,7 +111,10 @@ def convert(md_path):
     w2.font.name = SANS; w2.bold = True; w2.font.size = Pt(15); w2.font.color.rgb = BLUE
     bottom_border(hp)
     fp = sec.footer.paragraphs[0]
-    fr = fp.add_run("NexonAI Consulting SRL, Alba Iulia  ·  pilot phase, not independently audited")
+    # A file name ending in _RO means a Romanian document: same honesty line in Romanian.
+    is_ro = os.path.splitext(os.path.basename(md_path))[0].endswith("_RO")
+    fr = fp.add_run("NexonAI Consulting SRL, Alba Iulia  ·  fază pilot, neauditat independent" if is_ro
+                    else "NexonAI Consulting SRL, Alba Iulia  ·  pilot phase, not independently audited")
     fr.font.name = SANS; fr.font.size = Pt(8); fr.font.color.rgb = MUTED
     lines = open(md_path, encoding="utf-8").read().split("\n")
     i = 0
