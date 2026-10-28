@@ -5,6 +5,16 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑28 · Audit request for quotation and reply to DOCISIA/VĂZDUH
+
+- `handover/AUDIT_RFQ_2026-10-28.md/.docx` (EN) and `_RO`: current request for quotation for further audit firms (Lot A base, options B to F, out of scope, deliverables, questions 1 to 11, timeline, weights). No protocol details, so it can go out before an NDA.
+- `handover/AUDIT_ANTWORT_DOCISIA_VAZDUH_2026-10-28_RO.md/.docx`: Romanian reply draft to the DOCISIA/VĂZDUH offer (perimeter, frozen version, team and crypto competence, DNSC attestation questions, independence, report conditions, NDA with patent clause, missing commercial offer).
+- `evidence/AUDITOR_SCOPE.md`: note at the top pointing to the new scope.
+- `design/md_to_docx.py`: files named `*_RO` get the Romanian honesty line in the footer.
+- Open before sending: Lot B placement, December 2026 start assumption, weights, DNSC check on dnsc.ro.
+
+---
+
 ## 2026‑10‑28 · Whistleblower hurdles and unpruuf comparison: English version
 
 - `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27_EN.md` and `.docx`: English translation of the corrected German document (same structure, tables and corrections). Romanian not yet made.
