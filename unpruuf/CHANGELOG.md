@@ -5,6 +5,13 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑28 · Audit RFQ v2: contact address and quote comparison table
+
+- Contact address in RFQ (EN/RO) and the DOCISIA/VĂZDUH reply changed to gabriel@nexonai.ro.
+- `handover/AUDIT_ANGEBOTSVERGLEICH_2026-10-28.xlsx`: scoring (weights from RFQ section 9), prices and facts per firm, check of RFQ questions 1 to 11. Formulas tested by recalculation.
+
+---
+
 ## 2026‑10‑28 · Audit request for quotation and reply to DOCISIA/VĂZDUH
 
 - `handover/AUDIT_RFQ_2026-10-28.md/.docx` (EN) and `_RO`: current request for quotation for further audit firms (Lot A base, options B to F, out of scope, deliverables, questions 1 to 11, timeline, weights). No protocol details, so it can go out before an NDA.

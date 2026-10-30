@@ -2,7 +2,7 @@
 
 **Către:** Asocierea DOCISIA S.R.L. (lider) – VĂZDUH S.R.L., în atenția domnului Domșa Ovidiu și a domnului Rusan Nicolae Alexandru
 
-**De la:** NexonAI Consulting SRL, Alba Iulia, Gabriel Hategan, unpruuf@nexonai.ro
+**De la:** NexonAI Consulting SRL, Alba Iulia, Gabriel Hategan, gabriel@nexonai.ro
 
 **Data:** 28 octombrie 2026
 
@@ -80,12 +80,12 @@ Protocolul este în evaluare pentru brevet. Înainte de predarea codului sursă 
 
 Nu am primit propunerea comercială. Vă rugăm să includeți: preț fix sau plafonat pe fiecare lot (A–F), persoane-zile și tarif zilnic pe persoană, prețul reverificării, prețul unei runde suplimentare, prețul traducerii în engleză și al rezumatului public, condiții de plată și valabilitatea ofertei (cel puțin 60 de zile).
 
-Vă rugăm să ne trimiteți răspunsul și propunerea revizuită în cel mult 10 zile calendaristice. Întrebările pot fi trimise la unpruuf@nexonai.ro.
+Vă rugăm să ne trimiteți răspunsul și propunerea revizuită în cel mult 10 zile calendaristice. Întrebările pot fi trimise la gabriel@nexonai.ro.
 
 Cu stimă,
 
 Gabriel Hategan
 NexonAI Consulting SRL, Alba Iulia
-unpruuf@nexonai.ro
+gabriel@nexonai.ro
 
 Anexă: Cerere de ofertă, audit independent de securitate al sistemului unpruuf, 28.10.2026
