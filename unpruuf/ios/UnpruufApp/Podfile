@@ -1,6 +1,8 @@
 platform :ios, '17.0'
 
-target 'UnpruufApp' do
-  use_frameworks!
-  pod 'Tor', '~> 409'
+%w[UnpruufApp UnpruufBusiness UnpruufCompliance].each do |name|
+  target name do
+    use_frameworks!
+    pod 'Tor', '~> 409'
+  end
 end

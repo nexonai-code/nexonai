@@ -64,6 +64,16 @@ New files: `UnpruufCore/Sources/UnpruufCore/OfficerCase.swift` (+ tests) and eve
 `UnpruufApp/Sources/Compliance/`. Changed: `PairingPayload` (optional edition tag `e`),
 `AppEnvironment` (case store and service), `RootView` (picks the Compliance home).
 
+### unpruuf Business (third app, decided 2026‑10‑30)
+
+Own target `UnpruufBusiness`, same sources plus `UnpruufApp/Sources/Business/`, bundle id
+`com.nexonai.unpruuf.business`, Info.plist file `Info-Business.plist` (`UnpruufEdition` =
+`business`), "Generate Info.plist File" = Yes. The `Podfile` names all three app targets, so the
+local project must have `UnpruufApp`, `UnpruufBusiness` and `UnpruufCompliance` before `pod install`.
+
+Building a second target into the same DerivedData fails with `can't link a dylib with itself` (the
+`Tor` pod and its `tor.xcframework` differ only in case): delete `Build/` in DerivedData first.
+
 ### Building the Compliance app in Xcode (two minutes, no command line)
 
 The consumer target stays as it is. Add a second target from it:

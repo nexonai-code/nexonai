@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: third app unpruuf Business, node list screens (decision 9.1: own app)
+
+**What was done.** `Info-Business.plist`, `Edition.isBusiness`, `RootView` opens `BusinessHomeView`, `AppEnvironment.start` runs no relay poll in this edition. New in `UnpruufApp/Sources/Business`: `NodeListsModel`, `BusinessHomeView` (lists, locked servers with confirmation, Tor line, "Not independently audited"), `NodeListDetailView` (rename, delete), `NodeImportView` (QR, file, paste, target list). `Podfile` now names all three apps. `UnpruufCompliance` is a real target in the local project for the first time.
+
+**Checked.** All three targets build for the Simulator on Xcode 27.2.
+
+**Not checked.** The screens never ran: during this work the App Store updated Xcode from 27.1 to 27.2, after which CoreSimulator lists no runtime and no simulator boots. So neither `UnpruufBusiness` nor `UnpruufCompliance` has started once, and `UnpruufAppTests` was not repeated after this change. Romanian texts not reviewed by a native speaker. No String Catalog yet (B6), texts use `L.t` like Compliance. App icon is the empty catalog.
+
+**Known limits.** Bundle id and app name `unpruuf Business` are provisional, Gabriel has not confirmed them. A contact count on deleting a list comes with B3.
+
+---
+
 ## 2026‑10‑30 · iOS: own nodes and lists (package B2 without its screens)
 
 **What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshStore` (pool, lists, pool sources, control addresses as one Keychain item), the list rules in `NodeLists`, import of a node-list file all or nothing, owner string, sibling import through `GET /pool`, sealed-server status and unlock, node choice from one list. `OnionAddress.address(publicKey:)`. The store is in `AppEnvironment` and in the panic wipe set. `KeychainStore` takes a service and an accessibility class; owner secrets use `WhenUnlockedThisDeviceOnly` as the spec says. `KeyValueStore` gained `removeString`. An unreadable saved state stays untouched.

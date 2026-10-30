@@ -22,6 +22,7 @@ final class AppEnvironment: ObservableObject {
     let relayPoolManager: RelayPoolManager
     let archivedRelayStore: ArchivedRelayStore
     let nodeMeshStore: NodeMeshStore
+    let nodeMeshClient: NodeMeshClient
 
     /// The relay I currently advertise to new contacts (and, by default, use when Wechsel-ing an
     /// existing one) — set once in Settings. Contacts can still each end up pointed at a different
@@ -119,6 +120,8 @@ final class AppEnvironment: ObservableObject {
         self.relayPoolManager = RelayPoolManager(keychain: keychain)
         self.archivedRelayStore = ArchivedRelayStore(keychain: keychain)
         self.nodeMeshStore = NodeMeshStore(store: KeychainStore.nodeMesh())
+        let torController = self.torController
+        self.nodeMeshClient = NodeMeshClient(transport: TorNodeTransport(socksPort: { await torController.socksPort }))
         self.defaultRelayConnectionString = keychain.getString(Self.defaultRelayKey) ?? ""
         self.extraRelayConnectionStrings = RelayConnectionString.parseList(
             keychain.getString(Self.extraRelaysKey) ?? ""
@@ -142,7 +145,7 @@ final class AppEnvironment: ObservableObject {
         torController.start()
         if Edition.isCompliance {
             complianceService.startPolling()
-        } else {
+        } else if !Edition.isBusiness {
             relayService.startPolling()
         }
     }
