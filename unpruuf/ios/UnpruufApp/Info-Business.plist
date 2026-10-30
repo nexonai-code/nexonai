@@ -31,6 +31,11 @@
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 	</dict>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ro</string>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<true/>
 </dict>

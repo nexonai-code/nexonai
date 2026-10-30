@@ -41,21 +41,21 @@ struct LicenseView: View {
                 Text(status).font(.footnote)
             }
             if let serial {
-                Section(L.t("Licență", "License")) { Text(serial).font(.footnote) }
+                Section(String(localized: "License")) { Text(serial).font(.footnote) }
             }
-            Section(L.t("Cod de licență", "License code")) {
+            Section(String(localized: "License code")) {
                 TextEditor(text: $code)
                     .frame(minHeight: 90)
                     .font(.system(.footnote, design: .monospaced))
                     .codeInput()
-                Button(L.t("Activează", "Activate"), action: activate)
+                Button(String(localized: "Activate"), action: activate)
                     .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             if let message {
                 Text(message).foregroundStyle(.red)
             }
         }
-        .navigationTitle(L.t("Licență", "License"))
+        .navigationTitle(String(localized: "License"))
         .onAppear { state = store.state }
     }
 
@@ -66,7 +66,7 @@ struct LicenseView: View {
     private var serial: String? {
         switch state {
         case .valid(let info, _), .expiringSoon(let info, _), .expired(let info):
-            return L.t("Serie \(info.serial) • \(info.customer)", "Serial \(info.serial) • \(info.customer)")
+            return String(localized: "Serial \(info.serial) • \(info.customer)")
         case .notConfigured, .invalid:
             return nil
         }
@@ -75,17 +75,15 @@ struct LicenseView: View {
     private var status: String {
         switch state {
         case .notConfigured:
-            return L.t("unpruuf Business are nevoie de un cod de licență pentru a funcționa. Lipește mai jos codul primit de la distribuitorul tău.",
-                       "unpruuf Business needs a license code to run. Paste the code you received from your reseller below.")
+            return String(localized: "unpruuf Business needs a license code to run. Paste the code you received from your reseller below.")
         case .valid(let info, _):
-            return L.t("Activă — expiră \(date(info.expiresAtMs))", "Active — expires \(date(info.expiresAtMs))")
+            return String(localized: "Active — expires \(date(info.expiresAtMs))")
         case .expiringSoon(_, let days):
-            return L.t("Expiră în \(days) zile — reînnoiește curând", "Expires in \(days) days — renew soon")
+            return String(localized: "Expires in \(days) days — renew soon")
         case .expired(let info):
-            return L.t("Licența a expirat pe \(date(info.expiresAtMs)). Introdu un cod de reînnoire pentru a continua.",
-                       "The license expired on \(date(info.expiresAtMs)). Enter a renewal code to continue.")
+            return String(localized: "The license expired on \(date(info.expiresAtMs)). Enter a renewal code to continue.")
         case .invalid:
-            return L.t("Introdu un cod de licență valid pentru a continua.", "Enter a valid license code to continue.")
+            return String(localized: "Enter a valid license code to continue.")
         }
     }
 
@@ -95,9 +93,9 @@ struct LicenseView: View {
             code = ""
             message = nil
         case .invalid:
-            message = L.t("Acest cod de licență nu este valid.", "This license code isn't valid.")
+            message = String(localized: "This license code isn't valid.")
         case .otherDevice:
-            message = L.t("Această licență este deja activată pe un alt dispozitiv.", "This license is already activated on a different device.")
+            message = String(localized: "This license is already activated on a different device.")
         }
         state = store.state
         onChange()

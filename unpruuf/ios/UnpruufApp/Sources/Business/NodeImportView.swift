@@ -19,27 +19,27 @@ struct NodeImportView: View {
         NavigationStack {
             Form {
                 if let file = pendingFile {
-                    Section(L.t("\(file.addresses.count) noduri din listă", "\(file.addresses.count) nodes in the file")) {
-                        Picker(L.t("Adaugă la", "Add to"), selection: $targetListId) {
-                            Text(L.t("Listă nouă", "New list")).tag(String?.none)
+                    Section(String(localized: "\(file.addresses.count) nodes in the file")) {
+                        Picker(String(localized: "Add to"), selection: $targetListId) {
+                            Text(String(localized: "New list")).tag(String?.none)
                             ForEach(model.lists, id: \.id) { Text($0.name).tag(String?.some($0.id)) }
                         }
                         if targetListId == nil {
-                            TextField(L.t("Nume", "Name"), text: $listName)
+                            TextField(String(localized: "Name"), text: $listName)
                         }
-                        Button(L.t("Importă", "Import")) { finishImport(file) }
+                        Button(String(localized: "Import")) { finishImport(file) }
                     }
                 } else {
                     if QRScanner.isSupported {
-                        Button(L.t("Scanează codul serverului", "Scan the server's code")) { showScanner = true }
+                        Button(String(localized: "Scan the server's code")) { showScanner = true }
                     }
-                    Button(L.t("Alege fișierul listei", "Choose the list file")) { showFiles = true }
-                    Section(L.t("…sau lipește", "…or paste")) {
+                    Button(String(localized: "Choose the list file")) { showFiles = true }
+                    Section(String(localized: "…or paste")) {
                         TextEditor(text: $text)
                             .frame(minHeight: 120)
                             .font(.system(.footnote, design: .monospaced))
                             .codeInput()
-                        Button(L.t("Continuă", "Continue")) { take(text) }
+                        Button(String(localized: "Continue")) { take(text) }
                             .disabled(text.isEmpty)
                     }
                 }
@@ -47,11 +47,11 @@ struct NodeImportView: View {
                     Text(errorText).foregroundStyle(.red)
                 }
             }
-            .navigationTitle(L.t("Adaugă noduri", "Add nodes"))
+            .navigationTitle(String(localized: "Add nodes"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("Închide", "Close")) { dismiss() }
+                    Button(String(localized: "Close")) { dismiss() }
                 }
             }
             .sheet(isPresented: $showScanner) {
@@ -79,8 +79,7 @@ struct NodeImportView: View {
             listName = file.name
             text = ""
         case .invalid:
-            errorText = L.t("Acesta nu este un cod de server și nici o listă de noduri.",
-                            "This is neither a server code nor a node list.")
+            errorText = String(localized: "This is neither a server code nor a node list.")
         }
     }
 
@@ -91,12 +90,11 @@ struct NodeImportView: View {
         case .noRoom(let needed, let free):
             errorText = noRoomText(needed: needed, free: free)
         case .unknownList:
-            errorText = L.t("Lista nu mai există.", "That list no longer exists.")
+            errorText = String(localized: "That list no longer exists.")
         }
     }
 
     private func noRoomText(needed: Int, free: Int) -> String {
-        L.t("Nu mai este loc: \(needed) noduri noi, \(free) libere. Nu s-a importat nimic.",
-            "No room: \(needed) new nodes, \(free) free. Nothing was imported.")
+        String(localized: "No room: \(needed) new nodes, \(free) free. Nothing was imported.")
     }
 }

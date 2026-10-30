@@ -25,9 +25,9 @@ struct NodePairingView: View {
         NavigationStack {
             Form {
                 if lists.count > 1 {
-                    Section(L.t("Noduri din lista", "Nodes from list")) {
-                        Picker(L.t("Listă", "List"), selection: $selectedListId) {
-                            Text(L.t("Alege", "Choose")).tag(String?.none)
+                    Section(String(localized: "Nodes from list")) {
+                        Picker(String(localized: "List"), selection: $selectedListId) {
+                            Text(String(localized: "Choose")).tag(String?.none)
                             ForEach(lists, id: \.id) { Text($0.name).tag(String?.some($0.id)) }
                         }
                         .onChange(of: selectedListId) { id in
@@ -37,38 +37,38 @@ struct NodePairingView: View {
                     }
                 }
                 if let myCode {
-                    Section(L.t("Codul meu", "My code")) {
+                    Section(String(localized: "My code")) {
                         QRCodeImage(text: myCode.toJSON())
                             .frame(maxWidth: 260, maxHeight: 260)
                             .frame(maxWidth: .infinity)
-                        Button(L.t("Copiază codul", "Copy the code")) { SensitiveClipboard.copy(myCode.toJSON()) }
+                        Button(String(localized: "Copy the code")) { SensitiveClipboard.copy(myCode.toJSON()) }
                     }
                 }
-                Section(L.t("Contact", "Contact")) {
-                    TextField(L.t("Nume", "Name"), text: $name)
+                Section(String(localized: "Contact")) {
+                    TextField(String(localized: "Name"), text: $name)
                         .noKeyboardLearning()
                     if QRScanner.isSupported {
-                        Button(L.t("Scanează codul lor", "Scan their code")) { showScanner = true }
+                        Button(String(localized: "Scan their code")) { showScanner = true }
                             .disabled(trimmedName.isEmpty)
                     }
                 }
-                Section(L.t("…sau lipește codul lor", "…or paste their code")) {
+                Section(String(localized: "…or paste their code")) {
                     TextEditor(text: $pasted)
                         .frame(minHeight: 90)
                         .font(.system(.footnote, design: .monospaced))
                         .codeInput()
-                    Button(L.t("Adaugă", "Add")) { take(pasted) }
+                    Button(String(localized: "Add")) { take(pasted) }
                         .disabled(pasted.isEmpty || trimmedName.isEmpty)
                 }
                 if let errorText {
                     Text(errorText).foregroundStyle(.red)
                 }
             }
-            .navigationTitle(L.t("Adaugă contact", "Add contact"))
+            .navigationTitle(String(localized: "Add contact"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("Închide", "Close")) { dismiss() }
+                    Button(String(localized: "Close")) { dismiss() }
                 }
             }
             .sheet(isPresented: $showScanner) {
@@ -84,7 +84,7 @@ struct NodePairingView: View {
 
     private func take(_ raw: String) {
         guard let payload = NodeMeshPairingPayload.fromJSON(raw.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            errorText = L.t("Acesta nu este un cod de asociere valid.", "This is not a valid pairing code.")
+            errorText = String(localized: "This is not a valid pairing code.")
             return
         }
         switch flow.handle(payload: payload, displayName: trimmedName) {
@@ -94,25 +94,25 @@ struct NodePairingView: View {
             pasted = ""
             dismiss()
         case .alreadyContact(let existing):
-            errorText = L.t("\(existing) este deja contact.", "\(existing) is already a contact.")
+            errorText = String(localized: "\(existing) is already a contact.")
         case .keyChanged:
-            errorText = L.t("Cheia acestui contact s-a schimbat. Nu a fost adăugat.", "This contact's key has changed. It was not added.")
+            errorText = String(localized: "This contact's key has changed. It was not added.")
         case .refusedEdition(let edition):
             errorText = NodeMeshEdition.isGroup(edition)
-                ? L.t("Acesta este un cod Pro Groups și poate fi adăugat doar în aplicația Pro Groups.", "This is a Pro Groups code, it can only be added in the Pro Groups app.")
-                : L.t("Acesta este un cod de raportare și nu poate fi adăugat aici.", "This is a reporting code, it can't be added here.")
+                ? String(localized: "This is a Pro Groups code, it can only be added in the Pro Groups app.")
+                : String(localized: "This is a reporting code, it can't be added here.")
         case .guestInvitationNeedsClient:
-            errorText = L.t("Această invitație poate fi acceptată doar în aplicația gratuită Client.", "This invitation can only be accepted in the free Client app.")
+            errorText = String(localized: "This invitation can only be accepted in the free Client app.")
         case .guestAnswerNotSupported:
-            errorText = L.t("Invitațiile pentru oaspeți nu sunt încă disponibile pe iOS.", "Guest invitations are not available on iOS yet.")
+            errorText = String(localized: "Guest invitations are not available on iOS yet.")
         case .invalidCode:
-            errorText = L.t("Acesta nu este un cod de asociere valid.", "This is not a valid pairing code.")
+            errorText = String(localized: "This is not a valid pairing code.")
         case .ownNodeFirst:
-            errorText = L.t("Adaugă mai întâi un nod propriu.", "Add a node of your own first.")
+            errorText = String(localized: "Add a node of your own first.")
         case .chooseList:
-            errorText = L.t("Alege mai întâi o listă.", "Choose a list first.")
+            errorText = String(localized: "Choose a list first.")
         case .codeUsed:
-            errorText = L.t("Acest cod a fost deja folosit. Deschide din nou ecranul pentru un cod nou.", "This code was already used. Open this screen again for a new one.")
+            errorText = String(localized: "This code was already used. Open this screen again for a new one.")
         }
     }
 }
@@ -131,36 +131,36 @@ struct NodeContactDetailView: View {
     var body: some View {
         Form {
             if let contact {
-                Section(L.t("Număr de siguranță", "Safety number")) {
+                Section(String(localized: "Safety number")) {
                     Text(contact.safetyNumber)
                         .font(.system(.title2, design: .monospaced))
-                    Text(L.t("Comparați numărul pe un alt canal, de exemplu la telefon.", "Compare it over another channel, for example a call."))
+                    Text(String(localized: "Compare it over another channel, for example a call."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 Section {
                     if contact.isVerified {
-                        Label(L.t("Verificat", "Verified"), systemImage: "checkmark.seal")
+                        Label(String(localized: "Verified"), systemImage: "checkmark.seal")
                     } else {
-                        TextField(L.t("Codul citit de contact", "Code they read you"), text: $entered)
+                        TextField(String(localized: "Code they read you"), text: $entered)
                             .noKeyboardLearning()
                             .keyboardType(.numberPad)
-                        Button(L.t("Salvează", "Save")) { verify(contact) }
+                        Button(String(localized: "Save")) { verify(contact) }
                         if mismatch {
-                            Text(L.t("Codul nu se potrivește.", "The code does not match.")).foregroundStyle(.red)
+                            Text(String(localized: "The code does not match.")).foregroundStyle(.red)
                         }
                     }
                 }
                 Section {
-                    Button(L.t("Șterge contactul", "Delete contact"), role: .destructive) { confirmDelete = true }
+                    Button(String(localized: "Delete contact"), role: .destructive) { confirmDelete = true }
                 } footer: {
-                    Text(L.t("Contactul este anunțat și dispare și de pe telefonul lui.", "The contact is told and disappears from their phone too."))
+                    Text(String(localized: "The contact is told and disappears from their phone too."))
                 }
             }
         }
         .navigationTitle(contact?.displayName ?? "")
-        .confirmationDialog(L.t("Ștergi contactul?", "Delete this contact?"), isPresented: $confirmDelete) {
-            Button(L.t("Șterge", "Delete"), role: .destructive) {
+        .confirmationDialog(String(localized: "Delete this contact?"), isPresented: $confirmDelete) {
+            Button(String(localized: "Delete"), role: .destructive) {
                 engine.deleteContact(id: contactId)
                 dismiss()
             }

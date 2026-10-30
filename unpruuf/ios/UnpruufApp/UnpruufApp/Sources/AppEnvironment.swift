@@ -174,7 +174,7 @@ final class AppEnvironment: ObservableObject {
         engine.events.onSendFailed = { contactId, messageId in
             guard let messageId else { return }
             messages.markFailed(contactId: contactId, messageId: messageId,
-                                reason: L.t("Așteaptă mai întâi un mesaj de la acest contact.", "Wait for a first message from this contact."))
+                                reason: String(localized: "Wait for a first message from this contact."))
         }
         engine.events.onRevoke = { messages.zeroizeContact($0) }
         engine.events.onContactRemoved = { messages.zeroizeContact($0) }

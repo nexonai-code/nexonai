@@ -41,7 +41,7 @@ struct PinSetupView: View {
             Button {
                 localError = nil
                 viewModel.clearError()
-                guard pin == pinRepeat else { localError = "PINs do not match."; return }
+                guard pin == pinRepeat else { localError = String(localized: "PINs do not match."); return }
                 viewModel.setupPins(pin: pin, panicPin: panic)
             } label: {
                 Text("Save PIN").frame(maxWidth: .infinity)
@@ -53,7 +53,7 @@ struct PinSetupView: View {
         }
     }
 
-    private func pinField(_ text: Binding<String>, _ label: String) -> some View {
+    private func pinField(_ text: Binding<String>, _ label: LocalizedStringKey) -> some View {
         SecureField(label, text: Binding(
             get: { text.wrappedValue },
             set: { text.wrappedValue = String($0.filter(\.isNumber).prefix(12)) }

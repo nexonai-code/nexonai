@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: String Catalog EN and RO for unpruuf Business (package B6)
+
+**What was done.** `Sources/Business/Localizable.xcstrings` with 106 strings, English keys, in the Business target only. The Business screens use `String(localized:)` instead of `L.t`. The shared PIN, lock and root screens now use keys too, so they read Romanian in Business; without a catalog the consumer app and Compliance keep their English text. `CFBundleLocalizations` en and ro in `Info-Business.plist`, `ro` in the local project's known regions. Romanian wording from `values-ro/strings.xml` where Android has the same text.
+
+**Checked.** A script checked that every `String(localized:)` key is in the catalog and that placeholders match. All three apps build. `UnpruufAppTests` 10 green, 1 skipped. On the Simulator with `-AppleLanguages (ro)`: lock screen, licence gate in a release build, home screen, all in Romanian, numbers filled in.
+
+**Not checked.** Every screen by eye in Romanian: pairing, import, chat, list detail, error messages. Romanian texts without an Android original have not been read by a native speaker. English on the Business screens after the switch.
+
+**Known limits.** Consumer and Compliance PIN screens stay English; Compliance keeps its own `L.t` and offers Romanian there as before. Package B as a whole is not done: its acceptance is one iPhone and one Android Pro phone over a real server.
+
+---
+
 ## 2026‑10‑30 · iOS: licence screen and own icon of unpruuf Business (package B5)
 
 **What was done.** Decision 9.1 confirmed by Gabriel: own app, bundle id `com.nexonai.unpruuf.business`, name "unpruuf Business". `AppLicenseStore` (from `LicenseManager`): code, binding to a random install id in the Keychain, clock high-water mark. `BusinessGateView` and `LicenseView`: without a valid or expiring licence a release build shows only the activation screen; the code also opens from the home screen for a renewal. Debug builds skip the gate, same as Android. The licence survives the panic PIN. Asset set `AppIconBusiness`. `origin/android` merged.

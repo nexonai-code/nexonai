@@ -149,10 +149,10 @@ struct PinLockView: View {
 
     private func attemptBiometricUnlock() {
         let context = LAContext()
-        context.localizedCancelTitle = "Use PIN instead"
+        context.localizedCancelTitle = String(localized: "Use PIN instead")
         context.evaluatePolicy(
             .deviceOwnerAuthenticationWithBiometrics,
-            localizedReason: "Confirm your identity to unlock unpruuf"
+            localizedReason: String(localized: "Confirm your identity to unlock unpruuf")
         ) { success, _ in
             guard success else { return }
             Task { @MainActor in viewModel.biometricUnlock() }

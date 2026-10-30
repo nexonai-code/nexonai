@@ -52,9 +52,9 @@ struct NodeChatView: View {
                     Button { showCamera = true } label: {
                         Image(systemName: "camera.fill").font(.title3)
                     }
-                    .accessibilityLabel(L.t("Fă o fotografie", "Take a photo"))
+                    .accessibilityLabel(String(localized: "Take a photo"))
                 }
-                TextField(L.t("Mesaj…", "Message…"), text: $inputText, axis: .vertical)
+                TextField(String(localized: "Message…"), text: $inputText, axis: .vertical)
                     .noKeyboardLearning()
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...4)
@@ -62,7 +62,7 @@ struct NodeChatView: View {
                     Image(systemName: "arrow.up.circle.fill").font(.title2)
                 }
                 .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel(L.t("Trimite", "Send"))
+                .accessibilityLabel(String(localized: "Send"))
             }
             .padding(8)
         }
@@ -71,19 +71,19 @@ struct NodeChatView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Menu {
-                    Picker(L.t("Durata de viață", "Lifetime"), selection: $lifetime) {
+                    Picker(String(localized: "Lifetime"), selection: $lifetime) {
                         ForEach(MessageTtl.stepsHours, id: \.self) { Text("\($0) h").tag($0) }
                     }
                 } label: {
                     Image(systemName: "clock")
                 }
-                .accessibilityLabel(L.t("Durata de viață a mesajelor", "Message lifetime"))
+                .accessibilityLabel(String(localized: "Message lifetime"))
                 NavigationLink {
                     NodeContactDetailView(store: env.nodeMeshContacts, engine: env.nodeMeshEngine, contactId: contactId)
                 } label: {
                     Image(systemName: "info.circle")
                 }
-                .accessibilityLabel(L.t("Detalii contact", "Contact details"))
+                .accessibilityLabel(String(localized: "Contact details"))
             }
         }
         .onAppear {
@@ -119,7 +119,7 @@ struct NodeChatView: View {
     private func sendImage(_ image: UIImage) {
         guard let jpeg = ImagePreparer.prepareJPEG(from: image),
               let payload = try? MessagePayload.encodeAttachment(name: "Photo.jpg", bytes: jpeg, isImage: true) else {
-            attachmentError = L.t("Fotografia nu a putut fi pregătită.", "Couldn't prepare that photo.")
+            attachmentError = String(localized: "Couldn't prepare that photo.")
             return
         }
         attachmentError = nil
@@ -146,7 +146,7 @@ struct NodeChatView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 if message.isOutgoing {
-                    Text(message.failureReason ?? (message.delivered ? L.t("Trimis", "Sent") : L.t("Se trimite…", "Sending…")))
+                    Text(message.failureReason ?? (message.delivered ? String(localized: "Sent") : String(localized: "Sending…")))
                         .font(.caption2)
                         .foregroundStyle(message.failureReason != nil ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
                 }

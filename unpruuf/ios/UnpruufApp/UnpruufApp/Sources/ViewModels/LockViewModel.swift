@@ -22,8 +22,8 @@ final class LockViewModel: ObservableObject {
 
     /// First-time setup: normal PIN + a separate panic PIN.
     func setupPins(pin: String, panicPin: String) {
-        guard pin.count >= 4, panicPin.count >= 4 else { errorMessage = "PIN must be at least 4 digits."; return }
-        guard pin != panicPin else { errorMessage = "Panic PIN must differ from the PIN."; return }
+        guard pin.count >= 4, panicPin.count >= 4 else { errorMessage = String(localized: "PIN must be at least 4 digits."); return }
+        guard pin != panicPin else { errorMessage = String(localized: "Panic PIN must differ from the PIN."); return }
         pinManager.setPins(pin: pin, panicPin: panicPin)
         appLockManager.unlock()
     }
@@ -41,7 +41,7 @@ final class LockViewModel: ObservableObject {
             errorMessage = nil
             appLockManager.unlock()
         case .wrong:
-            errorMessage = "Wrong PIN."
+            errorMessage = String(localized: "Wrong PIN.")
             refreshLock()
         case .locked:
             refreshLock()
@@ -54,9 +54,9 @@ final class LockViewModel: ObservableObject {
         guard seconds != lockSeconds else { return }
         lockSeconds = seconds
         if seconds >= 60 {
-            errorMessage = "Too many wrong tries. Try again in \((seconds + 59) / 60) min."
+            errorMessage = String(localized: "Too many wrong tries. Try again in \((seconds + 59) / 60) min.")
         } else if seconds > 0 {
-            errorMessage = "Too many wrong tries. Try again in \(seconds) s."
+            errorMessage = String(localized: "Too many wrong tries. Try again in \(seconds) s.")
         } else {
             errorMessage = nil
         }

@@ -1,0 +1,1172 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "%@ is already a contact.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ este deja contact."
+          }
+        }
+      }
+    },
+    "%lld nodes in the file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld noduri din listă"
+          }
+        }
+      }
+    },
+    "Activate": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activează"
+          }
+        }
+      }
+    },
+    "Active — expires %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activă — expiră %@"
+          }
+        }
+      }
+    },
+    "Add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaugă"
+          }
+        }
+      }
+    },
+    "Add a node of your own first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaugă mai întâi un nod propriu."
+          }
+        }
+      }
+    },
+    "Add contact": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaugă contact"
+          }
+        }
+      }
+    },
+    "Add nodes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaugă noduri"
+          }
+        }
+      }
+    },
+    "Add to": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adaugă la"
+          }
+        }
+      }
+    },
+    "Choose": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alege"
+          }
+        }
+      }
+    },
+    "Choose a list first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alege mai întâi o listă."
+          }
+        }
+      }
+    },
+    "Choose the list file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alege fișierul listei"
+          }
+        }
+      }
+    },
+    "Close": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Închide"
+          }
+        }
+      }
+    },
+    "Close photo": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Închide fotografia"
+          }
+        }
+      }
+    },
+    "Code they read you": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codul citit de contact"
+          }
+        }
+      }
+    },
+    "Compare it over another channel, for example a call.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comparați numărul pe un alt canal, de exemplu la telefon."
+          }
+        }
+      }
+    },
+    "Confirm your identity to unlock unpruuf": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmă-ți identitatea pentru a debloca unpruuf"
+          }
+        }
+      }
+    },
+    "Contact": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact"
+          }
+        }
+      }
+    },
+    "Contact details": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detalii contact"
+          }
+        }
+      }
+    },
+    "Contacts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contacte"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuă"
+          }
+        }
+      }
+    },
+    "Copy the code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiază codul"
+          }
+        }
+      }
+    },
+    "Couldn't prepare that photo.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografia nu a putut fi pregătită."
+          }
+        }
+      }
+    },
+    "Delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Șterge"
+          }
+        }
+      }
+    },
+    "Delete contact": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Șterge contactul"
+          }
+        }
+      }
+    },
+    "Delete list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Șterge lista"
+          }
+        }
+      }
+    },
+    "Delete this contact?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ștergi contactul?"
+          }
+        }
+      }
+    },
+    "Delete this list?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ștergi lista?"
+          }
+        }
+      }
+    },
+    "Enter PIN": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introdu codul PIN"
+          }
+        }
+      }
+    },
+    "Enter a valid license code to continue.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introdu un cod de licență valid pentru a continua."
+          }
+        }
+      }
+    },
+    "Expires in %lld days — renew soon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expiră în %lld zile — reînnoiește curând"
+          }
+        }
+      }
+    },
+    "Guest invitations are not available on iOS yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitațiile pentru oaspeți nu sunt încă disponibile pe iOS."
+          }
+        }
+      }
+    },
+    "Import": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importă"
+          }
+        }
+      }
+    },
+    "License": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licență"
+          }
+        }
+      }
+    },
+    "License code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cod de licență"
+          }
+        }
+      }
+    },
+    "Lifetime": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durata de viață"
+          }
+        }
+      }
+    },
+    "List": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listă"
+          }
+        }
+      }
+    },
+    "Message lifetime": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durata de viață a mesajelor"
+          }
+        }
+      }
+    },
+    "Messages wait on the sender's servers for the lifetime they chose (at most 24 h). Open the app to receive. Cover traffic runs only while the app is open.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesajele așteaptă pe serverele expeditorului cât a ales acesta (cel mult 24 de ore). Deschide aplicația ca să le primești. Traficul de acoperire rulează doar cât aplicația este deschisă."
+          }
+        }
+      }
+    },
+    "Message…": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesaj…"
+          }
+        }
+      }
+    },
+    "My code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codul meu"
+          }
+        }
+      }
+    },
+    "Name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nume"
+          }
+        }
+      }
+    },
+    "New list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listă nouă"
+          }
+        }
+      }
+    },
+    "No contacts yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Încă nu există contacte."
+          }
+        }
+      }
+    },
+    "No nodes yet. Tap + and scan your server's code or import its list.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Încă nu există noduri. Atinge + și scanează codul serverului tău sau importă lista lui."
+          }
+        }
+      }
+    },
+    "No room: %lld new nodes, %lld free. Nothing was imported.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nu mai este loc: %lld noduri noi, %lld libere. Nu s-a importat nimic."
+          }
+        }
+      }
+    },
+    "Node lists": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liste de noduri"
+          }
+        }
+      }
+    },
+    "Nodes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noduri"
+          }
+        }
+      }
+    },
+    "Nodes from list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noduri din lista"
+          }
+        }
+      }
+    },
+    "Nodes: %lld · Servers: %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noduri: %lld · Servere: %lld"
+          }
+        }
+      }
+    },
+    "Not independently audited.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neauditat independent."
+          }
+        }
+      }
+    },
+    "PIN (min. 4 digits)": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cod PIN (minim 4 cifre)"
+          }
+        }
+      }
+    },
+    "PIN must be at least 4 digits.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codul PIN trebuie să aibă cel puțin 4 cifre."
+          }
+        }
+      }
+    },
+    "PINs do not match.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codurile PIN nu coincid."
+          }
+        }
+      }
+    },
+    "Panic PIN": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cod PIN de panică"
+          }
+        }
+      }
+    },
+    "Panic PIN must differ from the PIN.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codul PIN de panică trebuie să fie diferit de codul PIN normal."
+          }
+        }
+      }
+    },
+    "Repeat PIN": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repetă codul PIN"
+          }
+        }
+      }
+    },
+    "Safety number": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Număr de siguranță"
+          }
+        }
+      }
+    },
+    "Save": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvează"
+          }
+        }
+      }
+    },
+    "Save PIN": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvează codul PIN"
+          }
+        }
+      }
+    },
+    "Saved data could not be read on this device. It is kept untouched, and new changes are not saved.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datele salvate nu au putut fi citite pe acest dispozitiv. Rămân neatinse, iar modificările noi nu se salvează."
+          }
+        }
+      }
+    },
+    "Scan the server's code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanează codul serverului"
+          }
+        }
+      }
+    },
+    "Scan their code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanează codul lor"
+          }
+        }
+      }
+    },
+    "Screenshot taken": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captură de ecran realizată"
+          }
+        }
+      }
+    },
+    "Send": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trimite"
+          }
+        }
+      }
+    },
+    "Sending…": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se trimite…"
+          }
+        }
+      }
+    },
+    "Sent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trimis"
+          }
+        }
+      }
+    },
+    "Serial %@ • %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie %@ • %@"
+          }
+        }
+      }
+    },
+    "Server locked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server blocat"
+          }
+        }
+      }
+    },
+    "Servers": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servere"
+          }
+        }
+      }
+    },
+    "Set a PIN to open the app and a separate panic PIN. Entering the panic PIN instantly deletes all contacts and opens the app empty.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stabilește un cod PIN pentru a deschide aplicația și un cod PIN de panică separat. Introducerea codului PIN de panică șterge instantaneu toate contactele și deschide aplicația goală."
+          }
+        }
+      }
+    },
+    "Set up PIN": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurează codul PIN"
+          }
+        }
+      }
+    },
+    "Take a photo": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fă o fotografie"
+          }
+        }
+      }
+    },
+    "That list no longer exists.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lista nu mai există."
+          }
+        }
+      }
+    },
+    "The code does not match.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codul nu se potrivește."
+          }
+        }
+      }
+    },
+    "The contact is told and disappears from their phone too.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contactul este anunțat și dispare și de pe telefonul lui."
+          }
+        }
+      }
+    },
+    "The license expired on %@. Enter a renewal code to continue.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licența a expirat pe %@. Introdu un cod de reînnoire pentru a continua."
+          }
+        }
+      }
+    },
+    "The node list cannot be read on this phone. It is left untouched.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lista de noduri nu poate fi citită pe acest telefon. Rămâne neatinsă."
+          }
+        }
+      }
+    },
+    "The nodes leave this phone. The servers do not change.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nodurile dispar de pe acest telefon. Serverele nu se schimbă."
+          }
+        }
+      }
+    },
+    "The server restarted. Unlock it only if it is yours. If in doubt, set up a new server.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serverul a repornit. Deblochează-l doar dacă este al tău. Dacă ai dubii, configurează un server nou."
+          }
+        }
+      }
+    },
+    "This code was already used. Open this screen again for a new one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acest cod a fost deja folosit. Deschide din nou ecranul pentru un cod nou."
+          }
+        }
+      }
+    },
+    "This contact's key has changed. It was not added.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cheia acestui contact s-a schimbat. Nu a fost adăugat."
+          }
+        }
+      }
+    },
+    "This invitation can only be accepted in the free Client app.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Această invitație poate fi acceptată doar în aplicația gratuită Client."
+          }
+        }
+      }
+    },
+    "This is a Pro Groups code, it can only be added in the Pro Groups app.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acesta este un cod Pro Groups și poate fi adăugat doar în aplicația Pro Groups."
+          }
+        }
+      }
+    },
+    "This is a reporting code, it can't be added here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acesta este un cod de raportare și nu poate fi adăugat aici."
+          }
+        }
+      }
+    },
+    "This is neither a server code nor a node list.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acesta nu este un cod de server și nici o listă de noduri."
+          }
+        }
+      }
+    },
+    "This is not a valid pairing code.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acesta nu este un cod de asociere valid."
+          }
+        }
+      }
+    },
+    "This license code isn't valid.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acest cod de licență nu este valid."
+          }
+        }
+      }
+    },
+    "This license is already activated on a different device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Această licență este deja activată pe un alt dispozitiv."
+          }
+        }
+      }
+    },
+    "This sends the write key to the server. %lld nodes.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cheia de scriere pleacă la acest server. %lld noduri."
+          }
+        }
+      }
+    },
+    "Too many wrong tries. Try again in %lld min.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prea multe încercări greșite. Încearcă din nou peste %lld min."
+          }
+        }
+      }
+    },
+    "Too many wrong tries. Try again in %lld s.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prea multe încercări greșite. Încearcă din nou peste %lld s."
+          }
+        }
+      }
+    },
+    "Tor: connected": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tor: conectat"
+          }
+        }
+      }
+    },
+    "Tor: connecting…": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tor: se conectează…"
+          }
+        }
+      }
+    },
+    "Unlock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deblochează"
+          }
+        }
+      }
+    },
+    "Unlock this server?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deblochezi serverul?"
+          }
+        }
+      }
+    },
+    "Unlocking failed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deblocarea nu a reușit."
+          }
+        }
+      }
+    },
+    "Unread": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Necitit"
+          }
+        }
+      }
+    },
+    "Use PIN instead": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folosește codul PIN"
+          }
+        }
+      }
+    },
+    "Verified": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificat"
+          }
+        }
+      }
+    },
+    "Wait for a first message from this contact.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Așteaptă mai întâi un mesaj de la acest contact."
+          }
+        }
+      }
+    },
+    "Wrong PIN.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cod PIN greșit."
+          }
+        }
+      }
+    },
+    "iOS cannot block screenshots. This one is in your Photos and may show your messages.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS nu poate bloca capturile de ecran. Aceasta se află în Fotografii și poate arăta mesajele tale."
+          }
+        }
+      }
+    },
+    "unpruuf Business needs a license code to run. Paste the code you received from your reseller below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unpruuf Business are nevoie de un cod de licență pentru a funcționa. Lipește mai jos codul primit de la distribuitorul tău."
+          }
+        }
+      }
+    },
+    "…or paste": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…sau lipește"
+          }
+        }
+      }
+    },
+    "…or paste their code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…sau lipește codul lor"
+          }
+        }
+      }
+    }
+  }
+}
