@@ -68,7 +68,11 @@ struct UnpruufApp: App {
             // Leaves a few seconds of margin inside the ~30s grace period most background tasks
             // actually get, so the cleanup below and endBackgroundTask() itself have room to run
             // before the system's own deadline hits.
-            await env.relayService.waitForPendingDeliveries(timeout: 25)
+            if Edition.isBusiness {
+                await env.nodeMeshEngine.waitForPendingDeliveries(timeout: 25)
+            } else {
+                await env.relayService.waitForPendingDeliveries(timeout: 25)
+            }
             doneGuard.finishOnce {
                 if UIApplication.shared.applicationState != .active {
                     env.stop()

@@ -24,6 +24,7 @@ final class AppEnvironment: ObservableObject {
     let nodeMeshStore: NodeMeshStore
     let nodeMeshContacts: NodeMeshContactStore
     let nodeMeshClient: NodeMeshClient
+    lazy var nodeMeshEngine = makeNodeMeshEngine()
 
     /// The relay I currently advertise to new contacts (and, by default, use when Wechsel-ing an
     /// existing one) — set once in Settings. Contacts can still each end up pointed at a different
@@ -141,13 +142,61 @@ final class AppEnvironment: ObservableObject {
         )
     }
 
+    private func makeNodeMeshEngine() -> NodeMeshEngine {
+        let keychain = self.keychain
+        let torController = self.torController
+        let messages = self.messageStore
+        let secrets = KeychainStore.nodeMesh()
+        let engine = NodeMeshEngine(
+            contacts: nodeMeshContacts, nodes: nodeMeshStore, client: nodeMeshClient,
+            ratchets: .init(load: { keychain.loadRatchetState(contactId: $0) },
+                            save: { keychain.saveRatchetState(contactId: $0, state: $1) },
+                            delete: { keychain.deleteRatchetState(contactId: $0) }),
+            deviceSecret: Self.torIsolationSecret(in: secrets),
+            isReady: { torController.isReady }
+        )
+        engine.events.onMessage = { contactId, content in
+            let message: RamMessage
+            switch content {
+            case .text(let text):
+                message = RamMessage(id: UUID().uuidString, senderId: contactId, content: Data(text.utf8),
+                                     timestamp: Date(), isOutgoing: false, type: .text)
+            case .attachment(let name, let bytes, let isImage):
+                message = RamMessage(id: UUID().uuidString, senderId: contactId, content: bytes, timestamp: Date(),
+                                     isOutgoing: false, type: isImage ? .image : .file, fileName: name)
+            }
+            messages.addMessage(contactId, message)
+            messages.markUnread(contactId)
+        }
+        engine.events.onDelivered = { messages.markDelivered(contactId: $0, messageId: $1) }
+        engine.events.onSendFailed = { contactId, messageId in
+            guard let messageId else { return }
+            messages.markFailed(contactId: contactId, messageId: messageId,
+                                reason: L.t("Așteaptă mai întâi un mesaj de la acest contact.", "Wait for a first message from this contact."))
+        }
+        engine.events.onRevoke = { messages.zeroizeContact($0) }
+        engine.events.onContactRemoved = { messages.zeroizeContact($0) }
+        return engine
+    }
+
+    /// Keeps the SOCKS user names of this device apart from any other's. It never leaves the phone.
+    private static func torIsolationSecret(in store: KeychainStore) -> Data {
+        if let existing = store.getData("tor_isolation_secret") { return existing }
+        var secret = Data(count: 32)
+        _ = secret.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        store.setData("tor_isolation_secret", secret)
+        return secret
+    }
+
     /// Starts Tor + the relay poll loop — call when the app becomes active (foreground-scoped Tor,
     /// per `CROSS_PLATFORM_PLAN.md` §6).
     func start() {
         torController.start()
         if Edition.isCompliance {
             complianceService.startPolling()
-        } else if !Edition.isBusiness {
+        } else if Edition.isBusiness {
+            nodeMeshEngine.start()
+        } else {
             relayService.startPolling()
         }
     }
@@ -161,6 +210,7 @@ final class AppEnvironment: ObservableObject {
     func stop() {
         relayService.stopPolling()
         complianceService.stopPolling()
+        if Edition.isBusiness { nodeMeshEngine.stop() }
         torController.stop()
         messageStore.wipeAll()
     }
@@ -187,6 +237,7 @@ final class AppEnvironment: ObservableObject {
     /// state.
     func wipeContactsAndMessages() {
         relayService.wipeRuntimeState()
+        nodeMeshEngine.wipe()
         messageStore.wipeAll()
         contactStore.wipeAll()
         // Compliance: the cases, their keys and the remembered organisation QR go too.

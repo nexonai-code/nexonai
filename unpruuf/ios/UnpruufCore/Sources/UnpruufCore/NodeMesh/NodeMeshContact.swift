@@ -26,6 +26,8 @@ public struct NodeMeshContact: Codable, Equatable, Identifiable {
 
     /// One of `MessageTtl.stepsHours`, `nil` is the default.
     public var messageTtlHours: Int?
+    /// Their Temp Node, polled in addition to `theirNodeAddresses`. Without prefix.
+    public var theirTempNodeAddress: String?
 
     public var theirMessageKey: Data { Data(base64Encoded: theirMessageKeyBase64) ?? Data() }
     public var myMessageKey: Data { Data(base64Encoded: myMessageKeyBase64) ?? Data() }

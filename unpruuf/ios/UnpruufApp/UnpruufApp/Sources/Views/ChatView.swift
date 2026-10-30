@@ -207,7 +207,7 @@ struct ChatView: View {
 
 /// Decodes once per row and keeps the picture only as long as the row exists, so a redraw of the
 /// chat never decodes again and a wiped message takes its pixels with it.
-private struct ChatImage: View {
+struct ChatImage: View {
     let data: Data
     let onTap: (UIImage) -> Void
     @State private var image: UIImage?

@@ -117,13 +117,16 @@ struct NodePairingView: View {
     }
 }
 
-/// Name, safety number and its comparison. Chat and removal come with the service.
+/// Safety number and its comparison, and removing the contact.
 struct NodeContactDetailView: View {
     let store: NodeMeshContactStore
+    let engine: NodeMeshEngine
     let contactId: String
+    @Environment(\.dismiss) private var dismiss
     @State private var contact: NodeMeshContact?
     @State private var entered = ""
     @State private var mismatch = false
+    @State private var confirmDelete = false
 
     var body: some View {
         Form {
@@ -148,9 +151,20 @@ struct NodeContactDetailView: View {
                         }
                     }
                 }
+                Section {
+                    Button(L.t("Șterge contactul", "Delete contact"), role: .destructive) { confirmDelete = true }
+                } footer: {
+                    Text(L.t("Contactul este anunțat și dispare și de pe telefonul lui.", "The contact is told and disappears from their phone too."))
+                }
             }
         }
         .navigationTitle(contact?.displayName ?? "")
+        .confirmationDialog(L.t("Ștergi contactul?", "Delete this contact?"), isPresented: $confirmDelete) {
+            Button(L.t("Șterge", "Delete"), role: .destructive) {
+                engine.deleteContact(id: contactId)
+                dismiss()
+            }
+        }
         .onAppear { contact = store.contact(id: contactId) }
     }
 

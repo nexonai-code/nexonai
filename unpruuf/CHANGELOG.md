@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: sending and receiving in unpruuf Business (package B4, with M2, M3, M4 and stream isolation)
+
+**What was done.** `NodeMeshEngine` in `UnpruufCore/NodeMesh`: send queue with snapshots of tag and nodes, deposit to every node, back-off 3 to 15 s, per-contact poll loops, one request per (contact, node), `NodeMeshWindow` (M4), cursors and up to 8 continuations (M2, M3), Retry-After, hash dedup before anything else, chunks, signals REVOKE, DELETE_CONTACT, NODEMIGRATE, TEMPNODE, cover traffic, per-contact SOCKS user name (`TorIsolation`). Spec section 4.8 groups requests per address; that is replaced by the handover's section 6. In the app: `NodeChatView` (text, photo, lifetime 1/6/24 h), contact removal with its signal, unread dot, limits text on the home screen, panic wipe, bounded flush when going to the background.
+
+**Checked.** `swift test` 204 of 204 with the real server running. An in-memory node for the protocol paths (order, 507, 429 with Retry-After, cut answers, 8 continuations, full and narrow window, delete signal after the row is gone, wipe). Two engines through the real `node-mesh-server` on loopback: text, and a 20 000 byte file in chunks the other way. `UnpruufAppTests` 10 of 10. On the Simulator: chat opens, a message shows as "Sending…" (its node does not exist).
+
+**Not checked.** Anything over real Tor: `TorNodeTransport`, the SOCKS user name against Tor (a refusal would stop all traffic, it fails closed), a real onion node. The two apps talking on two simulators. Android Pro to iPhone. Sending a photo (no camera on the Simulator). The 26 h clock window across real hours. Cover traffic timing was not measured, only the code path through `sendSignal`.
+
+**Known limits.** Foreground only, as decided. The pool and locked-server checks run when Tor gets ready and on pull to refresh, not every 6 h and 15 min yet. Temp Node sending (C1) does not exist; a contact's Temp Node is read. Files can be received but only shown as a line; no file sending.
+
+---
+
 ## 2026‑10‑30 · iOS: pairing and contacts of unpruuf Business (package B3)
 
 **What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshContact`, `NodeMeshContactStore` (one Keychain item with the per-contact keys and the open pairing code), `NodeMeshEdition` (rule of `AppEdition.canAdd` for `pro`), `NodeMeshPairingFlow` (from `QrPairViewModel`: list choice, code kept until bound, one binding per screen, re-scan, changed key, edition refusal). `NodePairingView` (list, QR, copy, scan, paste, name) and `NodeContactDetailView` (safety number, verify). Part of the panic wipe set, including an open pairing code. Code keys must be 32 bytes, stricter than Android.

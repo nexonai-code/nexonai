@@ -5,6 +5,7 @@ import UnpruufCore
 struct BusinessHomeView: View {
     @ObservedObject var env: AppEnvironment
     @ObservedObject private var torController: TorController
+    @ObservedObject private var messageStore: InMemoryMessageStore
     @StateObject private var model: NodeListsModel
     @State private var showImport = false
     @State private var showPairing = false
@@ -15,6 +16,7 @@ struct BusinessHomeView: View {
     init(env: AppEnvironment) {
         self.env = env
         self.torController = env.torController
+        self.messageStore = env.messageStore
         _model = StateObject(wrappedValue: NodeListsModel(store: env.nodeMeshStore, client: env.nodeMeshClient))
     }
 
@@ -41,9 +43,16 @@ struct BusinessHomeView: View {
                     }
                     ForEach(contacts) { contact in
                         NavigationLink {
-                            NodeContactDetailView(store: env.nodeMeshContacts, contactId: contact.id)
+                            NodeChatView(env: env, contactId: contact.id)
                         } label: {
-                            Text(contact.displayName)
+                            HStack {
+                                Text(contact.displayName)
+                                if messageStore.unreadContactIds.contains(contact.id) {
+                                    Spacer()
+                                    Circle().fill(Color.accentColor).frame(width: 10, height: 10)
+                                        .accessibilityLabel(L.t("Necitit", "Unread"))
+                                }
+                            }
                         }
                     }
                     Button(L.t("Adaugă contact", "Add contact")) { showPairing = true }
@@ -69,6 +78,10 @@ struct BusinessHomeView: View {
                 Section {
                     Text(torController.isReady ? L.t("Tor: conectat", "Tor: connected") : L.t("Tor: se conectează…", "Tor: connecting…"))
                     Text(L.t("Neauditat independent.", "Not independently audited."))
+                        .foregroundStyle(.secondary)
+                    Text(L.t("Mesajele așteaptă pe serverele expeditorului cât a ales acesta (cel mult 24 de ore). Deschide aplicația ca să le primești. Traficul de acoperire rulează doar cât aplicația este deschisă.",
+                             "Messages wait on the sender's servers for the lifetime they chose (at most 24 h). Open the app to receive. Cover traffic runs only while the app is open."))
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
