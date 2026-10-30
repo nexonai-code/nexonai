@@ -24,6 +24,7 @@ final class AppEnvironment: ObservableObject {
     let nodeMeshStore: NodeMeshStore
     let nodeMeshContacts: NodeMeshContactStore
     let nodeMeshClient: NodeMeshClient
+    let licenseStore: AppLicenseStore
     lazy var nodeMeshEngine = makeNodeMeshEngine()
 
     /// The relay I currently advertise to new contacts (and, by default, use when Wechsel-ing an
@@ -123,6 +124,7 @@ final class AppEnvironment: ObservableObject {
         self.archivedRelayStore = ArchivedRelayStore(keychain: keychain)
         self.nodeMeshStore = NodeMeshStore(store: KeychainStore.nodeMesh())
         self.nodeMeshContacts = NodeMeshContactStore(store: KeychainStore.nodeMesh())
+        self.licenseStore = AppLicenseStore(store: keychain, edition: NodeMeshEdition.pro)
         let torController = self.torController
         self.nodeMeshClient = NodeMeshClient(transport: TorNodeTransport(socksPort: { await torController.socksPort }))
         self.defaultRelayConnectionString = keychain.getString(Self.defaultRelayKey) ?? ""

@@ -109,3 +109,66 @@ private extension Data {
             .replacingOccurrences(of: "=", with: "")
     }
 }
+
+final class AppLicenseStoreTests: XCTestCase {
+    private final class Memory: KeyValueStore {
+        var values: [String: String] = [:]
+        func getString(_ key: String) -> String? { values[key] }
+        func setString(_ key: String, _ value: String) { values[key] = value }
+    }
+
+    private let key = Curve25519.Signing.PrivateKey()
+    private var pub: String { key.publicKey.rawRepresentation.base64URLEncodedString() }
+    private let day: Int64 = 86_400_000
+    private let now: Int64 = 1_800_000_000_000
+
+    private func code(expires: Int64, edition: String = "pro", serial: String = "S1") -> String {
+        let payload = Data("1|\(edition)|\(serial)|Kunde|\(now)|\(expires)".utf8)
+        let signature = try! key.signature(for: payload)
+        return "unpruuf-license:v1:\(payload.base64URLEncodedString()):\(signature.base64URLEncodedString())"
+    }
+
+    func test_activation_andState() {
+        var clock = now
+        let store = AppLicenseStore(store: Memory(), edition: "pro", publicKeyB64: pub, wallMs: { clock })
+        XCTAssertEqual(store.state, .notConfigured)
+        XCTAssertFalse(store.isLicensed)
+        XCTAssertEqual(store.apply(code: "junk"), .invalid)
+        XCTAssertEqual(store.state, .notConfigured, "nothing stored on a refusal")
+        XCTAssertEqual(store.apply(code: code(expires: now + 100 * day, edition: "standard")), .invalid)
+        XCTAssertEqual(store.apply(code: " \(code(expires: now + 100 * day))\n"), .activated)
+        XCTAssertTrue(store.isLicensed)
+
+        clock = now + 80 * day
+        guard case .expiringSoon = store.state else { return XCTFail() }
+        XCTAssertTrue(store.isLicensed, "only warned about")
+        clock = now + 100 * day
+        guard case .expired = store.state else { return XCTFail() }
+        XCTAssertFalse(store.isLicensed)
+    }
+
+    func test_clockBack_doesNotExtend() {
+        var clock = now + 200 * day
+        let memory = Memory()
+        let store = AppLicenseStore(store: memory, edition: "pro", publicKeyB64: pub, wallMs: { clock })
+        XCTAssertEqual(store.apply(code: code(expires: now + 100 * day)), .activated)
+        XCTAssertFalse(store.isLicensed)
+        clock = now
+        XCTAssertFalse(store.isLicensed, "the highest date seen counts")
+        XCTAssertFalse(AppLicenseStore(store: memory, edition: "pro", publicKeyB64: pub, wallMs: { clock }).isLicensed)
+    }
+
+    func test_renewal_andBinding() {
+        let memory = Memory()
+        let store = AppLicenseStore(store: memory, edition: "pro", publicKeyB64: pub, wallMs: { self.now })
+        XCTAssertEqual(store.apply(code: code(expires: now + 100 * day)), .activated)
+        XCTAssertEqual(store.apply(code: code(expires: now + 400 * day, serial: "S2")), .activated)
+        guard case .valid(let info, _) = store.state else { return XCTFail() }
+        XCTAssertEqual(info.serial, "S2")
+
+        memory.values["license_install_id"] = "copied-to-another-install"
+        XCTAssertEqual(store.apply(code: code(expires: now + 400 * day)), .otherDevice)
+        XCTAssertEqual(store.state, .invalid)
+        XCTAssertFalse(store.isLicensed)
+    }
+}

@@ -49,8 +49,11 @@ final class LocalProtectionTests: XCTestCase {
             .appendingPathComponent("contacts.enc")
         XCTAssertTrue(FileManager.default.fileExists(atPath: contactFile.path))
 
+        env.keychain.setString("license_code", "kept")
         env.wipeContactsAndMessages()
 
+        XCTAssertEqual(env.keychain.getString("license_code"), "kept", "the licence survives the panic PIN")
+        env.keychain.removeData("license_code")
         XCTAssertTrue(env.contactStore.contacts.isEmpty)
         XCTAssertFalse(FileManager.default.fileExists(atPath: contactFile.path))
         XCTAssertNil(env.keychain.getData("contacts_file_key"))

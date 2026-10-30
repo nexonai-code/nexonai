@@ -28,7 +28,7 @@ struct RootView: View {
                 if Edition.isCompliance {
                     CasesHomeView(env: env)
                 } else if Edition.isBusiness {
-                    BusinessHomeView(env: env)
+                    BusinessGateView(env: env)
                 } else {
                     ContactListView(env: env)
                 }

@@ -76,6 +76,7 @@ struct BusinessHomeView: View {
                     }
                 }
                 Section {
+                    NavigationLink(L.t("Licență", "License")) { LicenseView(store: env.licenseStore) }
                     Text(torController.isReady ? L.t("Tor: conectat", "Tor: connected") : L.t("Tor: se conectează…", "Tor: connecting…"))
                     Text(L.t("Neauditat independent.", "Not independently audited."))
                         .foregroundStyle(.secondary)

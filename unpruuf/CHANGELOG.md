@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: licence screen and own icon of unpruuf Business (package B5)
+
+**What was done.** Decision 9.1 confirmed by Gabriel: own app, bundle id `com.nexonai.unpruuf.business`, name "unpruuf Business". `AppLicenseStore` (from `LicenseManager`): code, binding to a random install id in the Keychain, clock high-water mark. `BusinessGateView` and `LicenseView`: without a valid or expiring licence a release build shows only the activation screen; the code also opens from the home screen for a renewal. Debug builds skip the gate, same as Android. The licence survives the panic PIN. Asset set `AppIconBusiness`. `origin/android` merged.
+
+**Checked.** `swift test` 207 tests, 202 green, 5 skipped without a server. `UnpruufAppTests` 10 green, 1 skipped. On the Simulator with a release build: the gate shows after the PIN, the test-vector code (genuine signature, throw-away key) is refused with the Android text, the icon shows on the home screen.
+
+**Not checked.** A real code under the production key, so the way past the gate in a release build has not run on a device (the store is tested with a throw-away key). Expired and expiring screens by eye.
+
+**Known limits.** The icon is provisional, drawn from the design colours: the only logo in the repository is 345 px with a grey background. "unpruuf Business" is cut short under the icon. The binding follows the proposal of 4.15 while 9.5 is open, and like on Android it cannot stop one code being entered on a second phone. 9.2 to 9.7 are still open, including whether a licence code may be entered in an App Store app.
+
+---
+
 ## 2026‑10‑30 · iOS: first messages over the real Tor network
 
 **What was done.** `TorRoundTripTests` in `UnpruufAppTests`: two engines in the app process use the app's own Tor (`TorController.running`, a small seam for this test) and `TorNodeTransport` with a different SOCKS user name each, against a real onion node (`EPHEMERAL=1 node dist/index.js` on the Mac, owner code through `TEST_RUNNER_NODE_OWNER`). Skipped without a server.

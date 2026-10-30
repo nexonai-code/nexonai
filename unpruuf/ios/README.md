@@ -68,7 +68,7 @@ New files: `UnpruufCore/Sources/UnpruufCore/OfficerCase.swift` (+ tests) and eve
 
 Own target `UnpruufBusiness`, same sources plus `UnpruufApp/Sources/Business/`, bundle id
 `com.nexonai.unpruuf.business`, Info.plist file `Info-Business.plist` (`UnpruufEdition` =
-`business`), "Generate Info.plist File" = Yes. The `Podfile` names all three app targets, so the
+`business`), "Generate Info.plist File" = Yes, app icon set `AppIconBusiness`. The `Podfile` names all three app targets, so the
 local project must have `UnpruufApp`, `UnpruufBusiness` and `UnpruufCompliance` before `pod install`.
 
 Building a second target into the same DerivedData fails with `can't link a dylib with itself` (the
