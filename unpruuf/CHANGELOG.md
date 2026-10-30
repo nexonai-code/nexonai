@@ -5,6 +5,16 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: first messages over the real Tor network
+
+**What was done.** `TorRoundTripTests` in `UnpruufAppTests`: two engines in the app process use the app's own Tor (`TorController.running`, a small seam for this test) and `TorNodeTransport` with a different SOCKS user name each, against a real onion node (`EPHEMERAL=1 node dist/index.js` on the Mac, owner code through `TEST_RUNNER_NODE_OWNER`). Skipped without a server.
+
+**Checked.** Passed in 39 s on the Simulator: health check, pairing, a text one way, a 9 000 byte file in chunks the other way, all over Tor and a v3 onion service. This is the first time this client's traffic went through the real network. Tor accepted the SOCKS user names (0.4.9.15), so the question of section 12 is answered for acceptance. Tor bootstrap of the app's Tor is the one on the Simulator; the Mac's network.
+
+**Not checked.** That the streams really used separate circuits (acceptance only, not measured). Two apps on two devices through the screens. A real device, mobile data, Android Pro to iPhone. A node with many addresses or a sealed server.
+
+---
+
 ## 2026‑10‑30 · iOS: sending and receiving in unpruuf Business (package B4, with M2, M3, M4 and stream isolation)
 
 **What was done.** `NodeMeshEngine` in `UnpruufCore/NodeMesh`: send queue with snapshots of tag and nodes, deposit to every node, back-off 3 to 15 s, per-contact poll loops, one request per (contact, node), `NodeMeshWindow` (M4), cursors and up to 8 continuations (M2, M3), Retry-After, hash dedup before anything else, chunks, signals REVOKE, DELETE_CONTACT, NODEMIGRATE, TEMPNODE, cover traffic, per-contact SOCKS user name (`TorIsolation`). Spec section 4.8 groups requests per address; that is replaced by the handover's section 6. In the app: `NodeChatView` (text, photo, lifetime 1/6/24 h), contact removal with its signal, unread dot, limits text on the home screen, panic wipe, bounded flush when going to the background.

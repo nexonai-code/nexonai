@@ -193,6 +193,9 @@ import Tor
 /// arc, closed.
 @MainActor
 final class TorController: ObservableObject {
+    /// The running instance, for `TorRoundTripTests`: one process can host only one Tor.
+    private(set) static weak var running: TorController?
+
     @Published private(set) var isReady = false
     /// 0 until Tor reports a live SOCKS listener.
     @Published private(set) var socksPort: UInt16 = 0
@@ -232,6 +235,7 @@ final class TorController: ObservableObject {
             reconnectController()
             return
         }
+        Self.running = self
         let dataDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("tor", isDirectory: true)
         try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
