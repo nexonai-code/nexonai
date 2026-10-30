@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: Node-Mesh foundation in UnpruufCore (packages A1, A2, A4 logic)
+
+**What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshRouting` (tags, epochs, window of 26), `NodeConnectionStrings` (owner and address strings, node choice), `NodeListFile`, `NodeLists.cleanName`, `MessageTtl`, `GuestGrant`, `NodeMeshPairingPayload` (v2 with `g` and `i`), `NodeMeshPairKeys` and `NodeMeshCrypto` (per-contact session, seal, open). Nothing in the app uses them yet. `GuestGrant` came forward from the guest order because the pairing code needs it.
+
+**Checked.** `swift test` 135 of 135. Routing known answers from the spec, guest grant vectors byte for byte, pairing vectors decoded and re-encoded to the same bytes, a node-list fixture written by the real `buildNodeListFile` of the server, chunked round trip in both directions between two Swift sides.
+
+**Not checked.** A4 is not done: the Android fixture both ways needs a JVM test and this Mac has no Java runtime. So no packet built by Android has been opened here, nor the reverse. Node lists against a running server.
+
+**Known limits.** `OnionAddress` checks the checksum, Android does not. Android test fixtures with made-up addresses (`aaaa…`) are refused here, real addresses pass; a test server handing out addresses without a checksum would be refused too. The node-list storage rules of `NodeLists` come with `NodeMeshStore`.
+
+---
+
 ## 2026‑10‑30 · iOS: security alignment (list of 21.10. section 4, handover sections 5 and 6)
 
 **What was done.** PIN lock-out as on Android (from the 5th wrong try 30 s, doubling, at most 1 h), kept in the Keychain, measured on wall and monotonic clock, remaining time shown; panic PIN length checked in `LockViewModel`. One panic wipe set in `AppEnvironment.wipeContactsAndMessages`: contacts, ratchet states including orphans, file keys, messages, send queue, half-received chunks, relay setup, imported relay pool, kept relays, Compliance cases. `ContactStore` and `CaseStore` no longer create a new file key while an old file exists; an unreadable file stays untouched and `RootView` says so. Relay strings (they carry their token) moved from `UserDefaults` to the Keychain, with migration. `Library` and `Documents` out of backups. `SafeImage` (reads the size first, 50 million pixels, 20 000 px edge, decodes to 2048), `SensitiveClipboard` (local only, 60 s), keyboard modifiers on message and code fields, `PrivacyShield` (opaque window while inactive or while the screen is captured), screenshot hint. `RatchetFrame.maxTotalChunks` 2048. `OnionAddress` (v3 form, version byte, checksum), for the Node-Mesh code that comes with the work packages; relay mode is unchanged. `ITSAppUsesNonExemptEncryption` = true in both plists.

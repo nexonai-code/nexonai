@@ -1,0 +1,11 @@
+unpruuf-node-list:v1
+name: Acme GmbH · Server 1
+secret: Owner_secret_0123456789-AB
+control: hbu6ec5s66sim5a3izx5g2e4m4rhmq4tw6rpkc6kd6ugqu6nd6ny7lid.onion
+count: 4
+bridge: obfs4 192.0.2.1:443 0123456789ABCDEF0123456789ABCDEF01234567 cert=abcdefghijklmnopqrstuvwxyzABCDEFGH iat-mode=0
+
+hd4pu6f2yyjy6fhxe2cchk7ob3syyhvge34eghsqjktivajjq6hnvcqd.onion
+wplc7ngapagsyekzn3zsjy2yfmybzoe5tgj2lwvkspdegemhyj4e23ad.onion
+vcrfg6qzzymqlqfjsvm4udzoqymxenhgrmetdpyzb7dfc7urhbxmyaid.onion
+vzqf6mufvoyilrva452z2gobvjf47ym3dcqe23g7qkdlgtwvdbobebad.onion

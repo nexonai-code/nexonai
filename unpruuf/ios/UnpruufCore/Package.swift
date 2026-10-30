@@ -20,6 +20,6 @@ let package = Package(
     ],
     targets: [
         .target(name: "UnpruufCore", dependencies: ["CryptoSwift"]),
-        .testTarget(name: "UnpruufCoreTests", dependencies: ["UnpruufCore"]),
+        .testTarget(name: "UnpruufCoreTests", dependencies: ["UnpruufCore"], exclude: ["Fixtures"]),
     ]
 )
