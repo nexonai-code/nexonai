@@ -77,6 +77,21 @@ export interface RechercheRow {
   createdAt: number;
 }
 
+/** One status change of a case, as recorded since 2026-10-30 (older changes only survive as
+ *  acknowledged_at / closed_at on the case row). */
+export interface CaseStatusChange {
+  status: CaseStatus;
+  at: number;
+}
+
+/** unpruuf Compliance: the trace a permanently deleted case leaves behind — its number and when it
+ *  was deleted, nothing of its content. Lets the organisation show that and when it deleted a case. */
+export interface DeletionLogEntry {
+  id: number;
+  caseNumber: string;
+  deletedAt: number;
+}
+
 export interface CaseMessage {
   id: number;
   caseId: string;
@@ -161,6 +176,21 @@ export class CaseStore {
         active INTEGER NOT NULL DEFAULT 1,
         created_at INTEGER NOT NULL,
         identity_blob TEXT NOT NULL
+      );
+      -- Every status change with its time, so an exported case shows the whole history.
+      CREATE TABLE IF NOT EXISTS case_status_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        case_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_case_status_log_case_id ON case_status_log(case_id);
+      -- unpruuf Compliance: one row per permanently deleted case — case number and time of
+      -- deletion only, never content. Deliberately not tied to the cases table, so it outlives the case.
+      CREATE TABLE IF NOT EXISTS deletion_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        case_number TEXT NOT NULL,
+        deleted_at INTEGER NOT NULL
       );
     `);
     // Columns added with the organisation-wide QR / case numbers (2026-10-03). Older databases
@@ -334,6 +364,11 @@ export class CaseStore {
     } else {
       this.db.prepare(`UPDATE cases SET status = ?, last_activity_at = ? WHERE id = ?`).run(status, now, caseId);
     }
+    this.db.prepare(`INSERT INTO case_status_log (case_id, status, at) VALUES (?, ?, ?)`).run(caseId, status, now);
+  }
+
+  listStatusChanges(caseId: string): CaseStatusChange[] {
+    return this.db.prepare(`SELECT status, at FROM case_status_log WHERE case_id = ? ORDER BY id ASC`).all(caseId) as CaseStatusChange[];
   }
 
   setCategory(caseId: string, category: string): void {
@@ -382,12 +417,20 @@ export class CaseStore {
     return this.db.prepare(`SELECT case_id as caseId, identity, generation FROM poll_candidates`).all() as any[];
   }
 
-  /** Removes one case for good: its messages, its secrets and its poll tags. Freed pages are
-   *  overwritten (secure_delete) and the file is compacted, so deleted text does not linger in
-   *  the database file. Returns false when the case does not exist. */
-  deleteCase(caseId: string): boolean {
-    const removed = this.deleteCases([caseId]);
+  /** Removes one case for good: its messages, its secrets, its status history and its poll tags.
+   *  Freed pages are overwritten (secure_delete) and the file is compacted, so deleted text does
+   *  not linger in the database file. With `log`, the case number and the time of deletion go into
+   *  the deletion log in the same transaction (unpruuf Compliance). Returns false when the case
+   *  does not exist. */
+  deleteCase(caseId: string, options: { log?: boolean } = {}): boolean {
+    const removed = this.deleteCases([caseId], options.log === true);
     return removed > 0;
+  }
+
+  /** The deletion log, newest first. */
+  listDeletionLog(): DeletionLogEntry[] {
+    const rows = this.db.prepare(`SELECT id, case_number, deleted_at FROM deletion_log ORDER BY deleted_at DESC, id DESC`).all() as any[];
+    return rows.map((r) => ({ id: r.id, caseNumber: r.case_number, deletedAt: r.deleted_at }));
   }
 
   /** Removes every case whose last activity is older than the given moment. Returns how many. */
@@ -396,15 +439,21 @@ export class CaseStore {
     return this.deleteCases(ids);
   }
 
-  private deleteCases(ids: string[]): number {
+  private deleteCases(ids: string[], log = false): number {
     if (ids.length === 0) return 0;
     this.db.pragma("secure_delete = ON");
     const run = this.db.transaction((list: string[]) => {
       let n = 0;
+      const now = Date.now();
       for (const id of list) {
+        // A case from before the case numbers has none: the internal id stands in for it.
+        const row = log ? (this.db.prepare(`SELECT case_number FROM cases WHERE id = ?`).get(id) as { case_number: string | null } | undefined) : undefined;
         this.db.prepare(`DELETE FROM case_messages WHERE case_id = ?`).run(id);
+        this.db.prepare(`DELETE FROM case_status_log WHERE case_id = ?`).run(id);
         this.db.prepare(`DELETE FROM poll_candidates WHERE case_id = ?`).run(id);
-        n += this.db.prepare(`DELETE FROM cases WHERE id = ?`).run(id).changes;
+        const changed = this.db.prepare(`DELETE FROM cases WHERE id = ?`).run(id).changes;
+        if (row && changed > 0) this.db.prepare(`INSERT INTO deletion_log (case_number, deleted_at) VALUES (?, ?)`).run(row.case_number ?? id, now);
+        n += changed;
       }
       return n;
     });

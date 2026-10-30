@@ -44,6 +44,11 @@ function fmtDateTime(ms) {
   const tm = d.toLocaleTimeString(t("time_locale"), { hour: "2-digit", minute: "2-digit" });
   return `${d.getDate()} ${t("months")[d.getMonth()]}, ${tm}`;
 }
+/** With the year, for records that stay (deletion log). */
+function fmtDateTimeYear(ms) {
+  const d = new Date(ms);
+  return `${d.getDate()} ${t("months")[d.getMonth()]} ${d.getFullYear()}, ${d.toLocaleTimeString(t("time_locale"), { hour: "2-digit", minute: "2-digit" })}`;
+}
 function fmtDay(ms) {
   const d = new Date(ms);
   return `${d.getDate()} ${t("months")[d.getMonth()]}`;
@@ -120,22 +125,25 @@ function parseRoute() {
   if (h === "cod") return { name: "code", id: null };
   if (h === "setari" && EDITION === "press") return { name: "settings", id: null };
   if (h === "recherchen" && EDITION === "press") return { name: "recherchen", id: null };
+  if (h === "stergeri" && EDITION !== "press") return { name: "deletions", id: null };
   if (h.startsWith("caz/")) return { name: "detail", id: decodeURIComponent(h.slice(4)) };
   return { name: "overview", id: null };
 }
-const titleFor = (r) => ({ overview: t("nav_overview"), cases: t("nav_cases"), code: t("nav_code"), detail: t("page_detail"), settings: t("page_settings"), recherchen: t("page_rech") })[r];
+const titleFor = (r) => ({ overview: t("nav_overview"), cases: t("nav_cases"), code: t("nav_code"), detail: t("page_detail"), settings: t("page_settings"), recherchen: t("page_rech"), deletions: t("nav_dellog") })[r];
 
 async function route() {
   state.route = parseRoute();
   const r = state.route.name;
-  for (const v of ["overview", "cases", "code", "detail", "settings", "recherchen"]) $(`v-${v}`).classList.toggle("hidden", v !== r);
+  for (const v of ["overview", "cases", "code", "detail", "settings", "recherchen", "deletions"]) $(`v-${v}`).classList.toggle("hidden", v !== r);
   for (const a of document.querySelectorAll(".nav")) a.classList.toggle("on", a.dataset.route === (r === "detail" ? "cases" : r));
   $("pageTitle").textContent = titleFor(r);
-  $("pageSub").textContent = r === "overview" ? todayLong() : r === "code" ? t("page_code_sub") : r === "cases" ? t("page_cases_sub") : r === "settings" ? t("page_settings_sub") : r === "recherchen" ? t("page_rech_sub") : "";
+  $("pageSub").textContent = r === "overview" ? todayLong() : r === "code" ? t("page_code_sub") : r === "cases" ? t("page_cases_sub") : r === "settings" ? t("page_settings_sub") : r === "recherchen" ? t("page_rech_sub") : r === "deletions" ? t("dellog_sub") : "";
   state.detail = null;
+  closeDeleteDialog();
   if (r === "detail") await openDetail(state.route.id, true);
   else if (r === "settings") renderSettings();
   else if (r === "recherchen") { await loadRecherchen().catch((err) => toast(t("open_fail"), err.message)); renderRecherchen(); }
+  else if (r === "deletions") await renderDeletionLog();
   else render();
   window.scrollTo({ top: 0 });
 }
@@ -274,7 +282,10 @@ async function saveSettings() {
 }
 async function deleteCurrentCase() {
   const c = state.detail;
-  if (!c || !confirm(EDITION === "press" ? t("del_confirm") : t("del_confirm_c", { n: c.caseNumber || "" }))) return;
+  if (!c) return;
+  // unpruuf Compliance: the officer types the case number back before anything is deleted.
+  if (EDITION !== "press") { openDeleteDialog(c); return; }
+  if (!confirm(t("del_confirm"))) return;
   try {
     await api(`/api/cases/${encodeURIComponent(c.id)}`, { method: "DELETE" });
     state.detail = null;
@@ -285,11 +296,51 @@ async function deleteCurrentCase() {
     toast(t("open_fail"), err.message);
   }
 }
-function exportCurrentCase() {
+/** What the officer has to type: the case number as the page shows it (old cases without a number: the start of the id). */
+const deleteLabel = (c) => c.caseNumber || c.id.slice(0, 8);
+function openDeleteDialog(c) {
+  $("delModalText").textContent = t("del_confirm_c", { n: deleteLabel(c) });
+  $("delModalLabel").textContent = t("del_type", { n: deleteLabel(c) });
+  $("delModalInput").value = "";
+  $("delModalErr").textContent = "";
+  $("delModalOk").disabled = true;
+  $("delModal").classList.remove("hidden");
+  $("delModalInput").focus();
+}
+function closeDeleteDialog() { $("delModal").classList.add("hidden"); }
+const deleteTyped = (c) => $("delModalInput").value.trim().toUpperCase() === deleteLabel(c).toUpperCase();
+async function confirmDelete() {
+  const c = state.detail;
+  if (!c || !deleteTyped(c)) return;
+  $("delModalOk").disabled = true;
+  try {
+    // The server checks the number again and writes the deletion log entry.
+    await api(`/api/cases/${encodeURIComponent(c.id)}`, { method: "DELETE", body: JSON.stringify({ confirmCaseNumber: c.caseNumber || c.id }) });
+    closeDeleteDialog();
+    state.detail = null;
+    toast(t("del_done"), t("del_done_c", { n: deleteLabel(c) }));
+    await loadCases();
+    location.hash = "#/cazuri";
+  } catch (err) {
+    $("delModalErr").textContent = err.message;
+    $("delModalOk").disabled = !deleteTyped(c);
+  }
+}
+async function renderDeletionLog() {
+  try {
+    const log = await api("/api/deletion-log");
+    $("delLogBody").innerHTML = log.map((e) => `<tr><td><code>${esc(e.caseNumber)}</code></td><td>${esc(fmtDateTimeYear(e.deletedAt))}</td></tr>`).join("");
+    $("delLogNone").classList.toggle("hidden", log.length > 0);
+  } catch (err) {
+    toast(t("open_fail"), err.message);
+  }
+}
+function exportCurrentCase(json) {
   const c = state.detail;
   if (!c) return;
   const a = document.createElement("a");
-  a.href = `/api/cases/${encodeURIComponent(c.id)}/export`;
+  // unpruuf Compliance: a printable HTML file in the language of the dashboard, or JSON. unpruuf Press: its JSON file.
+  a.href = `/api/cases/${encodeURIComponent(c.id)}/export${EDITION === "press" ? "" : json ? "?format=json" : `?lang=${LANG}`}`;
   a.download = "";
   document.body.appendChild(a);
   a.click();
@@ -622,7 +673,7 @@ document.addEventListener("click", (e) => {
   if (chip) { $("categoryInput").value = chip.dataset.cat; saveCategory(chip.dataset.cat).catch((err) => toast(t("cat_fail"), err.message)); }
 });
 $("qrModal").addEventListener("click", hideQr);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideQr(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { hideQr(); closeDeleteDialog(); } });
 
 $("refreshBtn").addEventListener("click", async () => { await Promise.all([loadCases(), loadStatus()]); if (state.route.name === "detail") openDetail(state.route.id, false); });
 $("search").addEventListener("input", (e) => {
@@ -633,7 +684,12 @@ $("categoryInput").addEventListener("change", (e) => saveCategory(e.target.value
 $("categoryInput").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.blur(); });
 $("sendReplyBtn").addEventListener("click", sendReply);
 $("deleteCaseBtn").addEventListener("click", deleteCurrentCase);
-$("exportCaseBtn").addEventListener("click", exportCurrentCase);
+$("exportCaseBtn").addEventListener("click", () => exportCurrentCase(false));
+$("exportJsonBtn").addEventListener("click", () => exportCurrentCase(true));
+$("delModalInput").addEventListener("input", () => { if (state.detail) $("delModalOk").disabled = !deleteTyped(state.detail); });
+$("delModalInput").addEventListener("keydown", (e) => { if (e.key === "Enter") confirmDelete(); });
+$("delModalOk").addEventListener("click", confirmDelete);
+$("delModalCancel").addEventListener("click", closeDeleteDialog);
 $("saveSettingsBtn").addEventListener("click", saveSettings);
 $("pickupWarnClose").addEventListener("click", () => { state.dismissedWarn.add($("pickupWarn").dataset.key); $("pickupWarn").classList.add("hidden"); });
 $("replyInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendReply(); } });

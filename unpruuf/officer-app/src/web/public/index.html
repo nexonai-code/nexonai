@@ -31,6 +31,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
       <span data-i18n="nav_rech">Investigații</span> <span class="n" id="navRech">0</span>
     </a>
+    <a class="nav only-compliance" href="#/stergeri" data-route="deletions">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>
+      <span data-i18n="nav_dellog">Jurnal de ștergeri</span>
+    </a>
     <a class="nav only-press" href="#/setari" data-route="settings">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
       <span data-i18n="nav_settings">Setări</span>
@@ -191,6 +195,19 @@
     <div class="btns"><button class="btn primary" id="saveSettingsBtn" type="button" data-i18n="save">Salvează</button><span class="err" id="settingsMsg"></span></div>
   </section>
 
+  <!-- ───────────── Jurnal de ștergeri (unpruuf Compliance) ───────────── -->
+  <section id="v-deletions" class="view hidden">
+    <div class="card">
+      <div class="ch"><h2 data-i18n="dellog_h">Cazuri șterse definitiv</h2></div>
+      <p class="note" data-i18n="dellog_note">Pentru fiecare caz șters rămân aici doar numărul cazului și data ștergerii, fără conținut. Jurnalul nu poate fi modificat din panou.</p>
+      <div class="tablewrap"><table class="cases">
+        <thead><tr><th data-i18n="th_nr">Nr. caz</th><th data-i18n="dellog_th_at">Șters la</th></tr></thead>
+        <tbody id="delLogBody"></tbody>
+      </table></div>
+      <p class="empty hidden" id="delLogNone" data-i18n="dellog_none">Niciun caz șters încă.</p>
+    </div>
+  </section>
+
   <!-- ───────────── Un caz ───────────── -->
   <section id="v-detail" class="view hidden">
     <a class="back" href="#/cazuri" data-i18n="back">&larr; Înapoi la cazuri</a>
@@ -231,6 +248,7 @@
           <p class="note only-compliance" data-i18n="del_note_c">Descarcă cazul ca fișier sau șterge-l definitiv de pe acest calculator, cu toată conversația. Păstrează cazul cât timp este necesar (Directiva 2019/1937, Art. 18); ștergerea nu se poate anula.</p>
           <div class="btns" style="margin-top:10px">
             <button class="btn" id="exportCaseBtn" type="button" data-i18n="exp_btn">Descarcă cazul (fișier)</button>
+            <button class="btn only-compliance" id="exportJsonBtn" type="button" data-i18n="exp_json_btn">JSON</button>
             <button class="btn danger" id="deleteCaseBtn" type="button" data-i18n="del_btn">Șterge definitiv</button>
           </div>
         </div>
@@ -250,6 +268,21 @@
     <img id="qrModalImg" alt="Cod QR al organizației" data-i18n-alt="org_qr_alt" />
     <p data-i18n="qr_scan">Scanează cu aplicația unpruuf</p>
     <small data-i18n="qr_close">Apasă oriunde sau Esc pentru a închide</small>
+  </div>
+</div>
+
+<!-- unpruuf Compliance: deleting a case needs its number typed back -->
+<div id="delModal" class="modal confirm hidden" role="dialog" aria-modal="true" aria-labelledby="delModalTitle">
+  <div class="confirm-in">
+    <h2 id="delModalTitle" data-i18n="del_c_h">Ștergere definitivă</h2>
+    <p id="delModalText"></p>
+    <label class="fld"><span id="delModalLabel"></span>
+      <input id="delModalInput" type="text" autocomplete="off" spellcheck="false" /></label>
+    <div class="btns">
+      <button class="btn" id="delModalCancel" type="button" data-i18n="cancel">Renunță</button>
+      <button class="btn danger" id="delModalOk" type="button" disabled data-i18n="del_btn">Șterge definitiv</button>
+      <span class="err" id="delModalErr"></span>
+    </div>
   </div>
 </div>
 

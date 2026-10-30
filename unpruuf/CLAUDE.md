@@ -24,7 +24,7 @@ Beispiele:
 
 - Wenn Gabriel sagt, dass er etwas will, sage ihm nie, dass du es nicht tust. Das ist nicht deine Entscheidung. Gibt es Risiken, nenne sie vorab und liefere die bestmögliche Umsetzung.
 - NexonAI betreibt keine Server. Alle Server werden immer vom Kunden betrieben.
-- Business ist das Hauptprodukt. Compliance nur auf Anfrage.
+- Business ist das Hauptprodukt. Seit 30.10.2026 (von Gabriel bestätigt, Ziel: erste zahlende Kunden) ist unpruuf Compliance der Türöffner im Vertrieb und wird aktiv angeboten (Paket „unpruuf Compliance Start“, Verkaufsmaterial in `unpruuf/vertrieb/`). Business folgt als Ausbau beim selben Kunden.
 - Vor größeren Umbauten an dem, was schon funktioniert, sagen, wie es werden soll, und auf sein Ja warten. Der Kern bleibt klein und einfach: ein Knopf, 250 Briefkästen, Liste exportieren, in der App importieren.
 - Lieferungen mit mehreren Dateien als ZIP mit CHANGELOG.md, Namensschema `unpruuf_<Datum>_v<N>.zip`, bei Sondereditionen mit dem Editionsnamen im Dateinamen (zum Beispiel `unpruuf_TorClientEdition_<Datum>_v<N>.zip`). Branch `android` für die Hauptlinie. Die Tor Client Edition liegt auf dem Branch `tor-client-edition` und wird nur auf ausdrücklichen Wunsch gepusht.
 - Dokumente im Chat nur als Text anzeigen, ohne Erklärungen drumherum. Kurze Antworten, Du-Ansprache, Gabriel beim Namen nennen.
@@ -54,7 +54,7 @@ Beispiele:
 - Nie „GDPR-konform“ behaupten. Sagen: Die Architektur unterstützt die Prinzipien (Datenminimierung, Speicherbegrenzung, Vertraulichkeit, Art. 5, 25, 32). Die Organisation ist Verantwortliche (Art. 4 Nr. 7). NexonAI ist normalerweise nicht Auftragsverarbeiter (Art. 28), solange kein Datenzugriff besteht. Einordnung bestätigt ein Jurist oder der Datenschutzbeauftragte.
 - Datenlandkarte: Server = verschlüsselte Pakete höchstens 24 h, keine Namen/IPs; Telefon = lokal; Officer-Laptop = Falldateien lokal verschlüsselt; Lizenz = offline; Website = keine Cookies.
 - Hinweisgeber: Richtlinie 2019/1937 Art. 16 (Vertraulichkeit), 17 (DSGVO gilt, Irrelevantes löschen), 18 (Aufbewahrung nur so lange nötig).
-- Bekannte Lücke: Das Officer-Dashboard kann einen einzelnen Fall noch nicht löschen oder exportieren. Offen nennen, bis gebaut.
+- Seit 30.10.2026 gebaut: Das Officer-Dashboard löscht einen einzelnen Fall nach Eingabe der Fallnummer (Löschprotokoll ohne Inhalt) und exportiert einen Fall als HTML oder JSON. Kopien außerhalb der App (Backups, Exporte) löscht die Organisation selbst.
 - Material: Deck-Folie 11 (GDPR), Whitepaper Kapitel 9, Landing-Page-Bereich GDPR (RO/EN).
 
 ## Produkte und Stand (12.10.2026, von Gabriel bestätigt)

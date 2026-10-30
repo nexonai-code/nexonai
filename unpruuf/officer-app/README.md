@@ -36,18 +36,68 @@ relay's LAN address instead (needs the relay's own "Allow LAN access" setting tu
 
 ## The dashboard
 
-Romanian, light, built to be read from a distance. Four views (left side bar):
+Romanian or English (switch at the bottom left), light, built to be read from a distance. Five views (left side bar):
 
 - **Prezentare generală** — four figures (open cases, receipts due, answers due, closed this year), the cases that need attention first (sorted by the next legal deadline, coloured red / amber / green with a progress bar), the next four deadlines, the organisation's QR, cases by category and new reports per week. With no cases yet it shows the QR and three steps instead.
 - **Cazuri** — all cases, tabs Deschise / Noi / În lucru / Închise, search by case number or category.
 - **Codul organizației** — the QR large, the code as text, a full-screen mode, and the manual add for older reporter apps.
-- **A case** — the conversation, status buttons (Nou / Confirmat / În lucru / Închis), both deadlines, category (suggestions plus free text) and the case data. Ctrl+Enter sends a reply.
+- **Jurnal de ștergeri** (Deletion log) — every permanently deleted case with its number and the time of deletion, read-only. See below.
+- **A case** — the conversation, status buttons (Nou / Confirmat / În lucru / Închis), both deadlines, category (suggestions plus free text), the case data, export and delete. Ctrl+Enter sends a reply.
 
 It is live: the page asks for news every 3 seconds. A new case or a new message shows as a toast in the corner and a dot before the case number until the officer opens it. The bottom of the side bar shows the connection (green after a successful poll of the relay, red if the relay does not answer).
 
 Deadlines follow the case store: receipt 7 days and answer 90 days after the case is opened (Directive 2019/1937 Art. 9(1)(b) and (f)). The dashboard only reads what the store keeps. It never shows who a reporter is, because the app does not know.
 
 The fonts (IBM Plex, SIL OFL) are bundled in `src/web/public/fonts/`, so the page looks the same without internet. Pure static files, no build step; `npm test` includes tests for the API it uses. `start.bat` polls the relay every 4 seconds (the app default is 8; set `POLL_INTERVAL_MS` to change it), so a report appears within a few seconds on stage.
+
+## Export, delete and the deletion log (unpruuf Compliance)
+
+**Export one case.** In the case view, card *Ștergere*: **Exportă cazul (HTML, de tipărit)** downloads
+`case-<number>-<date>.html`, a single file that opens in any browser and prints cleanly. It loads nothing
+from outside (no scripts, fonts or images). It holds the case number, category, received date, status,
+both deadlines (acknowledgement 7 days, feedback 3 months) with their due date, the date they were met
+and their state (met on time / met after the deadline / overdue / running), the status changes and every
+message in both directions with its time. Times are the local time of this computer with the UTC offset.
+The file is in the language the dashboard is set to. **Exportă ca JSON** gives the same content as JSON
+(`case-<number>-<date>.json`, times in UTC). No case keys and nothing about the reporter go into either file.
+
+- API: `GET /api/cases/:id/export` (HTML, `?lang=en` for English), `GET /api/cases/:id/export?format=json`. Unknown case: 404.
+- Status changes are recorded since 30.10.2026 (table `case_status_log`). For older cases the history
+  only shows the opening; the acknowledgement and closing dates in the deadline table still apply.
+- The feedback deadline counts as met when the case is closed, the same rule the dashboard uses.
+- The officer app has no notes field, so exports contain no notes.
+- An exported file is a plain, unencrypted copy. Where it is stored (Downloads folder, share, archive)
+  and how long it is kept is up to the organisation.
+
+**Delete one case.** **Șterge definitiv** opens a dialog: the officer types the case number back, only
+then the button works. The server checks the number again (`DELETE /api/cases/:id` with
+`{"confirmCaseNumber": "<number>"}`, wrong or missing number: 400). The case row, every message, the
+status history, the case keys and its poll tags are removed; then the database file is compacted
+(`secure_delete`, `VACUUM`, WAL checkpoint with truncate). A reply sent later by the reporter for that
+case can no longer be read, because the keys are gone.
+
+**Deletion log.** Every deletion in unpruuf Compliance writes one row to the table `deletion_log` in the
+same transaction: the case number (the internal id for a case from before case numbers) and the time of
+deletion. Nothing of the content. The view *Jurnal de ștergeri* shows it read-only
+(`GET /api/deletion-log`); there is no route to change or empty it. It lets the organisation show that
+and when it deleted a case, for its retention duties under Law 361/2022 and the GDPR. Whether that is
+enough for a given organisation is for its lawyer or data protection officer to decide.
+
+What deletion does **not** reach, honestly:
+
+- **Copies made before.** Backups of `data/`, copies of `cases.sqlite`, exported files, a synced or
+  shadow-copied folder (OneDrive, Windows File History, volume snapshots) keep whatever they held.
+- **The disk itself.** `VACUUM` and the WAL checkpoint rewrite the database and truncate the `-wal`
+  file, so the text is gone from the files SQLite uses. The operating system and SSDs may still keep old
+  blocks physically until they are overwritten; this app cannot control that. Those remnants are
+  ciphertext (message bodies are AES-256-GCM encrypted), but the key is the officer's key, which still exists.
+- **The reporter's phone** keeps its own copy of the conversation; the relay holds undelivered packets
+  for at most 24 hours.
+- **The log is not tamper-proof.** It is read-only in the dashboard, but someone with write access to
+  `cases.sqlite` could change it. Case number and time are stored unencrypted, like the case numbers of
+  open cases.
+
+unpruuf Press is unchanged: deletion without typing the number, no deletion log, JSON export.
 
 ## How a case gets started
 
@@ -123,6 +173,7 @@ routes every relay request through its local SOCKS port — this process reaches
 - **Chunked attachments are not persisted across a restart.** `pollAndIngest.ts` buffers an
   in-progress multi-packet transfer (e.g. a photo) in memory only; a restart mid-transfer loses
   it. Text reports (the whole point of v1) are unaffected — they always fit in one packet.
+- **Deleted cases can survive in backups and on the disk** — see "Export, delete and the deletion log" above.
 - **Sensitive case metadata (existence, timestamps) is not itself encrypted** — only message
   bodies and crypto secrets are (see `caseStore.ts`'s doc comment). Someone with read access to
   `data/cases.sqlite` (but not the password) learns "N cases exist, opened on these dates,"

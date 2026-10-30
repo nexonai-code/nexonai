@@ -10,6 +10,7 @@ import { InvalidRechercheError, RechercheService } from "../officer/recherchen";
 import { RelayClient } from "../relay/relayClient";
 import { InvalidSettingsError, PressSettingsStore } from "../settings/pressSettings";
 import type { OfficerEdition } from "../config";
+import { buildCaseExport, caseExportFileName, caseExportHtml, caseExportJson } from "./caseExport";
 
 /**
  * The officer's local dashboard — deliberately plain server-rendered JSON + a small vanilla-JS
@@ -147,17 +148,42 @@ export function createDashboardApp(
   });
 
   // Deleting one case for good (Directive 2019/1937 Art. 17/18, GDPR Art. 17): the case row, every
-  // message and the case keys go (CaseStore.deleteCase). Both editions.
+  // message and the case keys go (CaseStore.deleteCase). Both editions. unpruuf Compliance also
+  // wants the case number typed back (body.confirmCaseNumber) and keeps a deletion log entry
+  // (case number and time, no content), so the organisation can show that and when it deleted.
   app.delete("/api/cases/:id", (req, res) => {
-    if (!store.deleteCase(req.params.id)) return res.status(404).json({ error: "nu a fost găsit" });
+    if (edition === "compliance") {
+      const row = store.getCase(req.params.id);
+      if (!row) return res.status(404).json({ error: "nu a fost găsit" });
+      const typed = typeof req.body?.confirmCaseNumber === "string" ? req.body.confirmCaseNumber.trim().toUpperCase() : "";
+      if (typed !== (row.caseNumber ?? row.id).toUpperCase()) return res.status(400).json({ error: "numărul cazului nu corespunde" });
+    }
+    if (!store.deleteCase(req.params.id, { log: edition === "compliance" })) return res.status(404).json({ error: "nu a fost găsit" });
     return res.json({ deleted: true });
+  });
+
+  // unpruuf Compliance: the deletion log, read-only. Case number and time of deletion, nothing else.
+  app.get("/api/deletion-log", (_req, res) => {
+    if (edition !== "compliance") return res.status(404).json({ error: "nu a fost găsit" });
+    return res.json(store.listDeletionLog());
   });
 
   // One case as a file (GDPR Art. 15/20 and the officer's own records): what the dashboard shows —
   // number, status, category, dates and the whole conversation — and none of the cryptographic keys.
+  // unpruuf Compliance: a printable HTML file by default, `?format=json` for the same content as
+  // JSON, `?lang=en` for English (see caseExport.ts). unpruuf Press keeps its JSON file below.
   app.get("/api/cases/:id/export", (req, res) => {
     const row = store.getCase(req.params.id);
     if (!row) return res.status(404).json({ error: "nu a fost găsit" });
+    if (edition === "compliance") {
+      const now = Date.now();
+      const exp = buildCaseExport(store, row, now);
+      const json = req.query.format === "json";
+      res.setHeader("Content-Disposition", `attachment; filename="${caseExportFileName(row, json ? "json" : "html", now)}"`);
+      res.setHeader("Cache-Control", "no-store");
+      if (json) return res.type("application/json").send(caseExportJson(exp));
+      return res.type("text/html").send(caseExportHtml(exp, req.query.lang === "en" ? "en" : "ro"));
+    }
     const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
     const body = {
       exportedAt: new Date().toISOString(),

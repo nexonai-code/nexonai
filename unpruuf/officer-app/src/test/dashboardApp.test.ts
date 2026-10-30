@@ -9,6 +9,7 @@ import { x25519GenerateKeyPair } from "../crypto/primitives";
 import { OfficerIdentity } from "../officer/officerIdentity";
 import { CaseSecrets, CaseStore, deriveDbKey } from "../store/caseStore";
 import { createDashboardApp } from "../web/app";
+import { buildCaseExport } from "../web/caseExport";
 import { RelayClient } from "../relay/relayClient";
 
 function identity(): OfficerIdentity {
@@ -134,24 +135,28 @@ async function withPressApp(run: (base: string, store: CaseStore, settings: Pres
   }
 }
 
+/** DELETE as the compliance dashboard sends it: with the case number typed back. */
+const del = (base: string, id: string, confirmCaseNumber?: string) =>
+  fetch(`${base}/api/cases/${id}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify(confirmCaseNumber === undefined ? {} : { confirmCaseNumber }) });
+
 test("the standard dashboard reports itself as compliance, exports and deletes a single case, and has no press settings", async () => {
   await withApp(async (base, store) => {
     assert.deepEqual(await (await fetch(`${base}/api/edition`)).json(), { edition: "compliance" });
     const row = store.createCase(SECRETS, "HW-DEL-0001");
     store.appendMessage(row.id, "in", "report text");
     store.appendMessage(row.id, "out", "officer reply");
-    const exp = await fetch(`${base}/api/cases/${row.id}/export`);
+    const exp = await fetch(`${base}/api/cases/${row.id}/export?format=json`);
     assert.equal(exp.status, 200);
-    assert.match(exp.headers.get("content-disposition") ?? "", /attachment; filename="case-HW-DEL-0001\.json"/);
+    assert.match(exp.headers.get("content-disposition") ?? "", /attachment; filename="case-HW-DEL-0001-\d{4}-\d{2}-\d{2}\.json"/);
     const doc = (await exp.json()) as any;
     assert.equal(doc.caseNumber, "HW-DEL-0001");
     assert.deepEqual(doc.messages.map((m: any) => [m.from, m.text]), [["reporter", "report text"], ["officer", "officer reply"]]);
     assert.ok(!JSON.stringify(doc).toLowerCase().includes("secret"), "no key material in the export");
     assert.equal((await fetch(`${base}/api/cases/nope/export`)).status, 404);
-    assert.equal((await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" })).status, 200);
+    assert.equal((await del(base, row.id, "HW-DEL-0001")).status, 200);
     assert.equal(store.getCase(row.id), null, "the case is gone");
     assert.deepEqual(store.listMessages(row.id), []);
-    assert.equal((await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" })).status, 404);
+    assert.equal((await del(base, row.id, "HW-DEL-0001")).status, 404);
     const res = await fetch(`${base}/api/settings`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ retentionDays: 5, pickupWarnHours: 6 }) });
     assert.equal(res.status, 404);
   });
@@ -211,4 +216,156 @@ test("unpruuf Press: the settings file remembers the last pickup, so a restart s
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ───────── unpruuf Compliance: delete with typed confirmation, deletion log, export ─────────
+
+test("unpruuf Compliance: deleting needs the case number typed back and leaves only number and time in the deletion log", async () => {
+  await withApp(async (base, store) => {
+    const row = store.createCase(SECRETS, "HW-7Q4M-2X9D");
+    store.appendMessage(row.id, "in", "the report text that must disappear");
+    store.setStatus(row.id, "acknowledged");
+    assert.equal((await del(base, row.id)).status, 400, "no confirmation, no deletion");
+    assert.equal((await del(base, row.id, "HW-0000-0000")).status, 400, "a wrong number does not delete");
+    assert.ok(store.getCase(row.id), "the case is still there");
+    assert.deepEqual(await (await fetch(`${base}/api/deletion-log`)).json(), []);
+
+    const before = Date.now();
+    assert.equal((await del(base, row.id, " hw-7q4m-2x9d ")).status, 200, "case and spaces do not matter");
+    assert.equal(store.getCase(row.id), null);
+    assert.deepEqual(store.listMessages(row.id), []);
+    assert.deepEqual(store.listStatusChanges(row.id), [], "the status history goes with the case");
+    assert.equal(store.allPollCandidates().length, 0);
+
+    const log = (await (await fetch(`${base}/api/deletion-log`)).json()) as any[];
+    assert.equal(log.length, 1);
+    assert.deepEqual(Object.keys(log[0]).sort(), ["caseNumber", "deletedAt", "id"], "number and time, nothing else");
+    assert.equal(log[0].caseNumber, "HW-7Q4M-2X9D");
+    assert.ok(log[0].deletedAt >= before && log[0].deletedAt <= Date.now());
+    assert.ok(!JSON.stringify(log).includes("report text"));
+    assert.equal((await del(base, row.id, "HW-7Q4M-2X9D")).status, 404, "a deleted case cannot be deleted twice");
+    assert.equal(store.listDeletionLog().length, 1, "a failed delete adds no entry");
+  });
+});
+
+test("unpruuf Compliance: the deletion log keeps entries in order, uses the internal id for cases without a number, and survives a restart", async () => {
+  const id = identity();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "officer-dellog-"));
+  const file = path.join(dir, "cases.sqlite");
+  try {
+    const store = new CaseStore(file, deriveDbKey(id));
+    const a = store.createCase(SECRETS, "HW-AAAA-0001");
+    const b = store.createCase(SECRETS, null);
+    assert.equal(store.deleteCase(a.id, { log: true }), true);
+    assert.equal(store.deleteCase(b.id, { log: true }), true);
+    assert.equal(store.deleteCase("nope", { log: true }), false);
+    store.close();
+    const reopened = new CaseStore(file, deriveDbKey(id));
+    const log = reopened.listDeletionLog();
+    assert.deepEqual(log.map((e) => e.caseNumber), [b.id, "HW-AAAA-0001"], "newest first; no number, the internal id instead");
+    reopened.close();
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("unpruuf Compliance: a case exports as a self-contained, printable HTML file", async () => {
+  await withApp(async (base, store) => {
+    const row = store.createCase(SECRETS, "HW-EXP-0001");
+    store.setCategory(row.id, "Achiziții & <contracte>");
+    store.appendMessage(row.id, "in", "Report: invoices <script>alert(1)</script> were split");
+    store.appendMessage(row.id, "out", "Thank you, we are looking into it.");
+    store.setStatus(row.id, "acknowledged");
+    store.setStatus(row.id, "in_progress");
+
+    const res = await fetch(`${base}/api/cases/${row.id}/export`);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get("content-type") ?? "", /^text\/html/);
+    assert.match(res.headers.get("content-disposition") ?? "", /attachment; filename="case-HW-EXP-0001-\d{4}-\d{2}-\d{2}\.html"/);
+    const html = await res.text();
+    assert.match(html, /^<!doctype html>/);
+    assert.match(html, /HW-EXP-0001/);
+    assert.match(html, /Achiziții &amp; &lt;contracte&gt;/, "category, escaped");
+    assert.match(html, /invoices &lt;script&gt;alert\(1\)&lt;\/script&gt; were split/, "message text, escaped");
+    assert.match(html, /Thank you, we are looking into it\./);
+    assert.match(html, /Confirmarea primirii \(7 zile/);
+    assert.match(html, /Răspuns \(3 luni/);
+    assert.match(html, /îndeplinit la timp/, "acknowledgement met");
+    assert.match(html, /în curs/, "feedback still running");
+    assert.match(html, /Confirmat/);
+    assert.match(html, /În lucru/);
+    assert.match(html, /Raportor/);
+    assert.match(html, /Ofițer/);
+    assert.doesNotMatch(html, /<script|<link|<img|src=|@import|url\(|https?:\/\//i, "nothing loaded from outside, no scripts");
+    assert.ok(!html.toLowerCase().includes("secret"), "no key material");
+
+    const en = await (await fetch(`${base}/api/cases/${row.id}/export?lang=en`)).text();
+    assert.match(en, /<html lang="en">/);
+    assert.match(en, /Case record/);
+    assert.match(en, /Acknowledgement of receipt \(7 days/);
+    assert.match(en, /met on time/);
+    assert.equal((await fetch(`${base}/api/cases/nope/export`)).status, 404);
+  });
+});
+
+test("unpruuf Compliance: the JSON export carries deadlines with their state, the status history and every message", async () => {
+  await withApp(async (base, store) => {
+    const row = store.createCase(SECRETS, "HW-EXP-0002");
+    store.setCategory(row.id, "Fraudă");
+    store.appendMessage(row.id, "in", "first report");
+    store.appendMessage(row.id, "out", "reply");
+    store.setStatus(row.id, "acknowledged");
+    store.setStatus(row.id, "closed");
+
+    const res = await fetch(`${base}/api/cases/${row.id}/export?format=json`);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get("content-type") ?? "", /^application\/json/);
+    const doc = (await res.json()) as any;
+    assert.equal(doc.caseNumber, "HW-EXP-0002");
+    assert.equal(doc.category, "Fraudă");
+    assert.equal(doc.status, "closed");
+    assert.equal(doc.openedAt, new Date(row.openedAt).toISOString());
+    assert.equal(doc.deadlines.acknowledgement.dueAt, new Date(row.ackDueAt).toISOString());
+    assert.equal(doc.deadlines.acknowledgement.state, "met");
+    assert.equal(doc.deadlines.feedback.dueAt, new Date(row.feedbackDueAt).toISOString());
+    assert.equal(doc.deadlines.feedback.state, "met");
+    assert.ok(doc.deadlines.feedback.doneAt);
+    assert.deepEqual(doc.statusChanges.map((c: any) => c.status), ["acknowledged", "closed"]);
+    assert.deepEqual(doc.messages.map((m: any) => [m.from, m.text]), [["reporter", "first report"], ["officer", "reply"]]);
+    assert.ok(doc.messages.every((m: any) => typeof m.at === "string"));
+    assert.ok(!JSON.stringify(doc).toLowerCase().includes("secret"), "no key material");
+    assert.equal((await fetch(`${base}/api/cases/nope/export?format=json`)).status, 404);
+  });
+});
+
+test("unpruuf Compliance: deadline states in an export follow the clock", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "officer-dl-"));
+  const store = new CaseStore(path.join(dir, "cases.sqlite"), deriveDbKey(identity()));
+  try {
+    const row = store.createCase(SECRETS, "HW-DL-0001");
+    const day = 24 * 60 * 60 * 1000;
+    const late = buildCaseExport(store, row, row.openedAt + 8 * day);
+    assert.equal(late.acknowledgement.state, "overdue");
+    assert.equal(late.feedback.state, "open");
+    assert.equal(buildCaseExport(store, row, row.openedAt + 91 * day).feedback.state, "overdue");
+    const ackedLate = buildCaseExport(store, { ...row, acknowledgedAt: row.openedAt + 9 * day }, row.openedAt + 10 * day);
+    assert.equal(ackedLate.acknowledgement.state, "met_late");
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("unpruuf Press keeps its delete and JSON export as before: no confirmation, no deletion log", async () => {
+  await withPressApp(async (base, store) => {
+    const row = store.createCase(SECRETS, "HW-PRS-0001");
+    store.appendMessage(row.id, "in", "tip");
+    const exp = await fetch(`${base}/api/cases/${row.id}/export`);
+    assert.equal(exp.status, 200);
+    assert.match(exp.headers.get("content-disposition") ?? "", /attachment; filename="case-HW-PRS-0001\.json"/);
+    assert.equal(((await exp.json()) as any).messages[0].text, "tip");
+    assert.equal((await fetch(`${base}/api/deletion-log`)).status, 404);
+    assert.equal((await fetch(`${base}/api/cases/${row.id}`, { method: "DELETE" })).status, 200);
+    assert.deepEqual(store.listDeletionLog(), [], "press keeps no deletion log");
+  });
 });

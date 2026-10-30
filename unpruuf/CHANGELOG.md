@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · Officer app (unpruuf Compliance): delete one case with typed confirmation, deletion log, export as HTML or JSON
+
+**What was done.** The compliance edition of `officer-app` closes the known gap "cannot delete or export a single case". Delete: the case view opens a dialog where the officer types the case number; the server checks it again (`DELETE /api/cases/:id`, `confirmCaseNumber`, otherwise 400), removes case, messages, status history, keys and poll tags and compacts the database file. Deletion log: new table `deletion_log` with case number and time of deletion only, written in the same transaction, shown read-only in the new view "Jurnal de ștergeri" / "Deletion log" (`GET /api/deletion-log`). Export: `GET /api/cases/:id/export` now returns a self-contained, printable HTML file (`case-<number>-<date>.html`, RO or EN via `?lang=en`) with case number, category, received date, both deadlines with their state, status changes and all messages; `?format=json` gives the same as JSON. New table `case_status_log` records every status change from now on. RO and EN texts in `i18n.js`. unpruuf Press unchanged (no typed confirmation, no log, JSON export as before). 6 new tests, 29 pass.
+
+**Which bug appeared.** None in the build. The JSON export that already existed in the code base had no deadline states and no status history, because status changes were never stored; only the acknowledgement and closing dates were.
+
+**How it was fixed.** Status changes are now logged per case. Cases from before 30.10.2026 show only their opening in the history; their acknowledgement and closing dates stay in the deadline table.
+
+**Open / not verified.** Deleted content can remain in backups or copies of `data/` made earlier, in exported files, and physically on the disk until overwritten (encrypted, but the officer key still exists). The deletion log is read-only in the dashboard but not tamper-proof against someone with write access to the database file. No notes field exists, so exports contain none. Not tested with a real Android reporter app.
+
+---
+
 ## 2026‑10‑18 · Guest lockers for a free, invite-only Client app (first build)
 
 **What was done.** Guest grants: a signed, expiring token that lets a Client app user without servers deposit on the inviter's node. Server (`node-mesh-server`): `PUT /deposit` accepts `Guest <token>` besides the owner bearer, off by default (`NODE_MESH_GUEST_GRANTS=1`), stateless MAC check, in-memory quota per grant, no grant data on disk; 9 new tests, 35 pass. Shared format and test vectors in `guest-grants/`. Android: `GuestGrant.kt` (issue, parse, renewal check) with 8 JVM tests against the vectors, `NodeMeshClient.depositAsGuest`, pairing field `g`. Specs: `GUEST_LOCKERS_BUILD_SPEC.md`, `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`.

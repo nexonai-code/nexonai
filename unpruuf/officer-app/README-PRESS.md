@@ -18,7 +18,7 @@ Status: pilot. Not audited by an independent party, not tested against real Tor 
 | Wording | cases, reporter | tips, source |
 | Topics | compliance categories | politics, business, justice, health, environment, other (free text) |
 | Keep tips | until the organisation decides | adjustable: keep until deleted, or delete after 1 / 7 / 30 / 90 / 180 / 365 days without activity |
-| Delete one tip | not built | yes, permanent, the database file is compacted afterwards |
+| Delete one tip | yes, permanent, the officer types the case number to confirm, deletion log with number and time only | yes, permanent, the database file is compacted afterwards |
 | Pickup warning | no | yes, when the app was off for longer than 12 hours (adjustable) |
 | QR code for a website | show / copy | also PNG download and a ready HTML snippet |
 
@@ -54,4 +54,4 @@ Linux/macOS: `OFFICER_EDITION=press npm start`.
 
 ## For developers
 
-`OFFICER_EDITION=press` switches the same code base: `src/settings/pressSettings.ts` (settings and last-pickup time, `data-press/settings.json`), `DELETE /api/cases/:id`, `POST /api/settings`, `GET /api/edition`. The press texts are the `p_` keys in `src/web/public/i18n.js`. Tests: `npm test` (23 tests, 8 of them for the per-research codes).
+`OFFICER_EDITION=press` switches the same code base: `src/settings/pressSettings.ts` (settings and last-pickup time, `data-press/settings.json`), `DELETE /api/cases/:id`, `POST /api/settings`, `GET /api/edition`. The press texts are the `p_` keys in `src/web/public/i18n.js`. Tests: `npm test` (29 tests, 8 of them for the per-research codes).

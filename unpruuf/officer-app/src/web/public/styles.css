@@ -217,6 +217,10 @@ body[data-edition="press"] .only-compliance, body[data-edition="press"] .col-dl 
 .warn.red { background: #fbe4e1; border-color: #e08a80; color: #6b1c13; }
 .btn.danger { border-color: #c9473a; color: #a3291d; }
 .btn.danger:hover { background: #fbe4e1; }
+.modal.confirm { cursor: default; background: rgba(8, 24, 27, .6); }
+.confirm-in { background: var(--surface); color: var(--ink); border-radius: 12px; padding: 20px 22px; width: min(460px, 92vw); box-shadow: 0 10px 40px rgba(0, 0, 0, .3); }
+.confirm-in h2 { margin: 0 0 8px; font-size: 17px; } .confirm-in p { margin: 0; font-size: 14px; }
+.confirm-in label.fld { max-width: none; } .confirm-in .btns { margin-top: 14px; }
 label.fld { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--dim); max-width: 320px; }
 
 /* unpruuf Press: a code per research */
