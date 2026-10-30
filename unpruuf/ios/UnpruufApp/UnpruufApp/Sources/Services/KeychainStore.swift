@@ -7,7 +7,24 @@ import UnpruufCore
 /// so it's readable while backgrounded (needed for the relay poll) but never leaves the device
 /// (no iCloud Keychain sync) — mirrors the Android app's device-local `SharedPreferences` storage.
 final class KeychainStore: KeyValueStore {
-    private let service = "com.nexonai.unpruuf.identity"
+    private let service: String
+    private let accessible: CFString
+
+    /// The default is the store for everything the relay poll may need while the phone is locked.
+    /// Owner secrets of own nodes use `nodeMesh`: readable only while the phone is unlocked.
+    init(service: String = "com.nexonai.unpruuf.identity",
+         accessible: CFString = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly) {
+        self.service = service
+        self.accessible = accessible
+    }
+
+    static func nodeMesh() -> KeychainStore {
+        KeychainStore(service: "com.nexonai.unpruuf.nodemesh", accessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
+    }
+
+    func removeString(_ key: String) {
+        removeData(key)
+    }
 
     func getString(_ key: String) -> String? {
         guard let data = getData(key) else { return nil }
@@ -40,7 +57,7 @@ final class KeychainStore: KeyValueStore {
         ]
         let attributes: [String: Any] = [
             kSecValueData as String: value,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            kSecAttrAccessible as String: accessible,
         ]
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         if status == errSecSuccess {

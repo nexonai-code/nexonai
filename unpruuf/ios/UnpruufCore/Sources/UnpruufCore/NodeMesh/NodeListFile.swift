@@ -87,8 +87,21 @@ public enum NodeListFile {
     }
 }
 
-/// Named groups of own nodes. The list storage comes with `NodeMeshStore`; the name rule is here
-/// because the node-list file needs it.
+/// A named group of own nodes. A new contact gets its nodes from one list.
+public struct NodeList: Codable, Equatable {
+    public let id: String
+    public var name: String
+    public var addresses: [String]
+
+    public init(id: String, name: String, addresses: [String]) {
+        self.id = id
+        self.name = name
+        self.addresses = addresses
+    }
+}
+
+/// Rules of the lists, ported from Android's `NodeLists`: every node is in exactly one list, a list
+/// with no nodes does not exist, a list can hold the nodes of several servers.
 public enum NodeLists {
     public static let defaultName = "Standard"
     public static let maxName = 60
@@ -106,5 +119,60 @@ public enum NodeLists {
             }
         }
         return String(out.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxName))
+    }
+
+    /// Makes the lists match the real pool: addresses that no longer exist go, a node in no list
+    /// goes into the list called `defaultName`, empty lists vanish.
+    public static func reconcile(_ lists: [NodeList], pool: [String], newId: () -> String) -> [NodeList] {
+        let inPool = Set(pool)
+        var seen = Set<String>()
+        var cleaned = lists.map { list -> NodeList in
+            var copy = list
+            copy.addresses = list.addresses.filter { inPool.contains($0) && seen.insert($0).inserted }
+            return copy
+        }
+        let unlisted = pool.filter { !seen.contains($0) }
+        if !unlisted.isEmpty {
+            if let i = cleaned.firstIndex(where: { $0.name == defaultName }) {
+                cleaned[i].addresses += unlisted
+            } else {
+                cleaned.append(NodeList(id: newId(), name: defaultName, addresses: unlisted))
+            }
+        }
+        return cleaned.filter { !$0.addresses.isEmpty }
+    }
+
+    /// Moves `addresses` into list `listId`, creating it as `newName` if it does not exist yet.
+    public static func assign(_ lists: [NodeList], addresses: [String], listId: String, newName: String) -> [NodeList] {
+        let moving = Set(addresses)
+        var seen = Set<String>()
+        let distinct = addresses.filter { seen.insert($0).inserted }
+        var updated = lists.map { list -> NodeList in
+            var copy = list
+            copy.addresses = list.addresses.filter { !moving.contains($0) }
+            return copy
+        }
+        if let i = updated.firstIndex(where: { $0.id == listId }) {
+            updated[i].addresses += distinct
+        } else {
+            let name = cleanName(newName)
+            updated.append(NodeList(id: listId, name: name.isEmpty ? defaultName : name, addresses: distinct))
+        }
+        return updated.filter { !$0.addresses.isEmpty }
+    }
+
+    public static func list(of address: String, in lists: [NodeList]) -> NodeList? {
+        lists.first { $0.addresses.contains(address) }
+    }
+
+    /// A blank name keeps the old one.
+    public static func rename(_ lists: [NodeList], listId: String, name: String) -> [NodeList] {
+        let clean = cleanName(name)
+        guard !clean.isEmpty else { return lists }
+        return lists.map { list in
+            var copy = list
+            if list.id == listId { copy.name = clean }
+            return copy
+        }
     }
 }

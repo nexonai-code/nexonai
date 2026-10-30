@@ -21,6 +21,7 @@ final class AppEnvironment: ObservableObject {
     let privacyShield = PrivacyShield()
     let relayPoolManager: RelayPoolManager
     let archivedRelayStore: ArchivedRelayStore
+    let nodeMeshStore: NodeMeshStore
 
     /// The relay I currently advertise to new contacts (and, by default, use when Wechsel-ing an
     /// existing one) — set once in Settings. Contacts can still each end up pointed at a different
@@ -117,6 +118,7 @@ final class AppEnvironment: ObservableObject {
         self.pinManager = PinManager(keychain: keychain)
         self.relayPoolManager = RelayPoolManager(keychain: keychain)
         self.archivedRelayStore = ArchivedRelayStore(keychain: keychain)
+        self.nodeMeshStore = NodeMeshStore(store: KeychainStore.nodeMesh())
         self.defaultRelayConnectionString = keychain.getString(Self.defaultRelayKey) ?? ""
         self.extraRelayConnectionStrings = RelayConnectionString.parseList(
             keychain.getString(Self.extraRelaysKey) ?? ""
@@ -173,7 +175,7 @@ final class AppEnvironment: ObservableObject {
     /// and the one place that defines the panic wipe set. Deliberately narrower than `wipeAll()`
     /// above: wipes contacts (and their Double Ratchet session state), RAM messages, the send
     /// queue and half-received chunks, this device's relay setup, the imported relay pool, kept
-    /// relay addresses and the Compliance cases, but leaves this device's own
+    /// relay addresses, own nodes with their owner secrets, and the Compliance cases, but leaves this device's own
     /// identity (`userId`/`myMessageKey`/X25519 ratchet keypair) and the PIN/panic-PIN hashes
     /// themselves untouched — same as Android, so a panicked user's device still works and can
     /// still show a QR to re-pair afterward, rather than resetting to a broken, identity-less
@@ -195,5 +197,6 @@ final class AppEnvironment: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "backup_relay_label")
         relayPoolManager.wipe()
         archivedRelayStore.wipeAll()
+        nodeMeshStore.wipe()
     }
 }

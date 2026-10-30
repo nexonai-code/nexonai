@@ -40,6 +40,7 @@ final class LocalProtectionTests: XCTestCase {
         env.myRelayLabel = "Mac"
         env.backupRelayLabel = "VM"
         env.archivedRelayStore.archive(label: "old", connectionString: relay)
+        XCTAssertTrue(env.nodeMeshStore.addNode(ownerString: "unpruuf-node-owner:v1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion:secret_0123456789"))
         await env.relayService.sendControlSignal(Data("x".utf8), to: "c1")
         XCTAssertEqual(env.relayService.pendingDeliveryCount, 1)
         let contactFile = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -63,6 +64,8 @@ final class LocalProtectionTests: XCTestCase {
         XCTAssertNil(env.keychain.getString("extra_relay_connection_strings"))
         XCTAssertTrue(env.archivedRelayStore.entries.isEmpty)
         XCTAssertNil(env.keychain.getData("archived_relays"))
+        XCTAssertTrue(env.nodeMeshStore.nodes.isEmpty)
+        XCTAssertNil(KeychainStore.nodeMesh().getString("node_mesh_state"))
 
         XCTAssertEqual(env.identity.myMessageKey, identityKey)
         XCTAssertEqual(env.pinManager.check("1234"), .normal)
@@ -141,6 +144,25 @@ final class LocalProtectionTests: XCTestCase {
         XCTAssertEqual(pins.lockRemainingMs(), 0)
         XCTAssertEqual(pins.check("1234"), .normal)
         keychain.removeAll()
+    }
+
+    func test_nodeStore_holdsAThousandNodes_inTheKeychain() throws {
+        let keychain = KeychainStore.nodeMesh()
+        keychain.removeData("node_mesh_state")
+        let addresses = (0..<1000).compactMap { i -> String? in
+            OnionAddress.address(publicKey: Data(repeating: UInt8(i % 256), count: 30) + Data([UInt8(i >> 8), UInt8(i & 0xFF)]))
+        }
+        let file = try XCTUnwrap(NodeListFile.parse(
+            "unpruuf-node-list:v1\nname: Gross\nsecret: Owner_secret_0123456789-AB\ncount: 1000\n\n" + addresses.joined(separator: "\n") + "\n"
+        ))
+        guard case .ok(_, _, 1000, 1000) = NodeMeshStore(store: keychain).importNodeList(file, name: "Gross", targetListId: nil) else {
+            return XCTFail("import")
+        }
+        let reloaded = NodeMeshStore(store: keychain)
+        XCTAssertEqual(reloaded.nodes.count, 1000)
+        XCTAssertFalse(reloaded.isUnreadable)
+        reloaded.wipe()
+        XCTAssertTrue(NodeMeshStore(store: keychain).nodes.isEmpty)
     }
 
     func test_safeImage_refusesOversizedHeaders() {

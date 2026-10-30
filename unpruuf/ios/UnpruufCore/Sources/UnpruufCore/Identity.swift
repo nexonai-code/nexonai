@@ -6,6 +6,11 @@ import Foundation
 public protocol KeyValueStore {
     func getString(_ key: String) -> String?
     func setString(_ key: String, _ value: String)
+    func removeString(_ key: String)
+}
+
+public extension KeyValueStore {
+    func removeString(_ key: String) { setString(key, "") }
 }
 
 /// Per-device identity plus the pair-secret/wire-tag math, a port of the relevant half of the

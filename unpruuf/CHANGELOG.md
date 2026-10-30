@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: own nodes and lists (package B2 without its screens)
+
+**What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshStore` (pool, lists, pool sources, control addresses as one Keychain item), the list rules in `NodeLists`, import of a node-list file all or nothing, owner string, sibling import through `GET /pool`, sealed-server status and unlock, node choice from one list. `OnionAddress.address(publicKey:)`. The store is in `AppEnvironment` and in the panic wipe set. `KeychainStore` takes a service and an accessibility class; owner secrets use `WhenUnlockedThisDeviceOnly` as the spec says. `KeyValueStore` gained `removeString`. An unreadable saved state stays untouched.
+
+**Checked.** `swift test` 177 tests, 173 green; the other 4 run against the real server and are 4 of 4 green (with `GET /pool`). Hosted app tests on the Simulator 10 of 10: 1000 nodes in the real Keychain survive a reload, the panic wipe removes own nodes.
+
+**Not checked.** Screens: none exist yet for lists, import or unlock. Real server restart with a sealed server (scripted replies only). Feed-managed lists come with C2. A real device.
+
+**Known limits.** The screens wait for decision 9.1, without a Business target nothing could open them. The list of how many contacts use a deleted list needs the contact model of B3.
+
+---
+
 ## 2026‑10‑30 · iOS: node client (package B1)
 
 **What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshClient` (deposit, guest deposit, fetchMany, pool, lock status, unlock, health, feed), `NodeHTTPResponse` (reply limits), `Socks5` (user name per RFC 1929, fails closed), `TorNodeTransport` (only Tor's SOCKS port, no fallback, nothing sent while Tor is not ready). Every address is checked again before connecting. Deposit returns a result per status (402, 423, 429 with Retry-After, 507), fetchMany reports `more` and 429 with Retry-After. The app does not use it yet. In `UnpruufCore` rather than `UnpruufApp/Sources/Business` as the spec proposes, so `swift test` covers it; the loopback transport exists in the test target only.

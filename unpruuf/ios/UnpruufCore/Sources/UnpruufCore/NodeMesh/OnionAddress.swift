@@ -23,6 +23,26 @@ public enum OnionAddress {
         return Array(digest.prefix(2)) == checksum
     }
 
+    /// The v3 address of an Ed25519 public key.
+    public static func address(publicKey: Data) -> String? {
+        guard publicKey.count == 32 else { return nil }
+        let key = [UInt8](publicKey)
+        let checksum = SHA3(variant: .sha256).calculate(for: Array(".onion checksum".utf8) + key + [3]).prefix(2)
+        var out = ""
+        var buffer: UInt32 = 0
+        var bits = 0
+        for byte in key + checksum + [3] {
+            buffer = (buffer << 8) | UInt32(byte)
+            bits += 8
+            while bits >= 5 {
+                bits -= 5
+                out.unicodeScalars.append(Unicode.Scalar(alphabet[Int((buffer >> UInt32(bits)) & 31)]))
+                buffer &= (1 << UInt32(bits)) - 1
+            }
+        }
+        return out + suffix
+    }
+
     /// 56 base32 characters are exactly 280 bits, so there are no left-over bits to check.
     private static func decodeBase32(_ chars: ArraySlice<UInt8>) -> [UInt8]? {
         var out: [UInt8] = []

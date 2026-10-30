@@ -279,6 +279,14 @@ final class RealServerTests: XCTestCase {
         XCTAssertLessThan(Date().timeIntervalSince(began), 5)
     }
 
+    func test_poolImport() async throws {
+        let (c, secret) = try setting()
+        let info = await c.listPool(address: onion, ownerSecret: secret)
+        XCTAssertEqual(info?.addresses, [onion])
+        let denied = await c.listPool(address: onion, ownerSecret: "wrong-secret-0123")
+        XCTAssertNil(denied)
+    }
+
     func test_refusals() async throws {
         let (c, secret) = try setting()
         let t = tag()
