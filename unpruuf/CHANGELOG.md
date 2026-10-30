@@ -5,6 +5,22 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: branch brought up to android, app builds and starts on Xcode 27.1, AppLicense with the new public key
+
+**What was done.** `origin/android` merged into `ios` (CHANGELOG conflict only, both sides kept). Fresh local Xcode project (not tracked). `AppLicense` in `UnpruufCore/NodeMesh`: verify and state logic ported from `LicenseManager.kt`, production public key `t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4`, tests against `ios/vectors/ios-vectors-2026-10-27.json` (throw-away key). There was no licence code on iOS before, so nothing was replaced.
+
+**Which bugs appeared.** `QRScanner.isSupported` did not compile on Xcode 27 (main actor). The tracked `Info.plist` lacks `CFBundleIdentifier`, so the README's "Generate Info.plist File = No" gives an app that will not install. In the Simulator the Tor control socket path is over the 104 byte limit and Network.framework ended the process at start.
+
+**How it was fixed.** `@MainActor` on `isSupported`; README corrected; Simulator-only socket directory `/tmp/unpruuf-t` behind `#if targetEnvironment(simulator)`, the device path is unchanged.
+
+**Checked.** `swift test` 92 of 92 green. Simulator build of target `UnpruufApp` (iOS 27, Tor pod 409.15.1, which contains Tor 0.4.9.15), started on iPhone 18 Pro up to the PIN setup screen.
+
+**Not checked.** Real device, real Tor network, any step behind the PIN screen, target `UnpruufCompliance` as its own target (its sources are compiled inside `UnpruufApp`).
+
+**Known limits.** `AppLicense` is logic only: storing the code, binding to the install and the clock high-water mark come with the licence screen (package B5, decision 9.5). No licence screen yet.
+
+---
+
 ## 2026‑10‑28 · Audit RFQ v2: contact address and quote comparison table
 
 - Contact address in RFQ (EN/RO) and the DOCISIA/VĂZDUH reply changed to gabriel@nexonai.ro.
