@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>unpruuf Whistleblower — Panoul ofițerului</title>
+<link rel="stylesheet" href="fonts.css" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<aside>
+  <div class="logo">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="14" fill="#fff"/><circle cx="19" cy="13" r="10" fill="#0E2A2E"/></svg>
+    <div>unpruuf<small data-i18n="role">Ofițer</small></div>
+  </div>
+  <nav>
+    <a class="nav" href="#/" data-route="overview">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/></svg>
+      <span data-i18n="nav_overview">Prezentare generală</span>
+    </a>
+    <a class="nav" href="#/cazuri" data-route="cases">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span data-i18n="nav_cases">Cazuri</span> <span class="n" id="navCount">0</span>
+    </a>
+    <a class="nav" href="#/cod" data-route="code">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM19 19h1"/></svg>
+      <span data-i18n="nav_code">Codul organizației</span>
+    </a>
+    <a class="nav only-press" href="#/recherchen" data-route="recherchen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+      <span data-i18n="nav_rech">Investigații</span> <span class="n" id="navRech">0</span>
+    </a>
+    <a class="nav only-press" href="#/setari" data-route="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+      <span data-i18n="nav_settings">Setări</span>
+    </a>
+  </nav>
+  <div class="sp"></div>
+  <div class="lang" id="langSwitch" role="group" aria-label="Limba / Language"><button type="button" data-lang="ro">RO</button><button type="button" data-lang="en">EN</button></div>
+  <div class="conn" id="conn">
+    <b><span class="dot wait" id="connDot"></span><span id="connTitle">Se conectează…</span></b>
+    <span id="connText">Prima verificare a releului urmează.</span>
+  </div>
+</aside>
+
+<main>
+  <header>
+    <div>
+      <h1 id="pageTitle">Prezentare generală</h1>
+      <div class="date" id="pageSub"></div>
+    </div>
+    <div class="sr">
+      <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input id="search" type="search" placeholder="Caută după număr de caz" data-i18n-ph="search_ph" autocomplete="off" aria-label="Caută după număr de caz" data-i18n-aria="search_ph" />
+      </label>
+      <button class="btn" id="refreshBtn" type="button" data-i18n="refresh">Reîmprospătează</button>
+    </div>
+  </header>
+
+  <div class="warn hidden" id="pickupWarn" role="alert"><div id="pickupWarnText"></div><button class="btn small" id="pickupWarnClose" type="button" data-i18n="dismiss">Am înțeles</button></div>
+
+  <!-- ───────────── Prezentare generală ───────────── -->
+  <section id="v-overview" class="view">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card start hidden" id="startCard">
+      <div class="start-qr"><img id="startQr" alt="Cod QR al organizației" data-i18n-alt="org_qr_alt" /></div>
+      <div class="start-text">
+        <h2 data-i18n="start_h">Începe aici: arată codul organizației</h2>
+        <ol>
+          <li data-i18n-html="start_1">Apasă <b>Afișează mare</b> și proiectează codul, sau arată-l pe ecran.</li>
+          <li data-i18n="start_2">Raportorul îl scanează în aplicația unpruuf, fără nume și fără cont.</li>
+          <li data-i18n="start_3">Cazul apare aici singur, cu număr de caz. Raportorul primește confirmarea automat.</li>
+        </ol>
+        <div class="btns"><button class="btn primary" type="button" data-action="showQr" data-i18n="show_big">Afișează mare</button><button class="btn" type="button" data-action="copyCode" data-i18n="copy_code">Copiază codul</button></div>
+      </div>
+    </div>
+
+    <div class="grid" id="overviewGrid">
+      <div class="left">
+        <div class="card">
+          <div class="ch"><h2 data-i18n="cases">Cazuri</h2><div class="tabs" id="tabsOverview"></div></div>
+          <div class="tablewrap"><table class="cases">
+            <thead><tr><th data-i18n="th_nr">Nr. caz</th><th data-i18n="th_state">Stare</th><th data-i18n="th_cat">Categorie</th><th data-i18n="th_opened">Deschis</th><th class="col-dl" data-i18n="th_next">Următorul termen</th><th data-i18n="th_activity">Activitate</th></tr></thead>
+            <tbody id="casesBodyOverview"></tbody>
+          </table></div>
+          <div class="foot"><span data-i18n="sorted_by">Sortat după termen, cel mai urgent primul</span><a href="#/cazuri" id="allCasesLink" data-i18n="all_cases">Toate cazurile</a></div>
+        </div>
+        <div class="card" id="weeksCard">
+          <div class="ch"><h2 data-i18n="weeks_h">Sesizări noi pe săptămână</h2><span class="dimn" id="weeksNote"></span></div>
+          <div class="wks" id="weeks"></div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="card only-compliance"><div class="ch"><h2 data-i18n="next_h">Termene următoare</h2></div><div id="nextList"></div></div>
+        <div class="card" id="codeCard">
+          <div class="ch"><h2 data-i18n="code_h">Codul organizației</h2></div>
+          <div class="qr"><img id="qrSmall" alt="Cod QR al organizației" data-i18n-alt="org_qr_alt" />
+            <div><p data-i18n="code_blurb">Un singur cod pentru toată organizația. Cine îl scanează trimite sesizarea direct aici, fără nume.</p>
+              <div class="btns"><button class="btn small" type="button" data-action="copyCode" data-i18n="copy_code">Copiază codul</button><button class="btn small" type="button" data-action="showQr" data-i18n="show_big">Afișează mare</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card grow"><div class="ch"><h2 data-i18n="cats_h">Cazuri pe categorii</h2></div><div id="cats"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────── Toate cazurile ───────────── -->
+  <section id="v-cases" class="view hidden">
+    <div class="card">
+      <div class="ch"><h2 data-i18n="cases">Cazuri</h2><div class="tabs" id="tabsCases"></div></div>
+      <div class="tablewrap"><table class="cases">
+        <thead><tr><th data-i18n="th_nr">Nr. caz</th><th data-i18n="th_state">Stare</th><th data-i18n="th_cat">Categorie</th><th data-i18n="th_opened">Deschis</th><th class="col-dl" data-i18n="th_next">Următorul termen</th><th data-i18n="th_activity">Activitate</th></tr></thead>
+        <tbody id="casesBodyAll"></tbody>
+      </table></div>
+      <p class="empty hidden" id="noCases" data-i18n="no_cases">Niciun caz încă. Cazurile apar aici automat imediat ce cineva scanează codul organizației și trimite o sesizare.</p>
+      <div class="foot"><span id="casesFoot"></span><span></span></div>
+    </div>
+  </section>
+
+  <!-- ───────────── Codul organizației ───────────── -->
+  <section id="v-code" class="view hidden">
+    <div class="codegrid">
+      <div class="card codebig">
+        <img id="qrBig" alt="Cod QR al organizației" data-i18n-alt="org_qr_alt" />
+        <div class="btns"><button class="btn primary" type="button" data-action="showQr" data-i18n="code_show_full">Afișează pe tot ecranul</button><button class="btn" type="button" data-action="copyCode" data-i18n="copy_code">Copiază codul</button></div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="ch"><h2 data-i18n="how_h">Cum funcționează</h2></div>
+          <p class="note" data-i18n-html="how_1"><b>Un singur cod pentru toată organizația.</b> Afișează-l la avizier, în intranet sau pe un card. Nu genera coduri separate pentru fiecare angajat: un cod individual ar putea fi legat de o persoană.</p>
+          <p class="note" data-i18n="how_2">Cine îl scanează în aplicația unpruuf trimite automat cazul aici. Cazul apare singur în listă, cu un număr de caz, iar raportorul primește automat confirmarea de primire.</p>
+          <p class="note"><span data-i18n="how_3">Raportează printr-un browser în loc de aplicație? Va avea nevoie și de adresa releului:</span> <code id="relayUrlHint"></code></p>
+        </div>
+        <div class="card">
+          <div class="ch"><h2 data-i18n="code_text_h">Codul ca text</h2></div>
+          <textarea id="myCode" readonly rows="5" aria-label="Codul organizației ca text" data-i18n-aria="code_text_aria"></textarea>
+        </div>
+        <div class="card only-press">
+          <div class="ch"><h2 data-i18n="web_h">Pentru site-ul tău</h2></div>
+          <p class="note" data-i18n="web_note">Pune codul QR pe site-ul tău. Sursa îl scanează cu aplicația unpruuf gratuită și scrie direct.</p>
+          <div class="btns" style="margin-top:10px"><button class="btn primary" type="button" data-action="downloadQr" data-i18n="web_png">Descarcă QR (PNG)</button><button class="btn" type="button" data-action="copyEmbed" data-i18n="web_embed">Copiază codul HTML</button></div>
+        </div>
+        <details class="card">
+          <summary data-i18n-html="manual_sum"><b>Adăugare manuală</b> — doar pentru aplicații de raportare mai vechi</summary>
+          <div class="manual">
+            <textarea id="pasteInput" rows="3" placeholder="Lipește codul afișat de aplicația raportorului după ce a scanat codul tău…" data-i18n-ph="paste_ph"></textarea>
+            <div class="btns"><button class="btn" id="addCaseBtn" type="button" data-i18n="add_case">Adaugă cazul</button><span class="err" id="addCaseError"></span></div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────── Investigații: un cod pe recherche (unpruuf Press) ───────────── -->
+  <section id="v-recherchen" class="view hidden">
+    <div class="card">
+      <div class="ch"><h2 data-i18n="rech_h">Un cod pentru fiecare investigație</h2></div>
+      <p class="note" data-i18n-html="rech_note"></p>
+      <div class="newrech">
+        <input id="rechName" type="text" maxlength="80" autocomplete="off" placeholder="Numele investigației" data-i18n-ph="rech_name_ph" aria-label="Numele investigației" data-i18n-aria="rech_name_ph" />
+        <button class="btn primary" id="rechCreateBtn" type="button" data-i18n="rech_create">Creează cod</button>
+        <span class="err" id="rechErr"></span>
+      </div>
+    </div>
+    <p class="empty hidden" id="rechNone" data-i18n="rech_none"></p>
+    <div id="rechList"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="ch"><h2 data-i18n="rech_export_h">Pentru pagina de informații</h2></div>
+      <p class="note" data-i18n="rech_export_note"></p>
+      <div class="btns" style="margin-top:10px"><a class="btn" href="/api/recherchen/export" download="tip-page-codes.txt" data-i18n="rech_export_btn">Descarcă lista de coduri</a></div>
+    </div>
+  </section>
+
+  <!-- ───────────── Setări (unpruuf Press) ───────────── -->
+  <section id="v-settings" class="view hidden">
+    <div class="card">
+      <div class="ch"><h2 data-i18n="set_keep_h">Cât timp se păstrează mesajele</h2></div>
+      <p class="note" data-i18n="set_keep_note">Mesajele fără activitate mai veche decât perioada aleasă sunt șterse definitiv de pe acest calculator. „Păstrează” înseamnă că rămân până le ștergi tu.</p>
+      <label class="fld"><span data-i18n="set_keep_label">Păstrare</span>
+        <select id="retentionSelect"></select></label>
+    </div>
+    <div class="card">
+      <div class="ch"><h2 data-i18n="set_warn_h">Avertizare la preluare</h2></div>
+      <p class="note" data-i18n="set_warn_note">Mesajele așteaptă pe server cel mult 24 de ore. Dacă aplicația a fost oprită mai mult, un mesaj se poate pierde. Panoul te avertizează înainte.</p>
+      <label class="fld"><span data-i18n="set_warn_label">Avertizează după</span>
+        <select id="warnSelect"></select></label>
+    </div>
+    <div class="btns"><button class="btn primary" id="saveSettingsBtn" type="button" data-i18n="save">Salvează</button><span class="err" id="settingsMsg"></span></div>
+  </section>
+
+  <!-- ───────────── Un caz ───────────── -->
+  <section id="v-detail" class="view hidden">
+    <a class="back" href="#/cazuri" data-i18n="back">&larr; Înapoi la cazuri</a>
+    <div class="detail">
+      <div class="card convo">
+        <div class="ch"><h2 data-i18n="convo_h">Conversație</h2><span class="dimn" id="convoNote"></span></div>
+        <div class="thread" id="thread"></div>
+        <div class="reply">
+          <textarea id="replyInput" rows="3" placeholder="Scrie un răspuns… (Ctrl+Enter trimite)" data-i18n-ph="reply_ph" aria-label="Răspuns" data-i18n-aria="reply_aria"></textarea>
+          <div class="btns"><button class="btn primary" id="sendReplyBtn" type="button" data-i18n="send_reply">Trimite răspunsul</button><span class="err" id="replyError"></span></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="card">
+          <div class="ch"><h2 data-i18n="state_h">Stare</h2></div>
+          <div class="seg" id="statusSeg" role="group" aria-label="Stare">
+            <button type="button" data-status="new" data-i18n="st_new">Nou</button>
+            <button type="button" data-status="acknowledged" data-i18n="st_acknowledged">Confirmat</button>
+            <button type="button" data-status="in_progress" data-i18n="st_in_progress">În lucru</button>
+            <button type="button" data-status="closed" data-i18n="st_closed">Închis</button>
+          </div>
+          <p class="note" id="statusDelivery"></p>
+        </div>
+        <div class="card only-compliance">
+          <div class="ch"><h2 data-i18n="deadlines_h">Termene</h2></div>
+          <div id="detailDeadlines"></div>
+          <p class="note small" data-i18n="deadline_note">Confirmarea de primire (7 zile, Directiva UE 2019/1937, Art. 9(1)(b)) pleacă automat cu numărul cazului. Răspuns în 3 luni (Art. 9(1)(f)). Fiecare schimbare de stare apare imediat în aplicația raportorului.</p>
+        </div>
+        <div class="card">
+          <div class="ch"><h2 data-i18n="category_h">Categorie</h2></div>
+          <input id="categoryInput" list="categoryList" placeholder="ex. abateri financiare, hărțuire…" data-i18n-ph="category_ph" autocomplete="off" aria-label="Categorie" data-i18n-aria="category_h" />
+          <datalist id="categoryList"></datalist>
+          <div class="chips" id="categoryChips"></div>
+        </div>
+        <div class="card">
+          <div class="ch"><h2 data-i18n="del_h">Ștergere</h2></div>
+          <p class="note only-press" data-i18n="del_note">Șterge definitiv acest mesaj și toată conversația de pe acest calculator.</p>
+          <p class="note only-compliance" data-i18n="del_note_c">Descarcă cazul ca fișier sau șterge-l definitiv de pe acest calculator, cu toată conversația. Păstrează cazul cât timp este necesar (Directiva 2019/1937, Art. 18); ștergerea nu se poate anula.</p>
+          <div class="btns" style="margin-top:10px">
+            <button class="btn" id="exportCaseBtn" type="button" data-i18n="exp_btn">Descarcă cazul (fișier)</button>
+            <button class="btn danger" id="deleteCaseBtn" type="button" data-i18n="del_btn">Șterge definitiv</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><h2 data-i18n="data_h">Date</h2></div>
+          <dl class="facts" id="facts"></dl>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toasts" aria-live="polite"></div>
+
+<div id="qrModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Codul organizației" data-i18n-aria="qr_dialog">
+  <div class="modal-in">
+    <img id="qrModalImg" alt="Cod QR al organizației" data-i18n-alt="org_qr_alt" />
+    <p data-i18n="qr_scan">Scanează cu aplicația unpruuf</p>
+    <small data-i18n="qr_close">Apasă oriunde sau Esc pentru a închide</small>
+  </div>
+</div>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

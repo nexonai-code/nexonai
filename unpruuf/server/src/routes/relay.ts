@@ -2,16 +2,23 @@ import { Router } from "express";
 import { BlobStore } from "../store/blobStore";
 import { MAX_BLOB_BYTES, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
 import { requireAuth } from "../middleware/auth";
+import { rateLimited, TokenBucket } from "../middleware/rateLimit";
 import { base64DecodedLength, logFetched, logRejected, logStored } from "../relayEventLog";
 
 const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
+// Standard base64 with optional padding; Buffer.from() never throws, so the check has to be ours.
+const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 
 export function relayRouter(store: BlobStore, authToken: string): Router {
   const router = Router();
   router.use(requireAuth(authToken));
+  // Everyone shares one token, so these cap the whole relay: a stuck or hostile client cannot
+  // fill the store faster than the TTL drains it, nor hammer the fetch routes.
+  const relayLimit = new TokenBucket(120, 20);
+  const fetchLimit = new TokenBucket(240, 40);
 
   // Store one opaque blob under the sender's current wire tag for the recipient to pull later.
-  router.post("/v1/relay", (req, res) => {
+  router.post("/v1/relay", rateLimited(relayLimit), (req, res) => {
     const { tag, blob } = req.body ?? {};
     if (typeof tag !== "string" || !TAG_RE.test(tag)) {
       logRejected(typeof tag === "string" ? tag : "?", "invalid tag");
@@ -21,13 +28,16 @@ export function relayRouter(store: BlobStore, authToken: string): Router {
       logRejected(tag, "invalid blob");
       return res.status(400).json({ error: "invalid blob" });
     }
-    let decodedLength: number;
-    try {
-      decodedLength = Buffer.from(blob, "base64").length;
-    } catch {
+    // Longest legal value is the base64 of MAX_BLOB_BYTES; check the length first so the regex never runs on a huge string.
+    if (blob.length > Math.ceil(MAX_BLOB_BYTES / 3) * 4 + 4) {
+      logRejected(tag, `blob size over ${MAX_BLOB_BYTES}`);
+      return res.status(413).json({ error: `blob must be 1..${MAX_BLOB_BYTES} bytes` });
+    }
+    if (!BASE64_RE.test(blob)) {
       logRejected(tag, "blob is not valid base64");
       return res.status(400).json({ error: "blob is not valid base64" });
     }
+    const decodedLength = Buffer.from(blob, "base64").length;
     if (decodedLength === 0 || decodedLength > MAX_BLOB_BYTES) {
       logRejected(tag, `blob size ${decodedLength} outside 1..${MAX_BLOB_BYTES}`);
       return res.status(413).json({ error: `blob must be 1..${MAX_BLOB_BYTES} bytes` });
@@ -42,7 +52,7 @@ export function relayRouter(store: BlobStore, authToken: string): Router {
   });
 
   // Pull-and-delete every blob queued for a tag. No history, no read log.
-  router.get("/v1/fetch", (req, res) => {
+  router.get("/v1/fetch", rateLimited(fetchLimit), (req, res) => {
     const tag = req.query.tag;
     if (typeof tag !== "string" || !TAG_RE.test(tag)) {
       logRejected(typeof tag === "string" ? tag : "?", "invalid tag");
@@ -69,7 +79,7 @@ export function relayRouter(store: BlobStore, authToken: string): Router {
   // hold the connection open for a while instead of blindly re-polling every few seconds. Kept
   // as a separate endpoint rather than changing /v1/fetch's contract, so an already-deployed
   // client or relay instance that only knows the old endpoint keeps working unmodified.
-  router.post("/v1/fetchMany", async (req, res) => {
+  router.post("/v1/fetchMany", rateLimited(fetchLimit), async (req, res) => {
     const { tags, waitMs } = req.body ?? {};
     if (!Array.isArray(tags) || tags.length === 0 || tags.length > MAX_FETCH_MANY_TAGS) {
       return res.status(400).json({ error: `tags must be a non-empty array of at most ${MAX_FETCH_MANY_TAGS}` });

@@ -57,10 +57,14 @@ class P2PNetworkManager @Inject constructor(
     private val relayManager: RelayManager,
     private val relayClient: RelayClient,
     private val nodeMeshManager: NodeMeshManager,
-    private val nodeMeshClient: NodeMeshClient
+    private val nodeMeshClient: NodeMeshClient,
+    private val feedUpdater: FeedUpdater,
+    private val groupInbox: com.nexonai.unpruuf.domain.group.GroupInbox,
+    private val phoneTempNode: PhoneTempNode
 ) {
     companion object {
-        private const val SERVICE_TYPE = "_unpruuf._tcp."
+        // LAN discovery on/off + hourly name rotation is re-checked this often.
+        private const val LAN_CHECK_INTERVAL_MS = 60_000L
 
         // Virtueller Onion-Port: identisch für ALLE Editionen — darauf verbinden
         // sich Sender (onionAddress:ONION_PORT). Darf sich nie unterscheiden.
@@ -72,6 +76,7 @@ class P2PNetworkManager @Inject constructor(
         val LOCAL_PORT: Int = 54321 + when (AppEdition.current) {
             AppEdition.PRO -> 1
             AppEdition.CLIENT -> 2
+            AppEdition.GROUP -> 3
             else -> 0
         }
         val REVOKE_SIGNAL: ByteArray = "UNPRUUF_REVOKE_V1".toByteArray(Charsets.UTF_8)
@@ -127,6 +132,7 @@ class P2PNetworkManager @Inject constructor(
         // above already encodes for a different subsystem), short enough that a genuinely
         // closed Temp Node tool doesn't leave messages stuck for long before the fallback kicks
         // in and standard nodes take back over.
+        private const val GUEST_RENEWAL_CHECK_MS = 30 * 60_000L
         private const val TEMP_NODE_HEARTBEAT_INTERVAL_MS = 2 * 60_000L
         private const val TEMP_NODE_HEARTBEAT_FAILURE_THRESHOLD = 3
         // v3 onion service IDs are exactly 56 base32 characters before the ".onion" suffix.
@@ -223,14 +229,33 @@ class P2PNetworkManager @Inject constructor(
         // exceeds it, rather than silently dropping tags past the cap.
         private const val MAX_FETCH_MANY_TAGS_PER_CALL = 64
 
-        // unpruuf Business / Node-Mesh (NODE_MESH_SPEC.md §3) — matches that document's
-        // confirmed defaults exactly, chosen there to stay consistent with the numbers this app
-        // and the consumer relay already use (hourly wire-ID rotation, 6h relay TTL default).
-        // Deliberately NOT coupled (rotation_interval independent of TTL) — see §3's reasoning:
-        // the tolerance window is computed FROM both via IdentityManager.nodeMeshToleranceEpochs,
-        // so any future change to either value here stays correct automatically.
+        // unpruuf Business / Node-Mesh (NODE_MESH_SPEC.md §3). Rotation is a protocol constant
+        // both contacts must share. The poll window is sized for the LONGEST retention any node
+        // profile allows (node-mesh-server/src/profiles.ts: MAX_TTL_HOURS = 24), not for one
+        // assumed profile — a contact's node running "offline-tolerant" (24h) would otherwise
+        // hold messages this app never asks for. Window = ceil(24h/1h)+1 = 25 epochs back plus
+        // the current one: 26 tags per contact, still one fetchMany call (server cap 64);
+        // profiles.test.ts pins the same window server-side.
         private const val NODE_MESH_ROTATION_INTERVAL_MS = 60 * 60 * 1000L
-        private const val NODE_MESH_DEFAULT_TTL_MS = 6 * 60 * 60 * 1000L
+        private const val NODE_POOL_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000L
+        // Company list feeds: look for a new list about once an hour, with a little jitter.
+        private const val FEED_REFRESH_INTERVAL_MS = 60 * 60 * 1000L
+        // Node-Mesh polling: one rhythm for every state (see startNodeMeshPoll).
+        private const val NODE_MESH_POLL_BASE_MS = 20_000L
+        private const val NODE_MESH_POLL_JITTER_MS = 5_000L
+        private const val NODE_MESH_POLL_WAIT_MS = 20_000L
+        /** How often the set of per-contact poll loops is compared with the contact list. */
+        private const val NODE_MESH_LOOP_SYNC_MS = 10_000L
+        /** Follow-up requests for one chunk when a node cuts its answer short, per poll. */
+        private const val NODE_MESH_MAX_CONTINUATIONS = 8
+        // Cover deposits: on average one every 15 min per Node-Mesh contact.
+        private const val NODE_MESH_COVER_MEAN_MS = 15 * 60 * 1000L
+        private const val NODE_MESH_COVER_MIN_MS = 20_000L
+        private const val NODE_MESH_COVER_MAX_MS = 60 * 60 * 1000L
+        private const val LOCKED_SERVER_CHECK_INTERVAL_MS = 15 * 60 * 1000L
+        // Whistleblower intake retry check (the actual resend interval is OfficerCase.INTAKE_RETRY_MS).
+        private const val OFFICER_INTAKE_CHECK_MS = 60_000L
+        private const val NODE_MESH_MAX_TTL_MS = 24 * 60 * 60 * 1000L
 
         // Connect timeout for FRESH Tor connections to a CONTACT's onion (the pooled send
         // paths). 40s was enough for every path except the hardest one: mobile-data client
@@ -330,7 +355,10 @@ class P2PNetworkManager @Inject constructor(
         // reason crossPlatformWireId is: sendDeleteContact removes the contact row in the same
         // coroutine that enqueues the delete signal, so a live lookup would already be gone by
         // delivery time. Null for every non-Node-Mesh item.
-        val nodeMeshRoutingTag: String? = null
+        val nodeMeshRoutingTag: String? = null,
+        // The own nodes this contact was given (Contact.myNodeAddresses), snapshotted for the
+        // same reason — a delete signal must still land where the contact actually polls.
+        val nodeMeshNodes: List<String>? = null
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -379,10 +407,11 @@ class P2PNetworkManager @Inject constructor(
     fun start() {
         if (started) return
         started = true
-        acquireMulticastLock()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("p2p: start() begin")
         startServer()
-        registerService()
-        discoverPeers()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("p2p: server started")
+        startLanDiscoveryLoop()
+        clearOrphanPhoneTempNodes()
 
         // Sobald Tor (wieder) bereit ist: Warteschlange sofort abarbeiten
         scope.launch {
@@ -409,6 +438,12 @@ class P2PNetworkManager @Inject constructor(
         startActiveChatWarmup()
         startRelayPoll()
         startNodeMeshPoll()
+        startOfficerIntakeLoop()
+        startNodeMeshCoverTraffic()
+        startNodePoolRefresh()
+        startGuestRenewal()
+        startFeedRefresh()
+        startLockedServerCheck()
         startTempNodeHeartbeat()
         startPeriodicReachabilityCheck()
     }
@@ -475,7 +510,7 @@ class P2PNetworkManager @Inject constructor(
         // they had advertised per contact — which is why a standard pairing only ever received
         // anything over the relay when both sides happened to have configured the very same one.
         // Now every contact is polled at the addresses THEY were told to push to.
-        val tagsByTarget = LinkedHashMap<RelayManager.ParsedConnection, MutableSet<String>>()
+        val tagsByTarget = LinkedHashMap<ParsedConnection, MutableSet<String>>()
 
         for (c in contacts) {
             val fullPool = contactMyRelayList(c).mapNotNull { RelayManager.parseConnectionString(it) }
@@ -485,7 +520,7 @@ class P2PNetworkManager @Inject constructor(
                     // fallback — they are relay-only and must keep working even when the global
                     // relay fallback is switched off in Settings.
                     if (!c.crossPlatform && relayManager.isUsable()) {
-                        listOf(RelayManager.ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
+                        listOf(ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
                     } else emptyList()
                 }
             if (fullPool.isEmpty()) continue
@@ -514,7 +549,7 @@ class P2PNetworkManager @Inject constructor(
                 val tags = tagsByTarget.getOrPut(target) { linkedSetOf() }
                 for (identity in candidateIdentities(c)) {
                     for (b in buckets) {
-                        tags += identityManager.expectedWireId(c.publicKey, identity, b)
+                        tags += identityManager.expectedWireId(c.publicKey, identity, b, mine = identityManager.myMessageKeyFor(c))
                     }
                 }
             }
@@ -550,13 +585,357 @@ class P2PNetworkManager @Inject constructor(
     // pooled across contacts the way relay targets can be). Same adaptive interval/wait
     // constants as the relay loop, reused rather than duplicated — the reasoning ("tight while a
     // chat's open, relaxed otherwise") applies identically here.
+    /** Imports every sibling node of the scanned servers as soon as Tor is up; [onDone] gets the
+     *  number of nodes added. */
+    fun refreshNodePoolNow(onDone: (Int) -> Unit) {
+        scope.launch {
+            val ready = withTimeoutOrNull(120_000) { torManager.isReady.filter { it }.first() }
+            val added = if (ready == null) 0 else runCatching { nodeMeshManager.importSiblings(nodeMeshClient) }.getOrDefault(0)
+            onDone(added)
+        }
+    }
+
+    // ─── GRANT_RENEW (GUEST_LOCKERS_BUILD_SPEC.md §4.4, GuestRenewal.kt) ─────────────────────────
+
+    /** Owner (Pro): every half hour, send new grants to each guest whose renewal is due. */
+    private fun startGuestRenewal() {
+        scope.launch {
+            while (isActive) {
+                runCatching { renewDueGuests() }
+                delay(GUEST_RENEWAL_CHECK_MS)
+            }
+        }
+    }
+
+    private suspend fun renewDueGuests() {
+        val now = System.currentTimeMillis()
+        for (c in contactDao.getGuestContacts()) {
+            val policy = GuestRenewal.decodePolicy(c.guestRenewal) ?: continue
+            if (GuestRenewal.due(policy, c.guestRenewedAtMs, now)) sendGrantRenewal(c, policy, now)
+        }
+    }
+
+    /**
+     * Owner: new grants for the nodes this guest polls me at, through the normal encrypted channel.
+     * Never sends over a node that is no longer in my pool (no secret to sign with) and never
+     * reuses an old grant id. The renewed-at time is only stored once the packet is queued.
+     */
+    private suspend fun sendGrantRenewal(contact: com.nexonai.unpruuf.data.model.Contact, policy: GuestRenewal.Policy, now: Long) {
+        if (!contact.nodeMesh) return
+        val contactKey = runCatching {
+            android.util.Base64.decode(contact.publicKey, android.util.Base64.DEFAULT)
+        }.getOrNull()?.takeIf { it.size == 32 } ?: return
+        val pool = nodeMeshManager.getMyNodePool().associate { it.address to it.ownerSecret }
+        val nodes = (myNodesFor(contact) ?: return).filter { it in pool }
+        if (nodes.isEmpty()) return
+        val grants = runCatching {
+            GuestInvite.issueGrants(nodes.map { GuestInvite.OwnNode(it, pool.getValue(it)) }, now, policy.validityDays, policy.quota)
+        }.getOrNull() ?: return
+        val signal = GuestRenewal.encodeSignal(nodes.zip(grants) { a, g -> GuestRenewal.Entry(a, g) }).toByteArray(Charsets.UTF_8)
+        val encrypted = runCatching { cryptoManager.encryptForContact(signal, contactKey) }.getOrNull() ?: return
+        if (encrypted.size > NetworkObfuscation.PACKET_SIZE - 8) return
+        deliveryQueue.add(
+            PendingDelivery(
+                null, contact.id, NetworkObfuscation.padPacket(encrypted), contact.publicKey,
+                nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                nodeMeshNodes = nodes
+            )
+        )
+        contactDao.updateGuestRenewedAt(contact.id, now)
+        wakeSignal.trySend(Unit)
+        flushQueue()
+    }
+
+    /** Owner: "stop renewing" / "renew again" for one guest. Stopping lets the grants run out. */
+    fun setGuestRenewing(contactId: String, renewing: Boolean) {
+        scope.launch {
+            val c = contactDao.getContactById(contactId) ?: return@launch
+            val policy = GuestRenewal.decodePolicy(c.guestRenewal) ?: return@launch
+            contactDao.updateGuestRenewal(contactId, GuestRenewal.encodePolicy(policy.copy(renewing = renewing)))
+            if (renewing) {
+                // Renewing again starts right away instead of waiting for the next quarter.
+                contactDao.updateGuestRenewedAt(contactId, 0L)
+                runCatching { renewDueGuests() }
+            }
+        }
+    }
+
+    /**
+     * Guest (Client app): the inviter sent new grants. Only a contact that already holds guest
+     * grants accepts one, only from that contact (the channel is keyed per contact), and only
+     * onion addresses with grants that read as unexpired. The contact's nodes become exactly the
+     * renewed ones, so a renewal also follows the inviter's nodes when they changed.
+     */
+    private suspend fun applyGrantRenewal(senderId: String, plaintext: String) {
+        val contact = contactDao.getContactById(senderId) ?: return
+        if (!contact.nodeMesh || contact.guestGrants.isNullOrEmpty()) return
+        val entries = GuestRenewal.parseSignal(plaintext, System.currentTimeMillis()) ?: return
+        val nodes = entries.joinToString(";") { NodeMeshManager.buildAddressConnectionString(it.address) }
+        contactDao.updateGuestNodesAndGrants(senderId, nodes, GuestGrant.encodeList(entries.map { it.token }))
+        setGuestIssue(senderId, null)
+    }
+
+    // Picks up nodes a server owner added later (more NODE_MESH_NODES) without a new scan.
+    private fun startNodePoolRefresh() {
+        scope.launch {
+            while (isActive) {
+                torManager.isReady.filter { it }.first()
+                if (nodeMeshManager.getPoolSources().isNotEmpty()) {
+                    runCatching { nodeMeshManager.importSiblings(nodeMeshClient) }
+                }
+                delay(NODE_POOL_REFRESH_INTERVAL_MS)
+            }
+        }
+    }
+
+    // Company list feeds (FeedCrypto.kt): fetches the current lists from the rotating onion address.
+    private fun startFeedRefresh() {
+        scope.launch {
+            while (isActive) {
+                torManager.isReady.filter { it }.first()
+                if (nodeMeshManager.getFeedSources().isNotEmpty()) {
+                    runCatching { feedUpdater.updateAll() }
+                }
+                delay(FEED_REFRESH_INTERVAL_MS + kotlin.random.Random.nextLong(0, 5 * 60_000L))
+            }
+        }
+    }
+
+    /** "Update now" in the list screen: runs the update once Tor is up. [onDone] gets the sources as they are afterwards. */
+    fun updateFeedsNow(onDone: (List<FeedSource>) -> Unit) {
+        scope.launch {
+            val ready = withTimeoutOrNull(120_000) { torManager.isReady.filter { it }.first() }
+            val result = if (ready == null) nodeMeshManager.getFeedSources() else runCatching { feedUpdater.updateAll() }.getOrDefault(nodeMeshManager.getFeedSources())
+            onDone(result)
+        }
+    }
+
+    // Constant rhythm, whatever the user does: the same jittered interval and the same long-poll
+    // wait whether a chat is open or the phone sits in a pocket. The old 6 s (chat open) / 90 s
+    // (idle) split let anyone watching a node — or the encrypted Tor stream — read off WHEN a
+    // chat was open. The long-poll (now effective thanks to the fetch cursor) keeps delivery fast.
+    //
+    // One loop PER CONTACT, each with its own random start and its own jittered interval, instead of
+    // one loop that asks for everybody at once: requests of different contacts then do not leave the
+    // phone in step, which would let a node operator tie them together by timing alone.
+    private val nodeMeshContactLoops = ConcurrentHashMap<String, Job>()
+
     private fun startNodeMeshPoll() {
         scope.launch {
             while (isActive) {
-                val active = isChatActiveOrRecent()
-                delay(if (active) RELAY_POLL_INTERVAL_ACTIVE_MS else RELAY_POLL_INTERVAL_IDLE_MS)
-                pollNodeMeshOnce()
+                syncNodeMeshContactLoops()
+                delay(NODE_MESH_LOOP_SYNC_MS)
             }
+        }
+    }
+
+    /** Starts a loop for every Node-Mesh contact that has none and stops the loops of contacts that are gone. */
+    private suspend fun syncNodeMeshContactLoops() {
+        val ids = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+            .filter { it.nodeMesh }.map { it.id }.toSet()
+        for ((id, job) in nodeMeshContactLoops) {
+            if (id !in ids) { job.cancel(); nodeMeshContactLoops.remove(id); forgetNodeMeshPollState(id) }
+        }
+        for (id in ids) {
+            if (nodeMeshContactLoops[id]?.isActive != true) {
+                nodeMeshContactLoops[id] = scope.launch {
+                    delay(kotlin.random.Random.nextLong(0, NODE_MESH_POLL_BASE_MS + 1)) // its own start
+                    while (isActive) {
+                        pollNodeMeshContact(id)
+                        delay(nodeMeshPollDelayMs())
+                    }
+                }
+            }
+        }
+    }
+
+    private fun forgetNodeMeshPollState(contactId: String) {
+        nodeMeshCursors.keys.removeAll { it.startsWith("$contactId|") }
+        nodeMeshLastComplete.keys.removeAll { it.startsWith("$contactId|") }
+    }
+
+    private fun nodeMeshPollDelayMs(): Long =
+        NODE_MESH_POLL_BASE_MS + kotlin.random.Random.nextLong(-NODE_MESH_POLL_JITTER_MS, NODE_MESH_POLL_JITTER_MS + 1)
+
+    // ─── Whistleblower: organisation-wide QR + case number (see OfficerCase.kt) ─────────────
+
+    /**
+     * Called once right after pairing with a compliance officer: a hidden first ratchet message
+     * (so the officer can answer at once even when it is the receiving side of the session) and
+     * the intake into the organisation's letterbox, which replaces copying our own code by hand.
+     */
+    fun startOfficerCase(contactId: String) {
+        scope.launch {
+            contactDao.startIntake(contactId, System.currentTimeMillis())
+            // Silently skipped by enqueueRatchetMessage when we are the receiving side — then
+            // the officer is the sending side and its receipt opens our sending chain instead.
+            sendMessage(contactId, MessagePayload.encodeText(OfficerCase.CASE_HELLO_TEXT))
+            contactDao.getContactById(contactId)?.let { runCatching { sendOfficerIntakeIfDue(it) } }
+        }
+    }
+
+    /** Drops everything this manager still holds for a contact removed locally (queued packets,
+     *  half-received chunk trains). Sends nothing. */
+    /**
+     * A Temp Node that runs on this phone ends with the app process. A registration left from
+     * before (the app was closed or killed while it ran) points at an address nobody serves any
+     * more: every message would first try it, and time out. Clear it and tell the contact.
+     */
+    private fun clearOrphanPhoneTempNodes() {
+        scope.launch {
+            val orphans = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+                .filter { it.tempNodeOnPhone && !phoneTempNode.isOwn(it.tempNodeAddress) }
+            for (c in orphans) {
+                contactDao.clearTempNode(c.id)
+                sendTempNodeDeactivate(c.id)
+            }
+        }
+    }
+
+    fun forgetContactLocally(contactId: String) {
+        if (phoneTempNode.runningFor() == contactId) phoneTempNode.stop()
+        deliveryQueue.removeAll { it.contactId == contactId }
+        chunkReassembly.remove(contactId)
+        sendLocks.remove(contactId)
+    }
+
+    /** Panic PIN: drops every queued outgoing packet and every half-received chunked message, for all contacts. */
+    fun forgetAllLocally() {
+        phoneTempNode.stop()
+        nodeMeshContactLoops.values.forEach { it.cancel() }
+        nodeMeshContactLoops.clear()
+        nodeMeshCursors.clear()
+        nodeMeshLastComplete.clear()
+        deliveryQueue.clear()
+        chunkReassembly.values.forEach { r -> r.pieces.forEach { it?.fill(0) } }
+        chunkReassembly.clear()
+        sendLocks.clear()
+    }
+
+    // Re-sends the intake until the officer's receipt (case number) arrives — the officer may be
+    // offline for hours, and its letterbox only looks 48 h back.
+    private fun startOfficerIntakeLoop() {
+        if (!AppEdition.isWhistleblower) return
+        scope.launch {
+            while (isActive) {
+                delay(OFFICER_INTAKE_CHECK_MS)
+                if (!torManager.isReady.value) continue
+                val pending = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+                    .filter { it.intakeStartedAt != null && it.caseNumber == null }
+                for (c in pending) runCatching { sendOfficerIntakeIfDue(c) }
+            }
+        }
+    }
+
+    private suspend fun sendOfficerIntakeIfDue(contact: com.nexonai.unpruuf.data.model.Contact) {
+        val started = contact.intakeStartedAt ?: return
+        if (contact.caseNumber != null) return
+        val now = System.currentTimeMillis()
+        if (now - started > OfficerCase.INTAKE_GIVE_UP_MS) {
+            contactDao.stopIntake(contact.id)
+            return
+        }
+        val last = contact.intakeLastSentAt
+        if (last != null && now - last < OfficerCase.INTAKE_RETRY_MS) return
+        if (!torManager.isReady.value) return
+        if (sendOfficerIntake(contact)) contactDao.markIntakeSent(contact.id, now)
+    }
+
+    private fun sendOfficerIntake(contact: com.nexonai.unpruuf.data.model.Contact): Boolean {
+        val officerKey = runCatching { android.util.Base64.decode(contact.publicKey, android.util.Base64.DEFAULT) }
+            .getOrNull()?.takeIf { it.size == 32 } ?: return false
+        val officerPub = runCatching { android.util.Base64.decode(contact.x25519RatchetPublicKey, android.util.Base64.DEFAULT) }
+            .getOrNull()?.takeIf { it.size == 32 } ?: return false
+        val myRelays = contactMyRelayList(contact).ifEmpty { return false }
+        // A case opened by WhistleblowerCases carries its own key, ratchet key and id — those
+        // are what the officer must see, never this device's global ones (unlinkable cases).
+        val pairingJson = com.nexonai.unpruuf.screens.qrpair.crossPlatformPayloadToJson(
+            com.nexonai.unpruuf.screens.qrpair.CrossPlatformPairingPayload(
+                userId = if (contact.myPairMessageKey != null) contact.myWireIdentity ?: identityManager.userId else identityManager.userId,
+                messageKeyBase64 = android.util.Base64.encodeToString(identityManager.myMessageKeyFor(contact), android.util.Base64.NO_WRAP),
+                x25519RatchetPublicKeyBase64 = android.util.Base64.encodeToString(
+                    identityManager.ratchetKeyPairFor(contact).publicKey, android.util.Base64.NO_WRAP
+                ),
+                relayConnectionStrings = myRelays,
+                appEdition = AppEdition.current
+            )
+        )
+        val sealed = OfficerCase.sealIntake(officerPub, officerKey, OfficerCase.encodeIntakePlaintext(contact.myWireIdentity, pairingJson))
+        if (sealed.size > NetworkObfuscation.PACKET_SIZE - 8) return false
+        val targets = contactTheirRelayList(contact).mapNotNull { RelayManager.parseConnectionString(it) }
+        if (targets.isEmpty()) return false
+        val tag = OfficerCase.intakeTag(officerKey, OfficerCase.hour())
+        val padded = NetworkObfuscation.padPacket(sealed)
+        return targets.any { relayClient.push(it.address, it.authToken, tag, padded) }
+    }
+
+    // ─── Node-Mesh cover traffic ──────────────────────────────────────────────────────────────
+    // Without it every deposit on a node was a real message, so a node operator (or whoever
+    // seized and kept running a node) could log exactly when this device wrote to a contact.
+    // Now each Node-Mesh contact also gets dummy deposits at random (exponentially distributed)
+    // times: same tag, same padded size, same nodes — indistinguishable from a real message
+    // without the contact's key. The receiver decrypts and silently drops them (DUMMY_SIGNAL).
+    private fun startNodeMeshCoverTraffic() {
+        scope.launch {
+            while (isActive) {
+                val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+                    .filter { it.nodeMesh && it.theirNodeMeshRoutingSeed.isNotBlank() }
+                delay(nextCoverDelayMs(contacts.size))
+                if (contacts.isEmpty() || !torManager.isReady.value) continue
+                runCatching { sendNodeMeshCover(contacts.random()) }
+            }
+        }
+    }
+
+    private suspend fun sendNodeMeshCover(contact: com.nexonai.unpruuf.data.model.Contact) {
+        val key = runCatching {
+            android.util.Base64.decode(contact.publicKey, android.util.Base64.DEFAULT)
+        }.getOrNull()?.takeIf { it.size == 32 } ?: return
+        val encrypted = runCatching { cryptoManager.encryptForContact(DUMMY_SIGNAL, key) }.getOrNull() ?: return
+        if (encrypted.size > NetworkObfuscation.PACKET_SIZE - 8) return
+        val tag = nodeMeshTagFor(contact) ?: return
+        depositForNodeMesh(contact.id, tag, NetworkObfuscation.padPacket(encrypted), myNodesFor(contact))
+    }
+
+    // Mean NODE_MESH_COVER_MEAN_MS per contact → mean / n across n contacts, exponentially
+    // distributed (a Poisson process has no rhythm to recognise), clamped to sane bounds.
+    private fun nextCoverDelayMs(contactCount: Int): Long {
+        if (contactCount == 0) return NODE_MESH_COVER_MEAN_MS
+        val mean = NODE_MESH_COVER_MEAN_MS.toDouble() / contactCount
+        val u = kotlin.random.Random.nextDouble().coerceAtLeast(1e-9)
+        return (-mean * kotlin.math.ln(u)).toLong().coerceIn(NODE_MESH_COVER_MIN_MS, NODE_MESH_COVER_MAX_MS)
+    }
+
+    // ─── Sealed own servers ───────────────────────────────────────────────────────────────────
+    private val _lockedServers = MutableStateFlow<List<NodeMeshManager.LockedServer>>(emptyList())
+    /** Own servers that restarted and wait for the user to unlock them (Settings shows these). */
+    val lockedServers: StateFlow<List<NodeMeshManager.LockedServer>> = _lockedServers.asStateFlow()
+
+    private fun startLockedServerCheck() {
+        scope.launch {
+            while (isActive) {
+                torManager.isReady.filter { it }.first()
+                if (nodeMeshManager.getControlAddresses().isNotEmpty()) {
+                    _lockedServers.value = runCatching { nodeMeshManager.findLockedServers(nodeMeshClient) }.getOrDefault(emptyList())
+                }
+                delay(LOCKED_SERVER_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+
+    fun checkLockedServersNow() {
+        scope.launch {
+            if (!torManager.isReady.value) return@launch
+            _lockedServers.value = runCatching { nodeMeshManager.findLockedServers(nodeMeshClient) }.getOrDefault(emptyList())
+        }
+    }
+
+    /** Unlocks [server] — called only from the confirm dialog in Settings. */
+    fun unlockServer(server: NodeMeshManager.LockedServer, onDone: (Boolean) -> Unit) {
+        scope.launch {
+            val ok = torManager.isReady.value && runCatching { nodeMeshManager.unlockServer(nodeMeshClient, server) }.getOrDefault(false)
+            if (ok) _lockedServers.update { list -> list.filter { it.sourceAddress != server.sourceAddress } }
+            onDone(ok)
         }
     }
 
@@ -564,69 +943,130 @@ class P2PNetworkManager @Inject constructor(
      *  next scheduled tick" reasoning as [pollRelayNow]. Safe to call freely: fetch never
      *  deletes (NODE_MESH_SPEC.md §4), so a redundant extra call just re-reads what's already
      *  there, same idempotence [ingestPacket]'s own dedup already relies on. */
-    fun pollNodeMeshNow() {
-        scope.launch { pollNodeMeshOnce() }
+    fun pollNodeMeshNow(contactId: String? = null) {
+        scope.launch { if (contactId != null) pollNodeMeshContact(contactId) else pollNodeMeshOnce() }
+    }
+
+    /** One poll round for every Node-Mesh contact, right now (used by [pollNodeMeshNow] without a contact). */
+    private suspend fun pollNodeMeshOnce() {
+        val ids = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+            .filter { it.nodeMesh }.map { it.id }
+        coroutineScope { ids.map { id -> async { pollNodeMeshContact(id) } }.awaitAll() }
     }
 
     /**
-     * Batched per distinct node ADDRESS across every Node-Mesh contact, not per contact — same
-     * reasoning as [pollRelayOnce]'s `tagsByTarget` map (see that function's doc comment):
-     * several contacts could share overlapping node infrastructure (e.g. a company hosting
-     * several employees' own nodes), and collapsing to one `fetchMany` call per distinct address
-     * avoids a redundant separate round-trip to the same server for each of them. Typically
-     * degrades to "one call per contact" anyway when nodes genuinely are unique per person, which
-     * costs nothing extra over the un-batched version — this is a pure win, never a regression.
+     * One poll round for ONE contact: one request per node address of that contact, never one that
+     * lists the tags of several contacts (that would tell the node operator the contacts belong to the
+     * same phone) and never one that lists 26 hourly tags (pre-audit M4). Only the epochs the contact
+     * can still be missing are asked for ([NodeMeshWindow]: two or three in the steady state, the full
+     * window after an app start or a failed poll). Every request carries the contact's own Tor
+     * isolation key ([IdentityManager.torIsolationKeyFor]), so Tor puts it on circuits of its own;
+     * what stays visible to a node operator is therefore not tied to the same phone through the circuit.
+     * The price is up to (nodes per contact) circuits per contact instead of one per distinct node.
      */
-    private suspend fun pollNodeMeshOnce() {
+    private suspend fun pollNodeMeshContact(contactId: String) {
         if (!torManager.isReady.value) return
-        val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
-            .filter { it.nodeMesh }
-        if (contacts.isEmpty()) return
+        val c = runCatching { contactDao.getContactById(contactId) }.getOrNull()?.takeIf { it.nodeMesh } ?: return
+        val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: return
+        val addresses = NodeMeshManager.parseNodeConnectionStringList(c.theirNodeAddresses ?: "")
+            .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+            // Temp Node (NODE_MESH_SPEC.md §7) — polled alongside the standard pool rather
+            // than switched to exclusively: fetch has no delete-on-fetch side effect, so
+            // checking both costs an extra request but never risks missing a message during
+            // the CONTACT's own activation/fallback transitions, which this device can't
+            // observe directly (that state lives on their phone, not this one).
+            .plus(c.theirTempNodeAddress?.let { listOf(it) } ?: emptyList())
+            .distinct()
+        if (addresses.isEmpty()) return
 
-        val waitMs = if (isChatActiveOrRecent()) RELAY_POLL_WAIT_MS_ACTIVE else RELAY_POLL_WAIT_MS_IDLE
-
-        val tagsByAddress = LinkedHashMap<String, MutableSet<String>>()
-        for (c in contacts) {
-            val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: continue
-            val addresses = NodeMeshManager.parseNodeConnectionStringList(c.theirNodeAddresses ?: "")
-                .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
-                // Temp Node (NODE_MESH_SPEC.md §7) — polled alongside the standard pool rather
-                // than switched to exclusively: fetch has no delete-on-fetch side effect, so
-                // checking both costs an extra request but never risks missing a message during
-                // the CONTACT's own activation/fallback transitions, which this device can't
-                // observe directly (that state lives on their phone, not this one).
-                .plus(c.theirTempNodeAddress?.let { listOf(it) } ?: emptyList())
-                .distinct()
-            if (addresses.isEmpty()) continue
-            val tags = identityManager.nodeMeshToleranceEpochs(NODE_MESH_DEFAULT_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
-                .map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch) }
-            // Every address is this ONE contact's own redundant node pool — added independently
-            // (a blob could be sitting on any of them, delete-on-fetch isn't in play here so
-            // there's no "already drained" risk in checking all).
-            for (address in addresses) {
-                tagsByAddress.getOrPut(address) { mutableSetOf() }.addAll(tags)
-            }
-        }
-        if (tagsByAddress.isEmpty()) return
-
-        // Every distinct address is fetched concurrently, same reasoning as pollRelayOnce's own
-        // concurrent target fetch — a long-poll blocks its own call for up to waitMs, and
-        // sequential addresses would otherwise multiply that wait by the number of distinct
-        // node servers in play this round instead of paying it once, in parallel.
+        val fullWindow = identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)
+        val current = fullWindow.first()
+        val mySeed = identityManager.myRoutingSeedFor(c)
+        val isolation = identityManager.torIsolationKeyFor(c.id)
+        // Every address is this ONE contact's own redundant node pool — each is asked on its own
+        // (a blob could be sitting on any of them; there is no delete-on-fetch).
         coroutineScope {
-            tagsByAddress.map { (address, tags) ->
+            addresses.map { address ->
                 async {
-                    for (chunk in tags.chunked(MAX_FETCH_MANY_TAGS_PER_CALL)) {
-                        val result = runCatching {
-                            nodeMeshClient.fetchMany(address, chunk, waitMs)
-                        }.getOrDefault(emptyMap())
-                        for ((tag, blobs) in result) {
-                            for (blob in blobs) runCatching { ingestPacket(tag, blob) }
-                        }
-                    }
+                    val key = "${c.id}|$address"
+                    val epochs = NodeMeshWindow.epochs(current, nodeMeshLastComplete[key], fullWindow)
+                    val tags = epochs.map { epoch -> identityManager.nodeMeshRoutingTag(seed, epoch, mySeed) }
+                    if (pollNodeMeshAddress(key, address, tags, isolation)) nodeMeshLastComplete[key] = current
+                    else nodeMeshLastComplete.remove(key)
                 }
             }.awaitAll()
         }
+        // Forget the state of addresses this contact no longer uses.
+        val keys = addresses.map { "${c.id}|$it" }.toSet()
+        nodeMeshCursors.keys.removeAll { it.startsWith("${c.id}|") && it !in keys }
+        nodeMeshLastComplete.keys.removeAll { it.startsWith("${c.id}|") && it !in keys }
+    }
+
+    // Per (contact, node address): the epoch in which the last poll was COMPLETE (everything the node
+    // had for the asked tags was downloaded). Memory only, like the cursors: after an app start the
+    // first poll asks for the full window once.
+    private val nodeMeshLastComplete = ConcurrentHashMap<String, Long>()
+
+    // Per (contact, node address): the server cursor up to which every blob of [NodeMeshCursor.tags] has
+    // been downloaded. Memory only — after an app restart the first poll fetches everything
+    // once (ingestPacket's dedup drops what was already seen).
+    private data class NodeMeshCursor(val cursor: Long, val tags: Set<String>)
+    private val nodeMeshCursors = ConcurrentHashMap<String, NodeMeshCursor>()
+
+    /**
+     * Tags already covered by the cursor are fetched incrementally (long-poll, only new blobs).
+     * Tags that just entered the window (a new hour) are fetched once from 0 — a sender whose
+     * clock runs ahead may have deposited under them before our cursor moved past. A node
+     * without cursor support (old server, Android node) answers without one; then every poll
+     * stays a full fetch, exactly as before.
+     */
+    private suspend fun pollNodeMeshAddress(key: String, address: String, tags: List<String>, isolationKey: String): Boolean {
+        val state = nodeMeshCursors[key]
+        val known = state?.tags ?: emptySet()
+        val fresh = tags.filter { it !in known }
+        val covered = tags.filter { it in known }
+        val cursors = ArrayList<Long?>()
+        // Cursors of chunks the node cut short (MAX packets per answer) and we could not finish.
+        val unfinished = ArrayList<Long>()
+        var failed = false
+
+        suspend fun run(group: List<String>, since: Long, wait: Long) {
+            val chunks = group.chunked(MAX_FETCH_MANY_TAGS_PER_CALL)
+            for (chunk in chunks) {
+                // Only a single-chunk call long-polls — several sequential waits would stack up.
+                var from = since
+                var rounds = 0
+                while (true) {
+                    val result = nodeMeshClient.fetchManySince(address, chunk, if (chunks.size == 1 && rounds == 0) wait else 0L, from, isolationKey)
+                    if (result == null) { failed = true; return }
+                    for ((tag, blobs) in result.blobs) {
+                        for (blob in blobs) runCatching { ingestPacket(tag, blob) }
+                    }
+                    rounds++
+                    val next = result.cursor
+                    if (result.more && next != null && next > from && rounds < NODE_MESH_MAX_CONTINUATIONS) { from = next; continue }
+                    cursors.add(next)
+                    if (result.more && next != null) unfinished.add(next)
+                    break
+                }
+            }
+        }
+
+        if (fresh.isNotEmpty()) run(fresh, 0L, if (covered.isEmpty()) NODE_MESH_POLL_WAIT_MS else 0L)
+        if (covered.isNotEmpty() && !failed) run(covered, state!!.cursor, NODE_MESH_POLL_WAIT_MS)
+
+        if (failed) return false
+        if (cursors.isEmpty() || cursors.any { it == null }) {
+            nodeMeshCursors.remove(key)
+        } else {
+            // A node's cursor comes from the packets it handed us for these tags, not from a counter of
+            // the whole server. A chunk that was answered completely says "nothing more up to now", so
+            // the furthest cursor is safe; a chunk that was cut short pins the bound to where it stopped.
+            val bound = if (unfinished.isNotEmpty()) unfinished.min() else cursors.filterNotNull().max()
+            nodeMeshCursors[key] = NodeMeshCursor(bound, tags.toSet())
+        }
+        // Complete = nothing was cut short and cut off. Only then may older epochs drop out of the next window.
+        return unfinished.isEmpty()
     }
 
     // Solange ein Chat geöffnet ist, den Tor-Sendepfad zu genau diesem Kontakt
@@ -647,7 +1087,8 @@ class P2PNetworkManager @Inject constructor(
             // background relay poll — check right now, so anything already queued (relay
             // MANDATORY contacts especially) shows up as fast as the Tor RTT allows.
             pollRelayNow()
-            pollNodeMeshNow()
+            // No extra Node-Mesh poll here on purpose: one right when a chat opens would tell
+            // the node exactly that. The constant long-poll rhythm delivers just as fast.
         } else {
             recentContactId?.let {
                 recentContactWarmUntil = System.currentTimeMillis() + ACTIVE_CHAT_GRACE_MS
@@ -800,6 +1241,12 @@ class P2PNetworkManager @Inject constructor(
     // after a bounce the next check waits 45s so the republish plus a slow mobile self-connect
     // get a realistic chance before being judged again.
     private fun verifyReachabilityAfterNetworkChange() {
+        // Nothing of ours to reach without an own onion service — and a failed self-check
+        // would bounce Tor for no reason.
+        if (!torManager.hostingOwnOnion.value) {
+            _selfReachable.value = null
+            return
+        }
         if (reachabilityCheckJob?.isActive == true) return
         reachabilityCheckJob = scope.launch {
             val deadline = System.currentTimeMillis() + 240_000
@@ -840,6 +1287,10 @@ class P2PNetworkManager @Inject constructor(
             while (isActive) {
                 delay(4 * 60_000L)
                 if (!torManager.isReady.value) continue
+                if (!torManager.hostingOwnOnion.value) {
+                    _selfReachable.value = null
+                    continue
+                }
                 runCatching { rotateVerifiedOnionIfDue() } // day-granularity; a cheap no-op most cycles
                 if (reachabilityCheckJob?.isActive == true) continue
                 if (isSelfReachableViaTor()) {
@@ -951,7 +1402,7 @@ class P2PNetworkManager @Inject constructor(
         }.getOrNull() ?: return
         if (encrypted.size > NetworkObfuscation.PACKET_SIZE - 8) return
         val padded = NetworkObfuscation.padPacket(encrypted)
-        val wireId = identityManager.myWireId(contact.publicKey, identity = contact.myWireIdentity ?: identityManager.userId)
+        val wireId = identityManager.myWireId(contact.publicKey, identity = contact.myWireIdentity ?: identityManager.userId, mine = identityManager.myMessageKeyFor(contact))
 
         // See attemptChunkTrainDelivery's matching comment — LAN matching key is remoteUserId,
         // not the local-only contact.id.
@@ -966,30 +1417,33 @@ class P2PNetworkManager @Inject constructor(
         }
     }
 
-    private fun acquireMulticastLock() {
-        val wifi = context.getSystemService(WifiManager::class.java)
-        multicastLock = wifi?.createMulticastLock("unpruuf_nsd")?.apply { acquire() }
-    }
-
     private fun startServer() {
         scope.launch {
             try {
-                val ss = ServerSocket(LOCAL_PORT).also { serverSocket = it }
-                while (isActive) {
-                    val client = runCatching { ss.accept() }.getOrNull() ?: break
-                    if (!acceptSemaphore.tryAcquire()) {
-                        client.runCatching { close() }
-                        continue
-                    }
-                    launch {
-                        try {
-                            receiveMessage(client)
-                        } finally {
-                            acceptSemaphore.release()
-                        }
-                    }
-                }
+                // Loopback only: this socket is what the own onion service maps to, and nothing
+                // else needs it. Bound to all interfaces it was a fixed, edition-specific open
+                // port (5432x) that any port scan in the same Wi-Fi could see. Same-Wi-Fi direct
+                // contacts get their own random-port socket from the LAN loop instead.
+                val ss = ServerSocket(LOCAL_PORT, 50, java.net.InetAddress.getByName("127.0.0.1")).also { serverSocket = it }
+                acceptLoop(ss)
             } catch (_: Exception) {}
+        }
+    }
+
+    private suspend fun acceptLoop(ss: ServerSocket) = coroutineScope {
+        while (isActive) {
+            val client = runCatching { ss.accept() }.getOrNull() ?: break
+            if (!acceptSemaphore.tryAcquire()) {
+                client.runCatching { close() }
+                continue
+            }
+            launch {
+                try {
+                    receiveMessage(client)
+                } finally {
+                    acceptSemaphore.release()
+                }
+            }
         }
     }
 
@@ -1082,15 +1536,22 @@ class P2PNetworkManager @Inject constructor(
     private suspend fun ingestPacketInner(wireId: String, packet: ByteArray): Boolean {
         // Unpad → decrypt with OUR OWN receive key (the key we shared in our QR code)
         val padded = runCatching { NetworkObfuscation.unpadPacket(packet) }.getOrNull() ?: return false
+        // A Node-Mesh contact paired with per-contact keys encrypts to the key I gave only them,
+        // so the sender has to be known before decrypting. Everything else uses the global key.
+        val earlySender = resolveSender(wireId)
+        val receiveKey = earlySender?.let { contactDao.getContactById(it) }
+            ?.takeIf { it.myPairMessageKey != null }
+            ?.let { identityManager.myMessageKeyFor(it) }
+            ?: identityManager.myMessageKey
         val plaintext = runCatching {
-            cryptoManager.decryptWithKey(padded, identityManager.myMessageKey)
+            cryptoManager.decryptWithKey(padded, receiveKey)
         }.getOrNull() ?: return false
 
         // Tarnpaket: still verwerfen.
         if (plaintext.contentEquals(DUMMY_SIGNAL)) return true
 
         // Rotierende Wire-ID → echten Kontakt auflösen.
-        val senderId = resolveSender(wireId) ?: return false
+        val senderId = earlySender ?: return false
 
         if (plaintext.contentEquals(REVOKE_SIGNAL)) {
             messageStore.zeroizeContact(senderId)
@@ -1173,6 +1634,11 @@ class P2PNetworkManager @Inject constructor(
             return true
         }
 
+        if (plaintextStr != null && plaintextStr.startsWith(GuestRenewal.SIGNAL_PREFIX)) {
+            applyGrantRenewal(senderId, plaintextStr)
+            return true
+        }
+
         if (plaintextStr != null && plaintextStr.startsWith(TEMP_NODE_SIGNAL_PREFIX)) {
             val address = NodeMeshManager.parseAddressConnectionString(plaintextStr.removePrefix(TEMP_NODE_SIGNAL_PREFIX))
             val contact = contactDao.getContactById(senderId)
@@ -1230,12 +1696,37 @@ class P2PNetworkManager @Inject constructor(
         // Must be identityManager.pairSecret(...), NOT contact.publicKey decoded raw — the
         // latter is this device's copy of the CONTACT's key, not a value both sides agree on.
         // See RatchetSessionManager.deriveSharedSecret's doc comment for the full explanation.
-        val pairSecret = identityManager.pairSecret(contact.publicKey)
+        val pairSecret = identityManager.pairSecretFor(contact)
         val realPlaintext = runCatching {
             ratchetSessionManager.decrypt(senderId, header, ciphertext, pairSecret)
         }.getOrNull() ?: return false
 
         val content = MessagePayload.decode(realPlaintext) ?: return false
+        // Pro Groups: a message to a group, sent to us as an ordinary 1:1 message by one member.
+        // Other editions never receive one (they pair only with their own kind) but still ACK and
+        // drop it rather than let the sender retry forever.
+        if (content is MessagePayload.Content.Group) {
+            if (AppEdition.isGroup) {
+                groupInbox.receive(senderId, content.groupId, content.memberCount, content.text)
+                showMessageNotification()
+            }
+            return true
+        }
+        // Whistleblower: the officer's case receipt / status update — stored on the contact for
+        // the "My case" screen, never shown as a chat line. The hello is our own kind; a peer
+        // never sends it to us, but it must not surface as text if one ever arrives.
+        if (content is MessagePayload.Content.Text) {
+            if (content.text.startsWith(OfficerCase.CASE_SIGNAL_PREFIX)) {
+                OfficerCase.parseCaseSignal(content.text.removePrefix(OfficerCase.CASE_SIGNAL_PREFIX))?.let { info ->
+                    contactDao.updateCaseInfo(
+                        senderId, info.number, info.status, info.openedAt, info.ackDueAt, info.feedbackDueAt, info.updatedAt
+                    )
+                    showMessageNotification()
+                }
+                return true
+            }
+            if (content.text == OfficerCase.CASE_HELLO_TEXT) return true
+        }
         val msg = when (content) {
             is MessagePayload.Content.Text -> RamMessage(
                 id = UUID.randomUUID().toString(),
@@ -1254,6 +1745,7 @@ class P2PNetworkManager @Inject constructor(
                 type = if (content.isImage) MessageType.IMAGE else MessageType.FILE,
                 fileName = content.name
             )
+            is MessagePayload.Content.Group -> return true // handled above
         }
         messageStore.addMessage(senderId, msg)
         messageStore.markUnread(senderId)
@@ -1287,8 +1779,9 @@ class P2PNetworkManager @Inject constructor(
             // determines which epochs are still worth checking.
             if (c.nodeMesh) {
                 val seed = c.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: continue
-                for (epoch in identityManager.nodeMeshToleranceEpochs(NODE_MESH_DEFAULT_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)) {
-                    if (identityManager.nodeMeshRoutingTag(seed, epoch) == wireId) return c.id
+                val mySeed = identityManager.myRoutingSeedFor(c)
+                for (epoch in identityManager.nodeMeshToleranceEpochs(NODE_MESH_MAX_TTL_MS, NODE_MESH_ROTATION_INTERVAL_MS)) {
+                    if (identityManager.nodeMeshRoutingTag(seed, epoch, mySeed) == wireId) return c.id
                 }
                 continue
             }
@@ -1298,7 +1791,7 @@ class P2PNetworkManager @Inject constructor(
                 // a generation counter instead of a clock bucket (see CROSS_PLATFORM_PLAN.md).
                 for (identity in identities) {
                     for (g in c.theirGeneration - WECHSEL_GENERATION_TOLERANCE..c.theirGeneration + WECHSEL_GENERATION_TOLERANCE) {
-                        if (identityManager.expectedWireId(c.publicKey, identity, g) == wireId) return c.id
+                        if (identityManager.expectedWireId(c.publicKey, identity, g, mine = identityManager.myMessageKeyFor(c)) == wireId) return c.id
                     }
                 }
                 continue
@@ -1308,7 +1801,7 @@ class P2PNetworkManager @Inject constructor(
             val hour = identityManager.currentHourBucket(identityManager.pairRotationOffsetSeconds(c.publicKey))
             for (identity in identities) {
                 for (h in longArrayOf(hour, hour - 1, hour + 1, hour - 2, hour + 2)) {
-                    if (identityManager.expectedWireId(c.publicKey, identity, h) == wireId) return c.id
+                    if (identityManager.expectedWireId(c.publicKey, identity, h, mine = identityManager.myMessageKeyFor(c)) == wireId) return c.id
                 }
             }
             if (c.remoteUserId.isNotBlank() && c.remoteUserId == wireId) return c.id // Legacy (alte App-Version)
@@ -1341,8 +1834,8 @@ class P2PNetworkManager @Inject constructor(
 
         val notification = NotificationCompat.Builder(context, UnpruufApplication.CHANNEL_MESSAGES)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("unpruuf")
-            .setContentText("New message received")
+            .setContentTitle(context.getString(R.string.notif_title))
+            .setContentText(context.getString(R.string.notif_new_message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setContentIntent(pendingIntent)
@@ -1394,7 +1887,7 @@ class P2PNetworkManager @Inject constructor(
         // using it directly here would silently break decryption on both ends. See
         // RatchetSessionManager.deriveSharedSecret's doc comment. contactKey itself stays as-is
         // below for the outer per-direction AES envelope, which is correctly asymmetric.
-        val pairSecret = identityManager.pairSecret(contact.publicKey)
+        val pairSecret = identityManager.pairSecretFor(contact)
         val encryptedMessage = runCatching {
             ratchetSessionManager.encrypt(toContactId, plaintext, pairSecret)
         }.getOrNull() ?: return
@@ -1416,12 +1909,14 @@ class P2PNetworkManager @Inject constructor(
         val crossPlatformWireId = if (contact.crossPlatform) {
             identityManager.myWireId(
                 contact.publicKey,
+                mine = identityManager.myMessageKeyFor(contact),
                 identity = contact.myWireIdentity ?: identityManager.userId,
                 hour = contact.myGeneration
             )
         } else null
         val relayCandidates = contactTheirRelayList(contact)
         val nodeMeshRoutingTag = nodeMeshTagFor(contact)
+        val nodeMeshNodes = myNodesFor(contact)
 
         // Chunked (multi-frame) transfers are relay-eligible too, same as single-frame ones:
         // RatchetFrame.Frame.ChunkCont now carries an explicit index, so the receive side
@@ -1444,7 +1939,8 @@ class P2PNetworkManager @Inject constructor(
                     isChunk = toEnqueue.size > 1,
                     crossPlatformWireId = crossPlatformWireId,
                     relayCandidates = relayCandidates,
-                    nodeMeshRoutingTag = nodeMeshRoutingTag
+                    nodeMeshRoutingTag = nodeMeshRoutingTag,
+                    nodeMeshNodes = nodeMeshNodes
                 )
             )
         }
@@ -1470,7 +1966,8 @@ class P2PNetworkManager @Inject constructor(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
                     myIdentity = contact.myWireIdentity,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1628,6 +2125,7 @@ class P2PNetworkManager @Inject constructor(
             val crossPlatformWireId = if (contact.crossPlatform) {
                 identityManager.myWireId(
                     contact.publicKey,
+                    mine = identityManager.myMessageKeyFor(contact),
                     identity = identityManager.userId,
                     hour = contact.myGeneration
                 )
@@ -1675,6 +2173,7 @@ class P2PNetworkManager @Inject constructor(
             val crossPlatformWireId = if (contact.crossPlatform) {
                 identityManager.myWireId(
                     contact.publicKey,
+                    mine = identityManager.myMessageKeyFor(contact),
                     identity = contact.myWireIdentity ?: identityManager.userId,
                     hour = contact.myGeneration
                 )
@@ -1724,7 +2223,8 @@ class P2PNetworkManager @Inject constructor(
             deliveryQueue.add(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1739,7 +2239,16 @@ class P2PNetworkManager @Inject constructor(
         scope.launch {
             val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
                 .filter { it.nodeMesh }
-            for (c in contacts) sendNodeMigrationSignal(c.id, oldAddress, newAddress)
+            for (c in contacts) {
+                // Only contacts that were given the moving node — everyone else never knew it.
+                if (myNodesFor(c)?.contains(oldAddress) != true) continue
+                c.myNodeAddresses?.let { raw ->
+                    val updated = NodeMeshManager.parseNodeConnectionStringList(raw)
+                        .map { if (NodeMeshManager.parseAddressConnectionString(it) == oldAddress) NodeMeshManager.buildAddressConnectionString(newAddress) else it }
+                    contactDao.updateMyNodeAddresses(c.id, updated.joinToString(";"))
+                }
+                sendNodeMigrationSignal(c.id, oldAddress, newAddress)
+            }
         }
     }
 
@@ -1774,7 +2283,8 @@ class P2PNetworkManager @Inject constructor(
             deliveryQueue.add(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1808,7 +2318,8 @@ class P2PNetworkManager @Inject constructor(
             deliveryQueue.add(
                 PendingDelivery(
                     null, toContactId, padded, contact.publicKey,
-                    nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                    nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                    nodeMeshNodes = myNodesFor(contact)
                 )
             )
             wakeSignal.trySend(Unit)
@@ -1839,7 +2350,9 @@ class P2PNetworkManager @Inject constructor(
                     .filter { it.nodeMesh && it.tempNodeAddress != null }
                 for (c in contacts) {
                     val address = c.tempNodeAddress ?: continue
-                    val alive = runCatching { nodeMeshClient.healthCheck(address) }.getOrDefault(false)
+                    // A phone-hosted Temp Node that is no longer running (app restarted) is never "alive".
+                    val alive = if (c.tempNodeOnPhone && !phoneTempNode.isOwn(address)) false
+                        else runCatching { nodeMeshClient.healthCheck(address) }.getOrDefault(false)
                     if (alive) {
                         consecutiveFailures.remove(c.id)
                         if (!c.tempNodeActive) contactDao.setTempNodeActive(c.id, true)
@@ -1895,6 +2408,7 @@ class P2PNetworkManager @Inject constructor(
             val padded = NetworkObfuscation.padPacket(encrypted)
             val wireId = identityManager.myWireId(
                 contact.publicKey,
+                mine = identityManager.myMessageKeyFor(contact),
                 identity = contact.myWireIdentity ?: identityManager.userId,
                 hour = oldGeneration
             )
@@ -1919,6 +2433,7 @@ class P2PNetworkManager @Inject constructor(
      * make fail, forever, by design (that's what "delete" does).
      */
     fun sendDeleteContact(toContactId: String) {
+        if (phoneTempNode.runningFor() == toContactId) phoneTempNode.stop()
         scope.launch {
             val contact = contactDao.getContactById(toContactId) ?: return@launch
             val onion = contact.onionAddress
@@ -1935,6 +2450,7 @@ class P2PNetworkManager @Inject constructor(
                     val crossPlatformWireId = if (contact.crossPlatform) {
                         identityManager.myWireId(
                             contact.publicKey,
+                            mine = identityManager.myMessageKeyFor(contact),
                             identity = contact.myWireIdentity ?: identityManager.userId,
                             hour = contact.myGeneration
                         )
@@ -1946,7 +2462,8 @@ class P2PNetworkManager @Inject constructor(
                             myIdentity = contact.myWireIdentity, onionOverride = onion,
                             crossPlatformWireId = crossPlatformWireId,
                             relayCandidates = relayCandidates,
-                            nodeMeshRoutingTag = nodeMeshTagFor(contact)
+                            nodeMeshRoutingTag = nodeMeshTagFor(contact),
+                            nodeMeshNodes = myNodesFor(contact)
                         )
                     )
                     wakeSignal.trySend(Unit)
@@ -2090,7 +2607,7 @@ class P2PNetworkManager @Inject constructor(
             if (!torManager.isReady.value) return delivered
             val tag = train.first().nodeMeshRoutingTag!!
             while (delivered < train.size) {
-                if (!depositForNodeMesh(contactId, tag, train[delivered].padded)) break
+                if (!depositForNodeMesh(contactId, tag, train[delivered].padded, train[delivered].nodeMeshNodes)) break
                 delivered++
             }
             return delivered
@@ -2168,17 +2685,17 @@ class P2PNetworkManager @Inject constructor(
      * delivered when both sides happened to have configured the very same relay — which is
      * exactly the gap the advertised list closes.
      */
-    private fun relayTargetsFor(item: PendingDelivery): List<RelayManager.ParsedConnection> {
+    private fun relayTargetsFor(item: PendingDelivery): List<ParsedConnection> {
         val advertised = item.relayCandidates.orEmpty().mapNotNull { RelayManager.parseConnectionString(it) }
         if (advertised.isNotEmpty()) return advertised
         if (!relayManager.isUsable()) return emptyList()
-        return listOf(RelayManager.ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
+        return listOf(ParsedConnection(relayManager.getRelayOnion(), relayManager.getAuthToken()))
     }
 
     /** Tries each target in order, stopping at the first success — a retry on the next candidate
      *  after one fails is "try somewhere else", not a double-send. */
     private suspend fun pushToRelays(
-        targets: List<RelayManager.ParsedConnection>,
+        targets: List<ParsedConnection>,
         wireId: String,
         padded: ByteArray
     ): Boolean = targets.any { relayClient.push(it.address, it.authToken, wireId, padded) }
@@ -2192,8 +2709,17 @@ class P2PNetworkManager @Inject constructor(
      */
     private fun nodeMeshTagFor(contact: com.nexonai.unpruuf.data.model.Contact): String? {
         if (!contact.nodeMesh) return null
-        val seed = contact.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: return null
-        return identityManager.nodeMeshRoutingTag(seed, identityManager.nodeMeshEpoch(NODE_MESH_ROTATION_INTERVAL_MS))
+        return identityManager.nodeMeshRoutingTagFor(contact, identityManager.nodeMeshEpoch(NODE_MESH_ROTATION_INTERVAL_MS))
+    }
+
+    /** The own nodes [contact] polls me at — its assigned ones, or (paired before per-contact
+     *  nodes) the first [NodeMeshManager.NODE_POOL_MAX_SIZE] of the pool, as it was told then. */
+    private fun myNodesFor(contact: com.nexonai.unpruuf.data.model.Contact): List<String>? {
+        if (!contact.nodeMesh) return null
+        val assigned = contact.myNodeAddresses?.let { raw ->
+            NodeMeshManager.parseNodeConnectionStringList(raw).mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+        }
+        return assigned ?: nodeMeshManager.getMyNodePool().take(NodeMeshManager.NODE_POOL_MAX_SIZE).map { it.address }
     }
 
     /**
@@ -2206,14 +2732,66 @@ class P2PNetworkManager @Inject constructor(
      * depends on the CONTACT's row existing, so there's no "deleted mid-flight" risk to guard
      * against here the way [nodeMeshTagFor] does.
      */
-    private suspend fun depositToOwnNodes(routingTag: String, padded: ByteArray): Boolean {
-        val pool = nodeMeshManager.getMyNodePool()
-        if (pool.isEmpty()) return false
+    private suspend fun depositToOwnNodes(addresses: List<String>, routingTag: String, padded: ByteArray, ttlMs: Long? = null, isolationKey: String? = null): Boolean {
+        val pool = nodeMeshManager.getMyNodePool().associateBy { it.address }
+        val targets = addresses.mapNotNull { pool[it] }
+        if (targets.isEmpty()) return false
         var anySucceeded = false
-        for (node in pool) {
-            if (nodeMeshClient.deposit(node.address, node.ownerSecret, routingTag, padded)) anySucceeded = true
+        for (node in targets) {
+            if (nodeMeshClient.deposit(node.address, node.ownerSecret, routingTag, padded, ttlMs, isolationKey)) anySucceeded = true
         }
         return anySucceeded
+    }
+
+    /** What a guest's deposits ran into for one contact (free Client app); cleared by the next
+     *  deposit that works. Shown in the chat so the guest knows what to do. */
+    enum class GuestIssue { REFUSED, QUOTA }
+
+    private val _guestIssues = MutableStateFlow<Map<String, GuestIssue>>(emptyMap())
+    val guestIssues: StateFlow<Map<String, GuestIssue>> = _guestIssues.asStateFlow()
+
+    private fun setGuestIssue(contactId: String, issue: GuestIssue?) {
+        _guestIssues.value = if (issue == null) _guestIssues.value - contactId else _guestIssues.value + (contactId to issue)
+    }
+
+    /**
+     * Free Client app (GUEST_LOCKERS_BUILD_SPEC.md §7.2): deposits [padded] on every node of the
+     * inviter that this guest holds a valid grant for. A grant that has run out is not even tried.
+     * A node that answers 401 (expired, forged, guests off) or 429 (sending limit) only changes
+     * what the chat says; the message stays queued and is tried again. There is deliberately no
+     * fallback to any own node or any other path.
+     */
+    private fun depositAsGuest(contact: com.nexonai.unpruuf.data.model.Contact, routingTag: String, padded: ByteArray, ttlMs: Long?, isolationKey: String? = null): Boolean {
+        val addresses = NodeMeshManager.parseNodeConnectionStringList(contact.myNodeAddresses ?: "")
+            .mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+        val grants = GuestClient.grantsFor(contact.guestGrants, addresses.size)
+        val now = System.currentTimeMillis()
+        var stored = false
+        var tried = 0
+        var refused = 0
+        var overQuota = 0
+        for ((i, address) in addresses.withIndex()) {
+            val token = grants[i]
+            if (token.isEmpty()) continue
+            tried++
+            if ((GuestGrant.parse(token)?.notAfterMs ?: 0L) <= now) { refused++; continue }
+            when (nodeMeshClient.depositAsGuest(address, token, routingTag, padded, ttlMs, isolationKey)) {
+                NodeMeshClient.GuestDepositResult.OK -> stored = true
+                NodeMeshClient.GuestDepositResult.GRANT_REFUSED -> refused++
+                NodeMeshClient.GuestDepositResult.QUOTA_REACHED -> overQuota++
+                NodeMeshClient.GuestDepositResult.FAILED -> {}
+            }
+        }
+        setGuestIssue(
+            contact.id,
+            when {
+                stored -> null
+                tried == 0 || refused == tried -> GuestIssue.REFUSED
+                overQuota > 0 -> GuestIssue.QUOTA
+                else -> null
+            }
+        )
+        return stored
     }
 
     /**
@@ -2226,15 +2804,31 @@ class P2PNetworkManager @Inject constructor(
      * standard pool when that lookup comes back null keeps this from ever being a hard failure
      * point the way the cross-platform/Node-Mesh branches above are careful to avoid.
      */
-    private suspend fun depositForNodeMesh(contactId: String, routingTag: String, padded: ByteArray): Boolean {
+    private suspend fun depositForNodeMesh(contactId: String, routingTag: String, padded: ByteArray, snapshotNodes: List<String>?): Boolean {
         val contact = contactDao.getContactById(contactId)
+        val nodes = contact?.let { myNodesFor(it) } ?: snapshotNodes
+            ?: nodeMeshManager.getMyNodePool().take(NodeMeshManager.NODE_POOL_MAX_SIZE).map { it.address }
         val tempAddress = contact?.tempNodeAddress
         val tempSecret = contact?.tempNodeOwnerSecret
-        if (contact == null || tempAddress == null || tempSecret == null) {
-            return depositToOwnNodes(routingTag, padded)
+        // The chat's own packet lifetime (1 / 6 / 24 h, MessageTtl). A contact row that is already
+        // gone sends with the node's default, which is the longest it allows.
+        val ttlMs = contact?.let { MessageTtl.toMillis(it.messageTtlHours) }
+        // The contact's own Tor isolation key (also when its row is gone: the key depends only on the id).
+        val isolation = identityManager.torIsolationKeyFor(contactId)
+        // Free Client app: no own nodes, only the grants the inviter issued. Never any fallback.
+        if (contact != null && !contact.guestGrants.isNullOrEmpty()) {
+            return depositAsGuest(contact, routingTag, padded, ttlMs, isolation)
         }
-        val tempSucceeded = nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded)
-        if (tempSucceeded && !contact.tempNodeActive) {
+        if (contact == null || tempAddress == null || tempSecret == null) {
+            return depositToOwnNodes(nodes, routingTag, padded, ttlMs, isolation)
+        }
+        // A Temp Node that runs on THIS phone is filled directly (no Tor round trip to ourselves).
+        // Such a deposit always works, so it proves nothing about the contact being able to reach
+        // it: "confirmed" comes only from the heartbeat's real reachability check (below).
+        val onThisPhone = phoneTempNode.isOwn(tempAddress)
+        val tempSucceeded = if (onThisPhone) phoneTempNode.localDeposit(routingTag, padded, ttlMs)
+            else nodeMeshClient.deposit(tempAddress, tempSecret, routingTag, padded, ttlMs, isolation)
+        if (tempSucceeded && !onThisPhone && !contact.tempNodeActive) {
             // First successful deposit via the Temp Node — §7 step 6's confirmation ("erste
             // erfolgreiche eigene Nachricht über den Temp Node in diese Richtung"). From here on
             // this contact's outgoing traffic uses the Temp Node exclusively (see the ACTIVE
@@ -2248,11 +2842,11 @@ class P2PNetworkManager @Inject constructor(
             // for THIS one message if the deposit above failed, so a message isn't lost in the
             // gap before the heartbeat loop notices an outage and flips the state back — the
             // state itself is heartbeat-governed, not decided per-send.
-            return tempSucceeded || depositToOwnNodes(routingTag, padded)
+            return tempSucceeded || depositToOwnNodes(nodes, routingTag, padded, ttlMs, isolation)
         }
         // Registered but not yet confirmed: dual-deposit, standard nodes stay the reliable path
         // until the Temp Node has proven itself reachable at least once.
-        val standardSucceeded = depositToOwnNodes(routingTag, padded)
+        val standardSucceeded = depositToOwnNodes(nodes, routingTag, padded, ttlMs, isolation)
         return tempSucceeded || standardSucceeded
     }
 
@@ -2289,7 +2883,7 @@ class P2PNetworkManager @Inject constructor(
         // NODE_MESH_SPEC.md §0/§1, this is a fully separate, mandatory-node-only transport.
         if (item.nodeMeshRoutingTag != null) {
             if (!torManager.isReady.value) return false
-            return depositForNodeMesh(item.contactId, item.nodeMeshRoutingTag, item.padded)
+            return depositForNodeMesh(item.contactId, item.nodeMeshRoutingTag, item.padded, item.nodeMeshNodes)
         }
 
         val contact = contactDao.getContactById(item.contactId)
@@ -2505,12 +3099,73 @@ class P2PNetworkManager @Inject constructor(
      *  UI-only (transport line in the contact list) — delivery decides per attempt. */
     fun isLanPeer(contactId: String) = lanPeers.containsKey(contactId.take(8))
 
-    private fun registerService() {
-        nsdManager = context.getSystemService(NsdManager::class.java) ?: return
+    // ---- Same-Wi-Fi fast path (direct contacts only) — see LanDiscovery for the why. ----
+
+    private var lanServerSocket: ServerSocket? = null
+    private var lanServerJob: Job? = null
+    private var lanRegisteredName: String? = null
+    private var lanActive = false
+    // Announced name → contact short id (remoteUserId.take(8), the key lanPeers already uses).
+    @Volatile private var lanNameToPeer: Map<String, String> = emptyMap()
+
+    /** LAN discovery exists for direct (onion) contacts. Business/Node-Mesh and cross-platform
+     *  contacts never use it, and the whistleblower edition must never announce anything. */
+    private suspend fun lanDiscoveryNeeded(): Boolean {
+        if (AppEdition.isWhistleblower) return false
+        val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrNull() ?: return false
+        return contacts.any { !it.nodeMesh && !it.crossPlatform && it.remoteUserId.isNotBlank() }
+    }
+
+    private fun startLanDiscoveryLoop() {
+        scope.launch {
+            while (isActive) {
+                runCatching { updateLanDiscovery() }
+                delay(LAN_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun updateLanDiscovery() {
+        if (!lanDiscoveryNeeded()) {
+            if (lanActive) stopLan()
+            return
+        }
+        val epoch = LanDiscovery.epoch()
+        lanNameToPeer = runCatching { contactDao.getAllContactsOnce() }.getOrDefault(emptyList())
+            .filter { !it.nodeMesh && !it.crossPlatform && it.remoteUserId.isNotBlank() }
+            .flatMap { c -> LanDiscovery.candidateNames(c.remoteUserId, epoch).map { it to c.remoteUserId.take(8) } }
+            .toMap()
+        if (!lanActive) {
+            lanActive = true
+            acquireMulticastLock()
+            openLanServer()
+            discoverPeers()
+        }
+        val name = LanDiscovery.serviceName(identityManager.userId, epoch)
+        if (name != lanRegisteredName) registerService(name)
+    }
+
+    // Random port on all interfaces, only while LAN discovery runs — a fixed port number would
+    // be its own fingerprint.
+    private fun openLanServer() {
+        val ss = runCatching { ServerSocket(0) }.getOrNull() ?: return
+        lanServerSocket = ss
+        lanServerJob = scope.launch { runCatching { acceptLoop(ss) } }
+    }
+
+    private fun acquireMulticastLock() {
+        val wifi = context.getSystemService(WifiManager::class.java)
+        multicastLock = wifi?.createMulticastLock("lan")?.apply { setReferenceCounted(false); acquire() }
+    }
+
+    private fun registerService(name: String) {
+        val port = lanServerSocket?.localPort ?: return
+        nsdManager = nsdManager ?: context.getSystemService(NsdManager::class.java) ?: return
+        regListener?.let { runCatching { nsdManager?.unregisterService(it) } }
         val info = NsdServiceInfo().apply {
-            serviceName = "unpruuf_${identityManager.userId.take(8)}"
-            serviceType = SERVICE_TYPE
-            port = LOCAL_PORT
+            serviceName = name
+            serviceType = LanDiscovery.SERVICE_TYPE
+            this.port = port
         }
         regListener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(i: NsdServiceInfo) {}
@@ -2519,42 +3174,57 @@ class P2PNetworkManager @Inject constructor(
             override fun onUnregistrationFailed(i: NsdServiceInfo, code: Int) {}
         }
         nsdManager?.registerService(info, NsdManager.PROTOCOL_DNS_SD, regListener)
+        lanRegisteredName = name
     }
 
     private fun discoverPeers() {
+        nsdManager = nsdManager ?: context.getSystemService(NsdManager::class.java) ?: return
         discListener = object : NsdManager.DiscoveryListener {
             override fun onStartDiscoveryFailed(st: String, code: Int) {}
             override fun onStopDiscoveryFailed(st: String, code: Int) {}
             override fun onDiscoveryStarted(st: String) {}
             override fun onDiscoveryStopped(st: String) {}
             override fun onServiceFound(service: NsdServiceInfo) {
-                if (service.serviceName.startsWith("unpruuf_")) {
-                    nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(i: NsdServiceInfo, code: Int) {}
-                        override fun onServiceResolved(i: NsdServiceInfo) {
-                            val shortId = i.serviceName.removePrefix("unpruuf_")
-                            if (shortId == identityManager.userId.take(8)) return
-                            val host = i.host?.hostAddress ?: return
-                            lanPeers[shortId] = Pair(host, i.port)
-                            flushQueue()
-                        }
-                    })
-                }
+                // Only names a known direct contact can be announcing are resolved at all — every
+                // other HTTP service on the network (printers, TVs) is ignored untouched.
+                val shortId = lanNameToPeer[service.serviceName] ?: return
+                nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(i: NsdServiceInfo, code: Int) {}
+                    override fun onServiceResolved(i: NsdServiceInfo) {
+                        val host = i.host?.hostAddress ?: return
+                        lanPeers[shortId] = Pair(host, i.port)
+                        flushQueue()
+                    }
+                })
             }
             override fun onServiceLost(service: NsdServiceInfo) {
-                lanPeers.remove(service.serviceName.removePrefix("unpruuf_"))
+                lanNameToPeer[service.serviceName]?.let { lanPeers.remove(it) }
             }
         }
-        nsdManager?.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discListener)
+        nsdManager?.discoverServices(LanDiscovery.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discListener)
+    }
+
+    private fun stopLan() {
+        lanActive = false
+        regListener?.let { runCatching { nsdManager?.unregisterService(it) } }
+        discListener?.let { runCatching { nsdManager?.stopServiceDiscovery(it) } }
+        regListener = null
+        discListener = null
+        lanRegisteredName = null
+        lanServerSocket?.runCatching { close() }
+        lanServerSocket = null
+        lanServerJob?.cancel()
+        lanServerJob = null
+        lanPeers.clear()
+        multicastLock?.runCatching { release() }
+        multicastLock = null
     }
 
     fun stop() {
         started = false
-        runCatching { nsdManager?.unregisterService(regListener) }
-        runCatching { nsdManager?.stopServiceDiscovery(discListener) }
+        stopLan()
         closeAllPooledConnections()
         serverSocket?.runCatching { close() }
-        multicastLock?.runCatching { release() }
         scope.cancel()
     }
 }

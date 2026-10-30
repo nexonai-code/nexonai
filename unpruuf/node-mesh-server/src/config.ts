@@ -1,45 +1,91 @@
 import * as path from "path";
+import { MAX_TTL_HOURS, resolveProfile, resolveSlot, slotPorts, slotResetOffsetMs } from "./profiles";
 
 /**
  * A single deposited blob is the same padded-outer-packet size every other unpruuf transport
- * caps at (see the consumer relay's `server/src/config.ts` for the full sizing rationale this
- * mirrors) — 4096 bytes, AES/Ratchet-wrapped, fixed regardless of message length.
+ * caps at — 4096 bytes, AES/Ratchet-wrapped, fixed regardless of message length.
  */
 export const MAX_BLOB_BYTES = 4096;
 
-// Per-tag queue cap. NODE_MESH_SPEC.md §8 flags this explicitly: without delete-on-fetch, an
-// already-read blob keeps occupying its slot until TTL sweep removes it, so a tag can hold more
-// concurrent entries within one TTL window than the old delete-on-fetch relay ever could. Kept
-// at the same starting value as the consumer relay's MAX_BLOBS_PER_TAG (1500) per the spec's own
-// note to start there and re-tune against real deployment TTL/rotation choices, not invent a new
-// number without data.
+// Per-tag queue cap (NODE_MESH_SPEC.md §8/§9 asked for this to be re-checked against the TTL
+// defaults, since fetch no longer drains a tag). Result: TTL doesn't matter here — the routing
+// tag rotates every hour, so one tag only ever collects ONE hour's worth of one contact's
+// outgoing traffic, whatever the TTL. 1500 covers a full 5 MB attachment (~1311 chunks) inside a
+// single hour with headroom, so the consumer relay's value stays correct as is.
 export const MAX_BLOBS_PER_TAG = 1500;
 
-// Default TTL — NODE_MESH_SPEC.md §3, chosen to match the consumer relay's own DEFAULT_TTL_HOURS
-// so the two products don't carry two unrelated "reasonable default" numbers. Deployment-
-// configurable, same as the consumer relay's own TTL.
-export const DEFAULT_TTL_HOURS = 6;
+export const NODE_PROFILE = resolveProfile(process.env.NODE_PROFILE);
+export const NODE_SLOT = resolveSlot(process.env.NODE_SLOT);
+export const DEFAULT_TTL_HOURS = NODE_PROFILE.ttlHours;
+export { MAX_TTL_HOURS };
 
-export const SWEEP_INTERVAL_MS = 15 * 60 * 1000;
+// Expired rows are already invisible to /fetch (nodeStore filters on expires_at); the sweep
+// bounds how long they physically linger on disk after that. After a sweep that removed rows the
+// WAL file is truncated too (nodeStore.sweepExpired), so expired ciphertext is gone from the files,
+// not only from the table.
+export const SWEEP_INTERVAL_MS = 60 * 1000;
 
-// POST /fetchMany's per-request tag cap and long-poll wait ceiling — identical values and
-// reasoning to the consumer relay's own MAX_FETCH_MANY_TAGS/MAX_WAIT_MS (server/src/config.ts):
-// 64 tags comfortably covers NODE_MESH_SPEC.md §3's default tolerance window (7 tags at the
-// documented 1h/6h defaults) with headroom for longer-TTL deployments; 55s stays under typical
-// reverse-proxy idle-connection timeouts.
+// Hard ceiling for everything waiting on this node, over all tags. The per-tag cap bounds one tag,
+// but tags rotate every hour and the owner's app picks them, so without a total a buggy or hijacked
+// owner client could fill the disk inside the TTL window. 200 000 packets of 4 KB is about 1.1 GB
+// as stored (base64 text). NODE_MESH_MAX_BLOBS overrides it.
+const maxBlobsEnv = Number(process.env.NODE_MESH_MAX_BLOBS);
+export const MAX_BLOBS_TOTAL = Number.isInteger(maxBlobsEnv) && maxBlobsEnv > 0 ? maxBlobsEnv : 200_000;
+
+// 64 tags covers the clients' 25-epoch tolerance window (profiles.ts) with headroom; 55s stays
+// under typical reverse-proxy idle timeouts. Same values as the consumer relay.
 export const MAX_FETCH_MANY_TAGS = 64;
+/** Most packets one /fetchMany answer carries (about 1.4 MB as JSON). The rest follows via the cursor. */
+export const MAX_FETCH_MANY_BLOBS = 256;
 export const MAX_WAIT_MS = 55_000;
 
-// NODE_MESH_SPEC.md §5's staggered Reset — connection/socket hygiene only, never message data
-// (see nodeStore.ts). RESET_INTERVAL_MS is the cycle length; RESET_OFFSET_MS is where in that
-// cycle THIS node instance's reset falls, so that running up to 3 instances (one per own node,
-// each its own process/deployment) with offsets like 0 / 20min / 40min keeps at least one always
-// mid-cycle. Both operator-configurable per instance — there is no way for one process to know
-// it's "node 2 of 3" without being told.
+// NODE_MESH_SPEC.md §5's staggered Reset. The slot picks this node's position in the 24h cycle
+// (0 / 20 / 40 min); NODE_MESH_RESET_OFFSET_MS stays as an expert override.
 export const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
-export const RESET_OFFSET_MS = Number(process.env.NODE_MESH_RESET_OFFSET_MS ?? 0);
+export const RESET_OFFSET_MS = process.env.NODE_MESH_RESET_OFFSET_MS !== undefined
+  ? Number(process.env.NODE_MESH_RESET_OFFSET_MS)
+  : slotResetOffsetMs(NODE_SLOT);
 
-export const PORT = Number(process.env.PORT ?? 8788);
-export const DATA_DIR = process.env.NODE_MESH_DATA_DIR ?? path.join(__dirname, "..");
+const ports = slotPorts(NODE_SLOT);
+export const PORT = Number(process.env.PORT ?? ports.apiPort);
+export const ADMIN_PORT = Number(process.env.ADMIN_PORT ?? ports.adminPort);
+
+export const PACKAGE_ROOT = path.join(__dirname, "..");
+export const DATA_DIR = process.env.NODE_MESH_DATA_DIR ?? path.join(PACKAGE_ROOT, "data", `node-${NODE_SLOT}`);
 export const DB_PATH = process.env.NODE_MESH_DB_PATH ?? path.join(DATA_DIR, "node-mesh.sqlite");
 export const IDENTITY_PATH = path.join(DATA_DIR, "node-mesh-identity.json");
+// The server license (license.ts): written by the setup page, or NODE_MESH_LICENSE in the environment.
+export const LICENSE_PATH = path.join(DATA_DIR, "license.txt");
+// The company's own Tor bridge lines (bridgeLines.ts), set on the setup page, exported with the node list.
+export const BRIDGE_LINES_PATH = path.join(DATA_DIR, "bridge-lines.txt");
+export const TOR_BIN_DIR = process.env.NODE_MESH_TOR_BIN_DIR ?? path.join(PACKAGE_ROOT, "tor-bin");
+
+// Where the encrypted packets wait. Default: a file on disk, so packets survive a restart (until
+// their TTL). NODE_MESH_STORE=ram keeps them in memory only: a restart (or power loss) drops every
+// waiting packet and nothing is ever written to the disk. A Temp Node is always in memory.
+export const STORE_IN_RAM = process.env.NODE_MESH_STORE === "ram";
+
+// With NODE_MESH_REQUIRE_SIGNED=1 the server refuses to start unless its program files match the
+// signed release list (integrity.ts). For operators who would rather have no server than a changed one.
+export const REQUIRE_SIGNED = process.env.NODE_MESH_REQUIRE_SIGNED === "1";
+
+// Tor is mandatory for a real node. NODE_MESH_TOR=0 exists only for automated tests and for an
+// operator who already runs their own Tor hidden service in front of PORT — never a LAN shortcut.
+export const TOR_ENABLED = process.env.NODE_MESH_TOR !== "0";
+
+// Where owner secret + node keys live between restarts (nodeIdentity.ts). "sealed" (default):
+// encrypted under the owner secret, server stays locked after a restart until the owner app
+// unlocks it. "disk": plain file, unattended restarts.
+export const KEY_STORAGE: "sealed" | "disk" = process.env.NODE_MESH_KEY_STORAGE === "disk" ? "disk" : "sealed";
+
+// Tor's onion-service proof-of-work defense (Tor ≥ 0.4.8). Values are Tor's own defaults.
+export const POW = { queueRate: 250, queueBurst: 2500 };
+
+// Guest grants (GUEST_LOCKERS_BUILD_SPEC.md): lets a free Client app user without servers of their
+// own deposit with a signed, expiring token issued by the owner. OFF by default; with the switch
+// off, a `Guest` credential is refused like any wrong credential. The caps below are the node
+// operator's ceiling; a grant may ask for less, never more.
+export const GUEST_GRANTS_ENABLED = process.env.NODE_MESH_GUEST_GRANTS === "1";
+export const GUEST_MAX_VALIDITY_MS = Number(process.env.NODE_MESH_GUEST_MAX_VALIDITY_DAYS ?? 30) * 24 * 60 * 60 * 1000;
+export const GUEST_MAX_DEPOSITS_PER_HOUR = Number(process.env.NODE_MESH_GUEST_MAX_DEPOSITS_PER_HOUR ?? 120);
+export const GUEST_MAX_BYTES_PER_HOUR = Number(process.env.NODE_MESH_GUEST_MAX_BYTES_PER_HOUR ?? 2 * 1024 * 1024);

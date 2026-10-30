@@ -129,3 +129,35 @@ in (e.g. their own customers/contacts), so it carries no cost of its own. See
 
 *Part of the unpruuf project · built by NexonAI · see `STATUS.md` for the full
 feature status.*
+
+
+---
+
+## unpruuf Pro Groups (added 2026-10-13)
+
+Pro (Business) plus local groups, as its own edition: install id `com.nexonai.unpruuf.group`,
+violet accent, variant `groupDebug` / `groupRelease`. Pro is unchanged.
+
+| I am… | I can add… |
+|---|---|
+| **Pro Groups** | Pro Groups only |
+| Pro / Standard / Client | never a Pro Groups user |
+
+Why only its own kind: a group message is a normal 1:1 message of a new type. Restricting pairing to
+Groups installs means every contact of a group member can read it.
+
+How groups work (no group server, no group key):
+
+1. The team agrees on a group and one **group code** (shown when creating the group; read out or sent in an existing chat).
+2. Everybody creates the group on their own phone with that code and picks the members from their own contacts.
+3. A message is sent as one end-to-end encrypted 1:1 message per member, over that member's nodes, in random order spread over a few seconds. The receiver shows it under the sender's name from the receiver's own address book.
+
+Rules: maximum 10 people including me, text only, every member must know every other member, a
+message is shown only if the sender is a member in the receiver's list. Member lists are not synchronised;
+if a sender's member count differs from the receiver's, the chat shows a warning.
+
+Licence: `node license-tool/issue.js --edition group ...`.
+
+Temp Node on the phone (added 2026-10-13): in a chat's Temp Node dialog, Pro Groups can start the Temp Node on
+the phone itself for that chat (new address, memory only, removed on stop). The contact needs no change. It works
+only while the phone is on and online; see `CHANGELOG.md` for the exact behaviour and limits.

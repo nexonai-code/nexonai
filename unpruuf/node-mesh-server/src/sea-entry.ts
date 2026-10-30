@@ -34,4 +34,10 @@ setSqliteNativeBinding(realRequire(nativeBindingPath));
 // imports to the top of the compiled output, which would run index.ts's top-level NodeStore
 // construction *before* the setSqliteNativeBinding() call above — a plain require() here executes
 // exactly where it appears in program order, after the override is already set.
-require("./index");
+if (process.argv.includes("--export-list")) {
+  // `unpruuf-node-mesh.exe --export-list [folder]`: asks the RUNNING server for its node list (export-list.bat calls this).
+  const i = process.argv.indexOf("--export-list");
+  void (require("./exportListCli") as typeof import("./exportListCli")).main(process.argv[i + 1]);
+} else {
+  require("./index");
+}

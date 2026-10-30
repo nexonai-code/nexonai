@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>unpruuf Whistleblower — Raportează din browser</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header>
+  <h1>unpruuf <span>Whistleblower</span></h1>
+  <span class="subtitle">Raportare din browser — fără instalare</span>
+</header>
+
+<div class="disclaimer-banner">
+  <strong>Citește asta întâi.</strong> Această pagină de browser îți oferă o protecție mai slabă decât
+  aplicația unpruuf: fără Tor implicit (furnizorul tău de internet poate vedea că vorbești cu acest releu,
+  chiar dacă nu poate citi ce se spune), stocarea normală a dispozitivului tău păstrează această conversație
+  până o ștergi mai jos (aplicația, în schimb, păstrează mesajele doar în memorie și le șterge), și
+  nu există protecție împotriva unui dispozitiv/browser compromis sau monitorizat. Dacă organizația ta
+  prezintă risc de represalii, preferă aplicația unpruuf pentru Android în locul acestei pagini, și ia în
+  considerare folosirea
+  <a href="https://www.torproject.org/download/" target="_blank" rel="noopener">Tor Browser</a>
+  pentru un nivel suplimentar pe care această pagină nu îl poate oferi singură. Conținutul rămâne oricum
+  criptat integral — operatorul releului și observatorii rețelei nu pot citi raportul tău.
+</div>
+
+<main>
+  <div id="setupView">
+    <div class="card">
+      <h2>Începe un raport nou</h2>
+      <label>Codul de împerechere al ofițerului de conformitate</label>
+      <textarea id="officerCodeInput" rows="4" placeholder="Lipește codul afișat de panoul ofițerului (sau care ți-a fost transmis/tipărit)…"></textarea>
+      <label>Adresa releului</label>
+      <input id="relayUrlInput" placeholder="ex. http://192.168.1.50:8787 — întreabă persoana care ți-a dat codul de împerechere" />
+      <div style="margin-top:14px;">
+        <button id="startBtn">Începe raportul</button>
+        <span id="setupError" class="error"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="chatView" class="hidden">
+    <div class="card" id="casePanel"></div>
+
+    <details class="card">
+      <summary>Codul tău (doar pentru panouri de ofițer mai vechi)</summary>
+      <textarea id="myCodeBox" readonly rows="4"></textarea>
+      <p class="hint">
+        În mod normal nu ai nevoie de el: codul este trimis automat oficiului de raportare. Nu conține nicio
+        informație despre cine ești — doar chei aleatorii generate chiar acum în acest browser.
+      </p>
+    </details>
+
+    <div class="card">
+      <h2>Conversație</h2>
+      <div class="thread" id="thread"></div>
+      <textarea id="composeInput" rows="3" placeholder="Scrie raportul sau răspunsul tău…"></textarea>
+      <div style="margin-top:10px;">
+        <button id="sendBtn">Trimite</button>
+        <span id="sendError" class="error"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Zonă de pericol</h2>
+      <p class="hint">Șterge tot ce reține această pagină pe acest dispozitiv — identitatea ta, cazul și istoricul mesajelor. Fă asta dacă folosești un dispozitiv comun sau împrumutat.</p>
+      <button id="resetBtn" class="danger">Șterge totul din acest browser</button>
+    </div>
+  </div>
+</main>
+
+<script src="bundle.js"></script>
+</body>
+</html>

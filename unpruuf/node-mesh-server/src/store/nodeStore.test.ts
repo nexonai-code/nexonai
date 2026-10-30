@@ -130,3 +130,18 @@ function setTimeoutSync(ms: number): void {
   const start = Date.now();
   while (Date.now() - start < ms) { /* deliberate busy-wait, test only */ }
 }
+
+test("sweepExpired removes a row at its expiry instant and truncates the WAL", () => {
+  const fs = require("fs") as typeof import("fs");
+  const dir = fs.mkdtempSync(require("path").join(require("os").tmpdir(), "node-mesh-wal-test-"));
+  const file = require("path").join(dir, "node-mesh.sqlite");
+  const store = new NodeStore(file, 1);
+  store.put("tagwal", "aGVsbG8=");
+  const row = Date.now() + 60 * 60 * 1000;
+  assert.equal(store.sweepExpired(row - 1000), 0);
+  assert.equal(store.sweepExpired(row + 1), 1, "expired row is swept");
+  const wal = file + "-wal";
+  const walSize = fs.existsSync(wal) ? fs.statSync(wal).size : 0;
+  assert.equal(walSize, 0, "WAL file is truncated after a sweep that removed rows");
+  store.close();
+});

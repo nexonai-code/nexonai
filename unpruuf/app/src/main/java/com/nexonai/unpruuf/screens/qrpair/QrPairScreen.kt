@@ -6,7 +6,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -32,24 +34,34 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.nexonai.unpruuf.BuildConfig
 import com.nexonai.unpruuf.domain.AppEdition
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QrPairScreen(
     onNavigateBack: () -> Unit,
+    onInviteGuest: (() -> Unit)? = null,
     viewModel: QrPairViewModel = hiltViewModel()
 ) {
     val errorState by viewModel.errorState.collectAsState()
     val successState by viewModel.successState.collectAsState()
     val myPayload by viewModel.myQrPayload.collectAsState()
+    // Free Client app: after an invitation is accepted, the guest's own code for the inviter to scan.
+    val guestCode by viewModel.guestCode.collectAsState()
+    // Business Node-Mesh: which list the contact being added gets its three nodes from.
+    val selectedNodeListId by viewModel.selectedNodeListId.collectAsState()
     var pendingPayload by remember { mutableStateOf<QrPairingPayload?>(null) }
     var pendingCrossPlatformPayload by remember { mutableStateOf<CrossPlatformPairingPayload?>(null) }
     var pendingNodeMeshPayload by remember { mutableStateOf<NodeMeshPairingPayload?>(null) }
+    // True when pendingNodeMeshPayload came through the paste field rather than the camera.
+    var pendingNodeMeshPasted by remember { mutableStateOf(false) }
+    val guestAnswerToConfirm by viewModel.guestAnswerToConfirm.collectAsState()
     var contactName by remember { mutableStateOf("") }
     // Debug-build-only fallback for testers who can't be scanned in person (see the copy/paste
     // UI below) — the same JSON string the QR encodes, just also offered as text.
     var pastedCode by remember { mutableStateOf("") }
-    val clipboardManager = LocalClipboardManager.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     // Settings → Relay set to Mandatory means this device's traffic never uses an onion anyway
     // (see RelayManager.RelayMode) — so it defaults to the no-onion cross-platform-format QR
     // automatically, for Android↔Android pairing too, not just genuine iOS interop. See
@@ -64,7 +76,7 @@ fun QrPairScreen(
     // mandatoryActive): a separate product line, not a third variant of the relay-mandatory
     // choice — see NODE_MESH_SPEC.md §0. Takes priority over crossPlatformMode/mandatoryActive
     // for what's actually shown/generated whenever it's on.
-    var nodeMeshMode by remember { mutableStateOf(false) }
+    var nodeMeshMode by remember { mutableStateOf(viewModel.isNodeMeshUsable()) }
 
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         val contents = result.contents
@@ -87,6 +99,7 @@ fun QrPairScreen(
                     if (nodeMeshPayload != null) {
                         contactName = ""
                         pendingNodeMeshPayload = nodeMeshPayload
+                        pendingNodeMeshPasted = false
                     } else {
                         viewModel.showUnreadableQrError()
                     }
@@ -95,13 +108,14 @@ fun QrPairScreen(
         }
     }
 
+    val scanPrompt = stringResource(R.string.qr_scan_prompt)
     val cameraPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             val opts = ScanOptions().apply {
                 setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                setPrompt("Scan unpruuf QR code")
+                setPrompt(scanPrompt)
                 setBeepEnabled(false)
                 setBarcodeImageEnabled(false)
                 setOrientationLocked(true)
@@ -114,10 +128,10 @@ fun QrPairScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add contact") },
+                title = { Text(stringResource(R.string.qr_title_add_contact)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.qr_cd_back))
                     }
                 }
             )
@@ -132,7 +146,7 @@ fun QrPairScreen(
         ) {
             if (mandatoryActive) {
                 Text(
-                    "RELAY-ONLY PAIRING — MANDATORY MODE IS ON",
+                    stringResource(R.string.qr_relay_only_mandatory),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -145,12 +159,12 @@ fun QrPairScreen(
                     FilterChip(
                         selected = !crossPlatformMode,
                         onClick = { crossPlatformMode = false },
-                        label = { Text("Android contact") }
+                        label = { Text(stringResource(R.string.qr_chip_android_contact)) }
                     )
                     FilterChip(
                         selected = crossPlatformMode,
                         onClick = { crossPlatformMode = true },
-                        label = { Text("iOS / cross-platform") }
+                        label = { Text(stringResource(R.string.qr_chip_ios_cross_platform)) }
                     )
                 }
             }
@@ -165,12 +179,35 @@ fun QrPairScreen(
                 FilterChip(
                     selected = nodeMeshMode,
                     onClick = { nodeMeshMode = !nodeMeshMode },
-                    label = { Text("Business (Node-Mesh)") }
+                    label = { Text(stringResource(R.string.qr_chip_business_node_mesh)) }
                 )
             }
 
+            // Free Client app without a server of its own: the way in is the Pro contact's invitation.
+            if (AppEdition.isClient && !viewModel.isNodeMeshUsable()) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            stringResource(R.string.qr_client_scan_invitation),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.qr_client_scan_invitation_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+
             Text(
-                "YOUR CODE",
+                stringResource(R.string.qr_your_code),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -178,6 +215,33 @@ fun QrPairScreen(
             Spacer(Modifier.height(16.dp))
 
             if (nodeMeshMode) {
+                // Mandatory choice: the QR carries three nodes taken from the chosen list.
+                val listChoices = remember(selectedNodeListId, successState) { viewModel.nodeListChoices() }
+                if (listChoices.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.qr_node_list_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
+                    ) {
+                        listChoices.forEach { choice ->
+                            FilterChip(
+                                selected = choice.id == selectedNodeListId,
+                                onClick = { viewModel.selectNodeList(choice.id) },
+                                label = {
+                                    Text(stringResource(R.string.qr_node_list_chip, choice.name, choice.nodeCount, choice.serverCount))
+                                }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
                 val nodeMeshPayload = viewModel.myNodeMeshQrPayload()
                 if (nodeMeshPayload != null) {
                     val qrJson = remember(nodeMeshPayload) { nodeMeshPayloadToJson(nodeMeshPayload) }
@@ -186,11 +250,30 @@ fun QrPairScreen(
                         Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.size(280.dp)) {
                             Image(
                                 bitmap = it.asImageBitmap(),
-                                contentDescription = "My Business Node-Mesh QR code",
+                                contentDescription = stringResource(R.string.qr_cd_my_node_mesh_qr),
                                 filterQuality = FilterQuality.None,
                                 modifier = Modifier.fillMaxSize().background(Color.White).padding(8.dp)
                             )
                         }
+                    }
+                } else if (listChoices.isNotEmpty()) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.size(240.dp),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.qr_choose_list_first),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            stringResource(R.string.qr_choose_list_first_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
                 } else {
                     Column(
@@ -199,13 +282,12 @@ fun QrPairScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            "Configure a node first",
+                            stringResource(R.string.qr_configure_node_first),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Business Node-Mesh pairing needs your own node — set one up in " +
-                            "Settings → Business Node-Mesh, then come back here.",
+                            stringResource(R.string.qr_configure_node_first_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -222,7 +304,7 @@ fun QrPairScreen(
                         Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.size(280.dp)) {
                             Image(
                                 bitmap = it.asImageBitmap(),
-                                contentDescription = "My cross-platform QR code",
+                                contentDescription = stringResource(R.string.qr_cd_my_cross_platform_qr),
                                 filterQuality = FilterQuality.None,
                                 modifier = Modifier.fillMaxSize().background(Color.White).padding(8.dp)
                             )
@@ -235,13 +317,12 @@ fun QrPairScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            "Configure a relay first",
+                            stringResource(R.string.qr_configure_relay_first),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Cross-platform pairing needs a relay — set one up in " +
-                            "Settings → Relay, then come back here.",
+                            stringResource(R.string.qr_configure_relay_first_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -250,6 +331,7 @@ fun QrPairScreen(
                     }
                 }
             } else {
+            LaunchedEffect(Unit) { viewModel.requestOnionQr() }
             myPayload?.let { payload ->
                 val qrJson = viewModel.payloadToJson(payload)
                 val qrBitmap = remember(qrJson) { generateQrBitmap(qrJson) }
@@ -260,7 +342,7 @@ fun QrPairScreen(
                     ) {
                         Image(
                             bitmap = it.asImageBitmap(),
-                            contentDescription = "Mein QR-Code",
+                            contentDescription = stringResource(R.string.qr_cd_my_qr),
                             // FilterQuality.None keeps module edges perfectly
                             // sharp black/white when Compose scales the bitmap
                             // up to fill the card — bilinear smoothing here
@@ -282,24 +364,37 @@ fun QrPairScreen(
                 CircularProgressIndicator()
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Waiting for Tor network…",
+                    stringResource(R.string.qr_waiting_for_tor),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "First start can take 10–30 s",
+                    stringResource(R.string.qr_first_start_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             }
 
-            // Debug-build only: a remote tester can't scan a QR code in person. Copy the exact
-            // same string the QR encodes and send it through any channel (message, email) —
-            // the tester pastes it into the "paste their code" field below on their own device.
-            // Deliberately not offered in release builds: an in-person scan is a real physical-
+            // Pro only: invite a free Client app user who has no servers of their own. Shown next to
+            // the Business Node-Mesh code because the invitation is built on it.
+            if (nodeMeshMode && AppEdition.isPro && onInviteGuest != null) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(onClick = onInviteGuest, modifier = Modifier.fillMaxWidth()) {
+                    Text("Invite a guest (free Client app)")
+                }
+            }
+
+            // Debug-build fallback for testers who can't be scanned in person — copy the exact
+            // same string the QR encodes and send it through any channel (message, email), the
+            // tester pastes it into the "paste their code" field below on their own device.
+            // Not offered in ordinary release builds: an in-person scan is a real physical-
             // proximity check a copy/pasted code sent over another channel doesn't have.
-            if (BuildConfig.DEBUG) {
+            //
+            // Whistleblower: no longer needed in normal use — after scanning the organisation's QR
+            // the app sends its own code to the officer automatically (OfficerCase.kt intake).
+            // Still offered as a manual fallback for officer dashboards older than that.
+            if (BuildConfig.DEBUG || AppEdition.isWhistleblower) {
                 val debugCode = if (nodeMeshMode) {
                     viewModel.myNodeMeshQrPayload()?.let { nodeMeshPayloadToJson(it) }
                 } else if (crossPlatformMode) {
@@ -310,12 +405,15 @@ fun QrPairScreen(
                 debugCode?.let { code ->
                     Spacer(Modifier.height(10.dp))
                     OutlinedButton(
-                        onClick = { clipboardManager.setText(AnnotatedString(code)) },
+                        onClick = { com.nexonai.unpruuf.ui.SensitiveClipboard.copy(context, "code", code) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.ContentCopy, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Copy code (debug — share manually)")
+                        Text(
+                            if (AppEdition.isWhistleblower) stringResource(R.string.qr_copy_code_whistleblower)
+                            else stringResource(R.string.qr_copy_code_debug)
+                        )
                     }
                 }
             }
@@ -338,8 +436,8 @@ fun QrPairScreen(
                 )
                 Spacer(Modifier.width(7.dp))
                 Text(
-                    if (myPayload != null) "tor active — your code is ready"
-                    else "connecting to tor…",
+                    if (myPayload != null) stringResource(R.string.qr_tor_active)
+                    else stringResource(R.string.qr_connecting_to_tor),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (myPayload != null) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.tertiary
@@ -356,19 +454,21 @@ fun QrPairScreen(
             ) {
                 Icon(Icons.Default.QrCodeScanner, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Scan their code", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qr_scan_their_code), fontWeight = FontWeight.Bold)
             }
 
-            // Debug-build only, the other half of the copy button above: paste a code a
-            // remote tester sent you instead of scanning them in person. Feeds the exact
-            // same dispatch (onion format, then cross-platform format) and the exact same
-            // "name this contact" flow as a camera scan — no separate contact-creation path.
-            if (BuildConfig.DEBUG) {
+            // The other half of the copy button above: paste a code sent through another
+            // channel instead of scanning it in person. Feeds the exact same dispatch (onion
+            // format, then cross-platform format) and the exact same "name this contact" flow
+            // as a camera scan — no separate contact-creation path. Enabled on Whistleblower
+            // release builds for the same reason as the copy button above (not a debug-only
+            // testing affordance there — see that button's doc comment).
+            if (BuildConfig.DEBUG || AppEdition.isWhistleblower) {
                 Spacer(Modifier.height(14.dp))
                 OutlinedTextField(
                     value = pastedCode,
                     onValueChange = { pastedCode = it },
-                    label = { Text("Paste their code (debug)") },
+                    label = { Text(if (AppEdition.isWhistleblower) stringResource(R.string.qr_paste_officer_code) else stringResource(R.string.qr_paste_their_code_debug)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -392,6 +492,7 @@ fun QrPairScreen(
                                 if (nodeMeshPayload != null) {
                                     contactName = ""
                                     pendingNodeMeshPayload = nodeMeshPayload
+                                    pendingNodeMeshPasted = true
                                     pastedCode = ""
                                 } else {
                                     viewModel.showUnreadableQrError()
@@ -402,13 +503,11 @@ fun QrPairScreen(
                     enabled = pastedCode.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Add from pasted code")
+                    Text(stringResource(R.string.qr_add_from_pasted_code))
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "Testing only — a code shared this way (message, email) skips the " +
-                    "in-person check a QR scan gives you. Anyone who intercepts it could " +
-                    "pair as this contact.",
+                    stringResource(R.string.qr_pasted_code_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -418,8 +517,7 @@ fun QrPairScreen(
             Spacer(Modifier.height(14.dp))
 
             Text(
-                "Both devices scan each other. The code carries your reachable address " +
-                "and keys — no account, no phone number, nothing else.",
+                stringResource(R.string.qr_both_devices_scan_footer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -468,19 +566,20 @@ fun QrPairScreen(
 
     pendingPayload?.let { payload ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { pendingPayload = null },
-            title = { Text("Name contact") },
+            title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
                 Column {
                     Text(
-                        "What do you want to call this contact?",
+                        stringResource(R.string.qr_name_contact_body),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = contactName,
                         onValueChange = { contactName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.qr_name_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -495,29 +594,30 @@ fun QrPairScreen(
                         }
                     },
                     enabled = contactName.isNotBlank()
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.qr_add)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingPayload = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingPayload = null }) { Text(stringResource(R.string.qr_cancel)) }
             }
         )
     }
 
     pendingCrossPlatformPayload?.let { payload ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { pendingCrossPlatformPayload = null },
-            title = { Text("Name contact") },
+            title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
                 Column {
                     Text(
-                        "What do you want to call this contact?",
+                        stringResource(R.string.qr_name_contact_body),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = contactName,
                         onValueChange = { contactName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.qr_name_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -532,29 +632,30 @@ fun QrPairScreen(
                         }
                     },
                     enabled = contactName.isNotBlank()
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.qr_add)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingCrossPlatformPayload = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingCrossPlatformPayload = null }) { Text(stringResource(R.string.qr_cancel)) }
             }
         )
     }
 
     pendingNodeMeshPayload?.let { payload ->
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { pendingNodeMeshPayload = null },
-            title = { Text("Name contact") },
+            title = { Text(stringResource(R.string.qr_name_contact_title)) },
             text = {
                 Column {
                     Text(
-                        "What do you want to call this contact?",
+                        stringResource(R.string.qr_name_contact_body),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = contactName,
                         onValueChange = { contactName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.qr_name_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -564,21 +665,76 @@ fun QrPairScreen(
                 TextButton(
                     onClick = {
                         if (contactName.isNotBlank()) {
-                            viewModel.handleScannedNodeMeshQr(payload, contactName.trim())
+                            viewModel.handleScannedNodeMeshQr(payload, contactName.trim(), pasted = pendingNodeMeshPasted)
                             pendingNodeMeshPayload = null
                         }
                     },
                     enabled = contactName.isNotBlank()
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.qr_add)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingNodeMeshPayload = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingNodeMeshPayload = null }) { Text(stringResource(R.string.qr_cancel)) }
+            }
+        )
+    }
+
+    guestCode?.let { code ->
+        val guestQr = remember(code.json) { generateQrBitmap(code.json) }
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { viewModel.clearGuestCode() },
+            title = { Text(stringResource(R.string.guest_code_title, code.inviterName)) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    guestQr?.let {
+                        Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.size(260.dp)) {
+                            Image(
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = stringResource(R.string.qr_cd_my_node_mesh_qr),
+                                filterQuality = FilterQuality.None,
+                                modifier = Modifier.fillMaxSize().background(Color.White).padding(8.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(stringResource(R.string.guest_code_body), style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.guest_code_fingerprint, code.fingerprint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearGuestCode() }) { Text(stringResource(R.string.guest_code_done)) }
+            }
+        )
+    }
+
+    guestAnswerToConfirm?.let { answer ->
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { viewModel.cancelGuestAnswer() },
+            title = { Text(stringResource(R.string.guest_confirm_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.guest_confirm_body, answer.displayName), style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(10.dp))
+                    Text(answer.fingerprint, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmGuestAnswer() }) { Text(stringResource(R.string.guest_confirm_add)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelGuestAnswer() }) { Text(stringResource(R.string.qr_cancel)) }
             }
         )
     }
 }
 
-private fun generateQrBitmap(content: String, size: Int = 512): Bitmap? {
+internal fun generateQrBitmap(content: String, size: Int = 512): Bitmap? {
     return try {
         val matrix: BitMatrix = MultiFormatWriter().encode(
             content, BarcodeFormat.QR_CODE, size, size

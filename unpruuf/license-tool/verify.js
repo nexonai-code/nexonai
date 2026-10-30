@@ -6,11 +6,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { publicKeyFromB64, verifyLicense, MS_PER_DAY } = require('./lib');
+const { publicKeyFromB64, verifyLicense, verifyServerLicense, SERVER_LICENSE_PREFIX, MS_PER_DAY } = require('./lib');
 
 const code = process.argv[2];
 if (!code) {
-  console.error('Usage: node verify.js "<unpruuf-license:v1:...>"');
+  console.error('Usage: node verify.js "<unpruuf-license:v1:...>"   (app license)');
+  console.error('       node verify.js "<unpruuf-server-license:v1:...>"   (server license)');
   process.exit(1);
 }
 
@@ -22,6 +23,23 @@ if (!fs.existsSync(keyFile)) {
 }
 const { publicKeyB64 } = JSON.parse(fs.readFileSync(keyFile, 'utf8'));
 const publicKey = publicKeyFromB64(publicKeyB64);
+
+if (code.trim().startsWith(SERVER_LICENSE_PREFIX)) {
+  const server = verifyServerLicense(publicKey, code);
+  if (!server) {
+    console.error('INVALID — signature does not verify, or the code is malformed.');
+    process.exit(1);
+  }
+  const left = Math.floor((server.expiresAtMs - Date.now()) / MS_PER_DAY);
+  console.log('Signature: VALID (server license)');
+  console.log('Serial:   ', server.serial);
+  console.log('Customer: ', server.customer);
+  console.log('Nodes:    ', server.maxNodes);
+  console.log('Issued:   ', new Date(server.issuedAtMs).toISOString());
+  console.log('Expires:  ', new Date(server.expiresAtMs).toISOString());
+  console.log('Status:   ', left >= 0 ? `valid, ${left} day(s) left` : `EXPIRED ${-left} day(s) ago`);
+  process.exit(0);
+}
 
 const parsed = verifyLicense(publicKey, code);
 if (!parsed) {

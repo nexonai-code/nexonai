@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  unpruuf Press — the free reporting app of the press edition (a source writing a tip to a
+  journalist or newsroom). English overlay: only the keys that talk about a "reporting office",
+  an "organisation" or a "case" are replaced; everything else comes from main. Romanian is in
+  values-ro/. The behaviour is the same as the whistleblower edition (AppEdition.isWhistleblower).
+-->
+<resources>
+    <string name="qr_copy_code_whistleblower">Copy my code (paste it into the newsroom dashboard)</string>
+    <string name="qr_paste_officer_code">Paste the journalist\'s code</string>
+    <string name="case_number_label">Tip number</string>
+    <string name="case_cd_copy">Copy tip number</string>
+    <string name="case_pending_title">Your tip is on its way</string>
+    <string name="case_pending_body">Your tip has been handed over. As soon as the journalist\'s app confirms receipt, your tip number appears here. You don\'t need to do anything.</string>
+    <string name="case_status_in_progress">Being looked at</string>
+    <string name="case_hint">Changes from the newsroom appear here automatically. Your tip number is only for you: it helps you refer to your tip, it is not needed to log in. There is no deadline for an answer: a journalist may or may not reply.</string>
+    <string name="wb_start_title">Send a tip safely</string>
+    <string name="wb_start_body">Scan the journalist\'s QR code. You only do this once — no name, no phone number, no account.</string>
+    <string name="wb_error_unreadable">This is not a newsroom code.</string>
+    <string name="wb_error_not_officer">This code belongs to another app, not to a newsroom.</string>
+    <string name="wb_error_relay">The code\'s connection address looks invalid. Ask the journalist for a new code.</string>
+    <string name="wb_error_old">This code comes from an outdated version. Ask the journalist for a new code.</string>
+    <string name="cases_title">My tips</string>
+    <string name="cases_new">New tip</string>
+    <string name="cases_empty">No tip yet.</string>
+    <string name="cases_empty_body">Start a new tip with the + button. Each tip is separate: the journalist cannot tell that two tips come from the same phone.</string>
+    <string name="cases_pending">New tip · number follows</string>
+    <string name="cases_menu_other_org">Scan another journalist\'s code</string>
+    <string name="case_new_title">New tip</string>
+    <string name="case_remove">Remove tip from this phone</string>
+    <string name="case_remove_title">Remove tip from this phone?</string>
+    <string name="case_remove_body">All messages and keys of this tip are deleted from this phone. The journalist keeps the tip. You will no longer be able to read replies to it on this phone.</string>
+</resources>

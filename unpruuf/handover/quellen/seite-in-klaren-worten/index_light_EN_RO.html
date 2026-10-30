@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="What unpruuf is and how it works, in plain words. English and Romanian.">
+<title>unpruuf in plain words</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  /* Layout: one reading column; each section is label/text rows divided by hairlines, like a printed explainer. Light only. */
+  color-scheme:light;
+  --bg:#F4F7F6; --surface:#FFFFFF; --ink:#12201E; --dim:#46564F; --line:#D5DEDB;
+  --deep:#E1EFEC; --on-deep:#12201E; --on-deep-dim:#3C5450;
+  --accent:#0F6B62; --accent-soft:#DDEFEC; --warm:#A8500F; --warm-soft:#F8E7D6; --warm-ink:#5E300A;
+  --f-display:"Archivo","Segoe UI",system-ui,sans-serif; --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.6;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
+[data-l="ro"]{display:none}
+html[data-lang="ro"] [data-l="ro"]{display:revert}
+html[data-lang="ro"] [data-l="en"]{display:none}
+.wrap{max-width:1040px;margin-inline:auto}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+p{margin:0 0 12px;max-width:62ch}
+p:last-child{margin-bottom:0}
+
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding-block:16px}
+.logo img{height:46px;width:auto;display:block}
+.lang{display:flex;gap:4px;background:var(--line);border-radius:10px;padding:3px}
+.lang button{font:600 13px/1 var(--f-body);letter-spacing:.06em;color:var(--dim);background:transparent;border:0;border-radius:8px;padding:9px 14px;min-height:36px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--accent);color:#fff}
+
+.hero{background:var(--deep);color:var(--on-deep);border:1px solid var(--line);border-radius:18px;padding:clamp(28px,5vw,56px);display:flex;flex-direction:column;gap:22px}
+.hero .eyebrow{color:var(--on-deep-dim)}
+.hero h1{font-weight:800;font-size:clamp(34px,6vw,60px);line-height:1.05;letter-spacing:-.02em}
+.hero .lede{font-size:clamp(18px,2.2vw,21px);line-height:1.5;color:var(--on-deep-dim);max-width:36em;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:13px;font-weight:600;letter-spacing:.03em;padding:5px 12px;border-radius:999px;border:1px solid rgba(18,32,30,.28);color:var(--on-deep);background:rgba(255,255,255,.55)}
+.cond{background:var(--warm-soft);color:var(--warm-ink);border-radius:12px;padding:16px 20px;margin-top:20px;max-width:none}
+.cond b{font-weight:600}
+.idea{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px}
+.idea>div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.idea h3{font-size:18px;margin-bottom:6px}
+.idea p{color:var(--dim);font-size:16px}
+
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;padding-block:24px 8px}
+nav.toc a{font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px}
+nav.toc a:hover{border-color:var(--accent)}
+
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+section{padding-block:56px 0;min-width:0}
+.sh{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;max-width:760px}
+.sh h2{font-weight:700;font-size:clamp(26px,3.6vw,38px);line-height:1.12;letter-spacing:-.01em}
+.rows{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr);gap:8px 40px;padding-block:20px;border-bottom:1px solid var(--line)}
+.lab{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding-top:3px}
+.txt{min-width:0}
+.row.note{background:var(--warm-soft);border-radius:12px;border-bottom:0;margin-top:14px;padding-inline:20px}
+.row.note .lab{color:var(--warm)}
+.row.note .txt{color:var(--warm-ink)}
+.row.wide{grid-template-columns:1fr}
+.row.wide .lab{padding-top:0}
+
+.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:14px;max-width:70ch}
+.steps li{counter-increment:s;display:grid;grid-template-columns:32px minmax(0,1fr);gap:14px;align-items:start}
+.steps li::before{content:counter(s);width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--surface);font:700 15px/32px var(--f-display);text-align:center}
+
+.fig{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.fig svg{width:100%;height:auto;display:block;color:var(--ink);font-family:var(--f-body)}
+.fig svg[data-l="ro"]{display:none}
+html[data-lang="ro"] .fig svg[data-l="ro"]{display:block}
+html[data-lang="ro"] .fig svg[data-l="en"]{display:none}
+.fig figcaption{font-size:15px;color:var(--dim);margin-top:10px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:16px}
+th,td{text-align:left;vertical-align:top;padding:12px 16px;border-bottom:1px solid var(--line)}
+thead th{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600}
+tbody th{font-weight:600;width:22%}
+tr:last-child th,tr:last-child td{border-bottom:0}
+
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.col h3{font-size:18px;margin-bottom:10px}
+.col ul{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:7px}
+
+.limits{margin:0;padding:24px 24px 24px 2.6rem;display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.limits li{max-width:68ch}
+
+footer{margin-top:56px;background:var(--deep);color:var(--on-deep);border:1px solid var(--line);border-radius:18px;padding:32px clamp(24px,4vw,40px);display:flex;flex-wrap:wrap;gap:12px 40px;justify-content:space-between;align-items:center}
+footer h2{font-weight:700;font-size:24px}
+footer .c{display:flex;flex-direction:column;gap:2px;font-size:18px;font-weight:500;user-select:all}
+footer small{display:block;color:var(--on-deep-dim);font-size:14px;margin-top:6px}
+
+@media (max-width:720px){
+  .row{grid-template-columns:1fr;gap:6px}
+  .row.note{padding-inline:16px}
+  body{font-size:16px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top">
+  <div class="logo"><img alt="NexonAI Consulting" src="assets/nexonai-logo.png"></div>
+  <div class="lang" role="group" aria-label="Language / Limba"><button type="button" data-set="en" aria-pressed="true">EN</button><button type="button" data-set="ro" aria-pressed="false">RO</button></div>
+</div>
+<header class="hero">
+  <div class="eyebrow"><span data-l="en">For organisations</span><span data-l="ro">Pentru organizații</span></div>
+  <h1><span data-l="en">unpruuf in plain words</span><span data-l="ro">unpruuf pe înțelesul tuturor</span></h1>
+  <p class="lede"><span data-l="en">What it is and how it works, one question at a time. No technical background needed.</span><span data-l="ro">Ce este și cum funcționează, pe rând. Nu ai nevoie de cunoștințe tehnice.</span></p>
+  <div class="chips"><span class="chip"><span data-l="en">Status 14 October 2026</span><span data-l="ro">Stadiul la 14 octombrie 2026</span></span><span class="chip"><span data-l="en">Tested by us</span><span data-l="ro">Testat de noi</span></span><span class="chip"><span data-l="en">No independent audit yet</span><span data-l="ro">Fără audit independent încă</span></span><span class="chip"><span data-l="en">Not certified</span><span data-l="ro">Necertificat</span></span></div>
+</header>
+<p class="cond"><span data-l="en"><b>One condition for everything on this page.</b> Every organisation runs its own servers. If someone else runs them, that someone is involved, and what follows no longer holds in full.</span><span data-l="ro"><b>O condiție pentru tot ce urmează.</b> Fiecare organizație își operează propriile servere. Dacă le operează altcineva, acel altcineva este implicat, iar ce urmează nu mai este valabil în întregime.</span></p>
+<div class="idea">
+  <div><h3><span data-l="en">Two parts</span><span data-l="ro">Două părți</span></h3><p><span data-l="en">A phone to write on, and a server of your own: your own post office.</span><span data-l="ro">Un telefon cu care scrii și un server propriu: propriul tău oficiu poștal.</span></p></div>
+  <div><h3><span data-l="en">My server, my rules</span><span data-l="ro">Serverul meu, regulile mele</span></h3><p><span data-l="en">Everything sits on your own side. Nobody in the middle has a say.</span><span data-l="ro">Totul rămâne de partea ta. Nimeni la mijloc nu are cuvânt de spus.</span></p></div>
+  <div><h3><span data-l="en">No names</span><span data-l="ro">Fără nume</span></h3><p><span data-l="en">The system knows mailboxes and locks, not people.</span><span data-l="ro">Sistemul cunoaște cutii poștale și lacăte, nu oameni.</span></p></div>
+</div>
+<nav class="toc" aria-label="Sections"><a href="#identity"><span data-l="en">No identities</span><span data-l="ro">Fără identități</span></a><a href="#third-party"><span data-l="en">No outside party</span><span data-l="ro">Nicio parte terță</span></a><a href="#direct"><span data-l="en">No direct line</span><span data-l="ro">Fără legătură directă</span></a><a href="#owner"><span data-l="en">Not even the owner</span><span data-l="ro">Nici proprietarul</span></a><a href="#message"><span data-l="en">A message</span><span data-l="ro">Un mesaj</span></a><a href="#compliance"><span data-l="en">Compliance</span><span data-l="ro">Conformitate</span></a></nav>
+<section id="identity">
+<div class="sh"><div class="eyebrow"><span data-l="en">Identity</span><span data-l="ro">Identitate</span></div><h2><span data-l="en">There are no identities.</span><span data-l="ro">Nu există identități.</span></h2></div>
+<div class="rows">
+<div class="row "><div class="lab"><span data-l="en">What it is</span><span data-l="ro">Ce este</span></div><div class="txt"><p><span data-l="en">No account. No username. No phone number. No e-mail address. Nowhere in the system is there a list of who uses it.</span><span data-l="ro">Fără cont. Fără nume de utilizator. Fără număr de telefon. Fără adresă de e-mail. Nicăieri în sistem nu există o listă cu cine îl folosește.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">How it works</span><span data-l="ro">Cum funcționează</span></div><div class="txt"><p><span data-l="en">To add a colleague, you show a code on your screen and they scan it. That code has no name in it. It is made new for that one person and for nobody else. The name you see in your chat list is one you typed yourself, and it exists only on your phone.</span><span data-l="ro">Ca să adaugi un coleg, îi arăți un cod pe ecran, iar el îl scanează. Codul nu conține niciun nume. Este creat nou pentru acea persoană și pentru nimeni altcineva. Numele pe care îl vezi în lista de conversații l-ai scris tu și există doar pe telefonul tău.</span></p><p><span data-l="en">Two of your contacts cannot find out that they both talk to you by comparing notes. The codes and keys you gave them have nothing in common.</span><span data-l="ro">Două dintre contactele tale nu pot afla, comparând notițe, că vorbesc amândouă cu tine. Codurile și cheile pe care li le-ai dat nu au nimic în comun.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">What it means</span><span data-l="ro">Ce înseamnă</span></div><div class="txt"><p><span data-l="en">What does not exist cannot be stolen, sold or handed over. Whoever gets into the system finds no list of people to go after.</span><span data-l="ro">Ce nu există nu poate fi furat, vândut sau predat. Cine pătrunde în sistem nu găsește nicio listă de oameni de urmărit.</span></p></div></div><div class="row note"><div class="lab"><span data-l="en">Good to know</span><span data-l="ro">De reținut</span></div><div class="txt"><p><span data-l="en">The person you add knows who you are, because you met them. The system does not.</span><span data-l="ro">Persoana pe care o adaugi știe cine ești, pentru că v-ați întâlnit. Sistemul nu știe.</span></p></div></div>
+</div>
+</section>
+<section id="third-party">
+<div class="sh"><div class="eyebrow"><span data-l="en">Data</span><span data-l="ro">Date</span></div><h2><span data-l="en">No outside party holds your data.</span><span data-l="ro">Nicio parte terță nu are datele tale.</span></h2></div>
+<div class="rows">
+<div class="row "><div class="lab"><span data-l="en">What it is</span><span data-l="ro">Ce este</span></div><div class="txt"><p><span data-l="en">Your messages do not pass through a cloud, a provider's account or a company in the middle. There is no central place where everybody's data collects.</span><span data-l="ro">Mesajele tale nu trec printr-un cloud, printr-un cont la un furnizor sau printr-o firmă la mijloc. Nu există un loc central în care să se adune datele tuturor.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">How it works</span><span data-l="ro">Cum funcționează</span></div><div class="txt"><p><span data-l="en">The mailboxes sit on servers that your own organisation runs or rents itself. NexonAI runs no servers. We supply the software. We are not part of the path and we receive nothing.</span><span data-l="ro">Cutiile poștale se află pe servere pe care organizația ta le operează sau le închiriază singură. NexonAI nu operează servere. Furnizăm software-ul. Nu facem parte din traseu și nu primim nimic.</span></p><p><span data-l="en">We can neither read your system nor control it. There is no wire to us.</span><span data-l="ro">Nu putem nici să vă citim sistemul, nici să-l controlăm de la distanță. Nu există niciun fir către noi.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">What it means</span><span data-l="ro">Ce înseamnă</span></div><div class="txt"><p><span data-l="en">Your data stays with you. No contract with an outside service is needed to keep it that way, because there is no outside service.</span><span data-l="ro">Datele rămân la tine. Nu ai nevoie de un contract cu un serviciu extern ca să rămână așa, pentru că nu există un serviciu extern.</span></p></div></div><div class="row note"><div class="lab"><span data-l="en">Good to know</span><span data-l="ro">De reținut</span></div><div class="txt"><p><span data-l="en">A hosting company that rents you a machine supplies the hardware, like a landlord. What lies on that machine is sealed, so the landlord cannot read messages either. Without servers of your own, someone else would be involved, and this page would no longer hold in full.</span><span data-l="ro">O firmă de găzduire care îți închiriază o mașină oferă hardware-ul, ca un proprietar de imobil. Ce se află pe mașină este sigilat, deci nici proprietarul nu poate citi mesajele. Fără servere proprii ar fi implicat altcineva, iar această pagină nu ar mai fi valabilă în întregime.</span></p></div></div>
+</div>
+</section>
+<section id="direct">
+<div class="sh"><div class="eyebrow"><span data-l="en">Connection</span><span data-l="ro">Conexiune</span></div><h2><span data-l="en">Your phone never talks directly to anyone.</span><span data-l="ro">Telefonul tău nu vorbește niciodată direct cu nimeni.</span></h2></div>
+<div class="rows">
+<div class="row "><div class="lab"><span data-l="en">What it is</span><span data-l="ro">Ce este</span></div><div class="txt"><p><span data-l="en">Two phones never connect to each other. Neither phone ever learns where the other one is.</span><span data-l="ro">Două telefoane nu se conectează niciodată între ele. Niciunul nu află vreodată unde se află celălalt.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">How it works</span><span data-l="ro">Cum funcționează</span></div><div class="txt"><p><span data-l="en">Think of letterboxes. When I write to you, I do not walk to your door. I put the sealed letter into my own mailbox, in my own post office. When we first meet, I tell you once where my mailbox is and give you the key to the lock that belongs to the two of us. From then on your phone looks into my mailbox now and then and takes what is meant for you.</span><span data-l="ro">Gândește-te la cutii poștale. Când îți scriu, nu merg la ușa ta. Pun scrisoarea sigilată în propria mea cutie, în propriul meu oficiu poștal. La prima întâlnire îți spun o singură dată unde este cutia mea și îți dau cheia lacătului care aparține nouă doi. De atunci, telefonul tău se uită din când în când în cutia mea și ia ce îți este destinat.</span></p><p><span data-l="en">When you answer, you do the same in your mailbox, and my phone looks there. I never address anyone else. I only put something on my own server and let someone know where to look.</span><span data-l="ro">Când răspunzi, faci la fel în cutia ta, iar telefonul meu se uită acolo. Eu nu adresez niciodată pe altcineva. Pun doar ceva pe propriul meu server și spun cuiva unde să se uite.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">What it means</span><span data-l="ro">Ce înseamnă</span></div><div class="txt"><p><span data-l="en">Each mailbox holds only what its owner wrote. So no single mailbox ever contains a whole conversation, and nobody can see a line drawn between two phones, because there is none.</span><span data-l="ro">Fiecare cutie conține doar ce a scris proprietarul ei. Astfel, nicio cutie nu conține vreodată o conversație întreagă și nimeni nu poate vedea o linie între două telefoane, pentru că nu există.</span></p></div></div><div class="row note"><div class="lab"><span data-l="en">Good to know</span><span data-l="ro">De reținut</span></div><div class="txt"><p><span data-l="en">Someone who could watch all mailboxes and all networks at the same moment could still compare the times when things happen. That is a limit of every system of this kind.</span><span data-l="ro">Cine ar putea urmări simultan toate cutiile și toate rețelele ar putea totuși compara momentele în care se întâmplă lucruri. Este o limită a oricărui sistem de acest fel.</span></p></div></div>
+</div>
+</section>
+<section id="owner">
+<div class="sh"><div class="eyebrow"><span data-l="en">Access</span><span data-l="ro">Acces</span></div><h2><span data-l="en">Even you, as the owner, cannot read it.</span><span data-l="ro">Nici tu, ca proprietar, nu poți citi.</span></h2></div>
+<div class="rows">
+<div class="row "><div class="lab"><span data-l="en">What it is</span><span data-l="ro">Ce este</span></div><div class="txt"><p><span data-l="en">The server is built so that its owner has no access to the content. Not you, not your IT staff, not us.</span><span data-l="ro">Serverul este construit astfel încât proprietarul lui să nu aibă acces la conținut. Nici tu, nici personalul tău IT, nici noi.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">How it works</span><span data-l="ro">Cum funcționează</span></div><div class="txt"><p><span data-l="en">A message is sealed on the phone before it leaves it. The seal opens only on the phones of the two people who are talking. The server only ever holds sealed packages. It has no key to open them. A package disappears by itself after the time chosen for that chat, 24 hours at most.</span><span data-l="ro">Mesajul este sigilat pe telefon înainte să plece de pe el. Sigiliul se deschide doar pe telefoanele celor doi oameni care vorbesc. Serverul păstrează doar pachete sigilate. Nu are nicio cheie ca să le deschidă. Un pachet dispare singur după timpul ales pentru acea conversație, cel mult 24 de ore.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">What it means</span><span data-l="ro">Ce înseamnă</span></div><div class="txt"><p><span data-l="en">Whoever breaks in finds digital scrap. There is no vault here that is worth cracking. Nothing is left lying around: everything is gone after a day at the latest. Your server is a passage, not a storage.</span><span data-l="ro">Cine sparge găsește gunoi digital. Aici nu există niciun seif care să merite forțat. Nu rămâne nimic la vedere: totul dispare după cel mult o zi. Serverul tău este un loc de trecere, nu un depozit.</span></p><p><span data-l="en">If someone asks the organisation for data from the server, there are sealed packages that nobody can open, and none of them is older than a day.</span><span data-l="ro">Dacă cineva cere organizației date de pe server, există pachete sigilate pe care nimeni nu le poate deschide, iar niciunul nu este mai vechi de o zi.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">What an owner can see</span><span data-l="ro">Ce poate vedea un proprietar</span></div><div class="txt"><p><span data-l="en">That packages arrive and leave, when, and roughly how big they are. No words, no names.</span><span data-l="ro">Că sosesc și pleacă pachete, când, și cam cât de mari sunt. Fără cuvinte, fără nume.</span></p></div></div><div class="row note"><div class="lab"><span data-l="en">Good to know</span><span data-l="ro">De reținut</span></div><div class="txt"><p><span data-l="en">The phones are a different matter. Someone who holds an unlocked phone sees what is on it. That is why the app has a PIN, a panic PIN that wipes everything, and messages that live only in memory and vanish after a few minutes. What an authority or a court may demand from an organisation is a legal question. What we can state is what exists on the server: sealed packages that are gone within a day.</span><span data-l="ro">Telefoanele sunt altceva. Cine ține un telefon deblocat vede ce se află pe el. De aceea aplicația are PIN, un PIN de panică ce șterge tot și mesaje care trăiesc doar în memorie și dispar după câteva minute. Ce poate cere o autoritate sau o instanță de la o organizație este o chestiune juridică. Ce putem afirma este ce există pe server: pachete sigilate, care dispar în cel mult o zi.</span></p></div></div>
+</div>
+</section>
+<section id="message">
+<div class="sh"><div class="eyebrow"><span data-l="en">A message</span><span data-l="ro">Un mesaj</span></div><h2><span data-l="en">What happens when a message is sent.</span><span data-l="ro">Ce se întâmplă când se trimite un mesaj.</span></h2></div>
+<div class="rows">
+<div class="row wide"><div class="lab"><span data-l="en">Picture</span><span data-l="ro">Imagine</span></div><div class="txt"><figure class="fig"><svg data-l="en" viewBox="0 0 860 330" role="img" aria-label="Diagram: Anna writes to Ben. Her phone puts a sealed package into her own mailbox. Ben&#x27;s phone looks into that mailbox and takes the package. The two phones are never connected." xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="ah-en" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+</defs>
+<!-- no direct line -->
+<path d="M95 146 C 95 -10, 765 -10, 765 146" fill="none" stroke="var(--warm)" stroke-width="2" stroke-dasharray="6 6"/>
+<g transform="translate(430 29)"><circle r="14" fill="var(--bg)" stroke="var(--warm)" stroke-width="2"/><path d="M-6 -6 L6 6 M6 -6 L-6 6" stroke="var(--warm)" stroke-width="2.5" stroke-linecap="round"/></g>
+<text x="430" y="72" text-anchor="middle" font-size="14" fill="var(--warm)" font-weight="600">no direct connection</text>
+<!-- phones -->
+<g>
+<rect x="30" y="150" width="130" height="110" rx="16" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>
+<rect x="46" y="166" width="98" height="62" rx="6" fill="var(--accent-soft)"/>
+<circle cx="95" cy="244" r="4" fill="currentColor" opacity=".5"/>
+<text x="95" y="292" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">Anna&#x27;s phone</text>
+</g>
+<g>
+<rect x="700" y="150" width="130" height="110" rx="16" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>
+<rect x="716" y="166" width="98" height="62" rx="6" fill="var(--accent-soft)"/>
+<circle cx="765" cy="244" r="4" fill="currentColor" opacity=".5"/>
+<text x="765" y="292" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">Ben&#x27;s phone</text>
+</g>
+<!-- mailbox -->
+<g>
+<rect x="350" y="140" width="160" height="130" rx="8" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>
+<rect x="368" y="160" width="124" height="14" rx="3" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1.5"/>
+<rect x="368" y="184" width="124" height="14" rx="3" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1.5"/>
+<rect x="368" y="208" width="124" height="14" rx="3" fill="var(--accent)" stroke="currentColor" stroke-width="1.5"/>
+<rect x="368" y="232" width="124" height="14" rx="3" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1.5"/>
+<text x="430" y="292" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">Anna&#x27;s mailbox</text>
+<text x="430" y="312" text-anchor="middle" font-size="12.5" fill="var(--dim)">on her organisation&#x27;s server</text>
+</g>
+<!-- arrows -->
+<line x1="164" y1="205" x2="344" y2="205" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ah-en)"/>
+<text x="254" y="190" text-anchor="middle" font-size="13" fill="currentColor">puts in the sealed package</text>
+<line x1="696" y1="180" x2="516" y2="180" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="3 5" marker-end="url(#ah-en)"/>
+<text x="606" y="166" text-anchor="middle" font-size="13" fill="currentColor">looks in, asks for its label</text>
+<line x1="516" y1="230" x2="696" y2="230" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ah-en)"/>
+<text x="606" y="250" text-anchor="middle" font-size="13" fill="currentColor">hands over the package</text>
+</svg><svg data-l="ro" viewBox="0 0 860 330" role="img" aria-label="Schemă: Anna îi scrie lui Ben. Telefonul ei pune un pachet sigilat în propria cutie poștală. Telefonul lui Ben se uită în acea cutie și ia pachetul. Cele două telefoane nu sunt niciodată conectate." xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="ah-ro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker>
+</defs>
+<!-- no direct line -->
+<path d="M95 146 C 95 -10, 765 -10, 765 146" fill="none" stroke="var(--warm)" stroke-width="2" stroke-dasharray="6 6"/>
+<g transform="translate(430 29)"><circle r="14" fill="var(--bg)" stroke="var(--warm)" stroke-width="2"/><path d="M-6 -6 L6 6 M6 -6 L-6 6" stroke="var(--warm)" stroke-width="2.5" stroke-linecap="round"/></g>
+<text x="430" y="72" text-anchor="middle" font-size="14" fill="var(--warm)" font-weight="600">nicio conexiune directă</text>
+<!-- phones -->
+<g>
+<rect x="30" y="150" width="130" height="110" rx="16" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>
+<rect x="46" y="166" width="98" height="62" rx="6" fill="var(--accent-soft)"/>
+<circle cx="95" cy="244" r="4" fill="currentColor" opacity=".5"/>
+<text x="95" y="292" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">Telefonul Annei</text>
+</g>
+<g>
+<rect x="700" y="150" width="130" height="110" rx="16" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>
+<rect x="716" y="166" width="98" height="62" rx="6" fill="var(--accent-soft)"/>
+<circle cx="765" cy="244" r="4" fill="currentColor" opacity=".5"/>
+<text x="765" y="292" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">Telefonul lui Ben</text>
+</g>
+<!-- mailbox -->
+<g>
+<rect x="350" y="140" width="160" height="130" rx="8" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>
+<rect x="368" y="160" width="124" height="14" rx="3" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1.5"/>
+<rect x="368" y="184" width="124" height="14" rx="3" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1.5"/>
+<rect x="368" y="208" width="124" height="14" rx="3" fill="var(--accent)" stroke="currentColor" stroke-width="1.5"/>
+<rect x="368" y="232" width="124" height="14" rx="3" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1.5"/>
+<text x="430" y="292" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">Cutia poștală a Annei</text>
+<text x="430" y="312" text-anchor="middle" font-size="12.5" fill="var(--dim)">pe serverul organizației ei</text>
+</g>
+<!-- arrows -->
+<line x1="164" y1="205" x2="344" y2="205" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ah-ro)"/>
+<text x="254" y="190" text-anchor="middle" font-size="13" fill="currentColor">pune pachetul sigilat</text>
+<line x1="696" y1="180" x2="516" y2="180" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="3 5" marker-end="url(#ah-ro)"/>
+<text x="606" y="166" text-anchor="middle" font-size="13" fill="currentColor">se uită, cere după etichetă</text>
+<line x1="516" y1="230" x2="696" y2="230" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ah-ro)"/>
+<text x="606" y="250" text-anchor="middle" font-size="13" fill="currentColor">predă pachetul</text>
+</svg><figcaption><span data-l="en">Anna writes to Ben. The package goes into Anna's mailbox and Ben fetches it from there. The two phones are never connected.</span><span data-l="ro">Anna îi scrie lui Ben. Pachetul intră în cutia Annei, iar Ben îl ia de acolo. Cele două telefoane nu sunt niciodată conectate.</span></figcaption></figure></div></div><div class="row "><div class="lab"><span data-l="en">Step by step</span><span data-l="ro">Pas cu pas</span></div><div class="txt"><ol class="steps"><li><span data-l="en">Anna's phone seals the message. Only Ben's phone can open the seal.</span><span data-l="ro">Telefonul Annei sigilează mesajul. Doar telefonul lui Ben poate deschide sigiliul.</span></li><li><span data-l="en">It does not send the package to Ben. It puts it into Anna's own mailbox, on her organisation's server, under a label. Only Anna and Ben can work out today's label, and it changes every hour.</span><span data-l="ro">Nu trimite pachetul lui Ben. Îl pune în propria cutie poștală a Annei, pe serverul organizației ei, sub o etichetă. Doar Anna și Ben pot calcula eticheta de azi, iar ea se schimbă în fiecare oră.</span></li><li><span data-l="en">Ben's phone looks into Anna's mailbox regularly and asks only for packages with their label. Nobody else knows which ones those are.</span><span data-l="ro">Telefonul lui Ben se uită regulat în cutia Annei și cere doar pachetele cu eticheta lor. Nimeni altcineva nu știe care sunt acelea.</span></li><li><span data-l="en">Ben's phone takes the package, opens the seal and shows the message under the name Ben gave Anna in his own address book. On the phone it exists only in memory and disappears when he leaves the app or after a few minutes.</span><span data-l="ro">Telefonul lui Ben ia pachetul, deschide sigiliul și arată mesajul sub numele pe care Ben i l-a dat Annei în propriul carnet de adrese. Pe telefon există doar în memorie și dispare când iese din aplicație sau după câteva minute.</span></li><li><span data-l="en">In Anna's mailbox the package waits until its time is up, 1, 6 or 24 hours as chosen for this chat. Then it is gone. Ben's answer travels the same way in the other direction, through Ben's mailbox.</span><span data-l="ro">În cutia Annei pachetul așteaptă până expiră timpul, 1, 6 sau 24 de ore, cum s-a ales pentru această conversație. Apoi dispare. Răspunsul lui Ben merge la fel în sens invers, prin cutia lui Ben.</span></li></ol></div></div><div class="row "><div class="lab"><span data-l="en">If Ben is offline</span><span data-l="ro">Dacă Ben este offline</span></div><div class="txt"><p><span data-l="en">The package waits in Anna's mailbox. If Ben opens the app before its time is up, he gets it.</span><span data-l="ro">Pachetul așteaptă în cutia Annei. Dacă Ben deschide aplicația înainte să expire timpul, îl primește.</span></p></div></div><div class="row wide"><div class="lab"><span data-l="en">Who knows what</span><span data-l="ro">Cine ce știe</span></div><div class="txt"><div class="tablewrap"><table><thead><tr><th><span data-l="en">Who</span><span data-l="ro">Cine</span></th><th><span data-l="en">knows</span><span data-l="ro">știe</span></th></tr></thead><tbody><tr><th scope="row"><span data-l="en">Anna's phone</span><span data-l="ro">Telefonul Annei</span></th><td><span data-l="en">Everything she wrote and received. Her own address book.</span><span data-l="ro">Tot ce a scris și a primit. Propriul ei carnet de adrese.</span></td></tr><tr><th scope="row"><span data-l="en">Ben's phone</span><span data-l="ro">Telefonul lui Ben</span></th><td><span data-l="en">Everything he wrote and received. Anna under the name he gave her.</span><span data-l="ro">Tot ce a scris și a primit. Pe Anna sub numele pe care i l-a dat.</span></td></tr><tr><th scope="row"><span data-l="en">Anna's mailbox</span><span data-l="ro">Cutia Annei</span></th><td><span data-l="en">A sealed package, the label it carries today, when it arrived and roughly how big it is. No names, no words.</span><span data-l="ro">Un pachet sigilat, eticheta de azi, când a sosit și cam cât de mare este. Fără nume, fără cuvinte.</span></td></tr><tr><th scope="row"><span data-l="en">Ben's mailbox</span><span data-l="ro">Cutia lui Ben</span></th><td><span data-l="en">Nothing about this message. It holds only what Ben wrote himself.</span><span data-l="ro">Nimic despre acest mesaj. Conține doar ce a scris Ben însuși.</span></td></tr><tr><th scope="row"><span data-l="en">NexonAI</span><span data-l="ro">NexonAI</span></th><td><span data-l="en">Nothing. We run no servers and are not on the path.</span><span data-l="ro">Nimic. Nu operăm servere și nu suntem pe traseu.</span></td></tr></tbody></table></div></div></div>
+</div>
+</section>
+<section id="compliance">
+<div class="sh"><div class="eyebrow"><span data-l="en">Reports</span><span data-l="ro">Raportări</span></div><h2><span data-l="en">unpruuf Compliance: the reporting channel.</span><span data-l="ro">unpruuf Compliance: canalul de raportare.</span></h2></div>
+<div class="rows">
+<div class="row "><div class="lab"><span data-l="en">What it is</span><span data-l="ro">Ce este</span></div><div class="txt"><p><span data-l="en">unpruuf Compliance is the reporting channel for organisations. Employees and others can report a concern safely, and the office that handles reports can answer without knowing who wrote.</span><span data-l="ro">unpruuf Compliance este canalul de raportare pentru organizații. Angajații și alte persoane pot raporta o problemă în siguranță, iar biroul care tratează raportările poate răspunde fără să știe cine a scris.</span></p><p><span data-l="en">EU Directive 2019/1937 requires organisations with 50 or more employees to offer such a channel. In Romania this is Law 361/2022.</span><span data-l="ro">Directiva UE 2019/1937 cere organizațiilor cu 50 sau mai mulți angajați să ofere un astfel de canal. În România este Legea 361/2022.</span></p></div></div><div class="row "><div class="lab"><span data-l="en">How a report goes</span><span data-l="ro">Cum decurge o raportare</span></div><div class="txt"><ol class="steps"><li><span data-l="en">The organisation shows one code for everybody: on a poster, on the intranet, on a card. Never one code per person, because a personal code could point to a person.</span><span data-l="ro">Organizația afișează un singur cod pentru toți: pe un poster, pe intranet, pe un card. Niciodată un cod per persoană, pentru că un cod personal ar putea duce la o persoană.</span></li><li><span data-l="en">A reporter scans it with the unpruuf Compliance app. No account, no name, no phone number.</span><span data-l="ro">Persoana care raportează îl scanează cu aplicația unpruuf Compliance. Fără cont, fără nume, fără număr de telefon.</span></li><li><span data-l="en">The app opens the case by itself. It hands the reporting office a sealed introduction, so that the office can answer. Nobody copies or pastes anything.</span><span data-l="ro">Aplicația deschide singură cazul. Predă biroului de raportare o prezentare sigilată, ca biroul să poată răspunde. Nimeni nu copiază și nu lipește nimic.</span></li><li><span data-l="en">On the office's laptop the case appears with a random case number. The office sends a confirmation of receipt back, and the reporter sees it in the app under My case. The law gives 7 days for that confirmation.</span><span data-l="ro">Pe laptopul biroului apare cazul cu un număr de caz aleatoriu. Biroul trimite înapoi confirmarea de primire, iar persoana care raportează o vede în aplicație, la Cazul meu. Legea dă 7 zile pentru această confirmare.</span></li><li><span data-l="en">Both sides write in the case. The status (new, confirmed, in progress, closed) and the deadlines are tracked in the office's dashboard. Feedback is due within 3 months.</span><span data-l="ro">Ambele părți scriu în caz. Starea (nou, confirmat, în lucru, închis) și termenele sunt urmărite în panoul biroului. Răspunsul pe fond este datorat în cel mult 3 luni.</span></li></ol></div></div><div class="row "><div class="lab"><span data-l="en">Each report stands alone</span><span data-l="ro">Fiecare raportare este separată</span></div><div class="txt"><p><span data-l="en">Two reports from one phone look like two unrelated people. A reporter may give their name if they wish. A reporter can remove a case from their own phone at any time; the office keeps its record.</span><span data-l="ro">Două raportări de pe același telefon arată ca doi oameni fără legătură. Persoana care raportează își poate da numele, dacă dorește. Poate șterge un caz de pe propriul telefon oricând; biroul își păstrează evidența.</span></p></div></div><div class="row wide"><div class="lab"><span data-l="en">Who does what</span><span data-l="ro">Cine ce face</span></div><div class="txt"><div class="split">
+<div class="col"><h3><span data-l="en">What unpruuf Compliance does</span><span data-l="ro">Ce face unpruuf Compliance</span></h3>
+<ul>
+<li><span data-l="en">Opens a case from a scan, with no registration</span><span data-l="ro">Deschide un caz dintr-o scanare, fără înregistrare</span></li>
+<li><span data-l="en">Gives every case a random number and its own keys</span><span data-l="ro">Dă fiecărui caz un număr aleatoriu și chei proprii</span></li>
+<li><span data-l="en">Sends the receipt and every status change back</span><span data-l="ro">Trimite înapoi confirmarea și fiecare schimbare de stare</span></li>
+<li><span data-l="en">Tracks the legal deadlines</span><span data-l="ro">Urmărește termenele legale</span></li>
+<li><span data-l="en">Captures no identity unless the reporter gives one</span><span data-l="ro">Nu captează nicio identitate, decât dacă persoana o indică</span></li>
+</ul></div>
+<div class="col"><h3><span data-l="en">What stays with the organisation</span><span data-l="ro">Ce rămâne la organizație</span></h3>
+<ul>
+<li><span data-l="en">The legal basis for handling the data</span><span data-l="ro">Temeiul juridic al prelucrării datelor</span></li>
+<li><span data-l="en">Informing people who are named in a report</span><span data-l="ro">Informarea persoanelor menționate într-o raportare</span></li>
+<li><span data-l="en">How long a case is kept, and deleting what is no longer needed</span><span data-l="ro">Cât timp se păstrează un caz și ștergerea a ceea ce nu mai este necesar</span></li>
+<li><span data-l="en">Reporting a data breach to the authority where required</span><span data-l="ro">Notificarea unei încălcări a securității datelor către autoritate, când este cazul</span></li>
+<li><span data-l="en">The contract with the hosting provider</span><span data-l="ro">Contractul cu furnizorul de găzduire</span></li>
+</ul></div>
+</div></div></div><div class="row note"><div class="lab"><span data-l="en">Good to know</span><span data-l="ro">De reținut</span></div><div class="txt"><p><span data-l="en">Deleting or exporting a single case from the office's dashboard is not built yet. Cases on the office laptop are protected by a password that cannot be recovered. unpruuf Compliance supports the principles of data protection. The organisation remains the one responsible, and its data protection officer or lawyer decides how it fits.</span><span data-l="ro">Ștergerea sau exportul unui singur caz din panoul biroului nu este încă construit. Cazurile de pe laptopul biroului sunt protejate cu o parolă care nu poate fi recuperată. unpruuf Compliance sprijină principiile protecției datelor. Organizația rămâne responsabilă, iar responsabilul ei cu protecția datelor sau juristul ei hotărăște cum se potrivește.</span></p></div></div>
+</div>
+</section>
+
+<section id="limits">
+<div class="sh"><div class="eyebrow"><span data-l="en">Honest status</span><span data-l="ro">Stadiu sincer</span></div><h2><span data-l="en">What this page does not say.</span><span data-l="ro">Ce nu spune această pagină.</span></h2></div>
+<ul class="limits">
+<li><span data-l="en">Nobody has audited unpruuf independently yet. It is not certified.</span><span data-l="ro">Nimeni nu a auditat încă unpruuf în mod independent. Nu este certificat.</span></li>
+<li><span data-l="en">A phone that someone holds unlocked shows what is on it.</span><span data-l="ro">Un telefon ținut deblocat arată ce se află pe el.</span></li>
+<li><span data-l="en">Someone who could watch every network at once could still compare when things happen.</span><span data-l="ro">Cine ar putea urmări toate rețelele simultan ar putea totuși compara momentele în care se întâmplă lucruri.</span></li>
+<li><span data-l="en">We do not say that using unpruuf makes an organisation compliant with data protection law. How it is used and run decides that.</span><span data-l="ro">Nu afirmăm că folosirea unpruuf face o organizație conformă cu legea protecției datelor. Aceasta depinde de felul în care este folosit și operat.</span></li>
+</ul>
+</section>
+<footer>
+  <div><h2><span data-l="en">Questions?</span><span data-l="ro">Întrebări?</span></h2><small>NexonAI Consulting SRL · Alba Iulia</small></div>
+  <div class="c"><span>gabriel@nexonai.ro</span><span>+40 773 829 646</span></div>
+</footer>
+</div>
+<script>
+(function(){
+  var root=document.documentElement, btns=[].slice.call(document.querySelectorAll('.lang button'));
+  function get(){try{return localStorage.getItem('unpruuf-plain-lang');}catch(e){return null;}}
+  function put(l){try{localStorage.setItem('unpruuf-plain-lang',l);}catch(e){}}
+  function set(l){
+    root.setAttribute('data-lang',l); root.setAttribute('lang',l);
+    btns.forEach(function(b){b.setAttribute('aria-pressed', b.getAttribute('data-set')===l ? 'true':'false');});
+  }
+  /* Order: link (#ro / #en), then the visitor's own earlier choice, then Romania, then English.
+     "Romania" = the browser's first language is Romanian, or the device clock is set to Bucharest time.
+     A page without a server cannot see the country of a visitor's connection. */
+  function detect(){
+    var h=(location.hash||'').replace('#','');
+    if(h==='ro'||h==='en') return h;
+    var saved=get(); if(saved==='ro'||saved==='en') return saved;
+    var first=((navigator.languages&&navigator.languages[0])||navigator.language||'').toLowerCase();
+    if(first.indexOf('ro')===0) return 'ro';
+    var tz=''; try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(e){}
+    if(tz==='Europe/Bucharest') return 'ro';
+    return 'en';
+  }
+  set(detect());
+  btns.forEach(function(b){b.addEventListener('click',function(){var n=b.getAttribute('data-set');set(n);put(n);});});
+})();
+</script>
+</body>
+</html>

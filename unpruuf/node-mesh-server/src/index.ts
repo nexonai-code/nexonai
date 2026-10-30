@@ -1,70 +1,338 @@
+import { readBridgeLines, writeBridgeLines } from "./bridgeLines";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { Server } from "http";
+import { spawn } from "child_process";
+import QRCode from "qrcode";
 import { createApp } from "./app";
+import { createAdminApp, ownerConnectionString } from "./admin/adminApp";
+import { ADMIN_TOKEN_FILE, createAdminToken, writeAdminToken } from "./admin/adminToken";
 import { NodeStore } from "./store/nodeStore";
-import { DB_PATH, IDENTITY_PATH, PORT, RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS } from "./config";
-import { createEphemeralIdentity, loadOrCreateIdentity, NodeIdentity } from "./nodeIdentity";
+import {
+  ADMIN_PORT, BRIDGE_LINES_PATH, DATA_DIR, DB_PATH, IDENTITY_PATH, KEY_STORAGE, LICENSE_PATH, NODE_PROFILE, NODE_SLOT, PORT, POW, STORE_IN_RAM, PACKAGE_ROOT, REQUIRE_SIGNED,
+  RESET_INTERVAL_MS, RESET_OFFSET_MS, SWEEP_INTERVAL_MS, TOR_BIN_DIR, TOR_ENABLED, GUEST_GRANTS_ENABLED, GUEST_MAX_VALIDITY_MS,
+} from "./config";
+import {
+  createEphemeralIdentity, isLocked, loadOrCreateIdentity, NodeIdentity, regenerateSecret, saveIdentity, unlockIdentity,
+} from "./nodeIdentity";
+import { NodeOnionService } from "./tor/onionService";
+import { Metrics } from "./metrics";
+import { LicenseGuard } from "./license";
+import { loweredProtection } from "./loweredProtection";
+import { describeIntegrity, IntegrityResult, verifyIntegrity } from "./integrity";
 
-// unpruuf Business Temp Node (NODE_MESH_SPEC.md §7 step 8): EPHEMERAL=1 starts this process as a
-// one-off Temp Node whose identity — and, since a persisted DB would otherwise outlive the
-// process and let a restart quietly pick the same messages back up, its message store too — never
-// touch disk at all. A regular (non-ephemeral) node keeps its usual on-disk identity/DB so a
-// restart doesn't lock the owner's own app instance(s) out; that distinction is the whole reason
-// this branches here instead of always going through loadOrCreateIdentity.
+// Files the server writes are readable by its own user only (the database holds waiting packets).
+process.umask(0o077);
+
+// Temp Node (NODE_MESH_SPEC.md §7): identity, onion key and message store live in memory only;
+// Tor's own working files go to a throwaway temp folder that is deleted on exit.
 const ephemeral = process.env.EPHEMERAL === "1" || process.argv.includes("--ephemeral");
+const adminBind = process.env.ADMIN_BIND ?? "127.0.0.1";
+
 let identity: NodeIdentity;
+let torWorkDir: string;
+let wasCreated = false;
 if (ephemeral) {
-  identity = createEphemeralIdentity();
-  console.log(`[identity] EPHEMERAL mode — Temp Node identity generated in memory only, TTL ${identity.ttlHours}h, nothing written to disk`);
-  console.log(`[identity] owner secret (configure the app's "Activate Temp Node" screen with this): ${identity.ownerSecret}`);
+  identity = createEphemeralIdentity(NODE_PROFILE.ttlHours);
+  torWorkDir = fs.mkdtempSync(path.join(os.tmpdir(), "unpruuf-tempnode-"));
 } else {
-  const { identity: loaded, wasCreated } = loadOrCreateIdentity(IDENTITY_PATH);
-  identity = loaded;
-  if (wasCreated) {
-    // Only path to retrieve the secret for a Docker deployment is the container logs — printed
-    // once, at generation time, not on every subsequent start. Unlike the consumer relay's token,
-    // this NEVER gets handed to a contact — only into this node's own paired app instance(s), see
-    // NODE_MESH_SPEC.md §1/§8.
-    console.log(`[identity] generated a new owner secret (TTL ${identity.ttlHours}h): ${identity.ownerSecret}`);
-    console.log("[identity] configure this node's OWNER app instance(s) with this secret — see node-mesh-server/README.md");
+  fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+  // A folder or database from an older start may be more open than the umask now makes new files.
+  for (const f of [DATA_DIR, DB_PATH, DB_PATH + "-wal", DB_PATH + "-shm"]) {
+    try { fs.chmodSync(f, f === DATA_DIR ? 0o700 : 0o600); } catch { /* not there (yet), or not ours to change */ }
+  }
+  const loaded = loadOrCreateIdentity(IDENTITY_PATH, NODE_PROFILE.ttlHours, KEY_STORAGE);
+  identity = loaded.identity;
+  wasCreated = loaded.wasCreated;
+  torWorkDir = DATA_DIR;
+}
+const sealed = !ephemeral && identity.keyStorage === "sealed";
+
+// Server license (license.ts): checked offline. A Temp Node is one address for one chat and needs
+// none. Every other server starts its API and its onion services only once a genuine license is
+// present — until then only the setup page runs, where the license is pasted in.
+const license = new LicenseGuard({ filePath: ephemeral ? null : LICENSE_PATH, envCode: process.env.NODE_MESH_LICENSE, free: ephemeral });
+
+// A Temp Node is one address for one chat by definition. Otherwise the license caps the node count.
+// Not a setting: a licensed server runs every node its licence allows (never more than 250).
+let nodeCount = ephemeral ? 1 : Math.max(1, license.maxNodes());
+// Release integrity (integrity.ts): once at start, then hourly. A changed file is reported loudly;
+// with NODE_MESH_REQUIRE_SIGNED=1 the server does not start at all.
+let integrity: IntegrityResult = verifyIntegrity(PACKAGE_ROOT);
+console.log(`[integrity] ${describeIntegrity(integrity)}`);
+if (REQUIRE_SIGNED && integrity.state !== "ok" && integrity.state !== "exe") {
+  console.error("[integrity] NODE_MESH_REQUIRE_SIGNED=1 and the program files are not a verified release. Not starting.");
+  process.exit(1);
+}
+setInterval(() => {
+  const before = integrity.state;
+  integrity = verifyIntegrity(PACKAGE_ROOT);
+  if (integrity.state !== before) {
+    console.log(`[integrity] changed: ${describeIntegrity(integrity)}`);
+    for (const f of [...integrity.changed, ...integrity.missing, ...integrity.extra].slice(0, 8)) console.log(`[integrity]   ${f}`);
+  }
+}, 60 * 60 * 1000).unref();
+
+const messagesInRam = ephemeral || STORE_IN_RAM;
+const store = new NodeStore(messagesInRam ? ":memory:" : DB_PATH, identity.ttlHours);
+
+let onion: NodeOnionService | null = null;
+let apiServer: Server | null = null;
+let serviceStarted = false;
+
+function createOnionService(): NodeOnionService {
+  const saved = ephemeral ? [] : identity.onionKeys ?? [];
+  return new NodeOnionService({
+    workDir: torWorkDir,
+    torBinDir: TOR_BIN_DIR,
+    localPort: PORT,
+    privateKeys: Array.from({ length: nodeCount }, (_, i) => saved[i] ?? null),
+    onNewKey: (index, key) => {
+      if (ephemeral) return;
+      const keys = identity.onionKeys ?? [];
+      keys[index] = key;
+      identity.onionKeys = keys;
+      saveIdentity(IDENTITY_PATH, identity);
+    },
+    controlKey: sealed ? identity.controlKey ?? null : undefined,
+    onNewControlKey: (key) => {
+      identity.controlKey = key;
+      saveIdentity(IDENTITY_PATH, identity);
+    },
+    locked: sealed && isLocked(identity),
+    pow: POW,
+  });
+}
+
+// Sealed servers: the owner app (or the setup page) proves the owner secret, the node keys are
+// unsealed into memory and the node onions go online again under their old addresses.
+async function unlock(secret: string): Promise<string[] | null> {
+  if (!unlockIdentity(identity, secret)) return null;
+  if (KEY_STORAGE === "disk") identity.keyStorage = "disk";
+  saveIdentity(IDENTITY_PATH, identity);
+  if (!onion) return publicAddresses();
+  const keys = identity.onionKeys ?? [];
+  const addresses = await onion.unlock(Array.from({ length: nodeCount }, (_, i) => keys[i] ?? null));
+  console.log(`[keys] unlocked by the owner — ${addresses.length} node onion(s) published again`);
+  return addresses;
+}
+const lockControl = sealed
+  ? {
+      isLocked: () => isLocked(identity),
+      unlock,
+      controlAddress: () => onion?.getStatus().controlAddress ?? null,
+    }
+  : undefined;
+
+const operatorAddress = process.env.NODE_MESH_PUBLIC_ADDRESS?.trim() || null;
+const publicAddress = (): string | null => (onion ? onion.getStatus().onionAddress : operatorAddress);
+const publicAddresses = (): string[] =>
+  onion ? onion.getStatus().onionAddresses : operatorAddress ? [operatorAddress] : [];
+const metrics = new Metrics();
+const app = createApp(store, () => identity.ownerSecret, publicAddresses, lockControl, metrics, () => license.depositBlocked(), { enabled: GUEST_GRANTS_ENABLED, maxValidityMs: GUEST_MAX_VALIDITY_MS });
+console.log(`[guests] guest grants ${GUEST_GRANTS_ENABLED ? "ENABLED" : "off"}`);
+
+// Second factor of the setup page (admin/adminToken.ts): new at every start. Not in the logs of a
+// service; the customer's tool reads the file over its own login.
+const adminToken = createAdminToken();
+const adminTokenPath = path.join(DATA_DIR, ADMIN_TOKEN_FILE);
+if (!ephemeral) writeAdminToken(adminTokenPath, adminToken);
+
+const adminApp = createAdminApp(
+  {
+    getOwnerSecret: () => identity.ownerSecret,
+    isLocked: () => isLocked(identity),
+    unlock: sealed ? unlock : undefined,
+    sealed,
+    controlAddress: () => onion?.getStatus().controlAddress ?? null,
+    rotateOwnerSecret: ephemeral
+      ? undefined
+      : () => {
+          identity = regenerateSecret(IDENTITY_PATH, identity);
+          console.log("[identity] owner secret rotated — scan the new owner QR into your own app");
+        },
+    profile: NODE_PROFILE,
+    slot: NODE_SLOT,
+    ephemeral,
+    messagesInRam,
+    integrity: () => integrity,
+    torEnabled: TOR_ENABLED,
+    publicAddress,
+    publicAddresses,
+    torStatus: () => onion?.getStatus() ?? null,
+    stats: () => store.stats(),
+    metrics,
+    get configuredNodes() {
+      return nodeCount;
+    },
+    registeredNodes: () => (onion ? onion.registeredNodeCount() : Promise.resolve(null)),
+    license: () => license.summary(),
+    bridgeLines: () => readBridgeLines(BRIDGE_LINES_PATH),
+    setBridgeLines: (lines: string[]) => writeBridgeLines(BRIDGE_LINES_PATH, lines),
+    applyLicense: async (code: string) => {
+      const result = license.apply(code);
+      if (!result.ok) return result;
+      console.log(`[license] applied — ${result.license.customer}, serial ${result.license.serial}, ${result.license.maxNodes} node(s), until ${new Date(result.license.expiresAtMs).toISOString().slice(0, 10)}`);
+      if (!serviceStarted) startService();
+      return { ok: true, summary: license.summary() };
+    },
+  },
+  ADMIN_PORT,
+  adminToken,
+);
+
+for (const note of loweredProtection(process.env)) console.warn(`[settings] ${note}`);
+
+const kind = ephemeral
+  ? "Temp Node"
+  : `Business Node server (slot ${NODE_SLOT}/3)`;
+console.log(`unpruuf ${kind} — profile "${NODE_PROFILE.name}" (TTL ${NODE_PROFILE.ttlHours}h)`);
+if (ephemeral) console.log("[identity] Temp Node — identity, onion key and messages exist in memory only");
+else if (messagesInRam) console.log("[store] NODE_MESH_STORE=ram — waiting packets live in memory only; a restart drops them");
+else console.log(wasCreated ? "[identity] new node identity created" : "[identity] existing node identity loaded");
+if (sealed && isLocked(identity)) {
+  console.log("[keys] LOCKED — node keys are sealed and only exist on disk encrypted. Nodes stay offline until");
+  console.log("[keys] you unlock: unpruuf app → Settings → Your own nodes → Unlock (or the setup page).");
+} else if (sealed) {
+  console.log("[keys] sealed storage — after a restart this server stays locked until your app unlocks it");
+}
+
+function openInBrowser(url: string): void {
+  try {
+    const [cmd, args] = process.platform === "win32" ? ["cmd", ["/c", "start", "", url]]
+      : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
+    spawn(cmd as string, args as string[], { detached: true, stdio: "ignore" }).on("error", () => { /* no browser here: the link is printed above */ }).unref();
+  } catch { /* the link is printed above */ }
+}
+
+const adminServer: Server = adminApp.listen(ADMIN_PORT, adminBind, () => {
+  if (process.stdout.isTTY || process.env.NODE_MESH_PRINT_OWNER_CODE === "1") {
+    console.log(`[setup] open http://localhost:${ADMIN_PORT}/?t=${adminToken} on THIS computer to connect your app (owner QR)`);
+    // start.bat asks for it: the browser is opened from here, so the token never has to leave this process.
+    if (process.env.NODE_MESH_OPEN_BROWSER === "1") openInBrowser(`http://localhost:${ADMIN_PORT}/?t=${adminToken}`);
   } else {
-    console.log(`[identity] loaded existing identity (TTL ${identity.ttlHours}h)`);
+    console.log(`[setup] the setup page on port ${ADMIN_PORT} needs an access token. It is not printed here because this output is not a terminal;`);
+    console.log(`[setup] it is in ${adminTokenPath} (new at every start). Open http://localhost:${ADMIN_PORT}/?t=<token> on THIS computer.`);
+  }
+});
+
+// The owner code is the write credential for every node, so it goes to the console only when a
+// person is looking at one (an interactive terminal), never into a log stream: `docker logs`, a
+// service journal or a redirected file would keep it. Without a terminal the setup page shows it.
+// NODE_MESH_PRINT_OWNER_CODE=1 forces printing for an operator who really wants it in the log.
+async function printOwnerCode(address: string): Promise<void> {
+  if (!process.stdout.isTTY && process.env.NODE_MESH_PRINT_OWNER_CODE !== "1") {
+    console.log("[owner] new owner code created — not printed here because this output is not a terminal.");
+    console.log(`[owner] open the setup page on this computer (http://localhost:${ADMIN_PORT}) to scan it with your own app.`);
+    return;
+  }
+  const code = ownerConnectionString(address, identity.ownerSecret);
+  const qr = await QRCode.toString(code, { type: "terminal", small: true });
+  console.log("\n================ OWNER CODE — scan with YOUR OWN app only, never share ================");
+  console.log(qr);
+  console.log(code);
+  console.log("========================================================================================\n");
+}
+
+// API + onion services. Runs once: at start when a license is already present, otherwise the
+// moment the license is pasted on the setup page.
+function startService(): void {
+  if (serviceStarted) return;
+  serviceStarted = true;
+  nodeCount = ephemeral ? 1 : Math.max(1, license.maxNodes());
+  if (process.env.NODE_MESH_NODES) {
+    console.warn("[node] NODE_MESH_NODES is no longer a setting and is ignored — a server always runs the full licensed number of nodes.");
+  }
+  console.log(`[node] ${nodeCount} node${nodeCount === 1 ? "" : "s"}`);
+
+  apiServer = app.listen(PORT, "127.0.0.1", () => {
+    console.log(`[api] listening on 127.0.0.1:${PORT} — reachable from outside only through the onion service`);
+  });
+  apiServer.keepAliveTimeout = 5_000;
+
+  if (TOR_ENABLED) {
+    onion = createOnionService();
+    onion
+      .start()
+      .then(async (address) => {
+        const st = onion!.getStatus();
+        const all = st.onionAddresses;
+        if (st.locked) {
+          console.log(`[tor] locked — only the control onion is online: ${st.controlAddress}`);
+          return;
+        }
+        if (all.length > 1) console.log(`[tor] ${all.length} onion addresses registered, first: ${address} (Tor proof-of-work defense on)`);
+        else console.log(`[tor] onion address: ${address} (Tor proof-of-work defense on)`);
+        if (ephemeral || wasCreated) await printOwnerCode(address);
+        if (!ephemeral) console.log(`[list] node list for your app (all ${all.length} nodes in one file): run ${process.platform === "win32" ? "export-list.bat" : "./export-list.sh"} in this folder, or use the setup page. Control fetches it with one click.`);
+      })
+      .catch((err) => {
+        console.error(`[tor] could not start yet: ${(err as Error).message}`);
+        console.error("[tor] keeps retrying automatically — the setup page shows the current state");
+      });
+  } else {
+    console.warn("[tor] NODE_MESH_TOR=0 — this process publishes NO onion service itself.");
+    console.warn(`[tor] Only valid if you run your own Tor hidden service mapping port 80 to 127.0.0.1:${PORT}.`);
+    if (operatorAddress && (ephemeral || wasCreated)) void printOwnerCode(operatorAddress);
   }
 }
 
-const store = new NodeStore(ephemeral ? ":memory:" : DB_PATH, identity.ttlHours);
-const app = createApp(store, identity.ownerSecret);
-
-// The only deletion path (NODE_MESH_SPEC.md §4) — Reset below never touches message data.
-setInterval(() => {
-  const removed = store.sweepExpired();
-  if (removed > 0) console.log(`[sweep] removed ${removed} expired blob(s)`);
-}, SWEEP_INTERVAL_MS).unref();
-
-// NODE_MESH_SPEC.md §5's staggered Reset — connection/socket hygiene only. This Express +
-// better-sqlite3 process holds no outbound connection pool of its own to recycle (better-sqlite3
-// is a single synchronous connection, not a pool; there are no long-lived outbound sockets here
-// the way an Android/Windows client maintaining live Tor circuits would have) — so for this
-// specific implementation, Reset's real, honest content is a best-effort SQLite housekeeping
-// pass (WAL checkpoint) rather than invented connection-pool work that doesn't apply to this
-// process shape. Still on its own staggered schedule per §5, in case a future client-facing
-// (rather than server-facing) implementation of this same interval does need real connection
-// recycling — keeping the timing contract identical now avoids a later behavioral surprise.
-setInterval(() => {
-  store.checkpointWal();
-  console.log("[reset] connection/socket hygiene pass complete");
-}, RESET_INTERVAL_MS).unref();
-if (RESET_OFFSET_MS > 0) {
-  // First reset of THIS process's lifetime waits out its configured offset into the cycle before
-  // the regular interval above takes over — see config.ts's RESET_OFFSET_MS doc comment for why
-  // running multiple node instances each need a different offset.
-  setTimeout(() => {
-    store.checkpointWal();
-    console.log("[reset] connection/socket hygiene pass complete (initial, offset-aligned)");
-  }, RESET_OFFSET_MS).unref();
+if (license.activated()) {
+  startService();
+} else {
+  console.log("[license] LICENSE REQUIRED — this server runs once it has a server license from NexonAI.");
+  console.log(`[license] Paste it on the setup page (http://localhost:${ADMIN_PORT}) or put it in ${LICENSE_PATH}.`);
 }
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`unpruuf-node-mesh listening on 127.0.0.1:${PORT} (reach it only via this node's own Tor hidden service)`);
-});
+// Logs the license state when it changes (valid → expiring → expired), and once at start.
+let lastLicenseStatus = "";
+function logLicense(): void {
+  const l = license.summary();
+  if (l.status === lastLicenseStatus || l.status === "free") return;
+  lastLicenseStatus = l.status;
+  const until = l.expiresAtMs ? new Date(l.expiresAtMs).toISOString().slice(0, 10) : "";
+  if (l.status === "valid") console.log(`[license] valid until ${until} (${l.customer}, up to ${l.maxNodes} nodes)`);
+  else if (l.status === "expiring") console.warn(`[license] expires in ${l.daysLeft} day(s), on ${until} — paste the renewal on the setup page`);
+  else if (l.status === "expired") console.error(`[license] EXPIRED on ${until} — new deposits are refused, fetching still works. Paste a new license on the setup page.`);
+  else if (l.status === "invalid") console.error("[license] the stored license code is not valid");
+}
+logLicense();
+setInterval(logLicense, 60 * 60 * 1000).unref();
 
-process.on("SIGTERM", () => { store.close(); process.exit(0); });
-process.on("SIGINT", () => { store.close(); process.exit(0); });
+// The only deletion path (NODE_MESH_SPEC.md §4) — Reset below never touches message data.
+// Not logged: a line per minute of traffic would leave a timeline of the server's use in docker logs
+// or the service journal for months. The counts are in the overview (metrics.ts), in memory.
+store.sweepExpired(); // once right at the start: packets that expired while the server was off go now
+setInterval(() => { store.sweepExpired(); }, SWEEP_INTERVAL_MS).unref();
+
+// NODE_MESH_SPEC.md §5 staggered Reset — connection/socket hygiene only: drop idle HTTP
+// keep-alive sockets, confirm the onion service is still registered (re-add with the same key if
+// not), fold the SQLite WAL back. Never messages, never rate-limit counters, never the address.
+async function resetHygiene(label: string): Promise<void> {
+  apiServer?.closeIdleConnections();
+  adminServer.closeIdleConnections();
+  store.checkpointWal();
+  let torNote = "tor disabled";
+  if (onion) torNote = await onion.hygiene().catch((err) => `tor check failed: ${(err as Error).message}`);
+  console.log(`[reset] ${label}: idle sockets closed, WAL checkpointed, ${torNote}`);
+}
+
+// Aligned to the wall clock (UTC), not to process start — three nodes on three different machines,
+// started at arbitrary times, still land on 0 / 20 / 40 min of the same daily cycle.
+const msUntilFirstReset = (RESET_OFFSET_MS - (Date.now() % RESET_INTERVAL_MS) + RESET_INTERVAL_MS) % RESET_INTERVAL_MS;
+setTimeout(() => {
+  void resetHygiene("scheduled");
+  setInterval(() => void resetHygiene("scheduled"), RESET_INTERVAL_MS).unref();
+}, msUntilFirstReset).unref();
+
+function shutdown(): void {
+  onion?.stop();
+  apiServer?.close();
+  adminServer.close();
+  store.close();
+  if (ephemeral) fs.rmSync(torWorkDir, { recursive: true, force: true });
+  process.exit(0);
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

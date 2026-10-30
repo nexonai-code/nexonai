@@ -97,15 +97,44 @@ class RelayTorManager(
 
         applyBridges(ctrl)
 
-        runCatching {
-            val portMap = mapOf(RelayConstants.ONION_VIRTUAL_PORT to "127.0.0.1:${RelayConstants.LOCAL_HTTP_PORT}")
-            val storedKey = getPrivKey()
-            val result = if (storedKey != null) ctrl.addOnion(storedKey, portMap) else ctrl.addOnion(portMap)
-            val serviceId = result[TorControlCommands.HS_ADDRESS] ?: return
-            result[TorControlCommands.HS_PRIVKEY]?.let(savePrivKey)
-            _onionAddress.value = "$serviceId.onion"
-            _isReady.value = true
-        }
+        runCatching { publish(ctrl) }
+    }
+
+    private var currentServiceId: String? = null
+
+    private fun publish(ctrl: TorControlConnection) {
+        val portMap = mapOf(RelayConstants.ONION_VIRTUAL_PORT to "127.0.0.1:${RelayConstants.LOCAL_HTTP_PORT}")
+        val storedKey = getPrivKey()
+        val result = if (storedKey != null) ctrl.addOnion(storedKey, portMap) else ctrl.addOnion(portMap)
+        val serviceId = result[TorControlCommands.HS_ADDRESS] ?: return
+        result[TorControlCommands.HS_PRIVKEY]?.let(savePrivKey)
+        currentServiceId = serviceId
+        _onionAddress.value = "$serviceId.onion"
+        _isReady.value = true
+    }
+
+    /** Swaps the published onion for the one [getPrivKey] now returns — used when the device
+     *  switches between relay and Business Node-Mesh mode, which use separate keys and
+     *  therefore separate addresses. */
+    suspend fun republish() {
+        val ctrl = torService?.torControlConnection ?: return
+        _isReady.value = false
+        _onionAddress.value = null
+        runCatching { currentServiceId?.let { ctrl.delOnion(it) } }
+        currentServiceId = null
+        runCatching { publish(ctrl) }
+    }
+
+    /** Node-Mesh staggered Reset (NODE_MESH_SPEC.md §5), connection hygiene only: confirms Tor
+     *  still has our onion registered and re-adds it with the same key if not. The address never
+     *  changes. Returns a short human-readable result for the activity log. */
+    suspend fun hygiene(): String {
+        val ctrl = torService?.torControlConnection ?: return "tor not connected"
+        val id = currentServiceId ?: return "no onion published yet"
+        val current = runCatching { ctrl.getInfo("onions/current") }.getOrNull().orEmpty()
+        if (current.split(Regex("\\s+")).contains(id)) return "onion service registered"
+        return runCatching { publish(ctrl); "onion service re-added (same address)" }
+            .getOrElse { "re-add failed: ${it.message}" }
     }
 
     // Only activates bridges that will actually work: vanilla lines always, PT lines (obfs4/

@@ -1,9 +1,21 @@
 package com.nexonai.unpruuf.domain.network
 
 import android.content.Context
+import com.nexonai.unpruuf.domain.AppEdition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Top-level, not nested in [RelayManager]'s companion object (moved 2026-09-26): a
+ * companion-object-nested `data class` failed to resolve from other files
+ * (`P2PNetworkManager.kt`) under this project's Kotlin/Gradle configuration — the first real
+ * compiler run this whole class had ever gone through (see STATUS.md §3's standing "never
+ * build-verified" caveat) surfaced this immediately as a hard "Unresolved reference" in every
+ * calling file, both as a type and as a constructor call. Top-level in the same package needs no
+ * qualification and has no such ambiguity.
+ */
+data class ParsedConnection(val address: String, val authToken: String)
 
 /**
  * Settings for the optional store-and-forward relay fallback (see server/README.md). Off by
@@ -25,9 +37,16 @@ import javax.inject.Singleton
  */
 @Singleton
 class RelayManager @Inject constructor(
-    @ApplicationContext context: Context
+    @ApplicationContext context: Context,
+    crypto: CryptoManager
 ) {
     private val prefs = context.getSharedPreferences("relay", Context.MODE_PRIVATE)
+    // Relay address, access token and backup relays are stored encrypted under the phone-bound key;
+    // plain values from older versions are upgraded on first read. The mode is not secret.
+    private val sealed = com.nexonai.unpruuf.domain.security.SealedStrings(
+        com.nexonai.unpruuf.domain.security.SharedPrefsStore(prefs),
+        { crypto.encrypt(it) }, { crypto.decrypt(it) }
+    )
 
     enum class RelayMode { OFF, AUTO, MANDATORY }
 
@@ -39,8 +58,13 @@ class RelayManager @Inject constructor(
         prefs.edit().putString("mode", mode.name).apply()
     }
 
-    fun getRelayOnion(): String = prefs.getString("onion", "") ?: ""
-    fun getAuthToken(): String = prefs.getString("auth_token", "") ?: ""
+    /** Panic PIN: forgets the relay (address, token, extra relays) and its mode. */
+    fun wipeAll() {
+        prefs.edit().clear().commit()
+    }
+
+    fun getRelayOnion(): String = sealed.get("onion")
+    fun getAuthToken(): String = sealed.get("auth_token")
 
     /**
      * Parses a scanned or pasted connection string (`unpruuf-relay:v1:<address>:<token>`) and
@@ -49,21 +73,27 @@ class RelayManager @Inject constructor(
      */
     fun applyConnectionString(raw: String): Boolean {
         val parsed = parseConnectionString(raw) ?: return false
-        prefs.edit()
-            .putString("onion", parsed.address)
-            .putString("auth_token", parsed.authToken)
-            .apply()
+        sealed.put("onion", parsed.address)
+        sealed.put("auth_token", parsed.authToken)
         return true
     }
 
-    /** True only when the relay is enabled (mode != OFF) AND a full, usable address+token pair
-     *  is configured. */
+    /** True only when the relay is enabled (mode != OFF, or [isMandatory] already forces it on —
+     *  see that function's doc comment) AND a full, usable address+token pair is configured. */
     fun isUsable(): Boolean =
-        getMode() != RelayMode.OFF && getRelayOnion().endsWith(".onion") && getAuthToken().isNotEmpty()
+        (isMandatory() || getMode() != RelayMode.OFF) &&
+            getRelayOnion().endsWith(".onion") && getAuthToken().isNotEmpty()
 
     /** Convenience for [P2PNetworkManager]'s delivery logic — true only when relay use should
-     *  bypass LAN/Tor-direct entirely for every contact, not just as a fallback. */
-    fun isMandatory(): Boolean = getMode() == RelayMode.MANDATORY
+     *  bypass LAN/Tor-direct entirely for every contact, not just as a fallback.
+     *
+     *  Forced permanently true for [AppEdition.WHISTLEBLOWER] — this product line's whole
+     *  compliance pitch is "anonymity through architecture, not a setting a reporter could
+     *  misconfigure or a support agent could talk them into turning off" (see COMPLIANCE.md).
+     *  Deliberately not just a different DEFAULT for [getMode]'s stored preference: the
+     *  Settings relay-mode picker itself must have no effect here, so nothing in the UI can
+     *  ever put a whistleblower build into a direct-P2P/onion-address-exposing mode at all. */
+    fun isMandatory(): Boolean = AppEdition.isWhistleblower || getMode() == RelayMode.MANDATORY
 
     /** Reconstructs the connection string for the CURRENTLY configured relay — the inverse of
      *  [applyConnectionString]. Used by cross-platform pairing (see CrossPlatformPairing.kt) to
@@ -75,10 +105,10 @@ class RelayManager @Inject constructor(
      *  as one `;`-joined string, same trick used for a contact's own relay pool
      *  (`Contact.theirRelayConnectionString`, reinterpreted) and for the wire format itself. */
     fun getExtraConnectionStrings(): List<String> =
-        parseConnectionStringList(prefs.getString("extra_connection_strings", "") ?: "")
+        parseConnectionStringList(sealed.get("extra_connection_strings"))
 
     fun setExtraConnectionStrings(list: List<String>) {
-        prefs.edit().putString("extra_connection_strings", buildConnectionStringList(list)).apply()
+        sealed.put("extra_connection_strings", buildConnectionStringList(list))
     }
 
     /** The full pool a new pairing QR advertises: my primary relay first (if usable), then
@@ -106,8 +136,6 @@ class RelayManager @Inject constructor(
          *  is raised to match, an iOS peer parsing an Android QR keeps only the first two entries
          *  — the third is simply unused, not mis-parsed (see CROSS_PLATFORM_PLAN.md). */
         const val RELAY_POOL_MAX_SIZE = 3
-
-        data class ParsedConnection(val address: String, val authToken: String)
 
         /**
          * Kotlin port of server/src/connectionString.ts's parseConnectionString — see that

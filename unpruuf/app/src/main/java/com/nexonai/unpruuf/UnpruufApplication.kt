@@ -7,6 +7,12 @@ import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 class UnpruufApplication : Application() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(base)
+        // Earliest possible: also catches a failure while Hilt builds the object graph (debug builds only).
+        com.nexonai.unpruuf.ui.DebugCrashReport.install(base)
+    }
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
@@ -15,10 +21,10 @@ class UnpruufApplication : Application() {
     private fun createNotificationChannels() {
         val channel = NotificationChannel(
             CHANNEL_MESSAGES,
-            "Messages",
+            getString(R.string.notif_channel_messages_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Incoming encrypted messages"
+            description = getString(R.string.notif_channel_messages_description)
             enableVibration(true)
             enableLights(true)
         }

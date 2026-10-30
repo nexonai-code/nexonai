@@ -5,6 +5,1641 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑28 · Audit RFQ v2: contact address and quote comparison table
+
+- Contact address in RFQ (EN/RO) and the DOCISIA/VĂZDUH reply changed to gabriel@nexonai.ro.
+- `handover/AUDIT_ANGEBOTSVERGLEICH_2026-10-28.xlsx`: scoring (weights from RFQ section 9), prices and facts per firm, check of RFQ questions 1 to 11. Formulas tested by recalculation.
+
+---
+
+## 2026‑10‑28 · Audit request for quotation and reply to DOCISIA/VĂZDUH
+
+- `handover/AUDIT_RFQ_2026-10-28.md/.docx` (EN) and `_RO`: current request for quotation for further audit firms (Lot A base, options B to F, out of scope, deliverables, questions 1 to 11, timeline, weights). No protocol details, so it can go out before an NDA.
+- `handover/AUDIT_ANTWORT_DOCISIA_VAZDUH_2026-10-28_RO.md/.docx`: Romanian reply draft to the DOCISIA/VĂZDUH offer (perimeter, frozen version, team and crypto competence, DNSC attestation questions, independence, report conditions, NDA with patent clause, missing commercial offer).
+- `evidence/AUDITOR_SCOPE.md`: note at the top pointing to the new scope.
+- `design/md_to_docx.py`: files named `*_RO` get the Romanian honesty line in the footer.
+- Open before sending: Lot B placement, December 2026 start assumption, weights, DNSC check on dnsc.ro.
+
+---
+
+## 2026‑10‑28 · Whistleblower hurdles and unpruuf comparison: English version
+
+- `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27_EN.md` and `.docx`: English translation of the corrected German document (same structure, tables and corrections). Romanian not yet made.
+
+---
+
+## 2026‑10‑27 · Whistleblower hurdles and unpruuf comparison: corrected
+
+- `handover/WHISTLEBLOWER_HUERDEN_VERGLEICH_2026-10-27.md` and `.docx`: Gabriel's German document corrected where it was wrong about unpruuf. Twelve corrections: product name (unpruuf Compliance, not safeline), installation is needed (app, QR scan; browser variant only as fallback), no "Fallcode" (case number and conversation in the app), cases can be exported and deleted (no tamper-proof audit log), server run by the customer with only encrypted packets for at most 24 hours and case files local on the officer's computer, limits of "IT administrators cannot read" and "basis for retaliation disappears", deadlines are shown not guaranteed, no "legally compliant" claim, no "guaranteed" and "uncompromising" wording, unpruuf Business wording. Added rows "effort for reporters" and "maturity" (pilot, not independently audited) and a section "Stand und Grenzen". External statistics and statements about other systems left unchanged and flagged; two weak sources noted.
+
+---
+
+## 2026‑10‑26 · Competitive comparison, scenario after the independent audit (EN and RO)
+
+- `handover/COMPETITIVE_COMPARISON_AFTER_AUDIT_2026-10-26.md` and `_RO.md` (and two artifacts): the same comparison redone on the premise that the independent audit is finished and passed and every statement is backed by proof. Labelled as a scenario, not today's state. Contents: the exact premise (including what stays outside round one: Control, Officer app, Press, Compliance parts, iOS), a table "what we may say, and the proof we hand over" per claim (mapped to `CLAIMS_TO_EVIDENCE.md`, the evidence scripts and the audit report), our position against the messengers and against the reporting channels, an honest note that the audit moves us to parity on the entry requirement and does not make us better than audited competitors, the scope decision that changes the reporting-channel comparison most (Compliance app and Officer app in round one), the conversation per competitor, the wording ladder and the conditions before the page may be used.
+
+---
+
+## 2026‑10‑26 · Competitive comparison
+
+- `handover/COMPETITIVE_COMPARISON_2026-10-26.md` (and artifact): what unpruuf actually offers today with an honest status per product, what it does not offer, and a comparison with SimpleX, Session, Briar, Cwtch, Threema OnPrem, Wire, Matrix/Element (messengers) and SecureDrop, GlobaLeaks, EQS Integrity Line (reporting channels). Every competitor cell is tagged: checked on the web on 26 October (low to medium source quality), general knowledge not rechecked, or unknown. Includes where we have a case, where we are weaker, trap questions per competitor, allowed wording, and the list of cells to verify first. No CRM data exists, so this is a capability comparison, not a win/loss analysis. English only; Romanian version on request.
+
+---
+
+## 2026‑10‑26 · Audit plan for the team
+
+- `handover/AUDIT_PLAN_2026-10-26.md` (and artifact): where we stand after R1/R2, the three decisions the team has to take first (F1 with M6 and L12, M5, M8), five phases with tasks, owners as proposals, effort estimates and done-criteria, a calendar (earliest final report mid-January 2027 if F1 is built first), the risks to a good result and the counter-moves, and the open points for the team.
+
+---
+
+## 2026‑10‑27 · iOS handover for Norbert (document, vectors, reference package)
+
+- New `ios/IOS_UEBERGABE_FUER_NORBERT_2026-10-27.md`: everything that changed since the list of 21.10. that iOS needs (new public licence key, free Client app with guest invitations, `GRANT_RENEW`, check code, server contract M1 to M3, v3-onion rule, receive window M4, Tor stream isolation, database key and panic wipe equivalents, F1 status), with an order of work and open questions for Gabriel.
+- New `ios/vectors/ios-vectors-2026-10-27.json` (check code, `GRANT_RENEW` cases, pairing codes with `g` and `i`, onion addresses with valid and invalid cases, licence codes signed with a throw-away key) and `NorbertVectorsTest.kt` that proves the Android code reproduces them (4 tests pass).
+- Package `unpruuf_iOS_Norbert_2026-10-27_v1.zip` carries the document, specs, vectors, Android reference sources and tests. Only the public licence key is in it.
+
+---
+
+## 2026‑10‑27 · New licence key pair (old private key lost), licence tool additions
+
+- The old `private-key.json` could not be found anywhere (not in this environment, not in Git, not in Drive or Gmail by name). New Ed25519 key pair made; public key replaced in the Android app (`LicenseManager`), relay-android (`NodeLicense`), the node server (`license.ts`) and Control (`licenses.ts`), and quoted in the iOS spec files. **Every licence signed with the old key (`67A_r4Y…`) stops working; iOS must embed the new key `t7ZQMSMx…`.**
+- New: `license-tool/rotate-public-key.js` (replaces the public key in all four places and the iOS docs from one command), `public-key.js` (prints the public key of `private-key.json`), Start menu entries "Licence key, create new" (asks for JA, refuses if a key exists) and "Licence key, show public key".
+- Private key: created in the build environment at Gabriel's explicit request, handed over once as a file, then shredded here. Never in Git, never printed. Backup is Gabriel's job (two places).
+- Test licences issued with the new key (server 5 nodes, 2 each for Standard, Pro, Group; one year), handed over as a file.
+- Checks: node server 138 pass, Control 63 pass; a licence signed with the new key verifies, the old key rejects it.
+
+---
+
+## 2026‑10‑27 · Windows installer (Setup.exe with Node.js included)
+
+- New: `unpruuf/windows-installer/` and the workflow `.github/workflows/windows-installer.yml`. A real Windows runner builds every Windows program (production dependencies, native SQLite for Windows), bundles `runtime\node.exe`, compiles an Inno Setup installer and a portable ZIP, and tests before handing over: SQLite loads, Control, web reporter and licence GUI answer on their ports, no secret file inside, silent install, all programs present, uninstall.
+- Per-user install, no administrator rights, Start menu group "unpruuf"; component choice (node server, officer app, Control, licence tool, web reporter, relay).
+- Found on the way: the licence GUI refuses to start without `private-key.json`; its launcher now says what to do instead of silently closing. The test uses a throw-away key and deletes it.
+- Limits: not code-signed (SmartScreen), data stays in the program folders (not removed on uninstall, no update path yet), not run on a customer PC.
+
+---
+
+## 2026‑10‑26 · GRANT_RENEW: guests keep their access automatically
+
+- The Pro app renews each guest's grants by itself through the encrypted chat (a quarter of the validity after the last renewal, so a 7-day grant is replaced every 42 hours). The renewal carries address and grant pairs, so it also follows the owner's nodes when they change. The Client accepts it only from its inviter, drops unusable entries, replaces its nodes and grants, and clears the "refused" banner.
+- Pro: icon in a guest's chat with "Stop renewing" / "Renew again" (soft revocation). Invitations store their promise (validity and sending limit); automatic renewal is on by default.
+- Room v16 (`guestRenewal`, `guestRenewedAtMs`, explicit migration 15→16). New message type `UNPRUUF_GRANTRENEW_V1`: iOS must follow (`ios/IOS_GUEST_CLIENT_BUILD_SPEC.md` §3.5).
+- Tests: `GuestRenewalTest` (6 new). All flavours compile; Standard and Client unit tests pass (258 each).
+- Not done: hard revocation on the server, guest list overview, Control, relay-android guest auth, phone test.
+
+---
+
+## 2026‑10‑25 · Hardening of the guest exchange and node addresses
+
+- Only v3 onion names are accepted as node addresses (same ground as pre-audit fix M7 on the audit line; both lines merged, the audit line's version kept): dropped at decoding of a code, when a stored address is parsed, and refused once more before any connection. A code with no valid address is rejected. Header injection through an address is impossible (test).
+- A pasted guest answer (Pro app) now needs a check code: the guest's phone shows it under its own code, the inviter confirms it before the contact is added. Scanned answers are unchanged.
+- Order in the guest binding fixed: unknown invitation is reported before "contact exists".
+- Tests: `NodeMeshAddressTest` (new), `NodeMeshPairingTest` (+2, fixtures now real-length onions), `GuestClientTest` (+1). All flavours compile, Standard and Client unit tests pass.
+- Build environment was reset: Android SDK reinstalled; the signing keys are not in this environment any more (they were never in git).
+---
+
+## 2026‑10‑25 · Security audit R1 (scanners plus review) and first fix round
+
+- **Audit:** Gitleaks, Semgrep, OSV-Scanner, npm audit and Checkov over the whole code base, plus a review of the hotspots. 17 findings: 0 Critical, 0 High, 6 Medium, 7 Low, 4 Info; no live secret anywhere; 0 dependency advisories outside the licence tool. The register (`.security-audit/`) stays with the owner and is not in git (team rule of 22 Oct); the report is an artifact.
+- **Fixed in this commit (13 of 17):**
+  - `.bat` command injection (SEC-001): `officer-app/start.bat`, `start-press.bat`, `node-mesh-server/start-bridge.bat` validate the pasted relay code or bridge address with `findstr` and write it quoted.
+  - Licence tool GUI (SEC-002): Host/Origin/header guard like Control, OPTIONS refused, `/api/sign-release` limited to the repository; page sends `x-unpruuf-license: 1`. Express transitive packages updated, npm audit clean (SEC-013).
+  - web-reporter (SEC-003): malformed URL answers 400 instead of killing the process; binds 127.0.0.1 unless `HOST=0.0.0.0`.
+  - Relay (SEC-007, SEC-011, SEC-014): `npm ci` with the lock file, non-root user and HEALTHCHECK in both Dockerfiles; strict base64 check and token buckets on all three routes (`server/src/middleware/rateLimit.ts`, new). HEALTHCHECK also on the node server image.
+  - Feed setup page (SEC-008): per-start access token like the node page (`feedIndex.ts`, `feedAdmin.ts`, own cookie `unpruuf_feed_token`); `start-feed.bat` opens the tokenised link.
+  - Officer dashboard (SEC-009): per-start access token (header, cookie `unpruuf_officer_token_<port>`, or `?t=` link), on top of the optional password; the start scripts explain the link.
+  - File modes 0600 for the relay identity, `customers.json` and bridge lines (SEC-010); constant-time token compare in Control (SEC-012); `getCurrentRotationFactor()` is plain `SecureRandom` with an honest comment (SEC-016); officer `fetchMany` copies only requested tags into a prototype-less map (SEC-017).
+- **Left open on purpose:** SEC-004 (F1 with M6 and L12), SEC-005 (M5), SEC-006 (M8) wait for the team's decision; SEC-015 is informational.
+- **Checks:** node server 139 (138 pass, 1 skipped), relay 72, Control 63, officer app 32, app unit tests Standard green, licence tool and web-reporter smoke-tested with curl. Not done: Windows run of the three `.bat` files, Docker builds (no registry here; `server/tor/torrc` is missing from the repository, so that image did not build before either), `security-verify` rescan.
+
+---
+
+## 2026‑10‑25 · Merge of `android` (36 commits from 20.–23.10.) into the audit line
+
+- **What:** the two lines had split at `9ec1809`. `android`/`main` carried guest invitations (Room v15, guest grants on the server, Client edition), the rename to **unpruuf Compliance** and **unpruuf Press** (22.10.), the Press line with one contact code per research, Officer-dashboard hardening (OFF-1), website v12, the spam-protection concept, the structured memory under `.claude/memory`. This line carried the pre-audit fixes (H1, M1–M4, M7, M9–M11, L1–L11), Tor isolation levels 1 and 3, the design kit, the process documents and `export-list`. Both are now in one history; nothing of either side was dropped.
+- **11 conflicts, resolved by hand:** `routes/node.ts`, `app.ts`, `package.json` (server: guest deposit auth *and* the new buckets, cursor, strict routing, 404 handler, both test lists), `NodeMeshClient.kt` (the request takes `isolationKey` *and* `authorization`), `P2PNetworkManager.kt` (guest deposits also run on the contact's Tor isolation key), `AppModule.kt` (sealed database key *and* `MIGRATION_14_15`), `CHANGELOG.md`, both READMEs, `evidence/REPORT.*` (re-run, see below).
+- **Guest deposits and Tor isolation:** `depositAsGuest` now carries the contact's isolation key, so a guest's packets to the inviter's node travel on that contact's circuit like every other deposit. Not verified against real Tor (same state as the rest of level 3).
+- **Evidence scripts:** `03` allows `http` in `exportListCli.ts` and checks that the tool names only `127.0.0.1`; `04` counts `Socks5.kt` as the Tor path and checks that the app's own SOCKS5 client connects only to the local proxy and that every caller passes `127.0.0.1`. Before that, both checks failed on the new files — a true report of the new code, not a regression.
+- **Rules:** root `CLAUDE.md` and `unpruuf/CLAUDE.md` now agree on the hand-over to read first (`UEBERGABE_2026-10-22.md`), the newsletter (dropped, 15.10.), the form of address, and the Officer-dashboard state. The product names from 22.10. were already in the root file via the merge. "safeline" replaced in the F1 sheet, the audit process, the pre-audit report and the audit-readiness page (sources and the four published pages; the live pages had been renamed by another session this morning and the sources now match them word for word).
+- **Checks after the merge:** node server 137 passed, 1 skipped (138); app unit tests green in all six editions (Standard 247; Pro, Client, Group, Whistleblower, Press compile and pass); Control 63; Officer app 28; relay server 70; evidence 99 passed, 0 failed, 1 finding (F1, known). Not done: a phone test of the merged app, real Tor, Windows run of the exe.
+- **Pending from the other line, unchanged:** `evidence/AUDITOR_SCOPE.md` still lists Control and Officer app as WP5/6 (round one is node server and Business app only).
+
+---
+
+## 2026‑10‑25 · Node list without a browser (`export-list`), exe and Control button
+
+- **Why:** the list of all nodes of a server (for the import in the app) was only reachable through the setup page, which on a VPS means an SSH tunnel and a browser. Control already fetched it with one click (Distribute); a server without Control had no easy way.
+- **New:** `node-mesh-server/export-list.bat` / `export-list.sh` (`src/exportListCli.ts`): asks the running server's setup page on loopback with the access token from the data folder, waits while the addresses are still being created (409), and writes `unpruuf-nodes-server-<slot>.txt` readable for the owner only. Clear messages for a locked server and for a wrong token. The start output and `start.bat`/`start.sh` point to it.
+- **Decision (finding):** nothing is written at start. A sealed server holds its write key only in memory (`nodeIdentity.ts`), so a list file at start would put the key on the disk and undo the sealing. The file exists only on request.
+- `.gitignore` excludes `unpruuf-nodes-*.txt` (contains the write key). 3 new tests (127 in total). Checked by hand against a stub server: file written with mode 600, waiting on 409, wrong token gives exit 1.
+- **Standalone exe:** `unpruuf-node-mesh.exe --export-list [folder]` (via `sea-entry.ts`), and `export-list.bat` is part of the exe folder (`exe-templates/`, `build-exe.js`); `start.bat` of the exe points to it. Built on Linux and run against a stub server (file written, mode 600). The Windows `.exe` itself is still not run on a real Windows machine.
+- **Control:** after the installation wizard has finished, the "Download node list" button appears right in the dialog (EN/RO), with the hint to wait a minute if the addresses are not there yet. It uses the existing list download. Control tests 63/63.
+- Fixed on the way: the batch file passed `"%~dp0"` (trailing backslash) to node, which Windows reads as an escaped quote. Now `"%~dp0."`.
+
+---
+
+## 2026‑10‑25 · Database key sealed, device transfer off, panic wipe completed (pre-audit H1, M9, M10)
+
+- **H1, database key:** the SQLCipher key of the contacts database (pairing keys, ratchet state) lay in plain Base64 in `db_key_store`/`db_key`, next to the database. It is now sealed under the phone-bound key in the same `k1:` form as `SealedStrings` (`data/db/DbKeyVault.kt`). Existing installs are migrated on the first start: new key sealed and noted first, WAL folded in, copy of the file (`unpruuf_contacts.db.rekey-backup`), `PRAGMA rekey` to a fresh key, reopen with the new key and compare the row count of every table, only then the plain value is replaced and the copy deleted. Any failure puts the copy back and keeps the old key (retried next start); a crash at any step is repaired from the copy on the next start. If the phone key cannot seal, the old key stays in use for now. If a sealed key cannot be opened, the app does not create a new database: it runs empty in memory, leaves the file alone and the lock screen shows the existing "phone key gone, clear the app data" message (`DbKeyState`, `PIN_STORE_LOST`, now also on the setup screen).
+- **M9:** `android:dataExtractionRules` (`res/xml/data_extraction_rules.xml`) excludes every app file from cloud backup and from device-to-device transfer; `allowBackup="false"` stays.
+- **M10:** the database is opened with `PRAGMA secure_delete=ON`. The panic wipe now also removes a pending pairing code (`clearPendingNodeMeshPairing`), empties the outgoing queue and half-received chunked messages (`P2PNetworkManager.forgetAllLocally`), and afterwards checkpoints and truncates the WAL and runs `VACUUM` (`DatabaseScrub`). The panic PIN needs at least 4 digits in the ViewModel too (the setup button already required it).
+- Tests: `DbKeyVaultTest` (15, JVM, simulated file and phone key): fresh install, migration, no plain field left, failed rekey with copy put back, wrong read-back, crash after rekey, crash while writing the key, unwritable key, leftover copy, failed copy, phone key cannot seal, sealed key unreadable, file without key.
+- **Not tested on a device:** the SQLCipher side (`SqlCipherDbFiles`: open with the old key, rekey, read probe, copy and restore), the migration of a real older install, the panic scrub and the transfer exclusion (some vendors' switch tools may ignore it). Should be checked on a phone before the next release.
+- **iOS (Norbert):** H1 does not apply as such (the contacts file key is in the Keychain, `ThisDeviceOnly`). Same idea needed in two places: `ContactStore.fileKey` creates a new key silently when the Keychain entry is missing and the next save overwrites the old file (should not create a new key while an old file exists), and `LockViewModel.swift` checks only the PIN length, the panic PIN length only in the view.
+
+---
+
+## 2026‑10‑25 · Audit process document
+
+- `handover/PROCESS_AUDIT_2026-10-25.md` (also published as a page in the NexonAI design): gate, decision, hand-over, quotes, contract, kick-off, running the audit, draft report, fix and retest, final report and how we may use it, close. Suggested RACI, exceptions, metrics.
+- Found while writing it: `evidence/AUDITOR_SCOPE.md` (14 October) still lists Control and the Officer app as work packages 5 and 6, while the plan since 20 October is round one with node server and Business app only. To be aligned.
+
+---
+
+## 2026‑10‑25 · Release process document
+
+- `handover/PROCESS_RELEASE_2026-10-25.md` (also published as a page in the NexonAI design): 13 steps from the prepared version to the record after delivery, with a suggested RACI, exceptions and metrics. It uses what exists (`sign-release.js`, `verify-release`, Control bundle, release key, evidence scripts) and marks what does not exist yet: the extended signed file list (M8), a reproducible build, a bill of materials, a release record script.
+- Found while writing it: every app build, debug and release, stops running about 180 days after it was compiled (`BUILD_EXPIRY_MS`); the process puts a reminder 150 days after each build.
+
+---
+
+## 2026‑10‑25 · Audit readiness checklist (shared page)
+
+- `design/pages/audit_readiness.py` builds the page "Audit readiness" in the NexonAI design: 17 items in four groups with status (open, in progress, done, needs decision), suggested owner and a note per item, what we ask the auditor for, what raises the result and what to expect. The team's status and notes live in the artifact's shared database (`audit_items`); without it the page shows the defaults read-only.
+- The owners are suggestions; the team decides together.
+
+---
+
+## 2026‑10‑25 · NexonAI design for all documents and artifacts
+
+- `design/NEXONAI_DESIGN.md`, `nexonai-tokens.css`, `brand/` (logo, favicon): tokens and rules taken from nexonai.ro (ink `#0f2a3a`, blue `#307098`, bright `#90c8e8`, Open Sans, hairlines, 4 px corners). Dark mode derived for artifacts.
+- `design/md_to_html.py`: Markdown to one page in this design (title band, header with logo and wordmark, tables that scroll inside their own box, light and dark). `design/md_to_docx.py`: the same look for Word. `CLAUDE.md` carries the rule for later sessions.
+- The F1 decision sheet, the Tor proposal and the pre-audit report are also published as HTML pages in the new design; the Docs versions stay for inline editing and comments.
+- The audit briefs (.docx) were rebuilt in the new look.
+
+---
+
+## 2026‑10‑25 · Tor stream isolation per contact (level 1) and own timers per contact (level 3)
+
+- `Socks5.kt`: a SOCKS5 client of our own (RFC 1929 user name and password, host sent as a name, nothing resolved on the phone, fail closed: with credentials only the user-name method is offered, a proxy that skips authentication is refused). No global state (the platform's `java.net.Authenticator` is process-wide and would touch every other connection).
+- `TorIsolation.kt` / `IdentityManager.torIsolationKeyFor`: the user name is a keyed hash of the contact id under a device secret (32 hex characters); it stays on the phone.
+- `NodeMeshClient`: `fetchManySince` and `deposit` take an isolation key; without a key (pool lists, feeds) the request uses the shared default group. `P2PNetworkManager` passes the contact's key for every poll and every deposit of that contact (also the Temp Node path).
+- Level 3: one poll loop per contact with its own random start and jittered interval (before: one loop for all). A loop starts when a contact appears and stops when it is gone; the panic wipe stops them all.
+- Tests: `Socks5Test` (13, against an in-process fake proxy: only the user-name method offered, name-based connect, every connect error code, refused credentials, another version, all bound address types, timeout, bad arguments), `TorIsolationTest` (4). Android unit tests: 220 per build.
+- Not verified: real Tor (do two requests with different user names land on different circuits?), battery, mobile data and latency with more circuits. Level 2 (isolation per hour) is not built. iOS: Norbert to check whether the iOS Tor stack allows a SOCKS user name per connection.
+
+---
+
+## 2026‑10‑25 · M4: tags are no longer chained by one big request (receiving side)
+
+- `NodeMeshWindow.kt` (+ `NodeMeshWindowTest`): which hourly epochs a poll asks for. The full window of 26 only on the first poll after an app start, after a failed or cut-short poll, or when the clock went backwards; otherwise from the epoch before the last complete poll up to now (2 or 3 epochs in the steady state).
+- `P2PNetworkManager.pollNodeMeshOnce`: one request per (contact, node address) instead of one per address, so a request no longer lists the tags of several contacts; requests start spread over up to 1.5 s. Cursors are kept per (contact, address). A poll counts as complete only if no answer was cut short.
+- Compatible: nothing changes in the packets or on the server; old and new apps keep reading each other. Not part of the incompatible F1/M6 release.
+- Remains: requests to one node address share Tor's circuit to that address and consecutive requests overlap by one epoch, so an operator who can tie requests to one client can still chain tags. Separate circuits per contact (SOCKS isolation) are not built. Cost: up to (contacts x nodes) parallel requests instead of (distinct nodes). Not tested on a device or against real Tor.
+- iOS (Norbert): same receiving-side change; no format change.
+
+---
+
+## 2026‑10‑25 · Audit briefs brought in line with the code (revision of 19 October)
+
+- `evidence/AUDIT_BRIEF_NODE_SERVER.md` and `AUDIT_BRIEF_ANDROID_APP.md` (+ .docx, + the shared Doc): wire format v2 is stated as "not done" (F1 open) instead of a finished precondition; claims reworded where the code did not carry them (write access is "every company device with the node list"; the release fingerprint covers `dist/*.js` and `package.json` only; tags vs a node operator over days; panic PIN and database key; clipboard; eleven permissions, not nine); evidence columns updated for the fixes of 25 October; new limits; new section 9 "What our own pre-audit found" with fixed and open items.
+- `design/md_to_docx.py` builds the .docx from the .md (python-docx; moved from `evidence/` on 25 October and given the NexonAI design).
+- `CLAIMS_TO_EVIDENCE.md` B5: eleven permissions in the merged manifest.
+
+---
+
+## 2026‑10‑25 · Pre-audit, low findings (L1 to L11)
+
+L12 belongs to the wire-format decision (F1) and is not touched. Not tested on a device: L4, L10, L11 (clipboard, lock-out with the date moved, Temp Node timeout).
+
+- **L1 (server):** `/lock-status`, `/pool` (owner) and `/pool` (wrong secret) have separate buckets; a stranger can no longer lock the owner out of `/pool`. `/unlock` keeps its own bucket (it has to try the secret to know) and the setup page is the way around it.
+- **L2 (server):** one sweep right at the start, so packets that expired while the server was off are removed first. The claim "gone within about a minute" holds while the server runs.
+- **L3 (server):** one JSON `{"error":"not found"}` for every unknown path and method; no ETag; exact paths (`/DEPOSIT`, `/deposit/` are 404); HEAD and OPTIONS answer 404.
+- **L7 (server):** the per-minute `[sweep] removed N` log line is gone (a timeline of traffic in `docker logs` for months). Counts stay in memory (overview).
+- **L8 (server):** `umask 077`; data folder 0700, database files 0600 (also for existing installs).
+- **L9 (server):** every start prints one `[settings]` line per setting that lowers protection (`loweredProtection.ts`: key storage on disk, Tor off, setup page beyond loopback, owner code in the log, changed ceiling, own Tor program or folder, public address that is not an onion, unsigned-start allowed). Unit-tested.
+- **L4 (app):** the clipboard is cleared after 60 s also when it cannot be read (Android 10+ background); it is left alone only when it can be read and holds something else.
+- **L5 (app):** chunk transfers above 2048 pieces are refused; `unpadPacket` checks the size and offset fields before allocating; the node client limits reply head lines (8 KB, 64 lines).
+- **L6 (app):** node list parser is linear (a set instead of `contains`) and refuses more than 5000 addresses.
+- **L10 (app):** the PIN lock-out is also timed on the monotonic clock; moving the date forward no longer shortens a pause. A restart makes only the wall clock count again. The count is written with `commit()`.
+- **L11 (app):** a Temp Node connection has 5 s to deliver its request (was 70 s); a long-poll waits after that, not while reading.
+- Checks: node-mesh-server 123 passed (1 skipped), Android unit tests 196 each for standard, pro and group.
+
+---
+
+## 2026‑10‑25 · Fixes from the pre-audit (M1, M2, M3, M7) and a dependency advisory
+
+Source: the internal pre-audit of 20 October (`PRE_AUDIT_REPORT`). Not yet fixed from it: M4 to M6, M8 to M10 (H1 is in progress).
+
+- **M1, read limit:** each address the server really serves gets its own bucket (Host header lower-cased, port stripped); every other Host value shares ONE bucket. Before, invented host names multiplied the allowance and could push the real nodes into a shared overflow. Tests: `app.test.ts` (invented hosts, port and case).
+- **M2, `/fetchMany`:** repeated tags are read once; one answer carries at most 256 packets (`MAX_FETCH_MANY_BLOBS`), read with a single bounded query. A cut answer says `"more":true`; the cursor continues there. The app follows up to 8 continuations per poll.
+- **M3, cursor:** derived from the requested tags only, no longer the server-wide counter. A stranger with one address can neither watch the server's deposit traffic nor link addresses to one server. Android combines chunk cursors accordingly (largest when complete, smallest of the cut ones).
+- **M7, addresses:** the app accepts only v3 onion addresses (pairing codes, node lists, owner strings, migrate and temp-node signals), and `NodeMeshClient.request` refuses anything else, so the owner secret can no longer be sent to a plain host name through a Tor exit. The LAN-style `host:port` form is gone; tests with placeholder names now use real-shaped onions. **iOS:** same rule needed (Norbert).
+- **M11, setup page:** an access token (32 random bytes, new at every start, file `admin-token` with 0600 in the data folder) is now required for every request of the setup page, on top of the loopback checks. A neighbouring container can no longer read the owner code by sending a loopback Host header. A person gets a link `/?t=<token>` printed to the terminal (not into service logs); `start.bat` opens it itself. Control reads the token over its SSH login (`docker exec … cat /app/data/admin-token`), sends it with every call and asks again once after a restart. Tests: 2 in `adminApp.test.ts`, 1 in Control with a fake server that rotates its token. Older servers without a token keep working with the new Control.
+- **Dependency:** `body-parser` 1.20.8 to 1.20.9 (high-severity DoS advisory published after the last evidence run) in node-mesh-server, server, control and officer-app (lock files only).
+- **Test:** `PhoneTempNodeTest.startRunsAndStopRemovesEverything` no longer assumes a freed port stays closed.
+- Checks: node-mesh-server 116 passed (1 skipped), relay 70, control 62, officer-app 15, evidence 97 passed / 0 failed / F1, Android unit tests 169 each for standard, pro and group.
+
+---
+
+## 2026‑10‑22 · Client import for guest invitations
+
+- unpruuf Client accepts a guest invitation by scan (two-scan key exchange, field `i` in the pairing code), stores the grants (Room v15, `guestGrants`), deposits as guest, shows refused/quota/expiring banners. Pro side issues grants for exactly the chosen nodes with invitation-specific pairing values and binds the guest on the second scan. Panic wipe removes open invitations.
+- Tests: `GuestClientTest` (8), `NodeMeshPairingTest` (+3). All flavours compile, Standard and Client unit tests pass.
+- Not done: `GRANT_RENEW`, guest list, Control, relay-android guest auth, iOS, phone test.
+
+---
+
+## 2026‑10‑22 · Old deliveries rebuilt with the new names
+
+- Rebuilt from sources: solution descriptions (18 files, DE/EN/RO; also corrected "dashboard cannot yet delete a single case", which is wrong since 19.10.), Control (UI labels, new server bundle, unsigned), officer app (both editions, dashboard hardening), evidence package, whole project, seven APKs (with the Temp Node fix).
+- Patched in place (no sources in the repository): team briefing EN/RO (Word), event deck UAB-Pitch-Kurz EN/RO (PowerPoint, no PDF).
+- Not rebuildable from the repository: press pitch and business pitch decks (screenshots and assets missing), compliance video and one-pager for press (sources only in Gabriel's chat), the online artifacts and documents from earlier sessions (they must be edited one by one).
+- `quellen/loesungsbeschreibungen`: output file names now `2_unpruuf_Compliance_*` and `3_unpruuf_Press_*`.
+
+---
+
+## 2026‑10‑22 · Renamed: safeline is gone, unpruuf Compliance and unpruuf Press
+
+- Whistleblower tool = **unpruuf Compliance**, press product = **unpruuf Press**. The name safeline is removed from everything visible: officer app (texts, login prompt, download file name `unpruuf-press-qr.png`, start script), Control (labels), website (text and anchor `#compliance`), decks, documentation, iOS spec, auditor scope, source files for solution descriptions, event decks and landing pages.
+- Deck `safeline` (EN, RO, 14 slides) rebuilt as **unpruuf Compliance** and exported as `unpruuf_Compliance_Kundendeck_EN/RO`; the old `safeline_EN/RO` exports are removed. The older decks `unpruuf_Compliance_RO/DE` stay.
+- **Unchanged on purpose (technical names):** package IDs (`com.nexonai.unpruuf.press`), folder and script names (`safeline_en/`, `safeline_ro/`, `safeline.py`), the internal product type `safeline` in Control's vault (stored data), the website CSS class `safeline-art`, history entries in this file.
+- Rules files `CLAUDE.md` (root and `unpruuf/`) updated with Gabriel's explicit instruction (new names, technical names stay, the SafeLine trademark note is dropped).
+
+---
+
+## 2026‑10‑22 · Website in the repository (`unpruuf/website/`, v12)
+
+- Static site (no build): open `index.html`, copy the folder to the web root. DE/EN/RO. Own change history in `unpruuf/website/CHANGELOG.md`.
+- Content of this version: NexonAI logo in header and footer, blue instead of green, new section "Never give out your phone number again" in "How it works". Base was the `web.zip` the team had on hand (state v8); the v9 to v11 files from 19.10. are not in the repository, so logo and blue were rebuilt, not taken over.
+- Not changed: legal pages still carry open placeholders (street, hosting provider, log retention).
+
+---
+
+## 2026‑10‑22 · Phone Temp Node: late connection after stop is no longer served (flaky test fixed)
+
+- **Cause (reproduced, not guessed):** `stop()` clears the state, then closes the listening socket. A connection that arrived in that instant could still be accepted by the accept loop and answered (measured: about 5 to 10 percent of rounds after one earlier request; 69 of 600 at TCP level). No data was reachable (packets and owner secret are already wiped), but the node answered `/health` after it had been stopped, and `PhoneTempNodeTest.startRunsAndStopRemovesEverything` failed once in a while.
+- **Fix:** `PhoneTempNode.acceptLoop` drops a connection accepted after the node was stopped. After the fix 0 of 600 probe rounds were answered. The test now repeats the check 100 times (still 181 tests per edition; Standard, Pro, Client, Group re-run in full: 181 passed, 0 failed each).
+
+---
+
+## 2026‑10‑22 · Decks: test numbers corrected
+
+- Business status slide (RO, DE, EN): "70 / 15 / 80 tests, real Tor" replaced by the counts measured today: node server 123 automated tests (one skipped), run without the live Tor network; Android node 15; app 181, the same suite in every edition. The wrong "real Tor" wording is gone. Compliance status slide: "App: 80 Tests" now 181.
+- Measured on 22.10.2026: app unit tests 181 per edition (Standard, Pro, Client, Group, Whistleblower, Press); `PhoneTempNodeTest.startRunsAndStopRemovesEverything` failed once in a full run (Client) and passed in all other runs (timing on the closed port, not investigated). Node server 123 passed, 1 skipped. Tablet node 15 passed.
+
+---
+
+## 2026‑10‑22 · Business deck: new slide "no phone number" (RO, DE) and a new English deck
+
+- Slide 7 in `unpruuf_Business_RO` and `unpruuf_Business_DE` (after "what does not exist"): a code per contact instead of a phone number, one code per person, delete the contact and there is no way to you any more. States the limit on the slide itself (what someone already received stays with them; other channels are untouched). Source: `presentations/decks2.py`, slide `fara-numar`. Footer numbers of the following slides moved by one (18 slides).
+- **English Business deck added** (`unpruuf_Business_EN`, 18 slides, same source: `decks2.py` with the English texts in `decks2_en.py`, keyed by the German text). It carries the same new slide. Customer material is English + Romanian; the German deck stays for internal use.
+- Old content in all three Business decks, not changed here: "70 automated tests / 15 / 80" on the status slide is out of date (node server now 123, Android 181), and the mailbox/post-office picture has not been switched to the courier picture yet.
+- Not checked by a native speaker (RO). The online artifact links in `presentations/README.md` still show the old version until they are republished.
+
+---
+
+## 2026‑10‑21 · Press line merged into `android`; officer dashboard access hardened
+
+- **Merge:** branch `ccr-9a899f8d-xrqsp0` (guest lockers, design kit, safeline Press with one contact code per research, split `CLAUDE.md`) merged into `android`. `officer-app` taken from the Press branch (it had been copied unchanged from `android`). Guest grants ported onto the current node server (licence, sealed keys, per-address limits kept): `depositAuth.ts` follows the rotating owner secret and answers 423 while a sealed server is locked. Android: pairing code carries the optional guest grants, invite button next to the Business code. Node server tests 123 passed; officer app 28 passed.
+- **`CLAUDE.md`:** left as on `android`; the split file `unpruuf/CLAUDE.md` from the Press branch is now also present. The team merges the two rule sets by hand (not done automatically).
+- **Officer dashboard (internal security test, finding on listening address and missing login):** now answers on `127.0.0.1` only; requests for any other host name are refused; changing requests need the header the page itself sends and a matching Origin; no CORS answer; optional HTTP Basic password. Listening on another address needs `OFFICER_BIND_HOST`, `OFFICER_ALLOWED_HOSTS` and `OFFICER_DASHBOARD_PASSWORD` (12+ characters), otherwise the program does not start. Identity file written with mode 0600. Hardening, not an audit result. New `accessGuard.test.ts`.
+- **Not done:** the tip page with real codes (needs the code list from a running Press officer app), the Press one-pager update (sources are not in the repo), a test with a real phone, real Tor.
+
+---
+
+## 2026‑10‑19 · Owner secrets of own nodes are stored encrypted
+
+- `SealedStrings` (+ `SealedStringsTest`): the app's own-node list with owner secrets, node lists, feed sources (with keys), control addresses, relay address, token and backup relays are stored as `k1:<encrypted>` under the phone-bound key. Plain values from older versions are read and rewritten encrypted on first use.
+- Found in the audit preparation: before, the owner secret (the write key for a server) lay in plain text in the app settings. The panic PIN already wipes these values.
+- Not covered: bridge lines, the remembered organisation QR (not write credentials). The Android node (`relay-android`) keeps its own storage and was not changed.
+
+---
+
+## 2026‑10‑19 · Release signing key and first working release build
+
+- `app/build.gradle.kts`, `relay-android/app/build.gradle.kts`: release builds are signed with `unpruuf-release.jks` when `release.properties` is present (both in `.gitignore`), otherwise left unsigned. Description: `SIGNING_TEST_KEY.md`.
+- **Fix:** `app/src/main/res/drawable/logo_unpruuf.png` was a JPEG with a `.png` name. Debug builds accepted it, **every release build failed** at resource compilation. Converted to a real PNG.
+- A release build (R8 on, not debuggable) of Pro was built and signed with the release key in the cloud.
+
+---
+
+## 2026‑10‑19 · Security review of the apps: four small fixes
+
+- Received images: size read first, absurd sizes refused, rest decoded reduced (`SafeImage`, `SafeImageTest`).
+- PIN: a lost phone key now gives a clear message instead of endless "wrong PIN".
+- Clipboard: codes are marked sensitive and cleared after 60 s (`SensitiveClipboard`).
+- Control: unlock lock-out doubles with every round of five wrong passphrases (30 s up to 15 min), test added.
+- Reviewed and clean: manifest (only `MainActivity` exported, no deep links, backup and clear text off), randomness, logging, pairing overwrite protection, node-list parsing, Control's loopback/CSRF/token. Not reviewed: Tor integration, feed crypto, Double Ratchet (audit scope).
+- Open: debug builds are debuggable (test only); node lists are trusted by whoever hands them over.
+
+---
+
+## 2026‑10‑19 · Fixed test signing key for debug builds
+
+- `app/build.gradle.kts` and `relay-android/app/build.gradle.kts` sign debug builds with a fixed NexonAI test key when `unpruuf-test.jks` and `keystore.properties` are in `unpruuf/`; without them nothing changes. Both files are in `.gitignore`. Description and fingerprint: `SIGNING_TEST_KEY.md`.
+- Reason: APKs built in the cloud and in Android Studio carried different debug keys, so the phone refused the update ("App not installed"). Test key only, never for customers.
+
+---
+
+## 2026‑10‑19 · Fixes from the claims-against-code review (21 findings)
+
+**What was done**
+
+- **Licence tool:** `issue-server.js --count N` (with `--serial-prefix`, `--start-at`). A single code without `--serial` gets a random suffix, so two runs in the same second can no longer produce the same serial (Control would have taken the second as a renewal of the first and the customer would have received one server fewer than bought). The GUI does the same. Control warns on import about server codes that allow fewer than 250 nodes.
+- **Node server:** errors come back as short JSON (no stack trace, no file paths); the owner code is printed on first start only in an interactive terminal (not into `docker logs`); read limit per node address instead of one for the whole server; ciphertext must be strict base64; total ceiling of 200 000 packets (507 beyond); sweep every 60 s (was 5 min), `<=` instead of `<`, and the write-ahead log is truncated after every sweep that removed rows (before: once a day, so expired ciphertext could stay readable in the log for up to a day); setup page also checks the connection's source address (this computer or a private network).
+- **Officer app:** delete one case and export one case as a file, in both editions (before: delete only in Press, no export).
+- **Android app:** panic PIN also wipes Pro Groups, own nodes with owner secrets, node lists, feed sources, the relay setup (before: only contacts, sessions, onion keys; the organisation-QR wipe even ran only when onion keys existed). PIN lock-out from the 5th wrong try (30 s, doubling, at most 1 h) and PIN hashes sealed under the Keystore key. Every dialog sets the secure flag itself.
+- **Documents:** `COMPLIANCE.md` (F1), `SECURITY_CLAIMS.md` (Tier 2 row about servers, RAM clearing, PIN lock, outbox, panic wipe), `STATUS.md`, `evidence/CLAIMS_TO_EVIDENCE.md` (A9, A15–A20, B10, D3, D3a, E4), `CLAUDE.md` (app licences are device-bound; group size 10 includes you; courier image is a picture, the 250 addresses share one store; exact wording for deletion times; unsent messages).
+
+**Not changed on purpose**
+
+- F1 (payload length in the clear) needs a wire-format change in every client: team decision.
+- Unsent messages are not written to disk: that would contradict "no message content on disk". Documented instead.
+- `/unlock` keeps one shared limit; the control address is not public.
+- The setup page still trusts the host-loopback port mapping of docker-compose and Control; source-address and Host checks are added on top.
+
+**Checked**
+
+Node server 112 tests, officer app 15, Control 61, evidence 97 (0 failed, 1 finding F1), Android unit tests (standard variant, incl. PinLockoutTest) pass, and all six variants compile.
+
+---
+
+## 2026‑10‑14 · Evidence package (`evidence/`), Tor download check, library fixes, finding F1
+
+**What was done**
+
+- New folder `evidence/`: nine scripts that test what can be tested by script, a table that links every claim to its proof (`CLAIMS_TO_EVIDENCE.md`), a proposed scope for an independent review (`AUDITOR_SCOPE.md`) and a one-click runner (`run-evidence.bat` / `.sh`) that writes `REPORT.md`. It checks: the node server's whole surface and that strangers and contacts cannot write or delete; what the server stores (one table, five columns, no address, name or secret in any file, bytes overwritten after expiry); what the server code does about callers, network and logs; the app's permissions, libraries and sockets; the routing tags (fixed values, 300 contacts, randomness); what a pairing code and a packet carry; the pinned Tor hashes (and, online, the Tor Project's PGP signature); known vulnerabilities in libraries.
+- **Tor download is now checked.** `node-mesh-server`, `server` and `officer-app` compare the downloaded Tor Expert Bundle with pinned SHA-256 values (from the Tor Project's signed list for 15.0.19, signature verified, key EF6E 286D DA85 EA2A 4BA7 DE68 4E2C 6E87 9329 8290) before extracting it; a platform without a pinned value is refused. Before this the download was not checked.
+- **Library fixes.** `npm audit` found four known vulnerabilities in the node server and the relay (one critical in `proxy-addr`, three moderate in `qs`). Fixed with `npm audit fix` (lock files only); tests pass.
+- The node server no longer sends `X-Powered-By: Express`.
+- New unit test `PacketMetadataTest` (real ratchet, framing and padding classes).
+
+**Finding F1 (a claim the evidence does not support)**
+
+- The first 8 bytes of every stored 4096-byte packet are the payload length and the position of the payload, **not encrypted** (`NetworkObfuscation.padPacket`). A node or relay stores the packet as received. So an operator can read each packet's encrypted length (which follows the message length) and tell a cover packet (44 bytes) from any real message. A network observer sees only 4096-byte packets; that part of the old claim holds.
+- Claims corrected in `SECURITY_CLAIMS.md` §1.2, `STATUS.md`, `PRODUCT_CONTEXT.md`, `MARKETING.md` and the feature table artifacts (English, Romanian). **Not changed: the wire format.** Closing it means putting the length inside the encrypted part, which touches Android, iOS, officer app, web reporter and relay; it needs the team's decision.
+
+**Checked**
+
+- 99 checks in the evidence scripts pass, 1 finding; node server suite 106 passed, 1 skipped; relay suite 70 passed; `PacketMetadataTest` 4 tests pass (Android unit test, standard variant).
+
+**Not checked**
+
+- A capture of a running server or phone, a forensic image of a phone, the cryptographic design itself, cover-traffic effectiveness, load. See `evidence/AUDITOR_SCOPE.md`.
+- The Tor hashes were compared with the Tor Project's signed list on 14 October 2026; the signing key's fingerprint was taken from the key server and should be compared with torproject.org by a person.
+- Other older documents (whitepaper, blueprint, decks, other artifacts) may still say message length is hidden; only the files named above were corrected.
+
+---
+
+## 2026‑10‑13 · Temp Node on this phone (Pro Groups)
+
+**What was done**
+
+- In a chat's Temp Node dialog (Pro Groups only) there is now **"Start on this phone"**. The app starts a Temp Node for this one chat on the phone itself: a new onion address that exists only while it runs (the key is never kept), a small node server on 127.0.0.1, packets in memory only. Nothing else is needed: no second device, no QR.
+- It speaks the same node contract as the servers and the Android relay (`/health`, owner-only `/deposit`, `/fetch`, `/fetchMany` with `waitMs` and cursor, `/pool`), so the contact's app, including iOS, cannot tell it from another node and needs no change. The contact learns the address through the normal Temp Node announcement.
+- Routing, heartbeat and fallback are the existing ones. Differences for a phone-hosted node: messages are put into it directly (no Tor round trip to itself); a local deposit does not count as "confirmed", only the heartbeat's real reachability check does, so until then every message also goes to the normal servers; if the phone cannot be reached three checks in a row the chat falls back to the normal servers by itself.
+- Stop (or deleting the contact) removes the address and every waiting packet. One phone Temp Node at a time. A registration left over from a closed or killed app is found at the next start, cleared, and the contact is told.
+- The Tor notification says "Temp Node active for one chat" while it runs.
+- Database v14: `tempNodeOnPhone` (plain ADD COLUMN). New texts in English and Romanian.
+
+**Checked**
+
+- 25 unit tests with a real HTTP server on loopback and a fake onion host: start and stop (address removed, port closed, nothing survives a restart), owner-only deposit, validation and size limits, fetch never deletes, cursor, long-poll wake-up and timeout, release on stop, expiry (a deposit can only shorten the lifetime, 24 h at most), per-tag and total caps, read rate limit, garbage input, loopback-only listening, and the app's own `NodeMeshClient` parsers run on the node's real answers.
+- All variants build; unit tests of all variants pass.
+
+**Not checked**
+
+- A real phone: the onion address being published and reached by a contact over Tor, battery and background behaviour, the dialog on screen. The heartbeat, deposit routing and orphan clean-up changes sit inside `P2PNetworkManager` and have no unit test of their own.
+- Whether Tor lets a phone reach its own onion address on every network. If not, the node stays in the "registered, not confirmed" state: it still works, because every message also goes to the normal servers.
+
+**Known limits (by design)**
+
+- The contact can pick up only while this phone is on, awake, online and the app is running. Android may end the app in the background.
+- The address is online when the phone is online, so anyone who knows the address could see those times. Only you and the contact know it.
+- No proof-of-work flood protection, as with every Android node.
+
+---
+
+## 2026‑10‑13 · unpruuf Control (new component: the customer's console for servers and licences)
+
+**What was done**
+
+- New folder `control/`: a local web page (Node, English and Romanian) that the customer runs on their own admin PC. It adds servers over SSH (own key per server, host key pinned), installs the node server in Docker, shows the state of all servers, unlocks them after a restart, updates them, hands out licence codes from an inventory (server codes to servers, app codes to named devices) and warns about the common mistakes. Details, tests and limits: `control/README.md` and `control/CHANGELOG.md`.
+- Licence model unchanged: no pool, no certificate chain. The customer receives a batch of ordinary codes (`license-tool --count N`) and Control keeps the books. Decision of 13.10.2026.
+- `node-mesh-server/Dockerfile` copies `release-manifest.txt` when it exists.
+
+**Checked**: 60 automated tests (simulated SSH server), and the page in a real browser.
+**Not checked**: a real VPS (Docker build, apt, sshd), Windows scripts.
+
+---
+
+## 2026‑10‑13 · Remaining English messages moved into the resource files
+
+**What was done**
+
+- 64 messages that were written directly in code (status lines in Settings and node lists, QR pairing errors, chat errors, group form errors, licence messages, the reason a pairing code is rejected, two notification texts) are now in `values/strings.xml` (English) and `values-ro/strings.xml` (Romanian). `AppEdition.blockReason` now takes a context.
+- ViewModels that show such messages receive the application context (Hilt) and read them with one helper.
+
+**Checked**
+
+- All variants compile and package; unit tests of all variants pass.
+
+**Not checked**
+
+- The messages on a real device. The whistleblower and press editions fall back to the main file for these keys (English, or Romanian on a Romanian phone).
+- Messages from the network layer that are not shown to the user (log lines) stay English on purpose.
+
+---
+
+## 2026‑10‑13 · Romanian interface for Pro / Pro Groups (and Standard, Client)
+
+**What was done**
+
+- New `app/src/main/res/values-ro/strings.xml`: every string of the main app in Romanian (387 lines, including node lists, company feeds, per-chat lifetime and all Pro Groups texts). The 297 strings shared with the reporting editions reuse the Romanian already shipped there; the 84 new ones were written for this file. The app follows the phone's language: Romanian phone shows Romanian, anything else English.
+- `whistleblower` flavor now carries its own `values-ro` copy of its Romanian wording, so a Romanian phone does not replace the reporter wording ("case", "reporting office") with the Business wording. `press` already had its own.
+- Placeholder parity (`%1$s`, `%2$d`) checked for all 387 strings. All variants compile and package.
+
+**Not checked**
+
+- Not looked at on a real device or emulator (none here): line breaks, long words in buttons, and whether the Romanian reads naturally to a native speaker (a Romanian speaker should read it once).
+- A few messages are still English because they are written in code, not in the resource files: the group form's error messages ("Give the group a name." and similar), the pairing block reasons and a few status lines.
+
+---
+
+## 2026‑10‑13 · unpruuf Pro Groups (new edition: Pro plus local groups)
+
+**What was done**
+
+- New Gradle flavor `group` (`com.nexonai.unpruuf.group`, name "unpruuf Pro Groups", violet). Own install id: it sits next to Pro, Pro itself is not changed in behaviour. It pairs only with other Pro Groups installs (`AppEdition.canAdd`); Pro, Standard and Client now also reject a Groups code, so a contact that cannot read group messages can never be added.
+- Groups exist only on the phones. No group server, no group key. A group message is one ordinary end-to-end encrypted 1:1 message per member, over that member's own nodes and keys.
+- **Group code** (`GroupCode`): the members agree on one code (12 random characters of a 32-letter alphabet plus 2 check characters; every wrong or swapped character is caught). Each member creates the group with the same code and picks the people from their own contacts. On the wire only an 8-byte one-way hash of the code travels, inside the encrypted message.
+- Receiving (`GroupInbox`): a message is shown in the group chat only if the group id matches one of my groups and the sender (known from the channel) is a member in MY list; the name shown is from my address book. Otherwise it is listed as a notice ("X wrote to a group you have not created"), without text. If the sender's member count differs from mine, the chat shows a warning.
+- Sending (`GroupManager`): maximum 10 people including me; sends are spread over a few seconds in random order so a watcher of my nodes does not see N packets at the same instant; delivery shows "delivered to 2 of 4". Text only.
+- Screens: Groups list (icon in the contacts bar, unread dot), create/edit group (name, code with copy and suggest, member checklist), group chat.
+- Database v13 (`chat_groups`, plain CREATE TABLE migration, contacts survive). Licence: `group` is an accepted licence edition (`license-tool` `--edition group`).
+- Wire format: new payload type 3 (`[3][group id 8][member count 1][text]`); other editions ACK and drop it.
+
+**Checked**
+
+- Unit tests for the code (generation, every single wrong character, swapped neighbours, typing style, one-way id), payload round trip and truncation, receive decisions. All flavors: unit tests and `assembleDebug`.
+
+**Not checked**
+
+- A real group of phones over real nodes (two or more devices); the random send spread against a real observer; delivery counts over days.
+
+**Known limits (by design)**
+
+- Member lists can differ between phones (nobody enforces them); the warning only covers the member count. Leaving or removing someone is local.
+- Everyone sees messages in the order they pick them up. A member offline longer than the chosen packet lifetime (at most 24 hours) misses messages. Text only. Interface English only (same as Pro).
+
+---
+
+## 2026‑10‑12 · safeline Press (journalist version of the officer app)
+
+**What was done**
+
+- New edition of the officer app for journalists and newsrooms, switched with `OFFICER_EDITION=press` (`start-press.bat`, port 3001, data in `data-press/`). One code base, own start script, own name in the dashboard (safeline Press).
+- No legal deadlines, tips instead of cases, free-text topics, tips sorted by latest activity.
+- Settings: how long tips are kept (until deleted, or deleted after N days without activity) and when to warn about a missed pickup. Tips are deleted for good (secure delete, file compacted).
+- Delete one tip (press only; the compliance dashboard is unchanged).
+- Pickup warning: the app remembers the last successful fetch. After a restart, or when fetching fails for longer than the chosen time, the dashboard warns that tips wait on the server for 24 hours at most.
+- Website code: download the QR as PNG or copy a ready HTML snippet.
+- 4 new tests (edition info, settings validation, delete, retention, settings file). 13 pass.
+
+**Checked**
+
+- Pages rendered in both languages and looked at: overview, tips, code, settings, one tip.
+
+**Not checked**
+
+- Retention and warning over real days; a real source with the Android app on a phone; the browser reporter does not use Tor (documented in `README-PRESS.md`).
+
+**Added the same day: reporting app wording for press**
+
+- New Android build variant `press` (`com.nexonai.unpruuf.press`): same behaviour as `whistleblower` (`AppEdition.isWhistleblower` is true for both), own wording: English in `app/src/press/res/values`, Romanian in `values-ro`. "Reporting office / organisation / case" become "journalist / newsroom / tip".
+- The status screen shows no feedback date when the officer sends none. The press officer sends no deadlines (`a` and `f` are null); the standard officer is unchanged.
+- The officer app accepts pairing codes from the press reporting app. System lines in the tip thread are English in press.
+- Checked: `assemblePressDebug` and `testPressDebugUnitTest` pass, merged resources contain both languages, 15 officer tests pass. Not checked: on a real phone.
+
+---
+
+## 2026‑10‑11 · Officer dashboard speaks English
+
+**What was done**
+
+- The officer dashboard (`officer-app/src/web/public`) has a Romanian/English switch (bottom left, remembered in the browser; default stays Romanian). All texts live in `i18n.js`; dates, deadlines, toasts and server error messages follow the language.
+- New test: both languages must have the same keys, list lengths and placeholders.
+
+**Bug found on the way**
+
+- A local variable named `t` hid the new translation function and broke the case page. Renamed; the page now loads without errors in both languages.
+
+**Limits**
+
+- Not yet translated: the officer app's console messages and the pairing-code error texts that come from deeper layers (a few are mapped, the rest stay Romanian).
+
+---
+
+## 2026‑10‑11 · Tor blocked? The app finds a way, and the company can run its own bridge
+
+**What was done**
+
+- **Automatic connection in the app** (`ConnectionPaths.kt`, `TorManager`): direct → company bridge → obfs4 → Snowflake, each with a time budget, the working path remembered. Settings → "Censorship circumvention": switch "Connect automatically" (on by default), live status line, "Try now". Hand-entered bridges still win and are now applied at once (before, they were applied only after Tor reported "on", which never happens on a blocked network).
+- **Company bridge** distributed with the lists: new optional `bridge:` lines in the node-list file (server export and app import, also through the company feed). The setup page has a "Firmen-Bridge" card. New `start-bridge.bat` / `start-bridge.sh` run a private obfs4 bridge on a small separate server and print the line.
+- **Bug found and fixed:** the Snowflake support started IPtProxy's `SnowflakeProxy`, which is the volunteer proxy that lends the phone to OTHER people, not the client. Read from the library's public API: the client is the same `Controller` that runs obfs4, configured by its `snowflake*` properties. Now it uses those, with the broker, front domains and STUN servers of Tor Browser's Snowflake bridge lines.
+- **Bug found and fixed in the bridge tool:** `ORPort auto` also binds IPv6 and Tor refused to start on a host without IPv6; the ORPort now stays on `127.0.0.1` (only the obfs4 front uses it). lyrebird writes `obfs4_bridgeline.txt` (not `obfs4_bridge_line.txt`), now both are read.
+- Tests: app 12 new (path order, budgets, bootstrap parsing, bridge-line shape and Tor-configuration injection, list file with bridge), all app unit tests green, all four flavours compile; server 100 of 100 (new: bridge lines, list file with bridge, setup page saves/shows/exports the bridge, bridge torrc and line composition).
+- Checked for real: the bridge starts, writes a valid line, and a Tor client connected to it over obfs4 (pluggable transport up, handshake done, consensus requested).
+
+**Not checked:** Snowflake and the public obfs4 bridges on a network that really blocks Tor (needs a device there); a full bootstrap through the company bridge (the bridge could not finish bootstrapping in this environment); the bridge on Windows. The built-in public bridge lines are a snapshot of Tor Browser's list from 2026-10-11 and must be refreshed with each app version. Not built: the same logic for the officer app and the node server's own Tor, iOS.
+
+**Honest limit:** bridges protect against blocking, not against being noticed.
+
+---
+
+## 2026‑10‑10 · Node server: is this the program NexonAI shipped?
+
+**What was done**
+
+- **Signed file list** (`release-manifest.txt`): SHA-256 of every program file, signed with the licence key pair under its own signing domain. Built and checked by one module (`src/integrity.ts`), so signer and checker cannot disagree. Builds are made byte-identical across Windows and Linux (`newLine: lf`).
+- **Self-check** at start and every hour. The overview and the setup page show a "Programm" row: unchanged and signed with version and fingerprint, VERÄNDERT with the number of changed, missing and extra files, signature invalid, or not signed (development). A changed install raises the "Achtung" banner. `NODE_MESH_REQUIRE_SIGNED=1` makes the server refuse to start unless everything matches.
+- **Outside check:** `verify-release.bat` / `.sh` / `tools/verify-release.js` on a copy of the files, optionally with the fingerprint NexonAI published; says whether it matches.
+- **Signing in the licence tool:** `sign-release.js` and a card in the tool's page. Writes the manifest into the built server folder, prints the fingerprint to publish, keeps a list in `release-fingerprints.txt`.
+- Tests: 94 of 94 for the server (11 new for the integrity module, one extended for the overview page). Checked end to end with a scratch key: sign, verify ok, edit a file, verify "modified", and with the real embedded key the scratch signature is rejected.
+
+**Which bug appeared**
+
+First edit put a helper into the middle of the setup page's template string and broke the build; fixed by moving it out and adding the client-side row separately.
+
+**What is not checked:** the real signing key has not been used (the scratch key proved the mechanism); a Windows build produced on a Windows machine (the byte-for-byte equality with a Linux build rests on `newLine: lf` and the pinned compiler, not on a run); the single-file `.exe` path (shows its SHA-256 only).
+
+**Honest limit:** this is a self-check. A server that is hacked while running can lie about itself; an attacker who can edit the files can edit the check. It finds changes on disk and allows a comparison from outside. It does not prove a running machine is clean.
+
+---
+
+## 2026‑10‑09 · Officer app: new dashboard, ready for the live demo
+
+**What was done**
+
+- **New look and structure** (`officer-app/src/web/public/`, still plain static files, no build step): side bar with Prezentare generală, Cazuri and Codul organizației; four figures on top (open cases, receipts due, answers due, closed this year); the cases sorted by the next legal deadline with red / amber / green and a progress bar; the next four deadlines; cases by category; new reports per week.
+- **Built for the demo:** the browser opens by itself after `start.bat`. With no cases the first screen is the organisation's QR with three steps, and **Afișează mare** shows it full screen for a projector (a second, large QR rendering in `/api/me`). The page asks for news every 3 seconds; a new case or message shows a toast and a dot until the case is opened. `start.bat` polls the relay every 4 seconds (was 8).
+- **A case:** conversation, status as four buttons, both deadlines, category with suggestions, case data. Ctrl+Enter sends. If sending fails the typed text stays.
+- **Connection light** in the side bar (`/api/status`): green after a successful poll of the relay, red if the relay does not answer.
+- **Fonts bundled** (IBM Plex, SIL OFL, `public/fonts/`), so the page looks the same without internet; `copy-public.js` copies sub-folders.
+- **Tests:** 8 of 8 (4 existing end-to-end tests plus 4 for the dashboard API, the bundled fonts, the large QR and the status). Unchanged: crypto, case store, relay, intake.
+
+**Which bug appeared**
+
+In the first preview of the design the right-hand cards ran past the bottom of the screen and the table did not fill its card; both were fixed in the layout. A focus outline sat wrongly inside the search box and a 1366-pixel laptop cut off the last table column; the layout now stacks below 1420 pixels. No bug in the case logic.
+
+**What is not checked:** the full phone-to-laptop round trip with the new page over real Tor (the page was exercised against the real case store and API with sample data and a stand-in relay, not against a live relay); Internet Explorer and old browsers; the deadline wording "3 luni de la primire" follows the case store (90 days from opening), not "from confirmation" as the directive words it.
+
+---
+
+## 2026‑10‑08 · Shared nodes, packet lifetime per chat, RAM store
+
+**What was done**
+
+- **Contacts share nodes.** A new contact gets 3 nodes picked at random from the chosen list, one per server first. Before, the
+  least-used nodes were chosen so that no node belonged to two contacts. A node that serves only one contact is that contact's
+  fingerprint; shared nodes mix the traffic. The "room for N contacts with nodes of their own" display is removed everywhere
+  (server setup page, overview, licence tool, list screens, contact picker). Texts that promised "own nodes for every contact"
+  were reworded (node-list hint, README, two slides).
+- **Packet lifetime per chat.** Clock icon in the chat bar: 1, 6 or 24 hours (default 24). Sent as the deposit's `ttl`; the node
+  caps it at its own profile. New column `messageTtlHours` (DB v12, real migration, contacts kept). Cover packets use the chat's
+  value too.
+- **Packets in RAM only (option).** `NODE_MESH_STORE=ram` for a licensed server: waiting packets only in memory, restart drops
+  them, nothing written to disk. `start.bat` asks once. The overview shows where packets live. Default stays on disk.
+- Docs: SPEC §18, BETRIEB (sharing, lifetime, RAM), server README, STATUS.
+
+**Which bug appeared**
+
+None in the tests. One thing to know: the old display and the old tests assumed "own nodes per contact" in four places (server page,
+overview JSON, licence tool, app list rows and picker); all were removed together so no screen still makes the old promise.
+
+**What is not checked:** a real device; a load test (the 100 users per node figure is calculated from the rate limit); the Android
+node still stores packets in its SQLite file, so "RAM only" holds for the PC/Linux/Docker server and the Temp Node, not for it.
+
+---
+
+## 2026‑10‑06 · Rotating list feed: a company keeps its employees' node lists up to date
+
+**What was done**
+
+- **The service** (`start-feed.bat`, `src/feed/`): a company runs a small service on its own server. Its onion address changes every
+  few hours (1 to 24 h, default 6). The address is derived from a shared secret and the time period, so the app computes it and
+  nobody else can find it. The server publishes the next address 15 minutes before the switch, keeps the old one 30 minutes after
+  it, and takes the rest offline.
+- **What it serves:** one file, the company's current node lists, **encrypted** (content key) and **signed** (company signing key).
+  A stolen server cannot read or forge a list: those two keys are sealed under the admin's passphrase and only needed to publish.
+- **Setup page** (`http://localhost:8841`): create the feed (name, period, passphrase) and get the **feed code** as QR and text;
+  publish by choosing the list files the node servers export; show the code again with the passphrase.
+- **App** (Settings → Node lists → Company feeds): paste the feed code; the app finds the address itself (tries the neighbouring
+  period near a boundary), fetches about hourly and on "Update now", checks the signature first, never takes an older version, and
+  turns each list in the feed into a managed list. Dropped addresses leave the pool; all or nothing if the device limit is hit.
+- The app's Kotlin code (SHA3-256, base32, address derivation, signature check, AES-GCM) is a port of the server's TypeScript.
+
+**Which bug appeared**
+
+None found by the tests. Two checks mattered: the address maths reproduces a real, published onion address (checksum, version,
+base32), and the Kotlin code opens a list produced by the TypeScript code on the first try. Not checked: a real Tor. The sandbox
+cannot run one, so the key format Tor expects for `ADD_ONION` rests on the Tor specification, not on a run. The service therefore
+stops with an error if Tor reports a different address than the derived one, instead of running unreachable.
+
+**Verification**
+
+Server `npm test` 84/84 (new: 13 for the feed: derivation, epochs, feed code, signing and tampering, store and sealed keys, public
+endpoint, rolling addresses with a fake Tor, setup page over HTTP). A real run of the service with the setup page: set up, publish,
+fetch `/list`, open it with the feed code. App: `FeedCryptoTest` 11 (vectors from the server, NIST SHA3, a real onion address,
+refusals, update plans). All four editions below.
+
+**Not built:** Tor client authorization (the service invisible to anyone without a key). Explained to Gabriel, offered as the next step.
+
+---
+
+## 2026‑10‑06 · Capacity display: how many contacts a node count carries
+
+**What was done**
+
+The number of nodes now says what it means for the customer: how many contacts get nodes of their own.
+Each contact takes 3 nodes; no node is shared with another contact.
+
+- **Rule:** one server of n nodes carries n / 3 contacts (5 → 1, 25 → 8, 100 → 33, 250 → 83). Three servers
+  of n nodes carry n contacts, because every contact takes one node on each server (3 × 250 → 250). Unbalanced
+  lists are limited by their smaller servers (250 + 25 + 25 → 25).
+- **Server setup page and overview:** "250 Nodes = Platz für 83 Kontakte … Zusammen mit zwei weiteren Servern
+  dieser Größe: bis zu 250". Shown on the licence card and as a "Kapazität" row on the overview page.
+- **App, Settings → Node lists:** each list shows "Room for N contacts with nodes of their own · M in use" and a
+  red warning once more contacts use the list than it has free nodes.
+- **App, adding a contact:** each list chip shows how many more contacts fit ("room for 41 more"), or "full,
+  nodes will be shared" when the list is used up.
+- **Licence tool:** `issue-server.js` and the GUI print the capacity for the node count you are about to issue.
+
+**Which bug appeared**
+
+One test failed on the first run: the setup page computed the capacity from the running node count, which
+is 0 in the test setup. It now falls back to the licence's node count. A real server was never affected.
+
+**Verification**
+
+Server `npm test` 71/71. App 82/82 in each of the 4 editions (new: capacity cases incl. 3 × 250 and an
+unbalanced list). Not seen on a device.
+
+---
+
+## 2026‑10‑06 · Presentations brought up to date (Business and Compliance, German and Romanian)
+
+**What was done**
+
+All four decks now match the product as of today and come from one source file (`presentations/decks2.py`, both languages side by side).
+
+- **Business (17 slides, was 14):** new slides for failure safety (3 servers, 3 providers, 750 addresses, up to 250 contacts with their own addresses), server lists (which servers carry which contacts) and the licence (tiers 5 / 25 / 100 / 250 nodes, checked offline). Changed: 250 nodes per server instead of 500, "Paketnummer" instead of "Abhol-Code", the node never sees an IP, sealed server keys, even rhythm with cover traffic, server in practice (licence, list file, overview page), status with today's test numbers (server 70, tablet node 15, app 80).
+- **Compliance (15 slides, was 13):** the relay story is replaced by the organisation's node; new slides "one QR code for the whole organisation" and "case number and status on the device"; the dashboard slide shows case numbers; installation includes the licence; status updated.
+- Speaker notes carry the caveats (no claim that searches are pointless, the three-providers advice is the customer's job, tiers are planned and prices open).
+- All four online decks were updated in place (same links); PDF and PowerPoint in `presentations/export/` were regenerated.
+
+**Which bug appeared**
+
+A copy mistake in my first publish call (a slide name from the Business deck in the Compliance list) was caught by the tool and fixed before anything was changed. Before overwriting the online decks I compared them with my last version: nobody had edited them by hand.
+
+**Verification**
+
+All slides rendered and checked by eye in German and Romanian (no overflow). The Romanian text is mine and has not been read by a native speaker. The PowerPoint files hold the slides as images, so they are not editable (editable PowerPoint: open the online deck, Share, Export).
+
+---
+
+## 2026‑10‑06 · Fixed 250 nodes per server, node lists in the app, licence for the Android node
+
+**What was done**
+
+- **250 nodes, not a setting.** A server always runs the full number its licence allows, never more than 250
+  (`MAX_NODES_PER_SERVER`). The question in `start.bat`, the `NODE_MESH_NODES` variable (now ignored, with a log
+  line) and the third argument of `start.sh` are gone. The licence tool issues 250 by default and refuses more
+  (`issue-server.js --nodes` is optional, the GUI defaults to 250). Why fixed: every server looks and loads the
+  same, nobody ends up with a small pool by accident, and 250 onions cost almost nothing (measured: 500 nodes ≈ 85 MB).
+- **Node list export.** The setup page has "Liste als Datei speichern": one text file (`unpruuf-node-list:v1`) with
+  all addresses of the server, the write key and, for sealed servers, the control address. Not for locked servers,
+  CSRF-guarded, loopback only. The format is pinned by a test that reads the server's real output in the app.
+- **Node lists in the app** (Settings → Node lists): import a file or pasted text into a new or an existing list,
+  rename, delete (shows how many contacts used the list). Every node is in exactly one list; nodes added by QR land
+  in "Standard"; the same server can be refreshed over Tor as before. Pool limit raised from 500 to 1000 nodes.
+- **Choosing a list when adding a contact.** The Business QR screen requires a list: the QR carries three nodes from
+  it, least-used first and spread over the servers of that list. With one list it is pre-selected. Changing the list
+  starts a fresh pairing (new keys), so a half-used QR never mixes with another list's nodes.
+- **Licence for the Android node** (`relay-android`, `core/NodeLicense.kt`): same code format and key as the server.
+  A licence card in the screen (activate, renew, status). Without a licence the owner QR stays hidden and deposits
+  are refused; after expiry deposits are refused with 402 and reading keeps working.
+
+**Which bug appeared**
+
+None in the new code that tests could find. Two things worth knowing: the throw-away signing key used in the tests
+is not your real one, so the real key has not signed a server code yet; and the Android node differs slightly from
+the PC server: Tor and the HTTP port stay up without a licence, only the owner QR and deposits are blocked.
+
+**Verification**
+
+Server `npm test` 70/70 (was 65): fixed cap, node-list round trip (250 addresses, injection attempt, malformed
+files), export route (header guard, locked server refused). Android node: 15/15 JVM tests (5 licence tests against
+codes signed by the real vendor tool, 402 over real HTTP). App: new `NodeListsTest` (10) reads a file written by the
+server's own builder; all four editions build and pass 80/80 (was 70). Not run on a real device; the file picker and the
+chip row in the QR screen have only been compiled, not looked at.
+
+---
+
+## 2026‑10‑06 · Node server: licence check (offline, no phone-home)
+
+**What was done**
+
+The Business Node server now needs a licence, checked on the machine itself:
+
+- **One code per server.** `unpruuf-server-license:v1:…`, signed offline with the same Ed25519 key as
+  the app licences (same public key as `LicenseManager.PUBLIC_KEY_B64`). It carries customer, serial,
+  **how many node addresses** this server may publish (1–500) and the **expiry date**.
+- **Nothing is sent anywhere, no device is identified.** The vendor knows how many licences were sold,
+  not where they run.
+- **Without a licence** the server starts only its setup page. API and Tor stay off. Pasting the code on
+  the setup page ("Lizenz erforderlich") starts everything at once, no restart. Also accepted: a
+  `license.txt` in the data folder, or `NODE_MESH_LICENSE` in the environment (containers).
+- **Node cap:** `NODE_MESH_NODES` above the licence is cut down to the licensed number, with a log line.
+- **Warning 30 days before expiry** on the setup page, the overview page and in the log.
+- **After expiry** new deposits are refused (HTTP 402); fetching what is still stored keeps working, so
+  nobody loses messages. A renewal pasted on the setup page takes effect immediately.
+- **Temp Node** needs no licence (one node, memory only).
+- A signature made for an app licence can never be replayed as a server licence: server codes are signed
+  over a domain prefix, and the code prefix differs.
+- **Issuing:** `license-tool/issue-server.js` (CLI), a new "Issue a server license" card in the licence
+  tool GUI, and `verify.js` now recognises server codes.
+
+**Which bug appeared**
+
+None in the check itself. One thing found while testing: an end-to-end run needs the real private key to
+sign a code the real public key accepts. This sandbox does not have it, so the end-to-end run used a copy of
+the built server with a throw-away key pair swapped in; the code under test was otherwise identical.
+
+**Verification**
+
+`npm test` 65/65 (was 54): signature, tamper, wrong key, app-licence replay, expiry states, file vs
+environment, deposit refusal with fetch still working, the setup page's licence form (CSRF guard, wrong
+code, app code pasted by mistake, activation). A tool-signed code verifies in the server and the other way
+round. Real run: no licence → API not listening; pasted via the setup page → API up, 10 nodes asked for,
+3 licensed → 3 run; expired licence → deposit 402, fetch 200; renewal → deposit 201 again.
+Not run against the real private key and not with real Tor in this pass.
+
+**Limit, said plainly:** the server is readable JavaScript on the customer's own machine. The check keeps
+honest customers honest and shows the contract in the product; it does not stop someone who edits the
+code. "How many servers" stays a contractual limit, as for app seats.
+
+---
+
+## 2026‑10‑06 · iOS: unpruuf Compliance (whistleblower edition) — NOT compiled
+
+**What was done**
+
+The iPhone version of Compliance, built from the existing iOS app plus new files. It does what the
+Android flavour does:
+
+- **First start:** straight to scanning the organisation's QR ("Raportează în siguranță"), or paste
+  the code. After that only **My cases** and **+ New case**, no contacts.
+- **One case = one screen, two tabs, "Status" and "Messages".** Status shows the case number, the
+  progress (received → review → closed), the date received, the feedback deadline and the last update.
+- **Automatic hand-over:** the app seals its pairing code so only the reporting office can open it,
+  puts it in the office's letterbox and repeats this every 6 h (up to 14 days) until the case number
+  comes back. A hidden first ratchet message lets the office answer at once.
+- **Own keys and own id for every case:** two reports from one phone look like two unrelated people.
+- **Remove case from this phone**, panic PIN deletes the cases and the remembered organisation QR,
+  optional Face ID, settings with the Tor state.
+- New in the core: `OfficerCase.swift` (intake seal / tag, case signal) with tests; `PairingPayload`
+  got an optional edition tag `e`, which the office needs to accept a reporter's code.
+- A second Xcode target with its own Info.plist (`Info-Compliance.plist`) makes it a separate app
+  that installs next to the consumer app. Steps are in `ios/README.md`.
+
+**Which bug appeared**
+
+None found, because nothing could be run. While reading the Android and officer-app code for the
+port, one thing the iOS port had to get right stood out: the office refuses a reporter code without
+the edition tag `e = whistleblower`, and the iOS pairing code had no such field. That is why
+`PairingPayload` was extended.
+
+**Verification**
+
+**Nothing compiled or run: there is no Swift toolchain here.** The wire format follows the Kotlin and
+TypeScript versions line by line, but the Swift side has not been cross-checked against them.
+Expect a few compile errors in the SwiftUI files on the first build.
+
+---
+
+## 2026‑10‑05 · Node server: overview page
+
+**What was done**
+
+- New page **`/overview`** next to the setup page, with a link from it. It shows the state of the
+  whole server at a glance:
+  - Traffic-light banner: all fine, Tor not ready, nodes missing, or locked.
+  - **Nodes online**: how many of the configured node addresses Tor really has registered. A node
+    that silently dropped shows up here.
+  - Packets stored, new messages and fetches of the last 24 h as a bar chart, and refused requests.
+  - Tor state, key storage (sealed / locked), profile and storage time, slot, uptime.
+  - All node addresses with a copy button.
+- Refreshes itself every 5 s. It is only reachable on the server itself (loopback and a host check,
+  like the setup page).
+- Counters are numbers only (`src/metrics.ts`, memory only, gone after a restart). The server
+  still stores nothing about who deposits or fetches.
+
+**Which bug appeared**
+
+The first version embedded the page data in the script as HTML-escaped text. Inside a `<script>`
+tag the browser does not decode such entities, so the data would have been unreadable. An address
+containing `</script>` could also have broken out of the script. Now only `<` is escaped as a unicode
+escape, and a test feeds exactly that case.
+
+**Verification**
+
+- Server: 54/54 tests (new: payload, warnings for locked / missing nodes, counters, loopback and
+  script-safe embedding).
+- Page started with real traffic and looked at in a browser: no horizontal overflow at phone width.
+- Not yet seen with a real Tor and 100 nodes.
+
+---
+
+## 2026‑10‑04 · Fix: Whistleblower app closed when a case was opened
+
+**Bug (reported from a real phone):** The app closed when a new case was created and whenever an
+existing case was opened.
+
+**Cause:** The case screen (Status / Messages tabs) used two early `return@…` jumps inside the
+screen description (Compose). The Compose compiler version in this project (1.5.10) does not handle
+early returns out of `Column`/`TopAppBar` content reliably. The app crashed on the very first build
+of the screen, and a new case jumps straight to that screen.
+
+**Fix:** Rebuilt both places as plain if/else, with no early returns. Behaviour unchanged.
+
+**Verification:** Compiles, 70/70 tests, WB APK built. Not yet seen on the device again.
+If the app still closes: in Android Studio, open the **Logcat** tab, search for `FATAL` and copy
+the red block.
+
+---
+
+## 2026‑10‑03 (2) · Whistleblower app: scan on first start, then only "My cases", separate keys for every case
+
+**What was done**
+
+1. **New flow in the Whistleblower edition.**
+   - First start, or no organisation yet: the scan screen comes straight up ("Report safely", scan
+     the QR, or paste the code). There is no contact list and no messenger vocabulary.
+   - After that the home screen is **"My cases"**: one row per case with case number, status,
+     opening date and a dot for a new message.
+   - The **"+ New case"** button opens a new case with the remembered organisation QR. No new
+     scan is needed.
+2. **One case = one screen with two tabs, "Status" and "Messages".**
+   - A new case opens on "Messages", because the report still has to be written. An existing case
+     opens on "Status".
+   - The separate "My case" screen and the strip in the chat are gone.
+3. **Every case has its own keys and its own identity**: message key, ratchet key pair and ID are
+   created fresh per case and stored with that case.
+   - Two reports from the same phone look like two different people, to the relay and to the
+     reporting office.
+   - Before this, every case had the same device ID, and the officer-app would even have merged a
+     second report into the first case.
+   - For this to work, the rotating wire tags are now derived from the case's key and no longer
+     from the device key.
+4. **"Remove case from this phone"**: deletes messages, keys and case data on the device. The
+   reporting office keeps the case, and nothing is sent to it.
+5. **Menu**: settings and "Scan another organisation". Existing cases keep their organisation.
+6. **The panic PIN** now also deletes the remembered organisation QR.
+
+**Verification**
+
+- Android 70/70 tests in each of the 4 editions, Whistleblower APK built, officer-app 4/4.
+- The new screens are only compiled, not seen on a device.
+
+---
+
+## 2026‑10‑03 · Whistleblower: one organisation-wide QR, automatic case number, "My case" screen
+
+**What was done**
+
+1. **One QR for the whole organisation.**
+   - Every employee scans the same code. Per-employee codes are deliberately not offered, because
+     an individual code could be tied to a person.
+   - After the scan, the app (or the web-reporter) automatically sends its own pairing code into
+     the organisation's letterbox on the relay.
+   - The letterbox is encrypted so that only the officer-app can open it: X25519 + HKDF +
+     AES-256-GCM, with a tag that changes every hour.
+   - Copying the code back to the officer and pasting it on the dashboard is no longer needed.
+     Manual paste stays only as a fallback.
+2. **Automatic case number and receipt.**
+   - The officer-app opens the case by itself and assigns a random case number (`HW-XXXX-XXXX`,
+     with no 0/1/I/L/O, never sequential).
+   - It sends the receipt straight back over the case's encrypted channel. That is the Art. 9
+     acknowledgement, and the case moves to "confirmed".
+3. **"My case" in the Android app.**
+   - A new screen shows the case number, the status, a three-step progress bar (received → review
+     → closed), the date received, the feedback deadline and the last update.
+   - A strip at the top of the chat and an icon in the toolbar open it.
+   - Every status change on the dashboard reaches the screen within seconds, with a neutral
+     notification.
+4. **Web-reporter:** the same intake, plus a "My case" panel. The reporter's own code is only
+   shown as a fallback.
+5. **The app retries the intake** every 6 h for up to 14 days until the receipt arrives. The officer
+   looks 48 h back.
+6. **Ratchet start fixed.**
+   - In a fresh session only one side may send first. A hidden start message and the officer's
+     automatic receipt now make sure both directions work immediately.
+   - Before this, a report could fail when the reporter happened to be on the receiving side.
+
+**Which bugs appeared (found while building, all fixed)**
+
+- **The officer-app dropped the Android app's identity signal.** That signal is outer envelope
+  only, not a ratchet frame, so the officer-app never learned the reporter's wire identity and
+  could not find real reports from the Android app. The demo round trip had only been tested with
+  the officer-app's own crypto modules. Now outer control signals (identity, generation switch,
+  revoke, cover packets) are handled before frames are decoded.
+- **The reporter app without its own relay never collected replies.** Its own relay list stayed
+  empty, so it polled nowhere. A whistleblower reporter now receives over the officer's relay from
+  the QR.
+- **The officer-app sent more than 64 tags in one request** once there were several cases, and the
+  relay rejects that. Requests are now split.
+- **Possible overwrite of the ratchet state on the officer side:** it was saved only after the
+  network call. It is now saved before.
+- **The dashboard was not served after `npm run build`:** tsc does not copy `src/web/public`. A
+  copy step was added.
+
+**Data model**
+
+- Android DB v11 with a real migration (no more destructive wipe): existing contacts stay.
+- Officer database: new columns added automatically on first start.
+
+**Verification**
+
+- officer-app: 4 new end-to-end tests (intake → case → receipt → report → status change →
+  duplicate intake, both ratchet roles over 6 runs; identity signal).
+- Android: 70/70 tests in each of the 4 editions (new: `OfficerCaseTest`). WB and Standard APKs
+  build.
+- **Cross-language checked:** an intake sealed by Kotlin is opened by the officer-app
+  (`officer-app/scripts/check-android-intake.js`); the browser intake and case signal are
+  compatible with the officer-app (`web-reporter/scripts/check-interop.js`).
+- Not tested on a real device or with a real relay over Tor.
+
+---
+
+## 2026‑10‑01 (6) · Hardening against outside observers: LAN, poll rhythm, cover traffic, sealed node keys
+
+**What was done**
+
+1. **The app no longer announces itself on Wi-Fi.** Before, every edition (including Whistleblower
+   and Business) announced `_unpruuf._tcp` as `unpruuf_<8 chars of the userId>` in every network,
+   and listened on a fixed port (5432x) on all interfaces. Anyone on the same Wi-Fi could see "unpruuf
+   runs here" and recognise the same phone again elsewhere. Now:
+   - LAN discovery runs only while a direct (onion) contact exists, never in Whistleblower, never for
+     Business/Node-Mesh-only users.
+   - Where it runs: generic service type `_http._tcp`, name = 16 hex chars of HMAC(userId, hour),
+     changing every hour and computable only by direct contacts. Random port.
+   - The onion's local socket now listens on 127.0.0.1 only.
+2. **Constant poll rhythm (Node-Mesh).** Previously every 6 s with an open chat, 90 s otherwise, plus an
+   extra poll at the moment a chat was opened. Anyone watching a node could read off when a chat was
+   open. Now there is a single rhythm (20 s ± 5 s, long-poll 20 s) and no extra poll on chat open.
+3. **Cover traffic in Node-Mesh.** On average one dummy deposit every 15 minutes per contact, at random
+   times (exponentially distributed). Each has the same tag, the same size and goes to the same nodes
+   as a real message, so a deposit no longer proves that a message was sent.
+4. **Sealed node keys on the server (`NODE_MESH_KEY_STORAGE=sealed`, now the default).**
+   - The owner secret and the onion keys are only stored encrypted (AES-256-GCM under a key derived
+     from the owner secret).
+   - After a restart the server is locked: only a control onion is online.
+   - The app shows "Server locked after restart → Unlock" (with a warning dialog). Only then does it
+     send the owner secret, and the nodes come back under the same addresses.
+   - Alternatively, paste the owner code on the setup page.
+   - A seized, powered-off server can no longer be run on under the same addresses.
+   - `NODE_MESH_KEY_STORAGE=disk` keeps the old behaviour.
+   - Old plain files are converted in place on first start; their addresses stay the same.
+5. **Fetch cursor (`POST /fetchMany` with `since`).** The app downloads each blob only once instead of
+   the whole TTL window on every poll. This makes cover traffic affordable and lets the long-poll
+   really wait.
+
+**Which bug appeared**
+
+The LAN broadcast was already listed as a "known gap" in `SECURITY_CLAIMS.md`. It was worse than noted
+there because it ran in every edition, not only for direct contacts. It is now closed.
+
+While building the fetch cursor, the existing `fetchMany` tests expected the exact old response. The
+cursor is therefore returned only when the client sends `since`, so old clients see no change.
+
+**Open**
+
+- Not tested on a real device or the live Tor network. The sealed restart and unlock were run with
+  real local Tor: the same 3 node addresses came back after the unlock.
+- The Android node (`relay-android`) does not support the cursor yet. The app falls back to a full
+  fetch there.
+- Unlock trust: whoever has seized a server could pose as its control address and wait for the
+  unlock. The app therefore only unlocks after confirmation, with a warning to set up a new server if
+  in doubt.
+- A live RAM dump of a running VPS (by the hoster) still yields the keys. That is unavoidable.
+
+**Verification**
+
+- Server: 51/51 tests (sealed storage, wrong secret, migration of old files, rotation, locked routes,
+  cursor, long-poll with cursor), plus a real local Tor run as described above.
+- App: 65/65 tests in each of the 4 editions (new: `LanDiscoveryTest`, `NodeMeshClientParseTest`).
+  All 4 APKs build.
+
+---
+
+## 2026‑10‑01 (5) · German versions of both presentations
+
+**What was done**
+
+- unpruuf Business (DE), 14 slides: https://claude.ai/artifact/JP11hQVZbqVTUqGt1ahysF
+- unpruuf Compliance (DE), 13 slides: https://claude.ai/artifact/Rwc3AVsDLhhZHZXmgmULdA
+- Same structure and design as the Romanian decks. The compliance deck names the EU directive and
+  "the national implementing law" instead of only the Romanian law, so it works for German
+  customers too.
+- PDF and PowerPoint in `presentations/export/` (`*_DE.pdf`, `*_DE.pptx`, slides as pictures).
+
+**Which bug appeared**
+
+Longer German words: "Relay der Organisation" overflowed its diagram box (now "Eigenes Relay")
+and one table cell wrapped to four lines (shortened). Both found on the rendered contact sheets.
+
+**Verification**
+
+Both German decks rendered and looked over; no Romanian text left (checked by script).
+
+---
+
+## 2026‑10‑01 (4) · Phone number in both presentations, PDF and PowerPoint downloads
+
+**What was done**
+
+- Phone number +40 773 829 646 on the last slide of both presentations (online decks updated).
+- Every slide rendered to an image; from those: `presentations/export/unpruuf_Business_RO.pdf`
+  / `.pptx` and `unpruuf_Compliance_RO.pdf` / `.pptx`. The PowerPoint files hold the slides as
+  pictures (not editable text) plus the speaker notes; an editable PowerPoint comes from the
+  online deck's Share → Export.
+
+**Which bug appeared**
+
+In the compliance architecture diagram the label "Panoul responsabilului" was wider than its box
+— shortened to "Panou responsabil" (online deck updated too).
+
+**Verification**
+
+Both decks rendered and looked over as contact sheets; no other overflow found.
+
+---
+
+## 2026‑10‑01 (3) · Two Romanian presentations: Business and Compliance
+
+**What was done**
+
+- **unpruuf Business** (main product, 14 slides): problem, the server as the tool, how the
+  connection to the node works, the two codes, what does not exist (no user ID, no phone number,
+  no account, no onion address on the phone, no provider, nothing shared between contacts),
+  hundreds of nodes with 3 per contact, what a node sees, the server in practice, security layers,
+  compliance by architecture, target groups, current status incl. limits, next steps.
+  https://claude.ai/artifact/4tH2sYnsmWgAkZELQGNkCd
+- **unpruuf Compliance** (13 slides): legal obligation with the 7-day / 3-month deadlines
+  (Art. 9(1)(b)/(f), Legea 361/2022), problem of classic solutions, the organisation's own relay,
+  architecture, what does not exist, who sees what, officer dashboard (illustrative example
+  rows), two ways to report, legal frame with disclaimer, installation, status, next steps.
+  https://claude.ai/artifact/61vsMG7dqfqqu3ZJhjVGoe
+- Slide files and generator scripts in `presentations/`.
+- Claims kept to what the code does today: the compliance deck does not claim "no ID" (the
+  whistleblower pairing still carries a random device ID); "subpoenas are pointless" is phrased
+  as "no provider that can be compelled to hand over data; a seized node holds nothing readable".
+
+**Which bug appeared**
+
+Two text colours on the teal slides were below 4.5:1 contrast — replaced before delivery. One
+unsupported table property removed.
+
+**Verification**
+
+Not rendered or proofread on a projector. Placeholder left: `[telefon]` on both last slides.
+
+---
+
+## 2026‑10‑01 (2) · Own keys and own nodes per contact; many nodes per server
+
+**What was done**
+
+- **Server (`node-mesh-server`):** `NODE_MESH_NODES=1..500` — one process, one Tor, that many
+  onion addresses, one persisted key each (`onionKeys` in the identity file; old single-key files
+  are migrated automatically). New owner-only `GET /pool` lists every address of the server. Setup
+  page shows the node count and the address list. `start.bat` asks for the node count on first
+  start (Enter = 10), `start.sh` takes it as third argument, `docker-compose.yml` sets 10.
+- **Tablet node (`relay-android`):** `GET /pool` answers with its own address (owner-only), so
+  the app treats every node type the same.
+- **App:** every Node-Mesh pairing now generates a fresh message key, X25519 ratchet key pair and
+  routing seed, and picks up to 3 own nodes from the pool (least used first, spread over
+  different servers). Stored on the contact (`Contact.myPair*`, `Contact.myNodeAddresses`, DB v10,
+  destructive migration as before). Deposits go only to that contact's nodes; routing tags,
+  decryption, ratchet setup and the safety number use the per-contact values. The QR shown stays
+  stored until a scan binds it; one pairing screen = one contact.
+- **Pool import:** scanning one owner QR also fetches the server's other nodes via `/pool`, and
+  the app re-checks every 6 h. Own pool limit 500. Settings show the node count and fold long
+  lists.
+- **Node migration** is announced only to contacts that were given the moving node.
+- **Measurement** (`node-mesh-server/tools/measure_nodes.py`): 500 nodes in one process about
+  85 MB RAM, 10 separate processes about 788 MB. Measured without the live Tor network.
+
+**Which bug appeared**
+
+None in the build. One script error while adding `/pool` to relay-android (Kotlin triple quotes
+inside a Python string) — caught before anything was written.
+
+**Verification**
+
+- node-mesh-server `npm test` 41/41; real Tor: 3 nodes in one process, 3 different addresses, all
+  3 unchanged after restart, `/pool` 401 without owner secret.
+- App: 59/59 unit tests × 4 editions (new: node distribution, pool parsing), all four editions
+  build. relay-android: 9/9.
+- Not verified: real devices, and the network load of hundreds of published onion services on a
+  real VPS.
+
+---
+
+## 2026‑10‑01 · No own onion service on the phone unless a contact needs one; linkability claim corrected
+
+**What was done**
+
+- `TorManager` no longer publishes the phone's own onion service at every Tor start. It does so
+  only if at least one contact is a direct (onion) P2P contact. Whistleblower edition: never.
+  Node-Mesh and relay-only users: not at all, until they open an onion-format pairing QR, which
+  starts it on demand via `ensureMainOnion()`. Without an own onion, `isReady` is set as soon as
+  Tor is up and bridges are applied.
+- Pairing screen: the onion QR is generated only when that QR is actually shown
+  (`QrPairViewModel.requestOnionQr()`), and the screen opens on the Node-Mesh QR when a node is
+  configured — opening the screen no longer publishes an onion as a side effect.
+- Self-reachability checks and the daily verified-onion rotation skip entirely while no own onion
+  is hosted, so a missing onion never triggers Tor bounces.
+
+**Which bug appeared**
+
+A wrong claim, not a crash: the 2026-09-30 entry said dropping the userId stops two contacts from
+linking a person. It does not. Message key, ratchet key, routing seed and node addresses are all
+device-global, so two contacts comparing QR codes can still link the same person. Corrected in
+`NODE_MESH_SPEC.md`, `NodeMeshPairing.kt`, `LOESUNGSUEBERSICHT.html`, and both solution
+documents (German and Romanian). Also: "the phone has no onion address" was only true for the
+Node-Mesh data path — the app still published one at startup in every edition. Fixed by the
+change above.
+
+**How it was fixed**
+
+Onion hosting is now a decision taken at Tor start from the contact list; the linkability gap is
+documented as open, with per-contact keys and per-contact nodes as the planned fix.
+
+**Verification**
+
+Unit tests and `assemble*Debug` for all four editions: green. Not yet run on a real device.
+
+---
+
+## 2026‑09‑30 (3) · German solution document Business-first, plus web page
+
+**What was done**
+
+- German solution document (Claude Docs:
+  https://claude.ai/code/artifact/e95b9483-c3a1-4794-baf8-a4c5311ff335) restructured like the
+  Romanian one: renamed "unpruuf — Lösungsübersicht (Business und Whistleblower)", Business tab
+  first as main product, Whistleblower second, all customer-specific references removed.
+- Same corrections as in Romanian: Art. 9(1)(b) for the 7-day acknowledgement, Legea nr. 361/2022
+  named, officer dashboard over Tor (security table now has its own officer row), 53 tests,
+  Romanian translation row in the build table. Typos "geschuetzt"/"Faelle" fixed.
+- New web page `LOESUNGSUEBERSICHT.html` (also published as a private artifact:
+  https://claude.ai/artifact/BB75eipRQBz1aHHRTE5xQy): the German overview as one page, Business
+  first, with a new diagram and table explaining the connection to the node (write key to deposit,
+  hourly pickup code to fetch, no user ID, no onion address on the phone). Light and dark theme,
+  works at phone width.
+
+**Which bug appeared**
+
+None.
+
+**Verification**
+
+Page rendered at phone width in Chromium: no horizontal page scroll, diagram labels clear.
+
+---
+
+## 2026‑09‑30 (2) · Solution document in Romanian, Business-first
+
+**What was done**
+
+- New Romanian solution document "unpruuf — Prezentarea soluției (Business și Whistleblower)"
+  (Claude Docs: https://claude.ai/code/artifact/8129d2e1-5d72-4ee0-82ba-fc9826e2a00c).
+- Business / Node-Mesh is the first tab and is presented as the main product line; Whistleblower
+  is the second tab, written for any organisation that needs an internal reporting channel — no
+  customer-specific references.
+- Content brought up to date while translating: officer dashboard reaches the relay over Tor
+  (no longer LAN), 53 unit tests, pairing QR v2 without userId, phone has no onion address of its
+  own in the Node-Mesh path, Romanian UI across all components.
+- Legal references corrected: the 7-day acknowledgement is Art. 9(1)(b) of Directive (EU)
+  2019/1937 (the German document says (a)); the Romanian transposition, Legea nr. 361/2022, is
+  named.
+- Private repository links replaced by a list of what the customer receives.
+
+**Which bug appeared**
+
+None in code. The German solution document still carries the Art. 9(1)(a) error and
+Whistleblower-first order — not yet changed.
+
+**Verification**
+
+Architecture diagram rendered and checked (no clipped labels). No code changes in this entry.
+
+---
+
+## 2026‑09‑30 · Business Node-Mesh: userId removed from the pairing QR (format v2)
+
+**What was done**
+
+- The Node-Mesh pairing QR no longer carries a userId (`u` field). It now holds only message key,
+  ratchet public key, routing seed, node addresses and edition. The userId was never read by
+  Node-Mesh routing or crypto, and one identifier shown identically to every contact is exactly
+  what lets two contacts link you without any cryptanalysis.
+- Re-scan duplicate detection now uses the contact's message key
+  (`ContactDao.getNodeMeshContactByPublicKey`). A reset device has a new key and pairs as a new
+  contact.
+- Old v1 QR codes (with `u`) are still accepted; the field is ignored.
+- Confirmed in code: in the Node-Mesh path the phone has no onion address of its own — it is a
+  pure Tor client (owner secret to deposit, routing tag to fetch).
+- New unit test `NodeMeshPairingTest` (5 tests): no `u` in output, round trip, v1 compatibility,
+  missing routing seed rejected, Node-Mesh QR never misread as a cross-platform QR.
+- `NODE_MESH_SPEC.md` §1 documents the change.
+
+**Which bug appeared**
+
+None in the build. Side finding: the cross-platform parser identified its QR by `u` + `n`, both of
+which the old Node-Mesh QR also carried — format detection only worked because Node-Mesh node
+addresses happen not to parse as relay connection strings. Without `u` the formats are now
+unambiguous by construction.
+
+**Verification**
+
+Unit tests and `assemble*Debug` for all four editions (standard, pro, client, whistleblower):
+green. Whistleblower/cross-platform pairing (officer-app, web-reporter) unchanged.
+
+---
+
+## 2026‑09‑27 (2) · Whistleblower pilot: full Romanian translation (Android app, officer-app, web-reporter, tablet relay)
+
+**What was done**
+
+Universitatea 1 Decembrie 1918 Alba Iulia is Romanian-speaking, so every piece they or their
+reporters/officers interact with is now Romanian, not just the demo runbook: the Android
+Whistleblower app, the officer-app dashboard (web UI + startup console + install/start.bat), the
+web-reporter browser fallback (page + startup scripts), and the tablet relay app (relay-android).
+
+**What was added**
+
+- `app/src/whistleblower/res/values/strings.xml` — a new Gradle-flavor resource override (280+
+  strings) covering every screen a reporter can reach: PIN lock/setup, QR pairing, chat, contact
+  list, contact detail (safety number), settings, home (security status), the license gate, and
+  the root/build-expired refusal screens, plus notification text. Standard/Pro/Client keep their
+  existing (English) text untouched — Gradle's flavor resource merging picks the whistleblower
+  override only for that one build variant, by resource name, regardless of the phone's own
+  language setting (a guaranteed Romanian demo, not a locale gamble).
+- `app/src/main/res/values/strings.xml` — the ~280 corresponding keys were extracted out of
+  hardcoded Compose `Text("...")` calls (this app had zero `stringResource` usage before this)
+  and given here as the default (English) value every other flavor keeps using.
+- `LockViewModel` — error messages changed from raw strings to a `LockError` enum, so the UI
+  layer (not the ViewModel) owns the localized wording.
+- `relay-android` — real Android locale resources instead of a flavor: `values/strings.xml`
+  (English default, ~70 keys) plus a new `values-ro/strings.xml` override. Unlike the main app,
+  this shows Romanian only when the *device's* language is Romanian — the right choice here
+  since relay-android's newer Business Node-Mesh mode (this session's earlier work) serves other,
+  non-Romanian NexonAI customers too, and shouldn't be forced into Romanian for them.
+- `officer-app/src/web/public/{index.html,app.js}` — dashboard UI, case table, thread view, all
+  translated directly (this deployment is the university's own dedicated instance, not a shared
+  multi-tenant one, so no i18n split was needed).
+- `officer-app/src/index.ts`, `src/officer/intake.ts`, `src/web/app.ts` — startup console
+  messages, pairing-code error messages, and dashboard API error messages translated.
+- `officer-app/install.bat`, `start.bat` — translated; `start.bat` now sets `chcp 65001` first so
+  Romanian diacritics render correctly in a plain Windows console instead of risking mojibake.
+- `web-reporter/public/index.html`, `src/main.ts`, `install.bat`, `start.bat` — translated,
+  including the security disclaimer banner (translated carefully — it's the page's most
+  important text) and the local-data-wipe confirmation dialog.
+
+**Bug found and fixed (real, caught by testing, not guessed)**
+
+Twelve English default strings (in the main app's `strings.xml`) and three in relay-android's
+contained an unescaped apostrophe (`doesn't`, `you've`, `officer's`, …). The whistleblower
+flavor never hit this — its Romanian override always shadowed those exact keys — so an
+initial `assembleWhistleblowerDebug` looked clean. Building the *other* three editions
+(`assembleStandardDebug`/`ProDebug`/`ClientDebug`), which fall through to the English default,
+failed AAPT2 resource merging with "Invalid unicode escape sequence in string" (AAPT2's actual
+wording for this, not literally about `\u` escapes). Fixed by escaping every literal apostrophe
+in both `strings.xml` files. This is exactly the kind of cross-edition regression the project's
+own "check all flavors, not just the one you're touching" habit exists to catch — confirmed by
+re-running all four editions' `test*DebugUnitTest` + `assemble*Debug` afterward.
+
+**Verification**
+
+- Android: `testStandardDebugUnitTest`/`testProDebugUnitTest`/`testClientDebugUnitTest`/
+  `testWhistleblowerDebugUnitTest` all 48/48, `assembleDebug` (all four flavors) green.
+- relay-android: `testDebugUnitTest` 8/8 (unchanged — UI text only), `assembleDebug` green.
+- officer-app: `npm run build` (tsc) clean.
+- web-reporter: `npm run build` clean, confirmed the Romanian strings actually landed in the
+  built `public/bundle.js` (grepped for them post-build, not just in `src/`).
+
+**Not verified**
+
+- Real device/browser rendering of the Romanian text (no emulator/browser display in this
+  sandbox) — confirm visually before the meeting, especially long strings in narrow Compose
+  cards and the officer-app table on a small laptop screen.
+- Windows console rendering of `officer-app`'s translated startup messages with `chcp 65001`
+  (the fix is standard and well-established, but wasn't tested on a real Windows box here).
+
+---
+
+## 2026‑09‑27 · Node-Mesh v5: betriebsreif — eingebauter Tor + PoW, Profile, Android-Node, 1 Client-Bug + 1 Server-Bug
+
+**What was done**
+
+Review of the uploaded Node-Mesh brief against the repo: the upload was the old **v1** draft;
+the repo already had v3 + a built server and Android client. A second review ("what's missing
+for real customer operation?") found five gaps, all closed here. `NODE_MESH_SPEC.md` is now
+**v5** (history entry + [v5] blocks in §3/§5/§8/§9/§11/§12).
+
+**What was added**
+
+- `node-mesh-server/src/tor/` — Tor built in and mandatory: pinned Expert Bundle download (with
+  officer-app's two Linux fixes), Tor as pure onion host (`SocksPort 0`, auto control port,
+  cookie auth, `__OwningControllerProcess`), publication via control-port `ADD_ONION` with a
+  persisted key (address never changes) and **Tor's onion-service proof-of-work defense always
+  on**; self-healing restart with backoff; Temp Node key kept in memory only.
+- `node-mesh-server/src/profiles.ts` — profiles `standard` 6 h / `high-security` 1 h /
+  `offline-tolerant` 24 h (max 24 h), rotation fixed at 1 h as a protocol constant, slots 1–3
+  (Reset at minute 0/20/40, UTC-aligned; own ports + data folder per slot).
+- `node-mesh-server/src/admin/` — local setup page on its own loopback port (never behind the
+  onion), `Host`-header DNS-rebinding guard, owner QR, Tor state, CSRF-guarded owner-secret
+  rotation (takes effect immediately). Owner code + terminal QR also printed on first start.
+- Reset now does real hygiene: closes idle HTTP sockets, verifies/re-adds the onion (same key),
+  WAL checkpoint. SQLite `secure_delete` on; sweep every 5 min.
+- Packaging: `install.bat`, `start.bat` (slot/profile menu, remembers choice, opens setup page),
+  `start-tempnode.bat`, `start.sh`, `start-tempnode.sh`, `Dockerfile`, `docker-compose.yml`;
+  standalone exe folder now ships the same two `.bat` files (`exe-templates/`).
+- `relay-android` — **Business Node mode** (Android as node host, closes §8's platform list):
+  `NodeMeshHttpServer` (same contract as the PC node), `BlobStore` v2 with per-row `expires_at`,
+  read-only reads, TTL-only sweep, `secure_delete`; profiles, slots, owner QR, owner-key
+  rotation, separate onion key per mode; first unit test setup for the module.
+- `NODE_MESH_BETRIEB.md` — customer-facing operator guide (German), incl. one-node limitation
+  (§11 requirement), profiles, slots, Temp Node, Android-without-PoW caveat.
+
+**Bugs found and fixed**
+
+1. **Android client missed messages from nodes with TTL > 6 h** (`P2PNetworkManager`): the poll
+   window was computed with a hard-coded 6 h TTL, but a client can't know a contact's node TTL.
+   A 24-h node's messages older than ~7 h were never requested. Now the window is always sized
+   for the max allowed TTL (24 h → 26 tags/contact, still one `fetchMany`).
+2. **Stale 400 on kept-alive connections** (`relay-android` node server, found by the new HTTP
+   contract test): an error answered before reading the body left the body on the socket and the
+   next request got a stale 400. Fixed by closing the connection after every response. The same
+   latent pattern in relay mode's `RelayHttpServer` is documented, not changed (pre-demo risk).
+3. `start.bat` (during development, never shipped): `%errorlevel%` inside a parenthesized block is
+   expanded at parse time — the slot menu would always have saved a stale value. Switched to
+   `if errorlevel`.
+
+**Verification**
+
+- `node-mesh-server`: `npm test` **38/38** (11 new: profiles/slots, Tor control protocol vs. a
+  fake control port, torrc, setup page incl. DNS-rebinding + CSRF, rotation). Real Tor 0.4.9.11:
+  `tor --list-modules` → `pow: yes`; `ADD_ONION … PoWDefensesEnabled=1` accepted; same onion
+  address after restart; `kill -9` Tor → auto-restart, same address; Temp Node: no key on disk,
+  temp dir gone after exit; no orphaned Tor after shutdown.
+- Standalone binary rebuilt and run on Linux with real Tor: onion + setup page + owner code OK.
+- `relay-android`: compiles, `NodeMeshHttpServerTest` **8/8**, debug APK builds.
+- `app`: compiles, **48/48** unit tests (standard flavor).
+
+**Not verified**
+
+- Tor reaching 100 % bootstrap (sandbox network stops at the handshake — confirm on a real line).
+- Real Windows run of `start.bat`/exe; Docker image build (the sandbox's Docker couldn't reach
+  the npm registry; the build attempt with sandbox proxy injection was not permitted).
+- Any of it on a real phone: Android node mode and the client fix are compile- and unit-tested,
+  not device-tested.
+
+---
+
+## 2026‑09‑26 (3) · officer-app: real Tor client (was LAN-only) — 2 more real bugs found
+
+**What was done**
+
+`unpruuf/officer-app/` now bootstraps a genuine Tor client on startup and reaches the relay over
+its real `.onion` address — the same path the Android app already uses — instead of the LAN-only
+HTTP shortcut this product line shipped with for its first demo. Requested explicitly ("Was
+laufen muss ist definitiv alles was mit unserer Architektur zu tun hat") since Tor-based
+reachability is core to the "anonymity through architecture, not policy" pitch, not an optional
+nicety.
+
+**What was added**
+
+- `src/tor/torDownload.ts` — downloads and installs the official Tor Expert Bundle on first run
+  (Windows/macOS/Linux), same mechanism `server/src/torDownload.ts` already uses for its own
+  Windows/macOS relay deployment, generalized to all three platforms and kept as its own copy
+  (no shared package between `server/` and `officer-app/` — same precedent CROSS_PLATFORM_PLAN.md
+  already documents for the two runtimes' crypto code).
+- `src/tor/torProcess.ts` — runs Tor as a pure outbound SOCKS client (no hidden service; officer-
+  app only ever needs to dial OUT, never be reached directly), parses its own bootstrap log for
+  live "Bootstrapped NN%" progress.
+- `src/tor/tor.ts` — ties the two together: ensure the binary, spawn it, wait for a real 100%
+  bootstrap, hand back the local SOCKS port.
+- `src/relay/relayClient.ts` — now routes every relay request through that SOCKS port via
+  `socks-proxy-agent` (`socks5h://`, so `.onion` hostname resolution happens on Tor's side, not
+  locally) using Node's classic `http` module; the previous plain-`fetch` LAN path is kept as an
+  explicit, opt-in fallback (`RELAY_REACHABLE_BASE_URL` set → Tor is skipped entirely).
+- `src/config.ts` — the relay's reachable address is now derived from its own connection string
+  (the same `.onion` + port-80 convention `RelayClient.kt` already uses on Android) instead of
+  requiring a separately-typed LAN URL; that env var becomes an explicit opt-out instead of a
+  required input.
+
+**Bugs found and fixed — both real, both only surfaced by actually running this for the first
+time, neither guessable from reading the code:**
+
+1. **Missing `LD_LIBRARY_PATH`** — the Linux Expert Bundle's `tor` binary ships next to its own
+   `libcrypto`/`libssl`/`libevent` `.so` files but has no RPATH pointing at its own directory, so
+   the dynamic linker can't find them at all ("cannot open shared object file") unless
+   `LD_LIBRARY_PATH` includes that directory. No equivalent needed on Windows (DLL search order
+   already includes the executable's own directory by default).
+2. **Wrong binary picked from the bundle** — the archive also ships a `debug/` directory with its
+   own same-named, full-debug-symbols `tor` binary; a blind recursive filename search matched
+   `debug/tor` instead of the intended `tor/tor` (`debug` sorts before `tor` alphabetically).
+   Confirmed by hash-comparing the two: the debug one is a different, larger file that fails to
+   execute at all ("Exec format error"), not just a slower equivalent. Fixed by preferring the
+   canonical `tor/<exeName>` path and only falling back to a recursive search if that's ever
+   missing.
+
+**Verification**
+
+Real, not simulated: the actual Tor binary was downloaded, spawned, and driven to a genuine
+handshake attempt with the live Tor network in this session's own sandbox — reached
+`Bootstrapped 14% (handshake): Handshaking with a relay` against several real relays before that
+sandbox's own outbound-network policy (not a code defect — confirmed separately: raw TCP to an
+arbitrary port is blocked there, port 443 is not) prevented the connection from completing
+further. The full pairing → report → reply round trip (see the entry below) was re-run after the
+`RelayClient` rewrite and still passes end-to-end.
+
+**Not verified:** a completed Tor bootstrap end-to-end (this session's sandbox network policy
+prevents it — see above; should complete normally on a real internet connection, the same way Tor
+Browser does), and automatic Tor-process recovery if it dies mid-session (`server/`'s
+`keepTorAlive` exists for exactly this and is a natural next port, not done this pass).
+
+---
+
+## 2026‑09‑26 (2) · First real Android compile + build in this project's history — 2 real bugs found
+
+**What was done**
+
+A full Android SDK (platform 34, build-tools 34.0.0) was set up in this
+session's environment for the first time ever (see STATUS.md §3's long-standing
+"no Android SDK here" caveat), the missing Unix `gradlew`/`gradle-wrapper.jar`
+at the `unpruuf/` root were generated (matching the already-pinned Gradle 8.6
+in `gradle-wrapper.properties` — `gradlew.bat` existed alone before, see
+HANDOFF.md's "bekannte Lücke"), and every edition of both Android apps
+(`unpruuf/app/` — standard/pro/client/whistleblower — and
+`unpruuf/relay-android/`) was **actually compiled, built into a signed debug
+APK, and unit-tested for the first time in this project's entire history.**
+
+**Bugs found and fixed — both real, both pre-existing, neither related to
+this session's Whistleblower work, both invisible until an actual compiler
+finally ran against this code:**
+
+1. **`RelayManager.kt`'s `ParsedConnection` data class**, declared nested
+   inside `RelayManager`'s `companion object`, failed to resolve at all
+   (`Unresolved reference`) everywhere it was referenced from
+   `P2PNetworkManager.kt` — as a type AND as a constructor call, five call
+   sites, all failing identically. Root cause not fully explained (this
+   qualified-nested-in-companion pattern is normally valid Kotlin), but 100%
+   reproducible under this project's exact Gradle/Kotlin/AGP configuration.
+   **Fixed** by moving `ParsedConnection` to a top-level, same-package class
+   — no qualification ambiguity possible — and updating all five call sites.
+2. **`TorManager.kt`'s `ensureVerifiedOnion()`** called
+   `ctrl.sendAndWaitForResponse("DEL_ONION $old", null)` directly —
+   `sendAndWaitForResponse` is `protected` in jtorctl's real
+   `TorControlConnection` class (confirmed via `javap` against the actual
+   `info.guardianproject:jtorctl:0.4.5.7` jar, not assumed), so this line
+   could never have compiled. **Fixed** by calling jtorctl's real public API
+   for the same operation, `ctrl.delOnion(old)`.
+3. **`RelayManagerListTest.kt`'s `RELAY_POOL_MAX_SIZE` test** asserted the pool
+   caps at 2 entries — true when the test was written, but
+   `RELAY_POOL_MAX_SIZE` was deliberately raised to 3 on 2026‑09‑17 (see that
+   constant's own doc comment) and the test was never updated to match, so it
+   was silently asserting stale, wrong behavior. **Fixed** by asserting the
+   real, current, intentional cap and adding a new test for the >3 case the
+   old test used to (accidentally) cover.
+
+**Verification**
+
+- `./gradlew assembleDebug` — all four `unpruuf/app/` editions
+  (standard/pro/client/whistleblower) build a real, signed debug APK.
+  `unpruuf/relay-android/` builds its own debug APK too.
+- `./gradlew test{Standard,Pro,Client,Whistleblower}DebugUnitTest` — 48 tests
+  per edition (192 total), **all passing**, including `DoubleRatchetTest`
+  (the same Double Ratchet algorithm this session's officer-app/web-reporter
+  TypeScript ports were separately cross-verified against — now confirmed
+  correct from the JVM side too, not just reasoned about).
+
+**Not verified — still real, honest limits:** no device, emulator, or camera
+exists in this sandbox (no KVM for accelerated emulation), so nothing about
+actually running the app, scanning a QR, or exercising Tor networking on a
+real device was or could be tested. "Compiles, builds, and unit-tests clean"
+is a large, genuinely new milestone for this project — it is not the same
+claim as "runs correctly on a phone."
+
+---
+
+## 2026‑09‑26 · unpruuf Whistleblower: new compliance product line (Android edition, officer-app, web-reporter)
+
+**What was done**
+
+New product line, separate from the Standard/Pro/Client consumer messenger (see
+CROSS_PLATFORM_PLAN.md's "enterprise compliance/whistleblower... product line
+scoped separately"), built for a pilot with Universitatea 1 Decembrie 1918 Alba
+Iulia: an EU Directive 2019/1937-shaped whistleblowing channel — anonymous
+reporter → compliance officer, with the officer side keeping a real case record
+(status, 7‑day acknowledgement deadline, 3‑month feedback deadline) instead of
+just being an anonymous chat.
+
+**What was added**
+
+- **Android — `whistleblower` edition** (new Gradle flavor, `app/build.gradle.kts`):
+  - `AppEdition.kt` — `WHISTLEBLOWER`/`OFFICER` constants; pairing rule is
+    Whistleblower↔Officer only, fully isolated from Standard/Pro/Client.
+  - `RelayManager.kt` — `isMandatory()`/`isUsable()` forced permanently true for
+    this edition: relay-only routing is architecture here, not a Settings toggle
+    a reporter (or a support agent) could turn off.
+  - `HomeScreen.kt` — the coloured edition badge is suppressed for this edition;
+    a visible "WHISTLEBLOWER" label on a reporter's home screen would itself be
+    a safety risk if someone else glances at the phone. No dedicated launcher
+    icon/accent colour either, for the same reason — it inherits Standard's look.
+  - `QrPairScreen.kt` — the existing debug-only "copy my code / paste their code"
+    flow is also enabled on Whistleblower release builds: it's the NORMAL pairing
+    step here (the officer's laptop dashboard has no camera to scan the phone
+    back with), not a testing affordance.
+  - **Not build-verified** — no Android SDK in this environment, same standing
+    caveat as every other Android change in this project's history (see STATUS.md
+    §3). Structurally reviewed only.
+- **`unpruuf/officer-app/`** (new) — the compliance officer's client, run on a
+  laptop: a genuine Double Ratchet peer (direct TypeScript port of
+  `domain/network/ratchet/*`, `RatchetFrame`, `NetworkObfuscation`,
+  `MessagePayload`, `CryptoManager`'s outer AES-256-GCM envelope, and the
+  cross-platform pairing QR codec) plus a local case-management dashboard
+  (Express + a small vanilla-JS UI) with the deadline fields above,
+  encrypted-at-rest (AES-256-GCM, key derived from an officer password via
+  scrypt). Pairing is one-sided-QR + pasted-code, since a laptop dashboard
+  can't scan a phone screen back — see its own README.md for the full flow.
+- **`unpruuf/web-reporter/`** (new) — a no-install, any-browser fallback
+  reporting channel: the same protocol, reimplemented independently in
+  browser-safe TypeScript (`@noble/curves`/`@noble/hashes`/`@noble/ciphers`
+  instead of Node/JVM primitives), bundled to one self-contained `bundle.js`
+  (esbuild, no CDN dependency at runtime). Carries an explicit in-page
+  disclaimer: weaker anonymity than the native app (no Tor by default, no
+  RAM-only/wipe-on-background, no device-compromise detection) — a deliberate
+  fallback channel, not a security-equivalent one.
+- **`unpruuf/server/`** — `RELAY_BIND_HOST` env var (default unchanged,
+  `127.0.0.1`) so an operator can opt a relay into LAN-reachability for a
+  Node/browser peer with no Tor client of its own; permissive CORS on every
+  route (safe — auth is bearer-token-only, not cookie-based).
+- **`unpruuf/relay-android/`** — the same LAN-reachability opt-in as a Settings
+  toggle ("Allow LAN access", off by default, `RelayIdentity.lanAccessEnabled`)
+  + the same CORS headers on every response.
+
+**Verification**
+
+Real, not just code review — the first time this project has had a genuine
+build+run loop for a *new* piece outside the Node relay:
+- X25519, HKDF-SHA256, XChaCha20-Poly1305 and AES-256-GCM cross-checked
+  byte-for-byte against a real `com.google.crypto.tink:tink:1.11.0` jar /
+  `javax.crypto.Cipher` for fixed test vectors, including the pure-JS
+  `@noble/ciphers` AES-GCM path web-reporter uses (a second, independent
+  library from what officer-app/Node uses for the same primitive).
+- `officer-app`'s TypeScript compiles clean (`npx tsc`, zero errors).
+- A full pairing → report → officer reply → reporter decrypt round trip run
+  against a real `server/` relay instance, using officer-app's own modules to
+  simulate the reporter side.
+- The SAME round trip re-run with web-reporter's independently-written modules
+  standing in for the reporter, against officer-app's real modules for the
+  officer side — two separately-implemented crypto ports agreeing end-to-end
+  over a real relay, not one codebase trusting its own math.
+- `server/`'s existing test suite (50/50) still passes after the
+  `RELAY_BIND_HOST`/CORS changes.
+
+**Not verified:** the Android app itself (see above); officer-app/web-reporter
+against the REAL Android app (only simulated so far); relay-android's Kotlin
+changes (no Android SDK here, same as always); Windows execution of any of the
+new `.bat` scripts (written on Linux, structurally reviewed only — see each
+new folder's README "Known gaps" section, and `unpruuf/WHISTLEBLOWER_DEMO.md`
+for the full demo runbook and setup steps).
+## 2026‑10‑18 · Guest lockers for a free, invite-only Client app (first build)
+
+**What was done.** Guest grants: a signed, expiring token that lets a Client app user without servers deposit on the inviter's node. Server (`node-mesh-server`): `PUT /deposit` accepts `Guest <token>` besides the owner bearer, off by default (`NODE_MESH_GUEST_GRANTS=1`), stateless MAC check, in-memory quota per grant, no grant data on disk; 9 new tests, 35 pass. Shared format and test vectors in `guest-grants/`. Android: `GuestGrant.kt` (issue, parse, renewal check) with 8 JVM tests against the vectors, `NodeMeshClient.depositAsGuest`, pairing field `g`. Specs: `GUEST_LOCKERS_BUILD_SPEC.md`, `ios/IOS_GUEST_CLIENT_BUILD_SPEC.md`.
+
+**Added later the same day.** Slot scope module for the 250 x 100 server (`guestScope.ts`, Kotlin `GuestScope.kt`, vector `slot-scope`), owner invite screen (`GuestInviteScreen`, `GuestInviteViewModel`, `GuestInvite.kt`), navigation and a button in the Business pairing screen. 37 server tests and 15 JVM tests pass.
+
+**Open / not verified.** The two Android files that touch Android classes were not compiled (no SDK here). No screens, Control, evidence scripts or iOS yet. The server change is in the older single-node server of this repository and must be ported to the current multi-slot server. Packet-length finding F1 is still open in this snapshot.
+
+---
+
 ## 2026‑09‑24 · server: auto-fall-back to a working Node when system Node is too new
 
 **What was done**

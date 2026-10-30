@@ -12,12 +12,15 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.nexonai.unpruuf.relay.MainActivity
 import com.nexonai.unpruuf.relay.core.BlobStore
+import com.nexonai.unpruuf.relay.core.NodeLicense
 import com.nexonai.unpruuf.relay.core.RelayBridgeManager
 import com.nexonai.unpruuf.relay.core.RelayConstants
 import com.nexonai.unpruuf.relay.core.RelayEventLog
 import com.nexonai.unpruuf.relay.core.RelayIdentity
 import com.nexonai.unpruuf.relay.core.buildConnectionString
+import com.nexonai.unpruuf.relay.net.NodeMeshHttpServer
 import com.nexonai.unpruuf.relay.net.RelayHttpServer
+import fi.iki.elonen.NanoHTTPD
 import com.nexonai.unpruuf.relay.net.RelayPluggableTransportManager
 import com.nexonai.unpruuf.relay.net.RelayTorManager
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +59,7 @@ class RelayService : Service() {
     private lateinit var blobStore: BlobStore
     private lateinit var bridgeManager: RelayBridgeManager
     private lateinit var torManager: RelayTorManager
-    private var httpServer: RelayHttpServer? = null
+    private var httpServer: NanoHTTPD? = null
 
     val isReady: StateFlow<Boolean> get() = torManager.isReady
     val onionAddress: StateFlow<String?> get() = torManager.onionAddress
@@ -93,6 +96,41 @@ class RelayService : Service() {
     private val _bridgeStatus = MutableStateFlow<String?>(null)
     val bridgeStatus: StateFlow<String?> = _bridgeStatus.asStateFlow()
 
+    private val _lanAccessEnabled = MutableStateFlow(false)
+    val lanAccessEnabled: StateFlow<Boolean> = _lanAccessEnabled.asStateFlow()
+
+    // ─── unpruuf Business Node-Mesh mode ─────────────────────────────────────
+    private val _nodeMeshMode = MutableStateFlow(false)
+    val nodeMeshMode: StateFlow<Boolean> = _nodeMeshMode.asStateFlow()
+
+    private val _nodeMeshProfile = MutableStateFlow(RelayConstants.NODE_MESH_DEFAULT_PROFILE)
+    val nodeMeshProfile: StateFlow<String> = _nodeMeshProfile.asStateFlow()
+
+    private val _nodeMeshSlot = MutableStateFlow(1)
+    val nodeMeshSlot: StateFlow<Int> = _nodeMeshSlot.asStateFlow()
+
+    private val _nodeMeshOwnerSecret = MutableStateFlow("")
+
+    /** `unpruuf-node-owner:v1:<onion>:<secret>` — only for the owner's OWN unpruuf app. */
+    private val _ownerConnectionString = MutableStateFlow<String?>(null)
+    val ownerConnectionString: StateFlow<String?> = _ownerConnectionString.asStateFlow()
+
+    // Server licence (core/NodeLicense.kt): without one the owner QR stays hidden and deposits are
+    // refused; after expiry deposits are refused, reading keeps working.
+    private lateinit var license: NodeLicense.Guard
+    private val _license = MutableStateFlow<NodeLicense.Summary?>(null)
+    val licenseSummary: StateFlow<NodeLicense.Summary?> = _license.asStateFlow()
+
+    /** Verifies and stores a pasted licence code. A code that does not verify changes nothing. */
+    fun applyLicense(code: String): NodeLicense.ApplyResult {
+        val result = license.apply(code)
+        _license.value = license.summary()
+        return result
+    }
+
+    private val _lastHygiene = MutableStateFlow<String?>(null)
+    val lastHygiene: StateFlow<String?> = _lastHygiene.asStateFlow()
+
     override fun onCreate() {
         super.onCreate()
         identity = RelayIdentity(applicationContext)
@@ -102,10 +140,22 @@ class RelayService : Service() {
         _authToken.value = identity.authToken
         _bridgesEnabled.value = bridgeManager.isEnabled()
         _bridgeText.value = bridgeManager.getBridgeText()
+        _lanAccessEnabled.value = identity.lanAccessEnabled
+        _nodeMeshMode.value = identity.nodeMeshMode
+        _nodeMeshProfile.value = identity.nodeMeshProfile
+        _nodeMeshSlot.value = identity.nodeMeshSlot
+        _nodeMeshOwnerSecret.value = identity.nodeMeshOwnerSecret
+        val licensePrefs = applicationContext.getSharedPreferences("relay_license", MODE_PRIVATE)
+        license = NodeLicense.Guard(object : NodeLicense.CodeStore {
+            override fun read(): String? = licensePrefs.getString("code", null)
+            override fun write(code: String) { licensePrefs.edit().putString("code", code).apply() }
+        })
+        _license.value = license.summary()
         torManager = RelayTorManager(
             context = applicationContext,
-            getPrivKey = { identity.torPrivKey },
-            savePrivKey = { identity.torPrivKey = it },
+            // Separate onion keys per mode — see RelayIdentity.nodeMeshTorPrivKey.
+            getPrivKey = { if (identity.nodeMeshMode) identity.nodeMeshTorPrivKey else identity.torPrivKey },
+            savePrivKey = { if (identity.nodeMeshMode) identity.nodeMeshTorPrivKey = it else identity.torPrivKey = it },
             bridgeManager = bridgeManager,
             pluggableTransportManager = RelayPluggableTransportManager(applicationContext)
         )
@@ -113,9 +163,15 @@ class RelayService : Service() {
         acquireWakeLock()
 
         scope.launch {
-            combine(torManager.onionAddress, _authToken) { onion, token ->
-                onion?.let { buildConnectionString(it, token) }
+            combine(torManager.onionAddress, _authToken, _nodeMeshMode) { onion, token, nodeMode ->
+                if (nodeMode) null else onion?.let { buildConnectionString(it, token) }
             }.collect { _connectionString.value = it }
+        }
+        scope.launch {
+            combine(torManager.onionAddress, _nodeMeshOwnerSecret, _nodeMeshMode, _license) { onion, secret, nodeMode, lic ->
+                val licensed = lic != null && lic.status != NodeLicense.Status.MISSING && lic.status != NodeLicense.Status.INVALID
+                if (nodeMode && onion != null && licensed) "${RelayConstants.NODE_OWNER_PREFIX}$onion:$secret" else null
+            }.collect { _ownerConnectionString.value = it }
         }
     }
 
@@ -145,7 +201,19 @@ class RelayService : Service() {
 
     private fun startRelay() {
         if (httpServer == null) {
-            httpServer = RelayHttpServer(RelayConstants.LOCAL_HTTP_PORT, blobStore) { identity.authToken }
+            httpServer = if (identity.nodeMeshMode) {
+                NodeMeshHttpServer(
+                    RelayConstants.LOCAL_HTTP_PORT,
+                    blobStore,
+                    getOwnerSecret = { identity.nodeMeshOwnerSecret },
+                    getTtlMs = { identity.nodeMeshTtlHours * 3_600_000L },
+                    getOnionAddress = { torManager.onionAddress.value },
+                    depositBlocked = { license.depositBlocked() }
+                )
+            } else {
+                val bindHost = if (identity.lanAccessEnabled) "0.0.0.0" else "127.0.0.1"
+                RelayHttpServer(RelayConstants.LOCAL_HTTP_PORT, blobStore, { identity.authToken }, bindHost)
+            }
             runCatching { httpServer?.start() }
         }
         torManager.start()
@@ -154,22 +222,55 @@ class RelayService : Service() {
         relayStarted = true
 
         scope.launch {
-            torManager.isReady.collect { ready ->
-                updateNotification(if (ready) "Relay active" else "Connecting to Tor…")
+            combine(torManager.isReady, _nodeMeshMode) { ready, nodeMode -> ready to nodeMode }.collect { (ready, nodeMode) ->
+                updateNotification(
+                    when {
+                        !ready -> "Connecting to Tor…"
+                        nodeMode -> "Business Node active"
+                        else -> "Relay active"
+                    }
+                )
             }
         }
         scope.launch {
             while (isActive) {
-                delay(RelayConstants.SWEEP_INTERVAL_MS)
-                val ttlMs = _ttlHours.value * 3_600_000L
-                val removed = runCatching { blobStore.sweepExpired(ttlMs) }.getOrDefault(0)
+                val nodeMode = _nodeMeshMode.value
+                delay(if (nodeMode) RelayConstants.NODE_MESH_SWEEP_INTERVAL_MS else RelayConstants.SWEEP_INTERVAL_MS)
+                val removed = runCatching {
+                    // Each mode's own deletion rule; a mode switch wipes the store, so rows of
+                    // the other mode never linger here.
+                    if (_nodeMeshMode.value) blobStore.sweepNodeMeshExpired()
+                    else blobStore.sweepExpired(_ttlHours.value * 3_600_000L)
+                }.getOrDefault(0)
                 if (removed > 0) refreshQueuedCount()
+            }
+        }
+        scope.launch {
+            // Node-Mesh staggered Reset, aligned to the wall clock (UTC) so nodes on different
+            // devices land on minute 0 / 20 / 40 of the same daily cycle regardless of when each
+            // was started. Hygiene only — never messages, never the address.
+            while (isActive) {
+                val offset = (_nodeMeshSlot.value - 1) * RelayConstants.NODE_MESH_SLOT_OFFSET_MS
+                val cycle = RelayConstants.NODE_MESH_RESET_INTERVAL_MS
+                val wait = (offset - System.currentTimeMillis() % cycle + cycle) % cycle
+                delay(if (wait == 0L) cycle else wait)
+                if (_nodeMeshMode.value) {
+                    val result = runCatching { torManager.hygiene() }.getOrElse { "failed: ${it.message}" }
+                    _lastHygiene.value = "${java.text.DateFormat.getDateTimeInstance().format(java.util.Date())}: $result"
+                }
             }
         }
         scope.launch {
             while (isActive) {
                 refreshQueuedCount()
                 delay(5_000)
+            }
+        }
+        scope.launch {
+            // valid → expiring → expired follows the clock without anyone opening the screen
+            while (isActive) {
+                _license.value = license.summary()
+                delay(60_000)
             }
         }
     }
@@ -184,6 +285,60 @@ class RelayService : Service() {
     fun setTtlHours(hours: Int) {
         identity.ttlHours = hours
         _ttlHours.value = identity.ttlHours
+    }
+
+    /**
+     * Toggles whether the embedded HTTP server binds `0.0.0.0` (LAN-reachable, for a Node
+     * officer-app or browser-based reporter with no Tor client of their own) instead of the
+     * default `127.0.0.1` (Tor-hidden-service-only) — see RelayIdentity.lanAccessEnabled's doc
+     * comment. NanoHTTPD binds its listening address at construction time, so applying this
+     * means tearing down and recreating the HTTP server, not just flipping a flag on the live
+     * instance — the Tor hidden service itself (and its onion address / already-paired
+     * contacts) is completely untouched by this, only the plain-HTTP listener is affected.
+     */
+    fun setLanAccessEnabled(enabled: Boolean) {
+        identity.lanAccessEnabled = enabled
+        _lanAccessEnabled.value = enabled
+        // Node-Mesh is onion-only; the setting is stored but only applies in relay mode.
+        if (httpServer != null && !identity.nodeMeshMode) {
+            runCatching { httpServer?.stop() }
+            httpServer = null
+            startRelay()
+        }
+    }
+
+    /**
+     * Switches this device between consumer relay and unpruuf Business Node-Mesh node. The two
+     * are different trust models (shared token + delete-on-fetch vs. owner-only write + read-only
+     * fetch), so switching wipes the queue, swaps the HTTP contract, and publishes the other
+     * mode's onion address — existing relay contacts / node owners must re-pair.
+     */
+    fun setNodeMeshMode(enabled: Boolean) {
+        if (enabled == identity.nodeMeshMode) return
+        identity.nodeMeshMode = enabled
+        _nodeMeshMode.value = enabled
+        runCatching { blobStore.wipeAll() }
+        refreshQueuedCount()
+        runCatching { httpServer?.stop() }
+        httpServer = null
+        startRelay()
+        scope.launch { runCatching { torManager.republish() } }
+    }
+
+    fun setNodeMeshProfile(profile: String) {
+        identity.nodeMeshProfile = profile
+        _nodeMeshProfile.value = identity.nodeMeshProfile
+    }
+
+    fun setNodeMeshSlot(slot: Int) {
+        identity.nodeMeshSlot = slot
+        _nodeMeshSlot.value = identity.nodeMeshSlot
+    }
+
+    /** New write key — the owner must re-scan it into their own app; contacts are unaffected
+     *  (they never had it). */
+    fun regenerateNodeMeshOwnerSecret() {
+        _nodeMeshOwnerSecret.value = identity.regenerateNodeMeshOwnerSecret()
     }
 
     /** Manual, immediate reset — clears every queued message right now, regardless of TTL. */

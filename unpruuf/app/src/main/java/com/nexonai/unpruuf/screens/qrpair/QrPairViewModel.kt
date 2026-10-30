@@ -1,10 +1,14 @@
 package com.nexonai.unpruuf.screens.qrpair
 
+import com.nexonai.unpruuf.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexonai.unpruuf.data.db.ContactDao
 import com.nexonai.unpruuf.data.model.Contact
 import com.nexonai.unpruuf.domain.AppEdition
+import com.nexonai.unpruuf.domain.network.GuestClient
+import com.nexonai.unpruuf.domain.network.GuestGrant
 import com.nexonai.unpruuf.domain.network.IdentityManager
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
 import com.nexonai.unpruuf.domain.network.P2PNetworkManager
@@ -18,6 +22,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
@@ -48,14 +53,18 @@ private const val RELAY_STRING_PREFIX = "unpruuf-relay:v1:"
 
 @HiltViewModel
 class QrPairViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val contactDao: ContactDao,
     private val identityManager: IdentityManager,
     private val torManager: TorManager,
     private val ratchetSessionManager: RatchetSessionManager,
     private val relayManager: RelayManager,
     private val nodeMeshManager: NodeMeshManager,
-    private val p2pNetworkManager: P2PNetworkManager
+    private val p2pNetworkManager: P2PNetworkManager,
+    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases
 ) : ViewModel() {
+    private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
 
     private val _errorState = MutableStateFlow<String?>(null)
     val errorState = _errorState.asStateFlow()
@@ -63,12 +72,28 @@ class QrPairViewModel @Inject constructor(
     private val _successState = MutableStateFlow<String?>(null)
     val successState = _successState.asStateFlow()
 
+    /** Client app: after an invitation is accepted, the guest's own code the inviter has to scan
+     *  (GUEST_LOCKERS_BUILD_SPEC.md §4). Shown once; rebuilt from the contact if needed. */
+    data class GuestCode(val json: String, val inviterName: String, val fingerprint: String)
+
+    private val _guestCode = MutableStateFlow<GuestCode?>(null)
+    val guestCode = _guestCode.asStateFlow()
+    fun clearGuestCode() { _guestCode.value = null }
+
     private val _myQrPayload = MutableStateFlow<QrPairingPayload?>(null)
     val myQrPayload = _myQrPayload.asStateFlow()
 
-    init {
+    private var onionQrRequested = false
+
+    /** Starts the device's own onion service on demand — only the onion-format QR needs one,
+     *  so Node-Mesh and relay-only users never publish an onion just by opening this screen. */
+    fun requestOnionQr() {
+        if (onionQrRequested) return
+        onionQrRequested = true
         generateMyQrCode()
     }
+
+    fun isNodeMeshUsable(): Boolean = nodeMeshManager.isUsable()
 
     private fun generateMyQrCode() {
         viewModelScope.launch {
@@ -125,20 +150,20 @@ class QrPairViewModel @Inject constructor(
         viewModelScope.launch {
             // Edition-Pairing-Regeln durchsetzen (Pro/Standard/Client).
             if (!AppEdition.canAdd(payload.appEdition)) {
-                _errorState.value = AppEdition.blockReason(payload.appEdition)
+                _errorState.value = AppEdition.blockReason(context, payload.appEdition)
                 return@launch
             }
 
             // Invalid onion address → contact would be permanently unreachable
             if (payload.onionAddress == "pending.onion" || !payload.onionAddress.endsWith(".onion")) {
-                _errorState.value = "Invalid QR code: Tor wasn't ready on the other device. Reopen the QR screen there and scan again."
+                _errorState.value = str(R.string.msg_qr_tor_not_ready)
                 return@launch
             }
 
             // Older app versions didn't include a ratchet key — reject rather
             // than silently create a contact that can never receive messages.
             if (payload.x25519RatchetPublicKeyBase64.isBlank()) {
-                _errorState.value = "This QR code is from an older app version. Update both devices and scan again."
+                _errorState.value = str(R.string.msg_qr_old_version)
                 return@launch
             }
 
@@ -152,11 +177,9 @@ class QrPairViewModel @Inject constructor(
                 if (existing.publicKey != payload.publicKeyBase64 ||
                     existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64
                 ) {
-                    _errorState.value = "This contact's key has changed since you last paired " +
-                        "with them. If they reinstalled or reset the app, re-verify their safety " +
-                        "number before trusting this. To replace them, delete the old contact first."
+                    _errorState.value = str(R.string.msg_qr_key_changed)
                 } else {
-                    _successState.value = "$displayName is already a contact."
+                    _successState.value = str(R.string.msg_contact_exists, displayName)
                 }
                 return@launch
             }
@@ -187,7 +210,7 @@ class QrPairViewModel @Inject constructor(
             // P2PNetworkManager.sendNewIdentitySignal()'s doc comments.
             p2pNetworkManager.sendNewIdentitySignal(contact.id)
             // Onion pro Gerät (Haupt-Onion) → kein per-Kontakt-confirmPairing nötig.
-            _successState.value = "$displayName added."
+            _successState.value = str(R.string.msg_contact_added, displayName)
         }
     }
 
@@ -200,7 +223,7 @@ class QrPairViewModel @Inject constructor(
     /** Null until a relay is configured in Settings (Settings → Relay) — the cross-platform QR
      *  is meaningless without one, since its whole point is "the relay that reaches me". */
     fun myCrossPlatformQrPayload(): CrossPlatformPairingPayload? {
-        val pool = relayManager.getMyRelayPool()
+        val pool = relayManager.getMyRelayPool().ifEmpty { if (AppEdition.isWhistleblower) whistleblowerOfficerRelays() else emptyList() }
         if (pool.isEmpty()) return null
         return CrossPlatformPairingPayload(
             userId = identityManager.userId,
@@ -213,6 +236,11 @@ class QrPairViewModel @Inject constructor(
         )
     }
 
+    // The officer's relays, once paired — what a reporter without an own relay receives over.
+    private fun whistleblowerOfficerRelays(): List<String> = runBlocking {
+        contactDao.getAllContactsOnce().firstOrNull()?.let { RelayManager.parseConnectionStringList(it.myRelayConnectionString ?: "") } ?: emptyList()
+    }
+
     /** True when Settings → Relay is set to Mandatory — the QR screen uses this to default to
      *  the no-onion cross-platform-format pairing automatically for Android↔Android contacts
      *  too, not just genuine iOS interop, since Mandatory means an onion will never be used for
@@ -221,6 +249,15 @@ class QrPairViewModel @Inject constructor(
 
     fun handleScannedCrossPlatformQr(payload: CrossPlatformPairingPayload, displayName: String) {
         viewModelScope.launch {
+            // Whistleblower: an officer QR is the organisation — every case gets its own keys
+            // (WhistleblowerCases), never the global ones used below.
+            if (AppEdition.isWhistleblower && payload.appEdition == AppEdition.OFFICER) {
+                when (whistleblowerCases.connectOrganization(crossPlatformPayloadToJson(payload))) {
+                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Ok -> _successState.value = str(R.string.msg_contact_added, displayName)
+                    is com.nexonai.unpruuf.domain.WhistleblowerCases.ScanResult.Invalid -> _errorState.value = AppEdition.blockReason(context, payload.appEdition)
+                }
+                return@launch
+            }
             // Cross-platform-format pairing is a paid Pro feature for genuine iOS interop — but
             // the same wire format is now also what Mandatory relay mode uses for Android↔Android
             // pairing (see isRelayMandatory's doc comment), where gating behind Pro would block
@@ -228,7 +265,7 @@ class QrPairViewModel @Inject constructor(
             // Mandatory is the reason this format is in use; the deliberate manual "iOS /
             // cross-platform" toggle on Standard/Client still requires Pro as before.
             if (!AppEdition.isPro && !relayManager.isMandatory()) {
-                _errorState.value = "Cross-platform (iOS) pairing is a Pro feature."
+                _errorState.value = str(R.string.msg_qr_ios_pro)
                 return@launch
             }
             // The payload carries no edition field from iOS (defaults to STANDARD — see
@@ -236,15 +273,15 @@ class QrPairViewModel @Inject constructor(
             // Android editions pairing this way under Mandatory still need the normal
             // Client-can-only-add-Pro rule enforced, same as the onion-based flow below.
             if (!AppEdition.canAdd(payload.appEdition)) {
-                _errorState.value = AppEdition.blockReason(payload.appEdition)
+                _errorState.value = AppEdition.blockReason(context, payload.appEdition)
                 return@launch
             }
             if (payload.relayConnectionStrings.none { RelayManager.parseConnectionString(it) != null }) {
-                _errorState.value = "This QR code's relay address looks invalid. Ask them to check their relay setup and try again."
+                _errorState.value = str(R.string.msg_qr_relay_invalid)
                 return@launch
             }
             if (payload.x25519RatchetPublicKeyBase64.isBlank()) {
-                _errorState.value = "This QR code is from an older app version. Update both devices and scan again."
+                _errorState.value = str(R.string.msg_qr_old_version)
                 return@launch
             }
 
@@ -253,15 +290,19 @@ class QrPairViewModel @Inject constructor(
                 if (existing.publicKey != payload.messageKeyBase64 ||
                     existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64
                 ) {
-                    _errorState.value = "This contact's key has changed since you last paired " +
-                        "with them. If they reinstalled or reset the app, re-verify their safety " +
-                        "number before trusting this. To replace them, delete the old contact first."
+                    _errorState.value = str(R.string.msg_qr_key_changed)
                 } else {
-                    _successState.value = "$displayName is already a contact."
+                    _successState.value = str(R.string.msg_contact_exists, displayName)
                 }
                 return@launch
             }
 
+            // Whistleblower reporters normally have no relay of their own: they receive over the
+            // officer's relay from the QR. Without this fallback myRelayConnectionString stayed
+            // empty, so the app never polled anywhere and the officer's replies never arrived.
+            val myRelays = relayManager.getMyRelayPool().ifEmpty {
+                if (AppEdition.isWhistleblower) payload.relayConnectionStrings.take(RelayManager.RELAY_POOL_MAX_SIZE) else emptyList()
+            }
             val contact = Contact(
                 id = identityManager.newWireIdentity(),
                 onionAddress = "",
@@ -271,7 +312,7 @@ class QrPairViewModel @Inject constructor(
                 isClientSlot = payload.appEdition == AppEdition.CLIENT,
                 x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
                 crossPlatform = true,
-                myRelayConnectionString = RelayManager.buildConnectionStringList(relayManager.getMyRelayPool()),
+                myRelayConnectionString = RelayManager.buildConnectionStringList(myRelays),
                 theirRelayConnectionString = RelayManager.buildConnectionStringList(payload.relayConnectionStrings),
                 remoteUserId = payload.userId,
                 myWireIdentity = identityManager.newWireIdentity()
@@ -280,7 +321,7 @@ class QrPairViewModel @Inject constructor(
             contactDao.insert(contact)
             ratchetSessionManager.createSession(contact)
             p2pNetworkManager.sendNewIdentitySignal(contact.id)
-            _successState.value = "$displayName added."
+            _successState.value = str(R.string.msg_contact_added, displayName)
         }
     }
 
@@ -296,53 +337,166 @@ class QrPairViewModel @Inject constructor(
     /** Null until at least one own node is configured (Settings → Business Node-Mesh) — the
      *  Node-Mesh QR is meaningless without one, mirroring [myCrossPlatformQrPayload]'s same gate
      *  for the relay pool. */
-    fun myNodeMeshQrPayload(): NodeMeshPairingPayload? {
+    // The pairing values shown on THIS screen. Kept for the screen's lifetime, even after a scan
+    // has bound them to a contact, because the other side may still need to scan this QR.
+    private var shownNodeMeshPairing: IdentityManager.PendingNodeMeshPairing? = null
+    private var nodeMeshPairingBound = false
+
+    /** A list a new contact can be given nodes from, with what the picker shows about it. */
+    data class NodeListChoice(
+        val id: String,
+        val name: String,
+        val nodeCount: Int,
+        val serverCount: Int,
+    )
+
+    fun nodeListChoices(): List<NodeListChoice> {
+        return nodeMeshManager.getNodeLists().map { l ->
+            NodeListChoice(l.id, l.name, l.addresses.size, nodeMeshManager.serverCount(l))
+        }
+    }
+
+    // Which list the contact being added gets its nodes from. Must be chosen before a QR is shown:
+    // the QR carries the three nodes picked from it. With exactly one list it is chosen for you.
+    private val _selectedNodeListId = MutableStateFlow<String?>(initialNodeListId())
+    val selectedNodeListId = _selectedNodeListId.asStateFlow()
+
+    private fun initialNodeListId(): String? {
+        val lists = nodeMeshManager.getNodeLists()
+        // A QR that is already pending (screen left and reopened) keeps the list it was made from.
+        identityManager.peekPendingNodeMeshPairing()?.let { pending ->
+            lists.find { l -> pending.nodeAddresses.any { it in l.addresses } }?.let { return it.id }
+        }
+        return lists.singleOrNull()?.id
+    }
+
+    /** Picking another list starts a fresh pairing (new keys, nodes from that list) — a QR that was
+     *  already scanned by the other side must not be mixed with nodes of a different list. */
+    fun selectNodeList(listId: String) {
+        if (_selectedNodeListId.value == listId) return
+        identityManager.clearPendingNodeMeshPairing()
+        shownNodeMeshPairing = null
+        nodeMeshPairingBound = false
+        _selectedNodeListId.value = listId
+    }
+
+    private fun currentNodeMeshPairing(): IdentityManager.PendingNodeMeshPairing? {
+        shownNodeMeshPairing?.let { return it }
         if (!nodeMeshManager.isUsable()) return null
+        val listId = _selectedNodeListId.value ?: return null
+        val list = nodeMeshManager.getNodeLists().find { it.id == listId }
+        if (list == null) {
+            // the list was deleted meanwhile
+            _selectedNodeListId.value = null
+            identityManager.clearPendingNodeMeshPairing()
+            return null
+        }
+        val pending = identityManager.pendingNodeMeshPairing {
+            nodeMeshManager.chooseNodesForNewContact(listId)
+        }
+        // A pending set that does not come from the selected list (list changed or its nodes were
+        // removed meanwhile) is useless — start fresh from the selected list.
+        if (pending.nodeAddresses.none { it in list.addresses }) {
+            identityManager.clearPendingNodeMeshPairing()
+            val fresh = identityManager.pendingNodeMeshPairing {
+                nodeMeshManager.chooseNodesForNewContact(listId)
+            }
+            shownNodeMeshPairing = fresh
+            return fresh
+        }
+        shownNodeMeshPairing = pending
+        return pending
+    }
+
+    fun myNodeMeshQrPayload(): NodeMeshPairingPayload? {
+        val pairing = currentNodeMeshPairing() ?: return null
         return NodeMeshPairingPayload(
-            userId = identityManager.userId,
-            messageKeyBase64 = android.util.Base64.encodeToString(
-                identityManager.myMessageKey, android.util.Base64.NO_WRAP
-            ),
-            x25519RatchetPublicKeyBase64 = identityManager.myX25519RatchetPublicKeyBase64,
-            nodeMeshRoutingSeedBase64 = identityManager.myNodeMeshRoutingSeedBase64,
-            nodeAddresses = nodeMeshManager.getMyAdvertisedAddresses(),
+            messageKeyBase64 = pairing.messageKey,
+            x25519RatchetPublicKeyBase64 = pairing.ratchetPublicKey,
+            nodeMeshRoutingSeedBase64 = pairing.routingSeed,
+            nodeAddresses = pairing.nodeAddresses,
             appEdition = AppEdition.current
         )
     }
 
-    fun handleScannedNodeMeshQr(payload: NodeMeshPairingPayload, displayName: String) {
+    /** Pro app: a guest's answer that was PASTED, waiting for the inviter to compare the check
+     *  code with the one on the guest's phone (GUEST_LOCKERS_BUILD_SPEC.md §15.1). */
+    data class GuestAnswerToConfirm(val payload: NodeMeshPairingPayload, val displayName: String, val fingerprint: String)
+
+    private val _guestAnswerToConfirm = MutableStateFlow<GuestAnswerToConfirm?>(null)
+    val guestAnswerToConfirm = _guestAnswerToConfirm.asStateFlow()
+
+    fun cancelGuestAnswer() { _guestAnswerToConfirm.value = null }
+
+    /** The inviter has compared the check code and it matches: add the guest now. */
+    fun confirmGuestAnswer() {
+        val pending = _guestAnswerToConfirm.value ?: return
+        _guestAnswerToConfirm.value = null
+        handleScannedNodeMeshQr(pending.payload, pending.displayName, pasted = false)
+    }
+
+    /** [pasted] = the code came through the paste field, not the camera: a guest's answer then
+     *  needs the check-code confirmation first, because nobody verified the phones were together. */
+    fun handleScannedNodeMeshQr(payload: NodeMeshPairingPayload, displayName: String, pasted: Boolean = false) {
         viewModelScope.launch {
             if (!AppEdition.canAdd(payload.appEdition)) {
-                _errorState.value = AppEdition.blockReason(payload.appEdition)
+                _errorState.value = AppEdition.blockReason(context, payload.appEdition)
+                return@launch
+            }
+            // A guest invitation (Pro → Client): only the free Client app can accept it.
+            if (payload.guestGrants.any { it.isNotEmpty() }) {
+                if (AppEdition.isClient) importGuestInvitation(payload, displayName)
+                else _errorState.value = str(R.string.msg_guest_invite_client_only)
+                return@launch
+            }
+            // The guest's own code answering one of our invitations (Client → Pro).
+            if (payload.guestInviteId.isNotEmpty() && payload.appEdition == AppEdition.CLIENT) {
+                if (pasted) {
+                    _guestAnswerToConfirm.value = GuestAnswerToConfirm(
+                        payload, displayName,
+                        GuestClient.fingerprint(payload.messageKeyBase64, payload.x25519RatchetPublicKeyBase64, payload.guestInviteId)
+                    )
+                } else {
+                    bindGuestInvitation(payload, displayName)
+                }
                 return@launch
             }
             if (payload.nodeAddresses.isEmpty()) {
-                _errorState.value = "This QR code's node address looks invalid. Ask them to check their node setup and try again."
+                _errorState.value = str(R.string.msg_qr_node_invalid)
                 return@launch
             }
             if (payload.x25519RatchetPublicKeyBase64.isBlank() || payload.nodeMeshRoutingSeedBase64.isBlank()) {
-                _errorState.value = "This QR code is from an older app version. Update both devices and scan again."
+                _errorState.value = str(R.string.msg_qr_old_version)
                 return@launch
             }
             if (!nodeMeshManager.isUsable()) {
-                _errorState.value = "Set up your own node first (Settings → Business Node-Mesh) — without it, this contact's messages would have nowhere to reach you."
+                _errorState.value = str(R.string.msg_qr_own_node_first)
                 return@launch
             }
 
-            val existing = contactDao.getContactByRemoteUserId(payload.userId)
+            // No userId in this format, so the message key is the re-scan key. A reset device
+            // gets a fresh message key and therefore pairs as a new contact.
+            val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
             if (existing != null) {
-                if (existing.publicKey != payload.messageKeyBase64 ||
-                    existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64
-                ) {
-                    _errorState.value = "This contact's key has changed since you last paired " +
-                        "with them. If they reinstalled or reset the app, re-verify their safety " +
-                        "number before trusting this. To replace them, delete the old contact first."
+                if (existing.x25519RatchetPublicKey != payload.x25519RatchetPublicKeyBase64) {
+                    _errorState.value = str(R.string.msg_qr_key_changed)
                 } else {
-                    _successState.value = "$displayName is already a contact."
+                    _successState.value = str(R.string.msg_contact_exists, displayName)
                 }
                 return@launch
             }
 
+            if (nodeMeshPairingBound) {
+                _errorState.value = str(R.string.msg_qr_code_used)
+                return@launch
+            }
+            val mine = currentNodeMeshPairing() ?: run {
+                _errorState.value = if (nodeMeshManager.isUsable())
+                    str(R.string.msg_qr_choose_list)
+                else
+                    str(R.string.msg_qr_own_node_first)
+                return@launch
+            }
             val contact = Contact(
                 id = identityManager.newWireIdentity(),
                 onionAddress = "",
@@ -351,20 +505,154 @@ class QrPairViewModel @Inject constructor(
                 displayName = displayName,
                 isClientSlot = payload.appEdition == AppEdition.CLIENT,
                 x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
-                remoteUserId = payload.userId,
                 nodeMesh = true,
+                myPairMessageKey = mine.messageKey,
+                myPairRatchetPrivateKey = mine.ratchetPrivateKey,
+                myPairRatchetPublicKey = mine.ratchetPublicKey,
+                myPairRoutingSeed = mine.routingSeed,
+                myNodeAddresses = mine.nodeAddresses.joinToString(";") { NodeMeshManager.buildAddressConnectionString(it) },
                 theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
                 theirNodeAddresses = NodeMeshManager.buildNodeConnectionStringList(payload.nodeAddresses)
             )
 
             contactDao.insert(contact)
+            identityManager.clearPendingNodeMeshPairing()
+            nodeMeshPairingBound = true
             ratchetSessionManager.createSession(contact)
             // No NEW_IDENTITY signal here, deliberately — Node-Mesh's routing tag has no
             // identity component to announce (see IdentityManager.nodeMeshRoutingTag's doc
             // comment), so myWireIdentity stays null for this contact and sendNewIdentitySignal
             // would have nothing correct to send.
-            _successState.value = "$displayName added."
+            _successState.value = str(R.string.msg_contact_added, displayName)
         }
+    }
+
+    // ─── Guest invitations (GUEST_LOCKERS_BUILD_SPEC.md §4) ───────────────────────────────────
+
+    /**
+     * Client app: accepts a Pro user's invitation. The Client has no servers of its own, so the
+     * contact's "own nodes" are the inviter's nodes, and every deposit there carries the grant
+     * issued for that node. Nothing is sent here; the guest's code (keys and the same nodes) is
+     * shown so the inviter can scan it, which is what gives the inviter the guest's keys.
+     */
+    private suspend fun importGuestInvitation(payload: NodeMeshPairingPayload, displayName: String) {
+        if (payload.x25519RatchetPublicKeyBase64.isBlank() || payload.nodeMeshRoutingSeedBase64.isBlank()) {
+            _errorState.value = str(R.string.msg_qr_old_version)
+            return
+        }
+        val check = GuestClient.check(payload.nodeAddresses, payload.guestGrants, System.currentTimeMillis())
+        val ok = when (check) {
+            is GuestClient.Check.Refused -> {
+                _errorState.value = str(
+                    if (check.problem == GuestClient.Problem.EXPIRED) R.string.msg_guest_invite_expired
+                    else R.string.msg_guest_invite_invalid
+                )
+                return
+            }
+            is GuestClient.Check.Ok -> check
+        }
+        val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
+        if (existing != null) {
+            _successState.value = str(R.string.msg_contact_exists, displayName)
+            return
+        }
+        val mine = identityManager.freshNodeMeshPairing(ok.nodeAddresses)
+        val nodeList = NodeMeshManager.buildNodeConnectionStringList(ok.nodeAddresses)
+        val contact = Contact(
+            id = identityManager.newWireIdentity(),
+            onionAddress = "",
+            publicKey = payload.messageKeyBase64,
+            rotationFactor = "",
+            displayName = displayName,
+            x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
+            nodeMesh = true,
+            myPairMessageKey = mine.messageKey,
+            myPairRatchetPrivateKey = mine.ratchetPrivateKey,
+            myPairRatchetPublicKey = mine.ratchetPublicKey,
+            myPairRoutingSeed = mine.routingSeed,
+            // The inviter's nodes are where this guest writes and reads; no own node exists.
+            myNodeAddresses = nodeList,
+            theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
+            theirNodeAddresses = nodeList,
+            guestGrants = GuestGrant.encodeList(ok.grants)
+        )
+        contactDao.insert(contact)
+        ratchetSessionManager.createSession(contact)
+        _guestCode.value = GuestCode(
+            guestCodeJson(contact, payload.guestInviteId), displayName,
+            GuestClient.fingerprint(contact.myPairMessageKey ?: "", contact.myPairRatchetPublicKey ?: "", payload.guestInviteId)
+        )
+        _successState.value = str(R.string.msg_guest_invite_accepted, displayName)
+    }
+
+    /** The guest's own code for [contact] (its keys, the inviter's nodes, the invitation id). */
+    private fun guestCodeJson(contact: Contact, inviteId: String): String =
+        nodeMeshPayloadToJson(
+            NodeMeshPairingPayload(
+                messageKeyBase64 = contact.myPairMessageKey ?: "",
+                x25519RatchetPublicKeyBase64 = contact.myPairRatchetPublicKey ?: "",
+                nodeMeshRoutingSeedBase64 = contact.myPairRoutingSeed ?: "",
+                nodeAddresses = NodeMeshManager.parseNodeConnectionStringList(contact.theirNodeAddresses ?: ""),
+                appEdition = AppEdition.CLIENT,
+                guestInviteId = inviteId
+            )
+        )
+
+    /**
+     * Pro app: the guest's own code arrives (scanned in person or pasted). The matching open
+     * invitation supplies this contact's own keys and nodes, the guest's code supplies theirs.
+     * Without an open, unexpired invitation with that id nothing is added.
+     */
+    private suspend fun bindGuestInvitation(payload: NodeMeshPairingPayload, displayName: String) {
+        if (payload.nodeAddresses.isEmpty()) { _errorState.value = str(R.string.msg_qr_node_invalid); return }
+        if (payload.x25519RatchetPublicKeyBase64.isBlank() || payload.nodeMeshRoutingSeedBase64.isBlank()) {
+            _errorState.value = str(R.string.msg_qr_old_version)
+            return
+        }
+        val invitation = identityManager.guestInvitation(payload.guestInviteId) ?: run {
+            _errorState.value = str(R.string.msg_guest_code_unknown)
+            return
+        }
+        // The guest may only name nodes this invitation gave it: anything else is not our answer.
+        val invitedNodes = invitation.pairing.nodeAddresses.toSet()
+        val answeredNodes = payload.nodeAddresses.mapNotNull { NodeMeshManager.parseAddressConnectionString(it) }
+        if (answeredNodes.isEmpty() || !invitedNodes.containsAll(answeredNodes)) {
+            _errorState.value = str(R.string.msg_guest_code_unknown)
+            return
+        }
+        val existing = contactDao.getNodeMeshContactByPublicKey(payload.messageKeyBase64)
+        if (existing != null) {
+            _successState.value = str(R.string.msg_contact_exists, displayName)
+            return
+        }
+        val mine = invitation.pairing
+        val contact = Contact(
+            id = identityManager.newWireIdentity(),
+            onionAddress = "",
+            publicKey = payload.messageKeyBase64,
+            rotationFactor = "",
+            displayName = displayName,
+            isClientSlot = true,
+            x25519RatchetPublicKey = payload.x25519RatchetPublicKeyBase64,
+            nodeMesh = true,
+            myPairMessageKey = mine.messageKey,
+            myPairRatchetPrivateKey = mine.ratchetPrivateKey,
+            myPairRatchetPublicKey = mine.ratchetPublicKey,
+            myPairRoutingSeed = mine.routingSeed,
+            myNodeAddresses = mine.nodeAddresses.joinToString(";") { NodeMeshManager.buildAddressConnectionString(it) },
+            theirNodeMeshRoutingSeed = payload.nodeMeshRoutingSeedBase64,
+            // The guest writes on these (our own) nodes, so we read them there.
+            theirNodeAddresses = NodeMeshManager.buildNodeConnectionStringList(payload.nodeAddresses),
+            // Automatic renewal as promised in the invitation; the first grants were issued when
+            // the invitation was made, which is its expiry minus the validity.
+            guestRenewal = invitation.renewal.ifEmpty { null },
+            guestRenewedAtMs = com.nexonai.unpruuf.domain.network.GuestRenewal.decodePolicy(invitation.renewal)
+                ?.let { invitation.expiresAtMs - it.validityDays * 24L * 3600 * 1000 }
+        )
+        contactDao.insert(contact)
+        identityManager.removeGuestInvitation(invitation.id)
+        ratchetSessionManager.createSession(contact)
+        _successState.value = str(R.string.msg_contact_added, displayName)
     }
 
     fun clearError() { _errorState.value = null }
@@ -372,7 +660,7 @@ class QrPairViewModel @Inject constructor(
     /** Scanned content wasn't a valid unpruuf QR code — usually an older app
      *  version on the other device (v3 changed the QR's wire format). */
     fun showUnreadableQrError() {
-        _errorState.value = "Couldn't read this code. Make sure both devices are updated to the latest version, then scan again."
+        _errorState.value = str(R.string.msg_qr_unreadable)
     }
 
     fun clearSuccess() { _successState.value = null }

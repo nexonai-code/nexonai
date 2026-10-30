@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -21,8 +23,48 @@ android {
         }
     }
 
+    // Fester NexonAI-Testschluessel fuer Debug-Builds: Wer die zwei Dateien unpruuf-test.jks und
+    // keystore.properties in den Ordner unpruuf/ legt, baut Debug-APKs mit demselben Schluessel wie
+    // jeder andere Build mit diesen Dateien (Updates ohne Deinstallieren, auch zwischen PC und
+    // Cloud-Builds). Ohne die Dateien: normaler Android-Studio-Debug-Schluessel, nichts bricht.
+    // Die Dateien stehen in .gitignore und gehoeren nie ins Repository. Nur fuer Tests, nie fuer Kunden.
+    val testKeystoreProps = Properties().apply {
+        val f = file("../../keystore.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val testKeystoreFile = testKeystoreProps.getProperty("storeFile")?.let { file("../../keystore.properties").resolveSibling(it) }
+    // Release-Schluessel fuer Kunden-Builds: release.properties + unpruuf-release.jks in unpruuf/ (nie im
+    // Repository). Fehlen sie, bleibt der Release-Build UNSIGNIERT, er faellt nie auf einen Test-Schluessel zurueck.
+    val releaseKeystoreProps = Properties().apply {
+        val f = file("../../release.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val releaseKeystoreFile = releaseKeystoreProps.getProperty("storeFile")?.let { file("../../release.properties").resolveSibling(it) }
+    signingConfigs {
+        if (releaseKeystoreFile != null && releaseKeystoreFile.exists()) {
+            create("nexonaiRelease") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystoreProps.getProperty("storePassword")
+                keyAlias = releaseKeystoreProps.getProperty("keyAlias")
+                keyPassword = releaseKeystoreProps.getProperty("keyPassword")
+            }
+        }
+        if (testKeystoreFile != null && testKeystoreFile.exists()) {
+            create("nexonaiTest") {
+                storeFile = testKeystoreFile
+                storePassword = testKeystoreProps.getProperty("storePassword")
+                keyAlias = testKeystoreProps.getProperty("keyAlias")
+                keyPassword = testKeystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfigs.findByName("nexonaiTest")?.let { signingConfig = it }
+        }
         release {
+            signingConfigs.findByName("nexonaiRelease")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -58,6 +100,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     // Compose & UI — versions pinned identical to the main unpruuf app for consistency.
     implementation(platform("androidx.compose:compose-bom:2024.02.00"))
     implementation("androidx.compose.ui:ui")
@@ -72,7 +115,10 @@ dependencies {
     // Tor (Guardian Project) — the exact same hidden-service mechanism the main unpruuf app
     // already uses (TorService + jtorctl's TorControlConnection), reused here for a single
     // fixed hidden service instead of a per-contact one.
-    implementation("info.guardianproject:tor-android:0.4.8.16")
+    implementation("info.guardianproject:tor-android:0.4.9.8") {
+        // The library asks for Kotlin 2.2 stdlib; this project compiles with Kotlin 1.9 and brings its own.
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    }
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     // Pluggable transports (obfs4/Snowflake) for DPI-censored networks — same dependency and
@@ -90,7 +136,19 @@ dependencies {
     // dependency instead of an unverifiable-here hand-rolled parser).
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 
+    // Server licence check (core/NodeLicense.kt) — same Ed25519 verifier the main app uses.
+    implementation("com.google.crypto.tink:tink-android:1.11.0")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+// tor-android 0.4.9.8 (newest the Java-21 toolchain of AGP 8.2.2 can dex; 0.4.9.9+ are built with Java 24) is needed because the Tor network now requires protocols (Desc=3, Microdesc=3)
+// that 0.4.8.x lacks: Tor 0.4.8.16 ended the whole app process at start (28.10.2026 debug reports).
+// The library is built against Android API 37 and declares that as minCompileSdk, but we only use
+// its stable Java surface (TorService, jtorctl) and compile against 34 with AGP 8.2.2, so the
+// metadata version check is switched off. The runtime needs no newer Android.
+tasks.configureEach {
+    if (name.endsWith("AarMetadata")) enabled = false
 }

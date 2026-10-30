@@ -4,6 +4,10 @@ Offline license issuing for unpruuf Standard/Pro (Client is free, never needs a 
 `AppEdition`/`LicenseManager.requiresLicense`). No server, no network calls, nothing installed
 beyond Node.js itself (uses only Node's built-in `crypto` module).
 
+## Sign a server release
+
+After `npm run build` in `node-mesh-server/`, `node sign-release.js` (or the "Sign a server release" card in the GUI) signs the list of program files and writes `release-manifest.txt` into that folder. Then pack the release. Every server shows "unchanged, signed" plus the fingerprint; publish that fingerprint next to the download (also kept in `release-fingerprints.txt`). Same key pair, own signing domain. See `NODE_MESH_SPEC.md` §19.
+
 ## How it works
 
 A license code is a small signed blob:
@@ -24,6 +28,10 @@ a code must be genuinely signed (can't be forged), and each code self-binds to t
 device it's activated on (copying one activated seat's app data to a second phone is
 detected and rejected). "Exactly 350 seats" stays a contractual limit — issue exactly 350
 codes and don't hand out more.
+
+## Key rotation (27 October 2026)
+
+The key pair was replaced because the old private key was lost. After a new `node keygen.js`, run `node rotate-public-key.js <public key>` (the public key is printed by keygen, or by `node public-key.js`) and rebuild the apps, relay-android, the node server and Control. All licences of the old key stop working.
 
 ## First-time setup
 
@@ -74,10 +82,29 @@ the serial number matches what the customer already has), with a fresh `--years`
 needs to be revoked — the old code simply stops working once its `expiresAtMs` passes; the new
 one is entered in the app's Settings → License, replacing it.
 
+## Server licenses (Business Node server)
+
+One code per Business Node server, signed with the SAME key pair:
+
+```bash
+node issue-server.js --customer "Acme GmbH" --years 1 --serial ACME-SRV-01 --out servers.csv   # 250 nodes
+node issue-server.js --customer "Acme GmbH" --count 10 --out servers.csv   # ten servers: SRV-0001 ... SRV-0010, one run
+```
+
+The code (`unpruuf-server-license:v1:…`) carries the number of nodes (default and maximum 250) and the expiry. The server runs exactly that many; nobody can choose a different number. The customer
+pastes it on the server's setup page. Renewal: issue again with the same `--serial` and paste the new
+code over the old one; nothing is revoked, the old one just expires. The GUI has the same thing as
+"Issue a server license". The public key is compiled into `node-mesh-server/src/license.ts`
+(`LICENSE_PUBLIC_KEY_B64`, identical to the app's); rotate both together or neither.
+
+Unlike app seats there is no device binding: a server has no stable identity (containers, VPS moves),
+so "how many servers run" is a contract limit, exactly like the seat count.
+
 ## Testing a code without touching the private key
 
 ```bash
-node verify.js "unpruuf-license:v1:...."
+node verify.js "unpruuf-license:v1:...."      # app licence
+node verify.js "unpruuf-server-license:v1:...." # server licence
 ```
 
 Does exactly what the app does on-device: verifies the signature, prints the parsed fields

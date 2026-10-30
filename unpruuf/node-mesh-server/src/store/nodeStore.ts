@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { EventEmitter } from "events";
-import { DEFAULT_TTL_HOURS, MAX_BLOBS_PER_TAG } from "../config";
+import { DEFAULT_TTL_HOURS, MAX_BLOBS_PER_TAG, MAX_BLOBS_TOTAL } from "../config";
 import { getSqliteNativeBinding } from "../sqliteNativeBinding";
 
 /**
@@ -25,7 +25,7 @@ export class NodeStore {
   // regardless of this.
   private events = new EventEmitter().setMaxListeners(0);
 
-  constructor(dbPath: string, ttlHours: number = DEFAULT_TTL_HOURS) {
+  constructor(dbPath: string, ttlHours: number = DEFAULT_TTL_HOURS, private readonly maxBlobsTotal: number = MAX_BLOBS_TOTAL) {
     this.ttlMs = ttlHours * 60 * 60 * 1000;
     // Only set for the standalone .exe build (see sea-entry.ts/sqliteNativeBinding.ts) — every
     // other entry point (npm start, ts-node, tests) leaves this undefined and better-sqlite3
@@ -34,6 +34,8 @@ export class NodeStore {
     const options = nativeBinding ? ({ nativeBinding } as unknown as Database.Options) : undefined;
     this.db = new Database(dbPath, options);
     this.db.pragma("journal_mode = WAL");
+    // Expired/swept ciphertext is overwritten with zeros instead of lingering in free pages.
+    this.db.pragma("secure_delete = ON");
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS blobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,6 +57,7 @@ export class NodeStore {
    * doc comment for why that cap needed re-checking now that fetch no longer drains it.
    */
   put(tag: string, blobBase64: string, ttlMs?: number): boolean {
+    if (this.isFull()) return false;
     const count = this.db.prepare("SELECT COUNT(*) as n FROM blobs WHERE tag = ?").get(tag) as { n: number };
     if (count.n >= MAX_BLOBS_PER_TAG) return false;
     const now = Date.now();
@@ -64,6 +67,12 @@ export class NodeStore {
       .run(tag, blobBase64, now, now + effectiveTtlMs);
     this.events.emit(`tag:${tag}`);
     return true;
+  }
+
+  /** True when the node already holds its total ceiling of waiting packets (all tags together). */
+  isFull(): boolean {
+    const row = this.db.prepare("SELECT COUNT(*) AS n FROM blobs").get() as { n: number };
+    return row.n >= this.maxBlobsTotal;
   }
 
   /** Read-only: returns every currently-unexpired blob queued for [tag], oldest first. Deletes
@@ -82,6 +91,38 @@ export class NodeStore {
       .prepare("SELECT blob, created_at FROM blobs WHERE tag = ? AND expires_at > ? ORDER BY id ASC")
       .all(tag, now) as { blob: string; created_at: number }[];
     return rows.map((r) => ({ blob: r.blob, createdAt: r.created_at }));
+  }
+
+  /**
+   * Incremental read for /fetchMany's cursor: blobs under [tag] with a row id above [sinceId].
+   * Combined with [currentCursor] a client only ever downloads each blob once instead of the
+   * whole TTL window on every poll — which is what makes cover traffic affordable.
+   */
+  fetchSince(tag: string, sinceId: number): string[] {
+    const rows = this.db
+      .prepare("SELECT blob FROM blobs WHERE tag = ? AND id > ? AND expires_at > ? ORDER BY id ASC")
+      .all(tag, sinceId, Date.now()) as { blob: string }[];
+    return rows.map((r) => r.blob);
+  }
+
+  /**
+   * Unexpired blobs under any of [tags] with a row id above [sinceId], oldest first across all tags,
+   * at most [limit] of them. This is what /fetchMany answers from: one query, a hard size bound.
+   */
+  fetchRows(tags: string[], sinceId: number, limit: number): { id: number; tag: string; blob: string }[] {
+    if (tags.length === 0) return [];
+    const marks = tags.map(() => "?").join(",");
+    return this.db
+      .prepare(`SELECT id, tag, blob FROM blobs WHERE tag IN (${marks}) AND id > ? AND expires_at > ? ORDER BY id ASC LIMIT ?`)
+      .all(...tags, sinceId, Date.now(), limit) as { id: number; tag: string; blob: string }[];
+  }
+
+  /** Highest row id ever handed out (0 for an empty store). Every blob with an id up to this
+   *  existed when it was read — better-sqlite3 is synchronous, so no insert can slip between a
+   *  fetchSince() and this call in the same request handler. */
+  currentCursor(): number {
+    const row = this.db.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'blobs'").get() as { seq: number } | undefined;
+    return row?.seq ?? 0;
   }
 
   /**
@@ -116,7 +157,12 @@ export class NodeStore {
    *  removed. Runs on its own periodic timer (see index.ts) independent of Reset (see
    *  NODE_MESH_SPEC.md §5 — Reset never touches message data). */
   sweepExpired(now: number = Date.now()): number {
-    const result = this.db.prepare("DELETE FROM blobs WHERE expires_at < ?").run(now);
+    // `<=`: a row is invisible to fetch from its expires_at on (fetch uses `>`), so it is swept from there on too.
+    const result = this.db.prepare("DELETE FROM blobs WHERE expires_at <= ?").run(now);
+    // secure_delete zeroes the freed pages of the main file, but the original INSERT frames stay in
+    // the -wal file until it is checkpointed and truncated. Do that right after every sweep that
+    // removed something, so expired ciphertext does not linger in the WAL until the daily reset.
+    if (result.changes > 0) this.checkpointWal();
     return result.changes;
   }
 
@@ -136,9 +182,9 @@ export class NodeStore {
   /** Real, honest SQLite housekeeping for this process shape — see index.ts's Reset doc comment
    *  for why this stands in for "connection/socket hygiene" here specifically (a single
    *  synchronous better-sqlite3 connection has no pool to recycle). Folds the WAL file back into
-   *  the main database file, keeping long-term disk usage bounded on a long-running node. */
+   *  the main database file and truncates it, so no old frame (expired ciphertext) stays in it. */
   checkpointWal(): void {
-    this.db.pragma("wal_checkpoint(PASSIVE)");
+    this.db.pragma("wal_checkpoint(TRUNCATE)");
   }
 
   close(): void {

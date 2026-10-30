@@ -1,8 +1,8 @@
 # unpruuf Business — Node-Mesh Architektur
 ## Implementierungs-Briefing für Claude Code
 
-**Status:** Architektur-Spezifikation für den Business-Zweig von unpruuf, noch **nicht
-implementiert**. Ersetzt/erweitert den aktuellen "optionaler Relay, TTL-begrenzt,
+**Status:** Architektur-Spezifikation für den Business-Zweig von unpruuf — **implementiert**
+(Stand v5, 2026-09-27; siehe Versionsgeschichte). Ersetzt/erweitert den aktuellen "optionaler Relay, TTL-begrenzt,
 Opt-in"-Mechanismus aus `PRODUCT_CONTEXT.md` für alle Business-/Compliance-Deployments. Der
 bestehende Android-P2P-Chat bleibt als eigenständiges Produkt unverändert bestehen (siehe
 Abschnitt 0).
@@ -59,7 +59,7 @@ Abschnitt 0).
   ändernden Node selbst ankündigen" damit automatisch erfüllt, ganz ohne Sonderfall. Empfangsseite
   in `ingestPacketInner` ersetzt beim Kontakt gezielt die alte durch die neue Adresse (nicht die
   ganze Liste), dedupliziert, deckelt auf `NODE_POOL_MAX_SIZE`. Neue Settings-UI: pro eigenem Node
-  ein "Migrate"-Button mit Inline-Eingabefeld. `fetchMany`-Bündelung: `pollNodeMeshOnce()` sammelt
+  ein "Migrate"-Button mit Inline-Eingabefeld. **Stand 25.10.2026 (Vor-Audit M4): nicht mehr gebündelt.** `pollNodeMeshOnce()` fragt je Kontakt und Node-Adresse einzeln, nur die Stunden seit dem letzten vollständigen Abruf (im Normalfall 2 bis 3 statt 26; nach einem App-Start oder einer Lücke das volle Fenster), mit zufällig gestaffeltem Start (bis 1,5 s). Seit 25.10.2026 hat jeder Kontakt außerdem einen eigenen SOCKS-Benutzernamen (Stream-Isolation, `Socks5.kt`, `TorIsolation.kt`) und einen eigenen Zeitgeber; Abrufe und Ablagen eines Kontakts laufen so auf eigenen Tor-Kreisen. Einheitengetestet gegen einen simulierten SOCKS-Server, noch nicht gegen echtes Tor geprüft. Der ursprüngliche Text zur Bündelung folgt als Geschichte. `fetchMany`-Bündelung: `pollNodeMeshOnce()` sammelt
   jetzt vor dem Abfragen alle Toleranzfenster-Tags ALLER Node-Mesh-Kontakte, gruppiert nach
   eindeutiger Node-**Adresse** (nicht mehr pro Kontakt), und macht genau einen `fetchMany`-Aufruf
   pro eindeutiger Adresse — exakt das bewährte `tagsByTarget`-Muster aus `pollRelayOnce()` (v1.09).
@@ -93,8 +93,24 @@ Abschnitt 0).
   NODE_MESH_SPEC.md vollständig implementiert** — keine offenen Punkte aus Abschnitt 12/den
   Phase-Status-Notizen mehr übrig.
 
-Alles hier Beschriebene ist neu gegenüber dem aktuellen Repo-Stand. Wo v1→v2→v3 etwas geändert
-hat, ist das mit **[v2]**/**[v3]** markiert.
+- **v5 (2026-09-27) — Betriebsreife.** Nach einer zweiten fachlichen Prüfung ("was fehlt für den
+  echten Kundenbetrieb?") fünf Lücken geschlossen:
+  1. **Tor ist jetzt eingebaut und Pflicht** (vorher: "Betreiber richtet selbst einen Hidden
+     Service ein"). `node-mesh-server` lädt Tor, startet es selbst und veröffentlicht den Node per
+     `ADD_ONION` — mit festem Schlüssel (Adresse ändert sich nie), Tor-eigenem Proof-of-Work-
+     DoS-Schutz, automatischem Neustart und RAM-only-Schlüssel beim Temp Node. Abschnitt 8 [v5].
+  2. **Profile statt freier Zahlen** (standard 6 h / high-security 1 h / offline-tolerant 24 h),
+     Rotation als festes Protokoll-Konstante 1 h. Abschnitt 3 [v5].
+  3. **Echter Bug behoben:** Der Android-Client ging fest von 6 h TTL beim Kontakt-Node aus —
+     ein Node mit längerer TTL hätte Nachrichten gehalten, die der Client nie abfragt. Das
+     Toleranzfenster deckt jetzt immer die maximal erlaubte TTL (24 h) ab. Abschnitt 3 [v5].
+  4. **Android als Node-Host** (`relay-android`, Modus "Business Node") — Abschnitt 8's
+     Plattformliste damit vollständig.
+  5. **Windows/Linux/Docker-Pakete** mit Einrichtungsseite (Owner-QR) statt Kommandozeile; Slots
+     1–3 für den versetzten Reset. Kundenseitige Betriebsdoku (Abschnitt 11): `NODE_MESH_BETRIEB.md`.
+
+Alles hier Beschriebene ist neu gegenüber dem aktuellen Repo-Stand. Wo v1→v2→v3→v5 etwas geändert
+hat, ist das mit **[v2]**/**[v3]**/**[v5]** markiert.
 
 ---
 
@@ -156,6 +172,36 @@ Beim Pairing tauschen beide Kontakte aus:
 - **die eigenen** Node-Adressen (damit der Kontakt weiß, wo er später pollen muss)
 - mit welchem Code sie die Nachrichten des jeweils anderen wiederfinden (Abhol-Code, s.
   Abschnitt 3)
+
+**Keine User-ID (QR-Format v2, 2026-09-30).** Der Node-Mesh-Pairing-QR enthält nur noch
+Nachrichtenschlüssel (`p`), Ratchet-Public-Key (`k`), Routing-Seed (`s`), Node-Adressen (`n`) und
+Edition (`e`). Die frühere `u`-User-ID wurde von Routing und Krypto nie gelesen. Duplikaterkennung
+beim erneuten Scannen läuft über den Nachrichtenschlüssel. v1-QR-Codes (mit `u`) werden weiterhin
+gelesen, das Feld wird ignoriert.
+
+**Eigene Schlüssel und eigene Nodes pro Kontakt (2026-10-01).** Bis 2026-09-30 waren
+Nachrichtenschlüssel, Ratchet-Schlüssel, Routing-Seed und Node-Adressen pro Gerät global, zwei
+Kontakte konnten durch QR-Vergleich feststellen, dass sie mit derselben Person sprechen. Seitdem
+erzeugt jede Node-Mesh-Kopplung frisch: Nachrichtenschlüssel, X25519-Ratchet-Schlüsselpaar,
+Routing-Seed — und wählt bis zu 3 eigene Nodes aus dem Pool, zuerst die am wenigsten benutzten,
+verteilt über verschiedene Server. Gespeichert am Kontakt (`Contact.myPair*`,
+`Contact.myNodeAddresses`, verschlüsselte DB), abgelegt wird nur noch auf die Nodes dieses
+Kontakts. Solange der Pool genug Nodes hat (3 pro Kontakt), haben zwei Kontakte nichts
+Gemeinsames mehr. Der angezeigte QR bleibt bis zum Scan gespeichert ("pending"), ein Bildschirm =
+ein Kontakt.
+
+**Viele Nodes pro Server.** `node-mesh-server` betreibt in einem Prozess mit einem Tor immer die
+volle lizenzierte Zahl an Onion-Adressen (normal und höchstens **250**, keine Einstellung — jeder
+Server sieht und lastet gleich). Die App scannt einen Owner-QR pro Server und holt die übrigen
+Adressen über `GET /pool` (nur mit Owner-Secret), alle 6 h erneut — oder importiert die Node-Liste
+als Datei (§15). Pool-Grenze in der App: 1000 eigene Nodes (vier volle Server). Messung siehe
+`node-mesh-server/README.md`.
+
+**Keine eigene Onion-Adresse auf dem Telefon (2026-10-01).** Im Node-Mesh-Pfad ist das Telefon
+reiner Tor-Client: beim Ablegen weist es sich per Owner-Secret aus, beim Abholen per Routing-Tag.
+Seit 2026-10-01 startet die App auch keinen eigenen Onion-Dienst mehr, solange kein Kontakt einen
+braucht (Whistleblower-Edition nie; sonst nur bei mindestens einem direkten P2P-Kontakt oder wenn
+der Nutzer ausdrücklich einen Onion-Pairing-QR öffnet).
 
 ---
 
@@ -234,7 +280,23 @@ Epochen ab, alle in einem `fetchMany`-Request.
   dabei automatisch korrekt, ohne dass irgendwo ein zweiter, von Hand synchron zu haltender
   Toleranzwert gepflegt werden müsste.
 
-**Zu implementieren:**
+**[v5] Umsetzung — Profile, feste Rotation, festes Client-Fenster:**
+
+- `rotation_interval` ist eine **Protokoll-Konstante (1 h)**, kein Node-Parameter: Sender und
+  Empfänger müssen denselben Wert benutzen, sonst stimmen die Tags nicht überein. Eine
+  Konfiguration pro Node hätte Zustellung still gebrochen.
+- TTL wird pro Node über ein **Profil** gewählt: `standard` 6 h, `high-security` 1 h,
+  `offline-tolerant` 24 h (`node-mesh-server/src/profiles.ts`, identisch in `relay-android`).
+  Obergrenze `MAX_TTL_HOURS = 24`.
+- **Gefundener Bug (behoben):** Der Android-Client rechnete das Toleranzfenster mit fest 6 h TTL.
+  Der Client kennt aber die TTL des *Kontakt*-Nodes nicht — bei einem 24-h-Node hätte er
+  Nachrichten, die älter als 7 h sind, nie abgefragt. Jetzt rechnet der Client immer mit
+  `MAX_TTL_HOURS`: `ceil(24/1) + 1 = 25` Epochen zurück plus die aktuelle = **26 Tags pro
+  Kontakt**, weiterhin ein einziger `fetchMany`-Aufruf (Server-Cap 64). Damit ist *jedes* Profil
+  abgedeckt, ohne dass der Client wissen muss, welches der Kontakt fährt. `profiles.test.ts` pinnt
+  die Zahl serverseitig.
+
+**Zu implementieren (Stand v3, durch v5 ersetzt):**
 - Konfigurierbarer `rotation_interval` und `TTL`, unabhängig voneinander; Toleranzfenster wird
   **berechnet**, nie separat konfiguriert.
 - Beim Poll alle Tags im berechneten Toleranzfenster in **einem** gebündelten Request abfragen
@@ -310,6 +372,14 @@ Abschnitt 1 zur Betreiber-Unabhängigkeit), sondern höchstens Timing/Volumen ei
   - Versatz-Implementierung bei 3 Nodes: z. B. Node 1 bei Minute 0, Node 2 bei Minute 20, Node 3
     bei Minute 40 eines konfigurierbaren Zyklus (Default 24h, s. u.). Bei 2 Nodes entsprechend
     Minute 0 / Minute 30 pro 24h-Zyklus.
+
+**[v5] Umsetzung:** Jeder Node bekommt einen **Slot 1/2/3** (`NODE_SLOT`, in `relay-android`
+als Auswahl in der App). Der Reset läuft bei Minute 0/20/40 eines 24-h-Zyklus, **an der Uhrzeit
+(UTC) ausgerichtet**, nicht am Prozessstart — sonst würden drei Nodes, die zu beliebigen Zeiten
+gestartet wurden, nicht zuverlässig versetzt laufen. Inhalt des Resets auf dem PC-Node: offene
+Leerlauf-HTTP-Sockets schließen, prüfen, ob der Onion-Service noch bei Tor registriert ist (sonst
+mit demselben Schlüssel neu anmelden), SQLite-WAL zurückschreiben. Auf Android: dieselbe
+Onion-Prüfung.
 
 **Default [v3, festgelegt]:** Reset-Intervall 24h, konfigurierbar pro Deployment. Da Reset jetzt
 nachweislich nie Nachrichtendaten anfasst, ist die in v2 befürchtete Kollision mit einem laufenden
@@ -446,6 +516,40 @@ Modus hinterließ nachweislich keine Datei. Nicht verifiziert: ein echter Lauf a
 (kein Windows-Rechner zum Bauen/Testen verfügbar) — der Mechanismus selbst ist Node/OS-agnostisch
 und wurde real durchlaufen, nur die Windows-spezifische Ausführung des fertigen Binaries nicht.
 
+**[v5, gebaut] Tor ist eingebaut und Pflicht.** Vorher musste der Betreiber selbst einen Hidden
+Service vor den Node setzen — für die Zielgruppe (Compliance-Abteilungen, keine Tor-Admins)
+unrealistisch, und ohne Onion wäre "Node sieht nie eine Absender-IP" nur eine Regel statt einer
+Struktureigenschaft. Jetzt (`node-mesh-server/src/tor/`):
+
+- Tor Expert Bundle (gepinnt, 15.0.19 / Tor 0.4.9.11) wird beim ersten Start geladen; Tor läuft
+  als reiner Onion-Host (`SocksPort 0`), Control-Port auf freiem Port, Cookie-Auth,
+  `__OwningControllerProcess` (Tor beendet sich selbst, wenn der Node-Prozess stirbt).
+- Veröffentlichung per `ADD_ONION` über den Control-Port, **nie** per `HiddenServiceDir`: der
+  Schlüssel wird im Node-Identity-File (Modus 600) gespeichert und bei jedem Start wiederverwendet
+  → Adresse bleibt immer gleich. Temp Node: Schlüssel nur im Arbeitsspeicher.
+- **Proof-of-Work-DoS-Schutz** von Tor (`PoWDefensesEnabled=1`, Rate 250/Burst 2500) ist immer
+  an. Das ist die richtige Ebene für Flood-Schutz: Die Lese-Endpunkte sind absichtlich ohne Auth
+  (Tag = Credential), und einen Verbindungs-Flood kann nur Tor abwehren, bevor er den Node
+  erreicht. Die App-seitige Rate-Limitierung (Token-Bucket) bleibt als zweite Schicht.
+- Selbstheilung: Tor-Absturz oder Control-Verbindungsverlust → Neustart mit Backoff (2 s … 60 s),
+  gleicher Schlüssel, gleiche Adresse. Real getestet mit `kill -9`.
+- Einrichtungsseite auf eigenem Loopback-Port (nie Teil des Onion-Port-Mappings), mit
+  `Host`-Header-Prüfung gegen DNS-Rebinding — zeigt Owner-QR zum Scannen in die eigene App.
+
+**[v5, gebaut] Android als Node-Host.** `relay-android` hat einen Modus "Business Node": gleicher
+HTTP-Vertrag wie der PC-Node (per JVM-Vertragstest über echtes HTTP geprüft), Owner-only-Deposit,
+reines Lesen, TTL-only-Löschen, Profile und Slots, **eigener Onion-Schlüssel pro Modus** (ein
+Gerät, das vom Relay zum Node wechselt, bekommt eine neue Adresse — Relay-Kontakte landen nie
+versehentlich auf einem Node). **Einschränkung, ehrlich:** Die Android-Tor-Bibliothek (jtorctl)
+kann `ADD_ONION` keine PoW-Parameter mitgeben, und ob `tor-android` das PoW-Modul enthält, ist
+nicht belegt — Android-Nodes haben deshalb nur die App-seitige Rate-Limitierung, keinen
+Tor-PoW. Für Deployments, bei denen Flood-Schutz zählt: PC/Server-Node bevorzugen.
+
+**[v5] Per-Tag-Cap durchgerechnet (§9-Checkpunkt):** Die TTL spielt für den Per-Tag-Cap keine
+Rolle — der Routing-Tag rotiert stündlich, ein Tag sammelt also immer nur *eine Stunde* ausgehenden
+Verkehr *eines* Kontakts, egal wie lang die TTL ist. 1500 deckt einen vollen 5-MB-Anhang (~1311
+Chunks) innerhalb einer Stunde ab → Wert unverändert korrekt.
+
 **API-Oberfläche:**
 
 - `PUT /deposit` — `{ routing_tag, ciphertext, ttl }` → legt Nachricht ab.
@@ -524,6 +628,17 @@ Lese-Endpunkte kostet nichts und ist als Tiefenverteidigung sinnvoll.
 
 ---
 
+**[v5] Stand der Checkliste:** Owner-only-Deposit, reines Lesen, TTL-only-Löschen, "Tag kann TTL
+nur verkürzen" — per HTTP-Test auf beiden Node-Plattformen geprüft (`node-mesh-server` `npm test`,
+`relay-android` `NodeMeshHttpServerTest`). Reset rührt keine Nachrichten/Adresse an — per Code
+und Lauf geprüft (Adresse nach Neustart und nach Tor-Absturz identisch). Per-Tag-Cap —
+durchgerechnet (Abschnitt 8 [v5]). Temp-Node-Pause — Code-Review von
+`P2PNetworkManager.depositForNodeMesh`: im aktiven Zustand geht ausgehender Verkehr nur an den Temp
+Node; der Standard-Pool dient ausschließlich als Rettungsnetz für eine *einzelne* fehlgeschlagene
+Nachricht, bis der Heartbeat den Zustand zurücksetzt. Das ist spezifikationskonform, weil jede
+Seite nur ihren *eigenen* ausgehenden Verkehr steuert — eine "beidseitige" Pause gibt es im
+v2-Modell nicht.
+
 ## 10. Bewusst nicht Teil dieser Spezifikation
 
 - Kein Gruppenchat (weiterhin Architekturentscheidung, siehe bestehendes Produktwissen).
@@ -543,6 +658,9 @@ eigene, an dieses Dokument angelehnte Fassung — nicht die bestehenden vier Kap
 ergänzen, sobald implementiert. Muss explizit die Ein-Node-Einschränkung aus Abschnitt 6 enthalten
 — ein Kunde, der sich für ein Ein-Node-Deployment entscheidet, muss das vor dem Kauf/Deployment
 wissen, nicht erst beim ersten Adresswechsel entdecken.
+
+**[v5] Erledigt:** `NODE_MESH_BETRIEB.md` — kundenseitige Betriebsanleitung (Deutsch), inkl.
+Ein-Node-Einschränkung, Profilwahl, Slots, Temp Node und der Android-PoW-Einschränkung.
 
 ---
 
@@ -568,7 +686,179 @@ entschieden wurde:
 | Temp-Node-Bootstrap | Löst sich durch die neue Schreibrichtung von selbst, kein Sondercode nötig | 7 |
 | Implementierungs-Basis | Bestehender `server/`/`relay-android/`-Code, gezielt angepasst, nicht neu gebaut | 8 |
 | Per-Tag-Speicher-Cap | Ausgangswert vom bestehenden Relay übernehmen, gegen neue Defaults durchrechnen | 8, 9 |
+| **[v5]** Rotation | Protokoll-Konstante 1 h, nicht pro Node konfigurierbar (beide Seiten müssen übereinstimmen) | 3 |
+| **[v5]** TTL-Konfiguration | Nur über Profile (6/1/24 h), Maximum 24 h | 3 |
+| **[v5]** Client-Toleranzfenster | Immer für MAX_TTL (24 h) berechnet — 26 Tags/Kontakt, deckt jedes Profil ab | 3 |
+| **[v5]** Tor | Eingebaut und Pflicht; `ADD_ONION` mit festem Schlüssel, Tor-PoW an, Selbstheilung | 8 |
+| **[v5]** Flood-Schutz | Tor-PoW (PC/Server) + App-Token-Bucket auf Lese-Endpunkten (alle Plattformen) | 8 |
+| **[v5]** Reset-Takt | Slot 1/2/3 → Minute 0/20/40, an UTC ausgerichtet | 5 |
+| **[v5]** Android-Node | `relay-android` Modus "Business Node", eigener Onion-Schlüssel pro Modus, ohne Tor-PoW | 8 |
+| **[v5]** Multi-Device | Bewusst nicht vorgesehen — keine Konten, jede Identität = genau ein Gerät | 0, 9 |
 
 ---
 
 *unpruuf Business · NexonAI Consulting SRL · Alba Iulia, Romania*
+
+---
+
+## 13. [v6, gebaut 2026‑10‑01] Härtung gegen Beobachtung von außen
+
+Ziel: Wer nur von außen zuschaut (WLAN, Netzbetreiber, ein beschlagnahmter oder mitgeschnittener
+Node), soll weder erkennen, **dass** unpruuf läuft, noch **wann** wirklich geschrieben oder ein Chat
+geöffnet wird.
+
+1. **Keine WLAN-Ankündigung.** LAN-Erkennung nur, solange ein Direkt-(Onion-)Kontakt existiert; nie in
+   Whistleblower, nie bei reinen Business-Nutzern. Dienst-Typ `_http._tcp`, Name = 16 Hex-Zeichen
+   HMAC(userId, Stunde) — stündlich neu, nur für Direktkontakte berechenbar, zufälliger Port. Der
+   Onion-Socket hört nur auf 127.0.0.1 (`LanDiscovery.kt`).
+2. **Ein Abholtakt.** Node-Mesh fragt immer im selben Rhythmus ab (20 s ± 5 s, Long-Poll 20 s), egal ob
+   ein Chat offen ist. Kein Extra-Abruf beim Öffnen eines Chats.
+3. **Tarn-Ablagen.** Pro Node-Mesh-Kontakt im Mittel eine Dummy-Ablage alle 15 min, exponentiell
+   verteilt: gleicher Tag, gleiche Größe, gleiche Nodes wie eine echte Nachricht. Der Empfänger
+   entschlüsselt und verwirft sie (`DUMMY_SIGNAL`). Eine Ablage beweist damit keine Nachricht mehr.
+4. **Abhol-Cursor.** `POST /fetchMany` nimmt optional `since` (Server-Zeilen-ID) und antwortet mit
+   `{"cursor":N,"blobs":{…}}`. Jeder Blob wird nur einmal geladen; Tags, die neu ins Fenster kommen,
+   einmal ab 0. Ohne `since` bleibt die Antwort exakt wie vorher. (Android-Node: noch ohne Cursor,
+   App fällt dort auf Voll-Abruf zurück.) **Stand 25.10.2026:** Der Cursor kommt nur noch aus den
+   angefragten Tags (höchste ID der gelieferten Pakete, sonst das gesendete `since`), nicht mehr aus
+   einem Zähler des ganzen Servers; ein Fremder mit einer Adresse sieht so weder den Einwurf-Verkehr
+   des Servers noch, welche Adressen zusammengehören. Gleiche Tags in einer Anfrage werden einmal
+   gelesen. Eine Antwort trägt höchstens 256 Pakete; wurde sie gekürzt, steht `"more":true` vor
+   `blobs`, und die nächste Anfrage mit dem Cursor setzt genau dort fort. Ein Cursor ohne `more`
+   heißt: für diese Tags liegt bis jetzt nichts Weiteres bereit, ein Client darf bei mehreren
+   Blöcken den größten Cursor übernehmen (bei `more` den kleinsten der gekürzten). Alte Clients
+   bleiben korrekt, laden nur gelegentlich etwas doppelt (die Annahme dedupliziert).
+   Lese-Bremse: ein eigener Topf je Adresse, die der Server selbst bedient (und je Loopback-Name);
+   jeder andere Host-Header teilt sich einen einzigen Topf. **iOS (Norbert):** Cursor-Logik gleich
+   nachziehen, `more` auswerten, nur v3-Onion-Adressen annehmen.
+5. **Versiegelte Node-Schlüssel (`NODE_MESH_KEY_STORAGE=sealed`, Standard).** Owner-Secret und
+   Onion-Schlüssel liegen nur verschlüsselt auf der Platte (AES-256-GCM, Schlüssel per HKDF aus dem
+   Owner-Secret, das selbst nirgends gespeichert ist). Nach einem Neustart ist der Server **gesperrt**:
+   nur eine Control-Onion (Schlüssel im Klartext, trägt keine Nachrichten) ist online, `/deposit` und
+   `/pool` antworten `423`. Die App erfährt die Control-Adresse über `GET /pool` (`"control"`), fragt
+   `GET /lock-status` (ohne Geheimnis) und sendet `POST /unlock` (Bearer Owner-Secret) **erst nach
+   Bestätigung durch den Nutzer**. Danach gehen die Nodes unter denselben Adressen wieder online.
+   Ersatzweg: Owner-Code auf der Einrichtungsseite einfügen. Ein ausgeschalteter, beschlagnahmter
+   Server lässt sich damit nicht unter denselben Adressen weiterbetreiben.
+   **Grenzen:** Wer den Server hat, kann die Control-Adresse imitieren und auf das Entsperren
+   warten — darum Bestätigung mit Warnung („im Zweifel neuen Server aufsetzen“). Ein RAM-Abbild eines
+   laufenden VPS (durch den Hoster) enthält die Schlüssel weiterhin. `NODE_MESH_KEY_STORAGE=disk`
+   behält das alte Verhalten (unbeaufsichtigte Neustarts).
+
+## 14. Server licence (2026‑10‑06)
+
+A Business Node server runs with an offline-checked licence (`node-mesh-server/src/license.ts`):
+`unpruuf-server-license:v1:<b64url payload>:<b64url Ed25519 signature>`, payload
+`1|serial|customer|maxNodes|issuedAtMs|expiresAtMs`, signature over `"unpruuf-server-license-v1\n" + payload`
+with the same key pair as the app licences. No network, no device identification, no telemetry. The licence
+fixes the node count (default and maximum 250; the server always runs exactly that many) and the expiry. Without a licence only the setup page runs; after expiry
+deposits are refused with 402 while fetching keeps working. A Temp Node needs none. The server stays
+structurally blind: the check reads one local file and learns nothing about users or contacts.
+
+Android node (`relay-android`): the same check (`core/NodeLicense.kt`, same code format and key). One node per
+device, so `maxNodes` is read but changes nothing. Without a licence the owner QR stays hidden and deposits are
+refused; after expiry deposits are refused (402), reading keeps working.
+
+## 15. Node lists (2026‑10‑06)
+
+**File.** The server's setup page exports `unpruuf-node-list:v1` (plain text): header lines `name`, `secret`
+(owner secret for every node of that server), optional `control` (sealed servers), `count`, an empty line, then one
+address per line. Parser and writer: `node-mesh-server/src/nodeList.ts`, app: `NodeListFile.kt`; a test pins that the
+Kotlin parser reads the real TypeScript output. The file carries the write key: as sensitive as the owner QR.
+
+**Lists in the app.** A list is a named group of own nodes (`NodeLists.kt`). Every node is in exactly one list, a list
+with no nodes does not exist, a list may hold the nodes of several servers. Importing a file creates a list (or adds
+to an existing one); nodes added by owner QR land in "Standard". Settings → Node lists: import (file or pasted text),
+rename, delete (removes the list's nodes from the device; shows how many contacts used them).
+
+**Adding a contact.** The Business QR screen requires a list: the QR carries three nodes from it (picked at random,
+spread over as many different servers of the list as possible; nodes are shared between contacts — see §18). With exactly one list it is pre-selected. Changing the
+list starts a fresh pairing (new keys), so a half-used QR is never mixed with nodes of another list. Existing
+contacts keep the nodes they were given. Design note: a list of ONE server puts all three nodes of a contact on one
+machine — put several servers in one list to keep the contact's nodes spread over different hosts.
+
+## 16. Rotating list feed (2026‑10‑06)
+
+**Purpose.** A company keeps its employees' node lists up to date without handing out files again. The company runs
+a small service (`node-mesh-server/src/feedIndex.ts`, `start-feed.bat`) on its own server. Its onion address changes
+every *period* (1 to 24 hours, default 6). The apps compute the current address; nobody else can find it.
+
+**Address.** `epoch = floor(unixMs / (period h))`. `seed_e = HKDF-SHA256(ikm = addressSeed, salt = "unpruuf-feed-v1",
+info = "onion-epoch:" + epoch, 32)`. The Ed25519 key of `seed_e` is the onion service key; address = Tor v3 encoding
+(public key, 2-byte SHA3-256 checksum, version 3). The server hands Tor the expanded key (`ED25519-V3:` + 64 bytes:
+clamped SHA-512 of the seed) with `ADD_ONION`. It publishes the next period's address 15 minutes before the switch and
+keeps the previous one 30 minutes after it (at most two alive); each minute it reconciles. If Tor returns a different
+service id than the derived address, the service stops with an error instead of running unreachable. The app tries the
+current period first and, within 45 minutes of a boundary, the neighbouring one (phone clock tolerance).
+
+**Three secrets, three places.** *Address seed*: server and apps. *Content key* (AES-256-GCM) and *signing key*
+(Ed25519): created at setup, sealed on the server under the admin's passphrase (scrypt + AES-GCM), only needed to
+publish. A stolen server reveals where the feed lives; it can neither read nor forge a list.
+
+**Feed code** `unpruuf-feed:v1:1|<name>|<period h>|<address seed>|<content key>|<signing public key>` (base64url): what
+the employees' apps get (QR or text). It is a secret of the company.
+
+**List file** (`GET /list`, plain text, no login, the endpoint holds nothing readable):
+`unpruuf-feed-list:v1`, `seq`, `issued`, `iv`, `data` (AES-GCM over the node-list files joined by `\n=====\n`, AAD
+`unpruuf-feed-v1:<seq>`), `sig` (Ed25519 over `"unpruuf-feed-list-v1\n" seq "\n" issued "\n" iv "\n" data`). The app
+checks the signature first, then decrypts, and never accepts a `seq` lower than the one it holds (no rollback).
+
+**In the app** (Settings → Node lists → Company feeds): paste the feed code; the app fetches about hourly (and on
+"Update now"). Each list in the feed becomes or updates one managed list of the same name; addresses the company
+dropped leave the pool; a managed list the company dropped is removed with its nodes. All or nothing: if the new nodes
+do not fit under the device limit, nothing changes. Contacts that were given a removed node keep their other nodes.
+
+**Not built / limits.** Tor client authorization (the service invisible to anyone without a key) is not in; the rotating
+address plus an encrypted, signed payload is. Not run against a real Tor in this sandbox: the first test on a real server
+is that the setup page reaches "ready" and the app finds the feed. The feed is not covered by the node licence.
+
+## 18. Shared nodes, packet lifetime per chat, RAM store (2026‑10‑08)
+
+**Nodes are shared.** Until now a new contact got the least-used nodes, so that no two contacts shared one. That was dropped.
+A node that serves exactly one contact is that contact's fingerprint: whoever sees the traffic on it sees that one
+conversation's volume and timing. A node that carries many conversations mixes them. What separates two conversations is the
+per-contact keys and the hourly routing tags, not the node. The app now picks 3 nodes at random from the chosen list, one per
+server first (`NodeMeshManager.chooseNodes`), and never looks at how often a node is used. What this costs: a compromised node
+touches every contact that uses it (hence three nodes per contact). What it gains: mixing grows with the number of active users
+per node. The old "room for N contacts with nodes of their own" display (server setup page, overview, licence tool, list
+screens, contact picker) is gone with it.
+
+**Capacity, as far as it can be said.** A node takes 5 fetches/s on average (burst 30, `routes/node.ts`). The app polls about
+every 20 s with one batched request per node, so roughly 100 concurrently active users per node. Calculated from the code, not
+measured; Tor on the customer's hardware is the likelier limit. A load test is still to be done.
+
+**Packet lifetime per chat.** `Contact.messageTtlHours` (1, 6 or 24; null = 24; DB v12, `MIGRATION_11_12`, contacts kept).
+`depositForNodeMesh` sends it as the deposit's `ttl` (ms). The server already accepted `ttl` and caps it at the node's own
+profile; the Android node does the same (`NodeMeshHttpServer`). Cover deposits use the chat's value too, so cover and real
+packets look alike. Only three steps (`MessageTtl`), because the node sees the value. The receiver's poll window is sized for
+24 h, so every step is within it. In the chat: clock icon in the top bar (Node-Mesh contacts only).
+
+**RAM store.** `NODE_MESH_STORE=ram` opens the store as `:memory:` for a normal (licensed) server. A restart drops every
+waiting packet; the owner secret and node keys are unaffected (sealed on disk, `KEY_STORAGE`). Default stays `disk`. The
+Temp Node is always in memory. `start.bat` asks once and remembers it in `node.env.bat`. Not covered: the Android node
+(`relay-android`) still keeps packets in its SQLite file.
+
+## 19. Release integrity (2026‑10‑10)
+
+**Purpose.** An operator, a customer or an auditor can ask "is this the program NexonAI shipped, and is it unchanged?". The answer is a signed list of hashes, not a promise.
+
+**Format.** `release-manifest.txt` next to `dist/`: header `unpruuf-release:v1`, `version:`, `files:`, then one `<sha256>␣␣<path>` line per covered file (all `.js` under `dist/` except tests, plus `package.json`; sorted; "/" separators), then `signature:` (base64url Ed25519). The signed bytes are `"unpruuf-release-v1\n"` plus everything above the signature line. Same key pair as the licences, own signing domain: a licence signature never verifies as a release signature, nor the reverse (test `integrity.test.ts`). Fingerprint = SHA-256 of the signed body, 16 groups of four hex digits. `tsconfig.json` sets `newLine: lf` so a build on Windows and one on Linux produce the same bytes.
+
+**Check.** `integrity.ts` `verifyIntegrity`: states `ok`, `modified` (changed / missing / extra files named), `bad-signature`, `unsigned` (no manifest: development checkout, not an alarm), `exe` (single-file build: SHA-256 of the program file only). At start and hourly; shown on the overview and setup page; a `modified` or `bad-signature` result raises the "Achtung" banner. `NODE_MESH_REQUIRE_SIGNED=1` exits when the state is not `ok`/`exe`.
+
+**Signing.** Offline in `license-tool`: `sign-release.js` or the "Sign a server release" card in the tool's page. It builds the body with the server's own compiled `integrity.js`, so signer and checker cannot disagree. The fingerprint is appended to `release-fingerprints.txt` for publishing.
+
+**Outside check.** `verify-release.js` (`.bat`/`.sh`) on a copy of the files, optionally with the published fingerprint.
+
+**Limits.** Self-check: a server compromised while running can lie about itself, and someone who can edit the files can edit the check. Not covered: `node_modules` (native, platform-specific) and the data folder. Real remote attestation would need hardware (TPM, protected environments) and is not built.
+
+## 20. Connection paths and the company bridge (2026‑10‑11)
+
+**Purpose.** The app must reach Tor even where a network blocks it, without asking a person to find bridge lines.
+
+**Automatic connection (app).** `ConnectionPaths` / `TorManager.runAssistant`. Tor starts bootstrapping direct by itself; the assistant watches `status/bootstrap-phase`. If a path does not reach 100 % within its time budget (direct 30 s, company 40 s, obfs4 45 s, Snowflake 90 s) it applies the next one over the control port: `DIRECT`, then `COMPANY` (only if the company has a bridge), `OBFS4` (the public default bridges Tor Browser ships), `SNOWFLAKE`. The path that worked is remembered and tried first at the next app start only; after a network change the direct path is looked at first again. If Tor has no circuit 25 s after a network change, the assistant runs again. If everything fails, the app returns to direct and tries again after 5 minutes. Hand-entered bridges (Settings) always take precedence; then the assistant stays out and the lines are applied at once (TorService only reports "on" after the first circuit, so waiting for that would never come on a blocked network). A transport without a running local client is never written into the Tor configuration.
+
+**Company bridge.** A private (unpublished) Tor bridge with an obfs4 front on a small separate server (`bridgeIndex.ts`, `bridge/bridgeTorrc.ts`): `BridgeRelay 1`, `PublishServerDescriptor 0`, lyrebird as server transport. It prints a bridge line (`obfs4 <address>:<port> <fingerprint> cert=… iat-mode=0`). The line goes on the node server's setup page, which exports it as `bridge:` header lines in the node-list file (at most 10 lines, only obfs4 and plain `IP:PORT [FINGERPRINT]`, one line each, no control characters) and therefore also in the company feed, which publishes the list files unchanged. The app stores the lines (BridgeManager) and uses them as path `COMPANY`.
+
+**Limits.** Bridges protect against blocking, not against being noticed. A bridge line is a secret of the group that received it; one leaked line lets an adversary block that bridge. Snowflake uses other people's machines. Not tested: Snowflake and the public bridges on a network that really blocks Tor; a full bootstrap through the company bridge (here the bridge itself could not finish bootstrapping; a Tor client did connect to it over obfs4 and requested the consensus). iOS: Norbert to carry the same path logic and the `bridge:` list line.
+

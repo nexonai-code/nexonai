@@ -106,3 +106,19 @@ final class PairingPayloadTests: XCTestCase {
         return bytes.base64EncodedString().trimmingCharacters(in: CharacterSet(charactersIn: "="))
     }
 }
+
+final class PairingPayloadEditionTests: XCTestCase {
+    func test_editionTag_roundTripsAndIsAbsentByDefault() throws {
+        let id = UUID().uuidString
+        let tagged = PairingPayload(
+            userId: id, messageKeyBase64: "x", x25519RatchetPublicKeyBase64: "y",
+            relayConnectionStrings: ["unpruuf-relay:v1:h:t"], appEdition: "whistleblower"
+        )
+        XCTAssertTrue(tagged.toJSON().contains("\"e\":\"whistleblower\""))
+        XCTAssertEqual(PairingPayload.fromJSON(tagged.toJSON())?.appEdition, "whistleblower")
+
+        let plain = PairingPayload(userId: id, messageKeyBase64: "x", x25519RatchetPublicKeyBase64: "y", relayConnectionStrings: ["unpruuf-relay:v1:h:t"])
+        XCTAssertFalse(plain.toJSON().contains("\"e\""))
+        XCTAssertNil(PairingPayload.fromJSON(plain.toJSON())?.appEdition)
+    }
+}

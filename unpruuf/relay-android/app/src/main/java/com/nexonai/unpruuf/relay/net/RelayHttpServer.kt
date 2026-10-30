@@ -26,8 +26,12 @@ import java.security.MessageDigest
 class RelayHttpServer(
     port: Int,
     private val blobStore: BlobStore,
-    private val getAuthToken: () -> String
-) : NanoHTTPD("127.0.0.1", port) {
+    private val getAuthToken: () -> String,
+    /** "127.0.0.1" (default) or "0.0.0.0" — see RelayIdentity.lanAccessEnabled's doc comment for
+     *  what setting this to "0.0.0.0" actually trades away. Passed in rather than hardcoded so
+     *  the caller (RelayService) is the one place that reads the operator's setting. */
+    bindHost: String = "127.0.0.1"
+) : NanoHTTPD(bindHost, port) {
 
     override fun serve(session: IHTTPSession): Response {
         return runCatching { route(session) }.getOrElse {
@@ -36,6 +40,11 @@ class RelayHttpServer(
     }
 
     private fun route(session: IHTTPSession): Response {
+        // Mirrors server/src/app.ts's CORS middleware — see that file's doc comment for why
+        // this is safe (bearer-token auth, no cookie/session for CORS to weaken).
+        if (session.method == Method.OPTIONS) {
+            return jsonResponse(HttpStatus(204, "No Content"), "")
+        }
         if (session.method == Method.GET && session.uri == "/health") {
             return jsonResponse(Response.Status.OK, """{"ok":true}""")
         }
@@ -166,7 +175,11 @@ class RelayHttpServer(
     }
 
     private fun jsonResponse(status: Response.IStatus, body: String): Response =
-        newFixedLengthResponse(status, "application/json", body)
+        newFixedLengthResponse(status, "application/json", body).apply {
+            addHeader("Access-Control-Allow-Origin", "*")
+            addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        }
 
     // Every blob/tag this app ever handles is base64/wire-tag alphabet — no JSON-special
     // characters to escape — so a small regex extractor is enough, same reasoning

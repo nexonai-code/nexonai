@@ -58,4 +58,32 @@ object RelayConstants {
     /** Cap on the raw HTTP request body for POST /v1/fetchMany — MAX_FETCH_MANY_TAGS tag strings
      *  (each up to 64 chars) plus JSON framing, generous but bounded. */
     const val MAX_FETCH_MANY_REQUEST_BYTES = 8192L
+
+    // ─── unpruuf Business Node-Mesh mode (NODE_MESH_SPEC.md) ─────────────────────────────
+    // Must match node-mesh-server/src/profiles.ts + config.ts exactly: same wire format, same
+    // profiles, same caps, so the unpruuf app can't tell an Android node from a PC node.
+
+    /** Retention profiles, name → TTL hours. MAX is 24h because every client polls a window
+     *  sized for 24h (P2PNetworkManager.NODE_MESH_MAX_TTL_MS) — a longer TTL would be useless. */
+    val NODE_MESH_PROFILES: Map<String, Int> = linkedMapOf(
+        "standard" to 6,
+        "high-security" to 1,
+        "offline-tolerant" to 24
+    )
+    const val NODE_MESH_DEFAULT_PROFILE = "standard"
+
+    /** Node-Mesh sweep cadence — expired rows are already invisible to reads; this bounds how
+     *  long they physically stay on disk afterwards (same as node-mesh-server). */
+    const val NODE_MESH_SWEEP_INTERVAL_MS = 5 * 60 * 1000L
+
+    /** Staggered Reset (NODE_MESH_SPEC.md §5): 24h cycle, slot 1/2/3 at minute 0/20/40. */
+    const val NODE_MESH_RESET_INTERVAL_MS = 24 * 60 * 60 * 1000L
+    const val NODE_MESH_SLOT_OFFSET_MS = 20 * 60 * 1000L
+
+    /** Global read-endpoint token bucket — same values as node-mesh-server's routes/node.ts. */
+    const val NODE_MESH_READ_BURST = 30.0
+    const val NODE_MESH_READ_REFILL_PER_SEC = 5.0
+
+    /** Owner connection string prefix — NodeMeshManager.NODE_OWNER_PREFIX in the unpruuf app. */
+    const val NODE_OWNER_PREFIX = "unpruuf-node-owner:v1:"
 }

@@ -1,0 +1,502 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import * as http from "http";
+import type { AddressInfo } from "net";
+import { createAdminApp, isLocalPeer, isLoopbackHost, ownerConnectionString, ownerSecretFromCode } from "./adminApp";
+import { PROFILES } from "../profiles";
+import { adminTokenGuard, createAdminToken, tokenMatches, writeAdminToken } from "./adminToken";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+
+function request(port: number, host: string, path: string): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, path, headers: { host } }, (res) => {
+      let body = "";
+      res.on("data", (c) => (body += c));
+      res.on("end", () => resolve({ status: res.statusCode!, body }));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function post(port: number, host: string, path: string, headers: Record<string, string>): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, path, method: "POST", headers: { host, ...headers } }, (res) => {
+      let body = "";
+      res.on("data", (c) => (body += c));
+      res.on("end", () => resolve({ status: res.statusCode!, body }));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+test("owner string matches the Android app's NodeMeshManager.parseOwnerConnectionString format", () => {
+  assert.equal(
+    ownerConnectionString("abc.onion", "s3cr3t"),
+    "unpruuf-node-owner:v1:abc.onion:s3cr3t",
+  );
+});
+
+test("only loopback Host headers are accepted (DNS-rebinding guard)", () => {
+  assert.equal(isLoopbackHost("localhost:8790", 8790), true);
+  assert.equal(isLoopbackHost("127.0.0.1:8790", 8790), true);
+  assert.equal(isLoopbackHost("evil.example:8790", 8790), false);
+  assert.equal(isLoopbackHost("localhost:9999", 8790), false);
+  assert.equal(isLoopbackHost(undefined, 8790), false);
+});
+
+test("setup page serves owner code + QR to localhost and refuses foreign hosts", async () => {
+  const server = http.createServer();
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const port = (server.address() as AddressInfo).port;
+  server.close();
+  let secret = "owner-secret-xyz";
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => secret,
+      rotateOwnerSecret: () => { secret = "rotated-secret"; },
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      messagesInRam: false,
+      torEnabled: true,
+      publicAddress: () => "abcdef.onion",
+      torStatus: () => ({ state: "ready", bootstrapPercent: 100, onionAddress: "abcdef.onion", onionAddresses: ["abcdef.onion"], controlAddress: null, locked: false, restarts: 0, lastError: null, powEnabled: true }),
+      stats: () => ({ queued: 3, tags: 1, oldestAgeMs: 10 }),
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  try {
+    const ok = await request(port, `localhost:${port}`, "/status.json");
+    assert.equal(ok.status, 200);
+    const status = JSON.parse(ok.body);
+    assert.equal(status.ownerString, "unpruuf-node-owner:v1:abcdef.onion:owner-secret-xyz");
+    assert.match(status.ownerQr, /^data:image\/png;base64,/);
+    assert.equal(status.stats.queued, 3);
+
+    const page = await request(port, `127.0.0.1:${port}`, "/");
+    assert.equal(page.status, 200);
+    assert.match(page.body, /Owner-QR/);
+
+    const rebinding = await request(port, `attacker.example:${port}`, "/status.json");
+    assert.equal(rebinding.status, 403);
+    assert.doesNotMatch(rebinding.body, /owner-secret-xyz/);
+
+    // Rotation needs the custom header (CSRF guard) and takes effect immediately.
+    const noHeader = await post(port, `localhost:${port}`, "/rotate-owner-secret", {});
+    assert.equal(noHeader.status, 403);
+    assert.equal(secret, "owner-secret-xyz");
+    const rotated = await post(port, `localhost:${port}`, "/rotate-owner-secret", { "x-unpruuf-admin": "1" });
+    assert.equal(rotated.status, 200);
+    const after = JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body);
+    assert.equal(after.ownerString, "unpruuf-node-owner:v1:abcdef.onion:rotated-secret");
+  } finally {
+    listener.close();
+  }
+});
+
+test("the setup page's unlock accepts a pasted owner code or a bare secret", () => {
+  assert.equal(ownerSecretFromCode("unpruuf-node-owner:v1:abc.onion:Secret_123-abcdefgh"), "Secret_123-abcdefgh");
+  assert.equal(ownerSecretFromCode("Secret_123-abcdefgh"), "Secret_123-abcdefgh");
+  assert.equal(ownerSecretFromCode("short"), null);
+});
+
+test("a locked server hides the owner QR and refuses rotation", async () => {
+  const port = 18000 + Math.floor(Math.random() * 1000);
+  let locked = true;
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "",
+      rotateOwnerSecret: () => {},
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      messagesInRam: false,
+      torEnabled: true,
+      publicAddress: () => null,
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      sealed: true,
+      isLocked: () => locked,
+      unlock: async (s) => (s === "Right_secret_0123456789" ? ((locked = false), ["a.onion"]) : null),
+      controlAddress: () => "ctrl.onion",
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  try {
+    const status = JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body);
+    assert.equal(status.locked, true);
+    assert.equal(status.ownerString, null);
+    assert.equal(status.canRotate, false);
+    const page = await request(port, `localhost:${port}`, "/");
+    assert.match(page.body, /Gesperrt nach Neustart/);
+    assert.equal((await post(port, `localhost:${port}`, "/rotate-owner-secret", { "x-unpruuf-admin": "1" })).status, 423);
+  } finally {
+    listener.close();
+  }
+});
+
+test("overview reports nodes, stored packets and counters, and flags a locked or incomplete server", async () => {
+  const { Metrics } = await import("../metrics");
+  const metrics = new Metrics();
+  metrics.record("deposit"); metrics.record("deposit"); metrics.record("fetch"); metrics.record("rejected");
+  const base = {
+    getOwnerSecret: () => "s",
+    profile: PROFILES.standard,
+    slot: 1 as const,
+    ephemeral: false,
+    messagesInRam: false,
+    torEnabled: true,
+    publicAddress: () => "a.onion",
+    publicAddresses: () => ["a.onion", "b.onion", "c.onion"],
+    torStatus: () => ({ state: "ready" as const, bootstrapPercent: 100, onionAddress: "a.onion", onionAddresses: ["a.onion", "b.onion", "c.onion"], controlAddress: null, locked: false, restarts: 0, lastError: null, powEnabled: true }),
+    stats: () => ({ queued: 7, tags: 3, oldestAgeMs: 120000 }),
+    metrics,
+    configuredNodes: 3,
+  };
+  const { overviewPayload } = await import("./adminApp");
+  const ok = await overviewPayload({ ...base, registeredNodes: async () => 3 });
+  assert.equal(ok.level, "ok");
+  assert.deepEqual(ok.nodes, { configured: 3, listed: 3, registered: 3 });
+  assert.equal(ok.stored.queued, 7);
+  assert.equal(ok.last24h!.deposit, 2);
+  assert.equal(ok.last24h!.fetch, 1);
+  assert.equal(ok.last24h!.rejected, 1);
+  assert.equal(ok.hourly.length, 24);
+  assert.doesNotMatch(JSON.stringify(ok), /"s"|owner/i);
+
+  const missing = await overviewPayload({ ...base, registeredNodes: async () => 2 });
+  assert.equal(missing.level, "warn");
+  assert.ok(missing.problems.includes("nodes-missing"));
+
+  const locked = await overviewPayload({ ...base, sealed: true, isLocked: () => true, registeredNodes: async () => 0 });
+  assert.equal(locked.level, "locked");
+
+  // release integrity: a signed, unchanged install is no problem; changed files or a bad signature are
+  const clean = { state: "ok" as const, version: "1.0.0", fingerprint: "aaaa bbbb", changed: [], missing: [], extra: [], filesChecked: 3, checkedAt: 0 };
+  const okInt = await overviewPayload({ ...base, integrity: () => clean, registeredNodes: async () => 3 });
+  assert.equal(okInt.level, "ok");
+  assert.equal(okInt.integrity?.state, "ok");
+  const bad = await overviewPayload({ ...base, integrity: () => ({ ...clean, state: "modified" as const, changed: ["dist/index.js"] }), registeredNodes: async () => 3 });
+  assert.equal(bad.level, "warn");
+  assert.ok(bad.problems.includes("integrity"));
+  const badSig = await overviewPayload({ ...base, integrity: () => ({ ...clean, state: "bad-signature" as const }), registeredNodes: async () => 3 });
+  assert.ok(badSig.problems.includes("integrity"));
+  const dev = await overviewPayload({ ...base, integrity: () => ({ ...clean, state: "unsigned" as const, fingerprint: null }), registeredNodes: async () => 3 });
+  assert.equal(dev.level, "ok", "a development checkout without a manifest is not an alarm");
+  assert.equal((ok as unknown as Record<string, unknown>).integrity, null, "no integrity function: nothing is claimed");
+
+  // where the waiting packets live is reported honestly, and the "room for N contacts" promise is gone
+  assert.equal(ok.messagesInRam, false);
+  const ram = await overviewPayload({ ...base, messagesInRam: true, registeredNodes: async () => 3 });
+  assert.equal(ram.messagesInRam, true);
+  assert.equal((ok as unknown as Record<string, unknown>).capacity, undefined);
+});
+
+test("the overview page is served on loopback only and embeds valid data", async () => {
+  const port = 19000 + Math.floor(Math.random() * 900);
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "s",
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      messagesInRam: false,
+      torEnabled: false,
+      publicAddress: () => "a</script>.onion",
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  try {
+    const page = await request(port, `localhost:${port}`, "/overview");
+    assert.equal(page.status, 200);
+    assert.match(page.body, /Node-Übersicht/);
+    assert.doesNotMatch(page.body, /a<\/script>/, "address must not be able to break out of the script");
+    const json = JSON.parse((await request(port, `localhost:${port}`, "/overview.json")).body);
+    assert.equal(json.level, "ok");
+    assert.equal((await request(port, `attacker.example:${port}`, "/overview")).status, 403);
+  } finally {
+    listener.close();
+  }
+});
+
+test("the setup page takes a server license: refuses bad codes, activates a good one, shows the state", async () => {
+  const crypto = await import("crypto");
+  const fs = await import("fs");
+  const os = await import("os");
+  const path = await import("path");
+  const { LicenseGuard } = await import("../license");
+  const keys = crypto.generateKeyPairSync("ed25519");
+  const pub = keys.publicKey.export({ format: "jwk" }).x as string;
+  const now = Date.UTC(2027, 0, 15);
+  const day = 24 * 60 * 60 * 1000;
+  const code = (expires: number) => {
+    const payload = `1|SRV-7|Acme GmbH|40|${now}|${expires}`;
+    const sig = crypto.sign(null, Buffer.from("unpruuf-server-license-v1\n" + payload), keys.privateKey);
+    return `unpruuf-server-license:v1:${Buffer.from(payload).toString("base64url")}:${sig.toString("base64url")}`;
+  };
+  const guard = new LicenseGuard({
+    filePath: path.join(fs.mkdtempSync(path.join(os.tmpdir(), "node-mesh-admin-license-")), "license.txt"),
+    publicKeyB64: pub,
+    now: () => now,
+  });
+  const port = 19000 + Math.floor(Math.random() * 1000);
+  let started = 0;
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "secret",
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      messagesInRam: false,
+      torEnabled: true,
+      publicAddress: () => null,
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      license: () => guard.summary(),
+      applyLicense: async (c) => {
+        const r = guard.apply(c);
+        if (!r.ok) return r;
+        started++;
+        return { ok: true, summary: guard.summary() };
+      },
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  const sendLicense = (c: string, headers: Record<string, string>) =>
+    new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const req = http.request(
+        { host: "127.0.0.1", port, path: "/license", method: "POST", headers: { host: `localhost:${port}`, "content-type": "application/json", ...headers } },
+        (res) => {
+          let body = "";
+          res.on("data", (d) => (body += d));
+          res.on("end", () => resolve({ status: res.statusCode!, body }));
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify({ code: c }));
+    });
+  try {
+    // no license yet: the page asks for one, the owner QR waits, the overview says so
+    const before = await request(port, `localhost:${port}`, "/");
+    assert.match(before.body, /Lizenz erforderlich/);
+    assert.match(before.body, /Zuerst die Lizenz/);
+    const ov = JSON.parse((await request(port, `localhost:${port}`, "/overview.json")).body);
+    assert.deepEqual(ov.problems, ["license-missing"]);
+    assert.equal(ov.level, "warn");
+
+    // CSRF guard, bad code, an app license pasted by mistake
+    assert.equal((await sendLicense(code(now + day), {})).status, 403);
+    assert.equal((await sendLicense("nonsense", { "x-unpruuf-admin": "1" })).status, 400);
+    const wrongType = await sendLicense("unpruuf-license:v1:abc:def", { "x-unpruuf-admin": "1" });
+    assert.equal(wrongType.status, 400);
+    assert.equal(JSON.parse(wrongType.body).error, "wrong-type");
+    assert.equal(started, 0);
+
+    // a good code activates (and would start the service exactly once)
+    const ok = await sendLicense(code(now + 200 * day), { "x-unpruuf-admin": "1" });
+    assert.equal(ok.status, 200);
+    assert.equal(started, 1);
+    const status = JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body);
+    assert.equal(status.license.status, "valid");
+    assert.equal(status.license.customer, "Acme GmbH");
+    assert.equal(status.license.maxNodes, 40);
+    const after = await request(port, `localhost:${port}`, "/");
+    assert.match(after.body, /Acme GmbH/);
+    assert.doesNotMatch(after.body, /Lizenz erforderlich/);
+    // nodes are shared between contacts now: no "room for N contacts" promise anywhere
+    assert.doesNotMatch(after.body, /Kontakte mit komplett eigenen Nodes/);
+    const ovAfter = JSON.parse((await request(port, `localhost:${port}`, "/overview.json")).body);
+    assert.equal(ovAfter.capacity, undefined);
+  } finally {
+    listener.close();
+  }
+});
+
+test("the setup page exports a node list file for the app, but never while locked and never without the CSRF header", async () => {
+  const { parseNodeListFile } = await import("../nodeList");
+  const port = 20000 + Math.floor(Math.random() * 1000);
+  let locked = false;
+  const addresses = Array.from({ length: 5 }, (_, i) => `node${i}${"a".repeat(50)}.onion`);
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "Owner_secret_0123456789",
+      profile: PROFILES.standard,
+      slot: 2,
+      ephemeral: false,
+      messagesInRam: false,
+      torEnabled: true,
+      publicAddress: () => addresses[0],
+      publicAddresses: () => addresses,
+      controlAddress: () => "ctrl.onion",
+      isLocked: () => locked,
+      torStatus: () => null,
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      license: () => ({ status: "valid", customer: "Acme GmbH", serial: "S", maxNodes: 5, expiresAtMs: Date.now() + 1e9, daysLeft: 100 }),
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  try {
+    assert.equal((await post(port, `localhost:${port}`, "/export-list", {})).status, 403);
+    const ok = await post(port, `localhost:${port}`, "/export-list", { "x-unpruuf-admin": "1" });
+    assert.equal(ok.status, 200);
+    const parsed = parseNodeListFile(ok.body)!;
+    assert.equal(parsed.name, "Acme GmbH · Server 2");
+    assert.equal(parsed.ownerSecret, "Owner_secret_0123456789");
+    assert.equal(parsed.control, "ctrl.onion");
+    assert.deepEqual(parsed.addresses, addresses);
+    const page = await request(port, `localhost:${port}`, "/");
+    assert.match(page.body, /Liste als Datei speichern/);
+    locked = true;
+    assert.equal((await post(port, `localhost:${port}`, "/export-list", { "x-unpruuf-admin": "1" })).status, 423);
+    const lockedPage = await request(port, `localhost:${port}`, "/");
+    assert.doesNotMatch(lockedPage.body, /Liste als Datei speichern/);
+  } finally {
+    listener.close();
+  }
+});
+
+
+test("the setup page saves the company's Tor bridge, shows it, puts it into the exported list, and needs the CSRF header", async () => {
+  const { parseNodeListFile } = await import("../nodeList");
+  const { cleanBridgeLines } = await import("../bridgeLines");
+  const obfs4 = "obfs4 203.0.113.9:443 D9A82D2F9C2F65A18407B1D2B764F130847F8B5D cert=bjRaMrr1BRiAW8IE9U5z27fQaYgOhX1UCmOpg2pFpoMvo6ZgQMzLsaTzzQNTlm7hNcb+Sg iat-mode=0";
+  const port = 21000 + Math.floor(Math.random() * 1000);
+  let saved: string[] = [];
+  const addresses = Array.from({ length: 3 }, (_, i) => `node${i}${"a".repeat(50)}.onion`);
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "Owner_secret_0123456789",
+      profile: PROFILES.standard, slot: 1, ephemeral: false, messagesInRam: false, torEnabled: true,
+      publicAddress: () => addresses[0], publicAddresses: () => addresses, isLocked: () => false,
+      torStatus: () => null, stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+      license: () => ({ status: "valid", customer: "Acme", serial: "S", maxNodes: 3, expiresAtMs: Date.now() + 1e9, daysLeft: 100 }),
+      bridgeLines: () => saved,
+      setBridgeLines: (lines: string[]) => (saved = cleanBridgeLines(lines)),
+    },
+    port,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  const postJson = (headers: Record<string, string>, body: unknown) => new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = http.request({ host: "127.0.0.1", port, path: "/bridge-lines", method: "POST", headers: { host: `localhost:${port}`, "content-type": "application/json", "content-length": String(Buffer.byteLength(data)), ...headers } }, (res) => {
+      let b = ""; res.on("data", (c) => (b += c)); res.on("end", () => resolve({ status: res.statusCode!, body: b }));
+    });
+    req.on("error", reject); req.write(data); req.end();
+  });
+  try {
+    assert.equal((await postJson({}, { text: obfs4 })).status, 403);
+    assert.deepEqual(saved, []);
+    const ok = await postJson({ "x-unpruuf-admin": "1" }, { text: obfs4 + "\r\nnonsense\n\n" });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(JSON.parse(ok.body), { ok: true, saved: [obfs4], rejected: 1 });
+    const page = await request(port, `localhost:${port}`, "/");
+    assert.match(page.body, /Firmen-Bridge/);
+    assert.ok(page.body.includes("203.0.113.9:443"));
+    const list = await post(port, `localhost:${port}`, "/export-list", { "x-unpruuf-admin": "1" });
+    assert.deepEqual(parseNodeListFile(list.body)!.bridges, [obfs4]);
+    assert.equal(JSON.parse((await request(port, `localhost:${port}`, "/status.json")).body).bridgeLines.length, 1);
+  } finally {
+    listener.close();
+  }
+});
+
+test("the setup page only accepts connections from this computer or a private network, not a public address", () => {
+  for (const ok of ["127.0.0.1", "::1", "::ffff:127.0.0.1", "172.17.0.1", "10.0.0.5", "192.168.1.20", "::ffff:172.18.0.1"]) assert.equal(isLocalPeer(ok), true, ok);
+  for (const bad of ["8.8.8.8", "172.32.0.1", "11.0.0.1", "2001:db8::1", "", undefined]) assert.equal(isLocalPeer(bad as string | undefined), false, String(bad));
+});
+
+function get(port: number, host: string, pathAndQuery: string, headers: Record<string, string> = {}): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, path: pathAndQuery, headers: { host, ...headers } }, (res) => {
+      let body = "";
+      res.on("data", (c) => (body += c));
+      res.on("end", () => resolve({ status: res.statusCode!, body, headers: res.headers }));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+test("with an access token the setup page answers nobody without it, even a neighbour that sends a loopback Host", async () => {
+  const server = http.createServer();
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const port = (server.address() as AddressInfo).port;
+  server.close();
+  const token = createAdminToken();
+  const app = createAdminApp(
+    {
+      getOwnerSecret: () => "owner-secret-xyz",
+      profile: PROFILES.standard,
+      slot: 1,
+      ephemeral: false,
+      messagesInRam: false,
+      torEnabled: true,
+      publicAddress: () => "abcdef.onion",
+      torStatus: () => ({ state: "ready", bootstrapPercent: 100, onionAddress: "abcdef.onion", onionAddresses: ["abcdef.onion"], controlAddress: null, locked: false, restarts: 0, lastError: null, powEnabled: true }),
+      stats: () => ({ queued: 0, tags: 0, oldestAgeMs: null }),
+    },
+    port,
+    token,
+  );
+  const listener = app.listen(port, "127.0.0.1");
+  const host = `localhost:${port}`;
+  try {
+    for (const p of ["/status.json", "/overview.json", "/", "/overview"]) {
+      const r = await get(port, host, p);
+      assert.equal(r.status, 403, p);
+      assert.doesNotMatch(r.body, /owner-secret-xyz/);
+    }
+    assert.equal((await get(port, host, "/status.json", { "x-unpruuf-admin-token": "wrong" })).status, 403);
+    assert.equal((await get(port, host, "/status.json?t=" + "x".repeat(500))).status, 403);
+    assert.equal((await get(port, host, "/status.json", { cookie: "unpruuf_admin_token=wrong" })).status, 403);
+
+    // The customer tool: header.
+    const viaHeader = await get(port, host, "/status.json", { "x-unpruuf-admin-token": token });
+    assert.equal(viaHeader.status, 200);
+    assert.match(viaHeader.body, /owner-secret-xyz/);
+
+    // A person: the printed link sets a cookie and goes to the clean address.
+    const link = await get(port, host, `/?t=${token}`);
+    assert.equal(link.status, 302);
+    assert.equal(link.headers.location, "/");
+    const cookie = String(link.headers["set-cookie"]);
+    assert.match(cookie, /HttpOnly/);
+    assert.match(cookie, /SameSite=Strict/);
+    const page = await get(port, host, "/", { cookie: cookie.split(";")[0] });
+    assert.equal(page.status, 200);
+
+    // The token in the address works for reading only: a POST cannot be started from a link.
+    const post403 = await post(port, host, `/rotate-owner-secret?t=${token}`, { "x-unpruuf-admin": "1" });
+    assert.equal(post403.status, 403);
+  } finally {
+    listener.close();
+  }
+});
+
+test("the access token is random, compared in constant time and written 0600", () => {
+  const a = createAdminToken();
+  const b = createAdminToken();
+  assert.notEqual(a, b);
+  assert.ok(a.length >= 43);
+  assert.equal(tokenMatches(a, a), true);
+  assert.equal(tokenMatches(a, b), false);
+  assert.equal(tokenMatches(undefined, a), false);
+  assert.equal(tokenMatches("", a), false);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "admin-token-"));
+  const file = path.join(dir, "admin-token");
+  writeAdminToken(file, a);
+  assert.equal(fs.readFileSync(file, "utf8").trim(), a);
+  if (process.platform !== "win32") assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  assert.equal(typeof adminTokenGuard(a), "function");
+});

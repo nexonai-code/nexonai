@@ -1,5 +1,6 @@
 package com.nexonai.unpruuf.domain.network
 
+import com.nexonai.unpruuf.data.model.Contact
 import android.content.Context
 import com.google.crypto.tink.subtle.X25519
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -88,13 +89,13 @@ class IdentityManager @Inject constructor(
         prefs.edit().putString("display_name", name).apply()
     }
 
-    // Rotation factor rotiert stündlich (GRAL Säule 3)
+    // A fresh random value for each pairing payload (QR field `rotationFactor`). It is carried to
+    // the contact and stored, but no key is derived from it (see RatchetSessionManager). The old
+    // code seeded SHA1PRNG with the hour, which on Android 7+ does not make it deterministic and
+    // read like an hourly shared secret that never existed.
     fun getCurrentRotationFactor(): String {
-        val hourBucket = System.currentTimeMillis() / (60 * 60 * 1000L)
-        val random = SecureRandom.getInstance("SHA1PRNG")
-        random.setSeed(hourBucket.toString().toByteArray())
         val bytes = ByteArray(16)
-        random.nextBytes(bytes)
+        SecureRandom().nextBytes(bytes)
         return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
     }
 
@@ -252,14 +253,21 @@ class IdentityManager @Inject constructor(
      * [contactMsgKeyB64]/[myMessageKey] are each individually per-device and NOT shared — do not
      * use either of those alone where a symmetric secret is required.
      */
-    fun pairSecret(contactMsgKeyB64: String): ByteArray {
+    fun pairSecret(contactMsgKeyB64: String, mine: ByteArray = myMessageKey): ByteArray {
         val other = android.util.Base64.decode(contactMsgKeyB64, android.util.Base64.DEFAULT)
-        val mine = myMessageKey
         val (a, b) = if (compareUnsigned(mine, other) <= 0) mine to other else other to mine
         val md = MessageDigest.getInstance("SHA-256")
         md.update(a); md.update(b)
         return md.digest()
     }
+
+    /**
+     * The SOCKS user name that keeps one contact's Tor traffic on circuits of its own (stream isolation,
+     * see [Socks5]). A keyed hash of the contact id under a device secret, so the id itself never appears
+     * as a user name, and two contacts can never be tied together through it. Stays on the phone.
+     */
+    fun torIsolationKeyFor(contactId: String): String =
+        TorIsolation.keyFor(myNodeMeshRoutingSeed, contactId)
 
     private fun hmac(key: ByteArray, msg: String): String =
         android.util.Base64.encodeToString(hmacBytes(key, msg), android.util.Base64.NO_WRAP)
@@ -296,14 +304,17 @@ class IdentityManager @Inject constructor(
     fun myWireId(
         contactMsgKeyB64: String,
         identity: String = userId,
-        hour: Long = currentHourBucket(pairRotationOffsetSeconds(contactMsgKeyB64))
+        hour: Long = currentHourBucket(pairRotationOffsetSeconds(contactMsgKeyB64)),
+        // A contact paired with its own per-contact message key (Node-Mesh, Whistleblower cases)
+        // must derive its tags from THAT key — the other side only knows that one.
+        mine: ByteArray = myMessageKey
     ): String =
-        hmac(pairSecret(contactMsgKeyB64), "$identity:$hour")
+        hmac(pairSecret(contactMsgKeyB64, mine), "$identity:$hour")
 
     /** Wire-ID, mit der sich der Kontakt ([contactIdentity] — their `myWireIdentity` once known,
      *  else their pairing-time `remoteUserId`) gegenüber mir ausweist. */
-    fun expectedWireId(contactMsgKeyB64: String, contactIdentity: String, hour: Long): String =
-        hmac(pairSecret(contactMsgKeyB64), "$contactIdentity:$hour")
+    fun expectedWireId(contactMsgKeyB64: String, contactIdentity: String, hour: Long, mine: ByteArray = myMessageKey): String =
+        hmac(pairSecret(contactMsgKeyB64, mine), "$contactIdentity:$hour")
 
     /** A fresh, random per-contact identity — generated locally at pairing time (see
      *  QrPairViewModel) and never reused across contacts, unlike [userId]. */
@@ -363,8 +374,12 @@ class IdentityManager @Inject constructor(
      * pairing code was tampered with in transit, the ratchet key baked into it changes and so
      * does this code — that's the whole point: a mismatch here means don't trust this contact.
      */
-    fun safetyNumber(theirX25519RatchetPublicKeyBase64: String): String {
-        val mine = myX25519RatchetKeyPair.publicKey
+    /** Safety number for [contact] — uses the per-contact ratchet key it was paired with, so both
+     *  devices compare the same two keys. */
+    fun safetyNumberFor(contact: Contact): String =
+        safetyNumber(contact.x25519RatchetPublicKey, ratchetKeyPairFor(contact).publicKey)
+
+    fun safetyNumber(theirX25519RatchetPublicKeyBase64: String, mine: ByteArray = myX25519RatchetKeyPair.publicKey): String {
         val theirs = android.util.Base64.decode(theirX25519RatchetPublicKeyBase64, android.util.Base64.DEFAULT)
         val (a, b) = if (compareUnsigned(mine, theirs) <= 0) mine to theirs else theirs to mine
         val md = MessageDigest.getInstance("SHA-256")
@@ -435,9 +450,8 @@ class IdentityManager @Inject constructor(
      * contact will have deposited under, without any live exchange beyond the one-time seed swap
      * at pairing.
      */
-    fun nodeMeshPairSecret(theirRoutingSeedB64: String): ByteArray {
+    fun nodeMeshPairSecret(theirRoutingSeedB64: String, mine: ByteArray = myNodeMeshRoutingSeed): ByteArray {
         val other = android.util.Base64.decode(theirRoutingSeedB64, android.util.Base64.DEFAULT)
-        val mine = myNodeMeshRoutingSeed
         val (a, b) = if (compareUnsigned(mine, other) <= 0) mine to other else other to mine
         val md = MessageDigest.getInstance("SHA-256")
         md.update(a); md.update(b)
@@ -459,8 +473,172 @@ class IdentityManager @Inject constructor(
      * be independently computable by both sides of ONE pair, not disambiguate between several
      * candidate identities the way the onion-based scheme's wire-ID does.
      */
-    fun nodeMeshRoutingTag(theirRoutingSeedB64: String, epoch: Long): String =
-        hmac(nodeMeshPairSecret(theirRoutingSeedB64), "routing:$epoch")
+    fun nodeMeshRoutingTag(theirRoutingSeedB64: String, epoch: Long, mySeed: ByteArray = myNodeMeshRoutingSeed): String =
+        hmac(nodeMeshPairSecret(theirRoutingSeedB64, mySeed), "routing:$epoch")
+
+    /** [nodeMeshRoutingTag] with the routing seed this device used when pairing with [contact]. */
+    fun nodeMeshRoutingTagFor(contact: Contact, epoch: Long): String? {
+        val theirs = contact.theirNodeMeshRoutingSeed.takeIf { it.isNotBlank() } ?: return null
+        return nodeMeshRoutingTag(theirs, epoch, myRoutingSeedFor(contact))
+    }
+
+    // ─── Per-contact own pairing values (Node-Mesh) ─────────────────────────────────────────
+    // Every Node-Mesh pairing gets a fresh message key, ratchet key pair and routing seed, shown
+    // only in the QR that one contact scans. Contacts paired before this (fields null) keep the
+    // device-global values above.
+
+    fun myMessageKeyFor(contact: Contact): ByteArray =
+        contact.myPairMessageKey?.let { b64(it) } ?: myMessageKey
+
+    fun pairSecretFor(contact: Contact): ByteArray = pairSecret(contact.publicKey, myMessageKeyFor(contact))
+
+    fun ratchetKeyPairFor(contact: Contact): X25519KeyPair {
+        val priv = contact.myPairRatchetPrivateKey ?: return myX25519RatchetKeyPair
+        val pub = contact.myPairRatchetPublicKey ?: return myX25519RatchetKeyPair
+        return X25519KeyPair(b64(priv), b64(pub))
+    }
+
+    fun myRoutingSeedFor(contact: Contact): ByteArray =
+        contact.myPairRoutingSeed?.let { b64(it) } ?: myNodeMeshRoutingSeed
+
+    /** One pairing's worth of fresh own values plus the own nodes chosen for that contact. */
+    data class PendingNodeMeshPairing(
+        val messageKey: String,
+        val ratchetPrivateKey: String,
+        val ratchetPublicKey: String,
+        val routingSeed: String,
+        val nodeAddresses: List<String>
+    )
+
+    /**
+     * The values the Node-Mesh QR currently on screen carries. Persisted (encrypted) until a
+     * scan binds them to a new contact, so leaving the screen between showing the QR and
+     * scanning theirs doesn't strand a contact who already scanned mine. [chooseNodes] is only
+     * called when a new set is created.
+     */
+    fun pendingNodeMeshPairing(chooseNodes: () -> List<String>): PendingNodeMeshPairing {
+        prefs.getString("pending_nm_pairing", null)?.let { stored ->
+            runCatching { parsePending(String(decryptSecret(stored), Charsets.UTF_8)) }.getOrNull()?.let { return it }
+        }
+        val random = java.security.SecureRandom()
+        val msgKey = ByteArray(32).also { random.nextBytes(it) }
+        val seed = ByteArray(32).also { random.nextBytes(it) }
+        val priv = X25519.generatePrivateKey()
+        val pending = PendingNodeMeshPairing(
+            messageKey = b64(msgKey),
+            ratchetPrivateKey = b64(priv),
+            ratchetPublicKey = b64(X25519.publicFromPrivate(priv)),
+            routingSeed = b64(seed),
+            nodeAddresses = chooseNodes()
+        )
+        prefs.edit().putString("pending_nm_pairing", encryptSecret(serializePending(pending).toByteArray(Charsets.UTF_8))).apply()
+        return pending
+    }
+
+    /** The pending pairing values if one exists — never creates one (unlike [pendingNodeMeshPairing]). */
+    fun peekPendingNodeMeshPairing(): PendingNodeMeshPairing? =
+        prefs.getString("pending_nm_pairing", null)?.let { stored ->
+            runCatching { parsePending(String(decryptSecret(stored), Charsets.UTF_8)) }.getOrNull()
+        }
+
+    /** Called once a scan has bound the pending values to a contact — the next QR gets new ones. */
+    fun clearPendingNodeMeshPairing() {
+        prefs.edit().remove("pending_nm_pairing").apply()
+    }
+
+    // ─── Guest invitations (Pro side, GUEST_LOCKERS_BUILD_SPEC.md §4 and §7) ─────────────────
+    // An invitation carries its OWN fresh pairing values (message key, ratchet key pair, routing
+    // seed, nodes), separate from the Node-Mesh QR on screen, so inviting a guest never disturbs
+    // a normal pairing and a guest never shares a key with anyone else. The values stay here,
+    // encrypted, until the guest's own code is scanned (then they become the contact's values)
+    // or the invitation expires. Several invitations may be open at once; the guest's code
+    // repeats the invitation id so the right one is found.
+
+    data class GuestInvitation(val id: String, val expiresAtMs: Long, val pairing: PendingNodeMeshPairing, val renewal: String = "")
+
+    /** Fresh pairing values (never persisted by itself) for [nodes]: used for an invitation (Pro)
+     *  and for the guest's own side of one (Client). */
+    fun freshNodeMeshPairing(nodes: List<String>): PendingNodeMeshPairing {
+        val random = java.security.SecureRandom()
+        val priv = X25519.generatePrivateKey()
+        return PendingNodeMeshPairing(
+            messageKey = b64(ByteArray(32).also { random.nextBytes(it) }),
+            ratchetPrivateKey = b64(priv),
+            ratchetPublicKey = b64(X25519.publicFromPrivate(priv)),
+            routingSeed = b64(ByteArray(32).also { random.nextBytes(it) }),
+            nodeAddresses = nodes
+        )
+    }
+
+    fun createGuestInvitation(nodes: List<String>, expiresAtMs: Long, renewal: String = ""): GuestInvitation {
+        val random = java.security.SecureRandom()
+        val inv = GuestInvitation(
+            id = android.util.Base64.encodeToString(ByteArray(9).also { random.nextBytes(it) }, android.util.Base64.NO_WRAP or android.util.Base64.URL_SAFE),
+            expiresAtMs = expiresAtMs,
+            pairing = freshNodeMeshPairing(nodes),
+            renewal = renewal
+        )
+        saveGuestInvitations(loadGuestInvitations(System.currentTimeMillis()) + inv)
+        return inv
+    }
+
+    /** The open invitation with [id], or null if there is none or it has expired. */
+    fun guestInvitation(id: String, nowMs: Long = System.currentTimeMillis()): GuestInvitation? =
+        loadGuestInvitations(nowMs).firstOrNull { it.id == id }
+
+    fun removeGuestInvitation(id: String) {
+        saveGuestInvitations(loadGuestInvitations(System.currentTimeMillis()).filterNot { it.id == id })
+    }
+
+    private fun loadGuestInvitations(nowMs: Long): List<GuestInvitation> {
+        val stored = prefs.getString("guest_invitations", null) ?: return emptyList()
+        val array = runCatching { org.json.JSONArray(String(decryptSecret(stored), Charsets.UTF_8)) }.getOrNull() ?: return emptyList()
+        val out = ArrayList<GuestInvitation>()
+        for (i in 0 until array.length()) {
+            val o = array.optJSONObject(i) ?: continue
+            val expires = o.optLong("x", 0L)
+            if (expires <= nowMs) continue
+            runCatching { parsePending(o.getJSONObject("p").toString()) }.getOrNull()?.let {
+                out.add(GuestInvitation(o.getString("i"), expires, it, o.optString("r", "")))
+            }
+        }
+        return out
+    }
+
+    private fun saveGuestInvitations(list: List<GuestInvitation>) {
+        if (list.isEmpty()) { prefs.edit().remove("guest_invitations").apply(); return }
+        val array = org.json.JSONArray()
+        // At most ten open invitations; the oldest fall away first.
+        for (inv in list.takeLast(10)) {
+            array.put(org.json.JSONObject().put("i", inv.id).put("x", inv.expiresAtMs).put("r", inv.renewal).put("p", org.json.JSONObject(serializePending(inv.pairing))))
+        }
+        prefs.edit().putString("guest_invitations", encryptSecret(array.toString().toByteArray(Charsets.UTF_8))).apply()
+    }
+
+    /** Panic PIN: the pairing values shown in a QR and every open guest invitation go too. */
+    fun wipePendingPairings() {
+        prefs.edit().remove("pending_nm_pairing").remove("guest_invitations").commit()
+    }
+
+    private fun serializePending(p: PendingNodeMeshPairing): String =
+        org.json.JSONObject()
+            .put("m", p.messageKey).put("rp", p.ratchetPrivateKey).put("rk", p.ratchetPublicKey)
+            .put("s", p.routingSeed).put("n", p.nodeAddresses.joinToString(";"))
+            .toString()
+
+    private fun parsePending(json: String): PendingNodeMeshPairing {
+        val o = org.json.JSONObject(json)
+        return PendingNodeMeshPairing(
+            messageKey = o.getString("m"),
+            ratchetPrivateKey = o.getString("rp"),
+            ratchetPublicKey = o.getString("rk"),
+            routingSeed = o.getString("s"),
+            nodeAddresses = o.getString("n").split(";").filter { it.isNotBlank() }
+        )
+    }
+
+    private fun b64(s: String): ByteArray = android.util.Base64.decode(s, android.util.Base64.NO_WRAP)
+    private fun b64(bytes: ByteArray): String = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
 
     /**
      * NODE_MESH_SPEC.md §3's tolerance-window formula — `ceil(TTL / rotation_interval) + 1`,

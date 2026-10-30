@@ -15,6 +15,59 @@ Package: `com.nexonai.unpruuf` · Architecture: **GRAL** · Built by **NexonAI**
 
 ---
 
+## Whistleblower-Pilot — Rumänisch, Stand 2026‑09‑27
+
+Universitatea 1 Decembrie 1918 Alba Iulia ist rumänischsprachig — alles, was Melder/Ofițer direkt
+sehen, ist jetzt Rumänisch (Details: CHANGELOG.md).
+
+| Baustein | Status |
+|---|---|
+| Android Whistleblower-App | ✅ eigene Flavor-Ressource (280+ Strings), ein Firmen-QR mit automatischem Fall-Eingang, Bildschirm „Mein Fall“ (Fallnummer, Status, Fristen), 70/70 Tests, alle 4 Editionen bauen · 🟡 nicht auf echtem Gerät gesehen |
+| relay-android (Tablet) | ✅ `values-ro` (Gerätesprache-abhängig, betrifft andere Kunden nicht), 8/8 Tests · 🟡 nicht auf Gerät gesehen |
+| officer-app (Dashboard) | ✅ neues Dashboard (9.10.2026): Prezentare generală / Cazuri / Codul organizației / Fall, Fristen farbig, QR „Afișează mare“, Live-Aktualisierung mit Hinweis bei neuem Fall, Verbindungsanzeige, Browser öffnet sich selbst, Schriften gebündelt · 8/8 Tests · 🟡 mit Beispieldaten und Stand-in-Relay geprüft, nicht über echtes Tor und nicht auf einem Windows-Laptop gesehen |
+| web-reporter (Browser-Fallback) | ✅ Seite inkl. Sicherheitshinweis, install/start.bat, Bundle gebaut und geprüft · 🟡 nicht im echten Browser gesehen |
+
+**Echter Bug gefunden:** unescapte Apostrophe in mehreren Standard-(Englisch)-Strings brachen den
+Ressourcen-Build der drei anderen Editionen (Standard/Pro/Client) — die Whistleblower-Edition
+selbst war unauffällig, weil ihre rumänische Fassung dieselben Schlüssel überschreibt. Nur beim
+Bauen ALLER Editionen aufgefallen, jetzt behoben (Details: CHANGELOG.md).
+
+---
+
+## unpruuf Business / Node-Mesh — Stand 2026‑09‑27 (Spec v5)
+
+| Baustein | Status |
+|---|---|
+| `node-mesh-server` (Windows/Linux/Docker/exe) | ✅ eingebauter Tor + PoW, Profile, Slots, Einrichtungsseite, Temp Node, Multi-Node, versiegelte Schlüssel (gesperrt nach Neustart, Entsperren aus der App), Abhol-Cursor — 51/51 Tests, echter lokaler Tor-Lauf (Sperren/Entsperren, gleiche Adressen) · 🟡 Bootstrap 100 %, Windows-Lauf, Docker-Build noch auf echter Maschine prüfen |
+| Android als Node (`relay-android`, Business Node) | ✅ gebaut, 8/8 HTTP-Vertragstests · 🟡 nicht auf Gerät getestet, kein Tor-PoW |
+| Android-Client (Node-Mesh im Messenger) | ✅ Toleranzfenster-Bug behoben, Pro-Kontakt-Schlüssel/-Nodes, gleichmäßiger Abholtakt, Tarn-Ablagen, Entsperren eigener Server — 65/65 Tests × 4 Editionen · 🟡 nicht auf Gerät getestet |
+| Kundendoku | ✅ `NODE_MESH_BETRIEB.md` |
+
+## Build-verification baseline (2026‑09‑26)
+
+The "no Android SDK in this environment" caveat repeated throughout this file
+described this project's ENTIRE history until this date. As of 2026‑09‑26, a
+real Android SDK (platform 34, build-tools 34.0.0) was set up and `unpruuf/
+app/` (all four editions: standard/pro/client/whistleblower) and `unpruuf/
+relay-android/` were **actually compiled, packaged into signed debug APKs,
+and unit-tested** (`./gradlew assembleDebug testDebugUnitTest`, 48 tests ×
+4 editions, all passing) for the first time ever — see `CHANGELOG.md`'s
+"First real Android compile + build" entry for the two real, previously-
+invisible bugs this surfaced and fixed (`RelayManager.ParsedConnection`,
+`TorManager`'s protected-method call).
+
+**What this changes vs. every ⛔/🟡/"not build-verified" marker below:**
+compiles-and-unit-tests-clean is now an established, re-checkable baseline,
+not a one-off claim — but it is a DIFFERENT, WEAKER claim than "verified on
+real hardware." No device, emulator, or camera exists in the environment
+these sessions run in (no KVM for accelerated emulation), so every
+individual feature's own real-hardware status below is unchanged and still
+accurate — this note does not upgrade any of them. Re-run the same build+test
+pass after future Android changes to keep this baseline current; it costs
+a few minutes and would have caught both bugs above immediately.
+
+---
+
 ## Versioning
 
 Two-digit scheme requested by the user: **1.01, 1.02, 1.03, ...** — shown
@@ -34,7 +87,7 @@ checklist, not a one-off.
 |---|---|---|
 | Serverless P2P transport | ✅ | No backend. Each contact = a direct connection. |
 | Tor hidden services | ✅ | Each device runs a hidden service to receive. |
-| LAN fallback (same Wi-Fi) | ✅ | NSD discovery + direct TCP for instant local delivery. |
+| LAN fallback (same Wi-Fi) | ✅ | NSD discovery + direct TCP for instant local delivery — only while a direct contact exists, never in Whistleblower; neutral `_http._tcp` type, hourly-rotating name only contacts can compute, random port (2026‑10‑01). |
 | Works over **any** internet | ✅ | Mobile data, foreign Wi-Fi, network switches. |
 | Network-change resilience | ✅ | On switch, Tor is bounced (DisableNetwork 1→0) so the hidden service re-publishes. |
 | Reliable delivery (ACK + queue) | ✅ | Messages retry until the recipient confirms (ACK). |
@@ -44,7 +97,7 @@ checklist, not a one-off.
 | Idempotent delivery (lost-ACK dedup) | ✅ | Receiver re-ACKs a retried, already-processed packet (bounded SHA-256 LRU) instead of letting it fail Double-Ratchet decryption forever — prevents a lost ACK from permanently jamming a contact's strictly-ordered queue ("poison message"). |
 | Delivery status in chat | ✅ | 🕓 waiting · ✓✓ confirmed by the other device. |
 | End-to-end encryption | ✅ | Double Ratchet (see section 2) over an outer AES-256-GCM transport layer, per-contact symmetric key shared via QR. |
-| Fixed-size packet padding | ✅ | Every packet 4096 bytes → message length hidden. |
+| Fixed-size packet padding | ✅ (with a limit) | Every packet is 4096 bytes on the wire, so a network observer learns no length. The length is readable inside a stored packet by a node or relay operator (finding F1, 14.10.2026, `SECURITY_CLAIMS.md` §1.2). |
 | Chunked transfer (files/photos) | ✅ | Payloads over one packet split into multiple outer packets, each carrying an explicit chunk index, reassembled on receipt (order-independent) — reuses the existing ACK/delivery-queue reliability layer instead of a new transport. Chunks ride the pooled connection in windows of 8 (one ACK round per window, not per chunk), and texts/control signals are always delivered BEFORE queued chunk trains — a running file transfer no longer blocks the chat. |
 | Optional store-and-forward relay | ✅ | Off by default (`RelayManager.RelayMode.OFF`, 2026‑08‑21). A self-hosted, blind Tor-hidden-service mailbox (`unpruuf/server/`) that only ever sees already-encrypted blobs addressed by the same rotating wire tag as the direct path. Three modes, switchable anytime in Settings → Relay: **Off** (never used); **Auto** — tried after direct LAN/Tor delivery fails (covers everything, including chunked file/photo transfers, since chunks carry an explicit index and no longer depend on arrival order), plus now goes straight to the relay for any transfer over 2 MB instead of attempting a slow/fragile direct Tor transfer first; **Mandatory** — every contact skips LAN/Tor-direct entirely, relay only (same shape cross-platform contacts already use unconditionally, made available globally for testing). Requires a bearer token generated per relay instance (not just knowledge of the wire tag) and has an operator-configurable TTL. Runs via Docker (Linux) or a plain Node.js process that manages its own Tor on Windows (`start-windows.bat`) — pairing an app to a relay is scan-a-QR-or-paste-a-string, same UX as pairing a contact. |
 | Relay pool travels in the pairing QR | ✅ (2026‑09‑17) | Until v1.08 the standard Android↔Android QR carried no relay field at all: the sender pushed to its OWN globally configured relay and the receiver polled ITS own, so the relay path only ever delivered when both sides happened to have configured the very same relay — otherwise it silently did nothing. The QR (`v5`) now carries the device's relay pool in a compact `n` field (constant `unpruuf-relay:v1:` prefix stripped, `;`-joined), exactly like the cross-platform QR always did, and both sides store each other's pool at pairing time. Sending goes to the relays the contact advertised, tried in order; polling checks every relay this device advertised to that contact. Pool cap raised 2 → 3 (primary + two fallbacks). Contacts paired before v1.08 keep working via the old global-relay fallback. Nothing is added to the QR when no relay is configured, so non-relay users keep the small QR they had. |
@@ -76,7 +129,7 @@ checklist, not a one-off.
 | QR re-scan overwrite protection | ✅ (2026‑09‑17) | Contact rows are now keyed by a local-only random id, not the value a scanned QR claims to be — a QR encoding an existing contact's pairing identity with *different* keys is rejected with a warning instead of silently replacing their (possibly already safety-number-verified) keys. An identical re-scan of an already-added contact is a no-op, not a duplicate. |
 | Per-contact onion address | 🟡 | New pairings share the device's main onion (for reliability); older pairings keep their per-contact onion. Address isolation is therefore partial — ID isolation is full. The contact list now proactively surfaces a "N contacts may have an outdated address" banner (one tap migrates all of them) instead of requiring the user to notice the per-chat sync button on their own. |
 | Verified onion — separate, daily-rotating address for verified contacts | 🟡 (2026‑09‑17, **not tested against real Tor**) | A second onion (`TorManager.ensureVerifiedOnion()`), distinct from the shared main/pairing onion above — only `isVerified` contacts (safety-number confirmed) are ever moved onto it, and its Ed25519 key is re-derived deterministically once a day (`Ed25519OnionDerivation`, from a device-local `IdentityManager.verifiedOnionFactor` that's never sent anywhere) instead of staying fixed forever. Announced to verified contacts once at verification and again on every actual rotation — self-tested (a self-connect probe) before ever being announced, so a bad derivation surfaces as "nothing got announced" rather than silently breaking a contact's reachability. Narrows, does not eliminate, the "two of your verified contacts could compare addresses" gap: they still share one address at any given moment, just one that changes daily instead of forever. See `SECURITY_CLAIMS.md` §1.3 for the honest limits (why contacts DON'T independently compute the rotated address themselves — that would need hand-rolled Ed25519 point math + SHA3-256, judged too risky to ship unverified) and the standing **please confirm on two real devices before trusting this for anything sensitive** caveat. |
-| LAN (same-Wi-Fi) discovery still broadcasts the global userId | 🟡 (known gap, 2026‑09‑17) | The mDNS/NSD service name used for same-Wi-Fi discovery (`registerService`/`discoverPeers`) is still `unpruuf_<first 8 chars of IdentityManager.userId>` — unlike the wire-tag (now per-contact, see above), this is still one value, visible to anyone on the same Wi-Fi network, not just paired contacts. Renewing the pairing identity in Settings also changes this. Not fixed in this pass — would need per-contact LAN service registration, a bigger change with real Android NSD framework limits to work through first. |
+| LAN (same-Wi-Fi) discovery broadcast the global userId | ✅ closed 2026‑10‑01 | See `CHANGELOG.md` 2026‑10‑01 (6) and `LanDiscovery.kt`. |
 | Copy/paste pairing (debug builds only) | ✅ (2026‑08‑21) | Pairing normally requires an in-person QR scan. Debug builds add a "copy code"/"paste their code" fallback in `QrPairScreen` for testers who can't be scanned in person — same dispatch and contact-creation path as a real scan, just fed from clipboard text instead of a camera. Not present in release builds on purpose: skips the physical-proximity check a QR scan gives you. |
 | Safety-number verification | ✅ (2026‑08‑23) | Tap the shield icon next to any contact to see a 6-digit code (`IdentityManager.safetyNumber()`, derived from both devices' static X25519 identity keys) and enter the code they read back to you over a different channel (a call). Matches are saved as a local "Verified" flag on the contact; mismatches are shown but never saved. Works offline on both sides — no live network round-trip — so it fits the same always-online-not-guaranteed constraint as the rest of the P2P design. Mainly closes the trust gap in the copy/paste debug pairing flow above, but works for any contact, including ones added by a normal QR scan. |
 
@@ -93,7 +146,8 @@ checklist, not a one-off.
 | Feature | Status | Notes |
 |---|---|---|
 | PIN lock | ✅ | Opens only after PIN (PBKDF2-salted hash, never stored in clear). |
-| Panic PIN | ✅ | Separate PIN instantly wipes all contacts + keys, opens the app empty. |
+| Panic PIN | ✅ | Separate PIN instantly wipes contacts, ratchet sessions, per-contact onion keys, Pro Groups, own nodes with owner secrets, node lists, feed sources, relay setup and the organisation QR; opens the app empty (identity keys, licence and PINs stay). Widened 2026‑10‑19; device test open. |
+| PIN lock-out | ✅ (2026‑10‑19) | From the 5th wrong try the pad locks 30 s, doubling to 1 h; PIN hashes sealed under the Keystore key. Root can reset the counter. |
 | Re-lock on background/lock | ✅ | PIN required again after leaving app or screen-off. |
 | Delete chat (revoke) | ✅ | Wipes messages on both sides, keeps the contact. |
 | Bidirectional contact deletion | ✅ | Deleting a contact deletes it on the other phone too (queued, retried). |
@@ -277,6 +331,12 @@ it structurally CANNOT enforce a global seat count (no device knows what any oth
 | Expiry warning + hard gate | ✅ | Settings → License always shows status/serial/customer/days-left. `MainActivity` hard-blocks reaching the app (`LicenseLockScreen`) for any state except Valid/ExpiringSoon — PIN, panic-PIN, and all RAM message data are completely unaffected by license state. |
 | Debug-build bypass | ✅ (2026‑08‑21) | Debug builds skip the license gate entirely (`BuildConfig.DEBUG` in `MainActivity`) — device-binding otherwise meant every fresh test install needed its own distinct code. Release builds enforce the gate exactly as above, untouched. |
 | Renewal | 🟡 | Same offline flow as activation — `issue.js` again for the same serial, paste the new code into Settings → License. Fully manual; no push/notification when a renewal is due beyond the in-app "expires in N days" line once ExpiringSoon starts (30 days out). |
+| Rotating list feed (company → employees) | ✅ built, 🟡 not run against a real Tor (2026‑10‑06) | `node-mesh-server/src/feed/`, `start-feed.bat`, app: Settings → Node lists → Company feeds. Onion address derived from a shared secret and the period (default 6 h), service keeps current + next/previous alive; list encrypted + signed, sealed keys on the server, no rollback in the app. Server 84 tests, app `FeedCryptoTest` 11 (reads vectors made by the server code, incl. a real published onion address and NIST SHA3 vectors). Tor client authorization not built. First real-server check: setup page reaches "ready" and the app finds the feed. |
+| Fixed node count + node lists + capacity display | ✅ (2026‑10‑06) | Server always runs the licensed number of nodes (max 250), no setting. Setup page exports a node-list file; the app imports it into named lists (Settings → Node lists) and requires choosing a list when adding a contact (3 nodes from that list). Android node has the same licence check. Server 71/71, Android node 15/15, app 82/82 in each of the 4 editions. (The "contacts a node count carries" display was removed again on 2026‑10‑08, see next row.) 🟡 Not seen on a real device. Real private key not used yet. |
+| Tor blocked: automatic connection + company bridge | ✅ built (2026‑10‑11), 🟡 not run on a network that blocks Tor | App: direct → company bridge → obfs4 → Snowflake, remembered, shown in Settings. Company bridge: `start-bridge.bat/.sh`, line pasted on the setup page, travels in node list and feed as `bridge:`. Server 100/100, app 12 new tests. Snowflake client fixed (was the volunteer proxy). Not done: officer app, the node server's own Tor, iOS (Norbert). |
+| Node server release integrity | ✅ (2026‑10‑10) | Signed list of program-file hashes (`release-manifest.txt`), self-check at start and hourly, "Programm" row on the overview and setup page, `NODE_MESH_REQUIRE_SIGNED=1`, `verify-release.bat/.sh`, signing in the licence tool (`sign-release.js` + GUI card). Server 94/94. 🟡 Real signing key not used yet; Windows-built bytes not compared with a Linux build; a self-check only, cannot prove a running machine clean. |
+| Shared nodes + packet lifetime per chat + RAM store | ✅ (2026‑10‑08) | Contacts now share nodes (3 picked at random per contact, spread over servers); the "room for N contacts" display is gone. Per chat 1 / 6 / 24 h packet lifetime (clock icon, DB v12). `NODE_MESH_STORE=ram` keeps waiting packets in memory only. Server 83/83, app 94/94 in standard and whistleblower. 🟡 Not seen on a real device; no load test yet (the 100 users per node figure is calculated). Android node: packets still on disk. |
+| Server licence (Business Node) | ✅ (2026‑10‑06) | `node-mesh-server/src/license.ts`. `unpruuf-server-license:v1:…`, same Ed25519 key, signed over a domain prefix. Checked offline; no device binding (a server has no stable identity). Bounds node count (1–500) and expiry. No licence = only the setup page runs; expired = deposits 402, fetch still works. Issued with `license-tool/issue-server.js` or the GUI. Tests 65/65, plus a real run with a throw-away key. Not run with the real private key. Honest limit: readable JS on the customer's machine, so a contract limit, not copy protection. |
 | Verified against a real build | ⛔ | Same limitation as the rest of this project — no Android SDK here to compile the Kotlin. What COULD be verified without one was: the Ed25519 cross-compatibility (Node signer → Tink verifier, run for real, not assumed) and the license-tool's own Node code (keygen/issue/verify all actually run, including a tamper test). |
 
 ## 13. Android cross-platform mode (iOS-interop companion, + Business/Mandatory pairing since v1.10)

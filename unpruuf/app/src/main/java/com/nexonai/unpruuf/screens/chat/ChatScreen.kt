@@ -25,8 +25,10 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +47,10 @@ import com.nexonai.unpruuf.data.model.Contact
 import com.nexonai.unpruuf.data.repository.MessageType
 import com.nexonai.unpruuf.data.repository.RamMessage
 import com.nexonai.unpruuf.screens.qrpair.PortraitCaptureActivity
+import androidx.compose.ui.res.stringResource
+import com.nexonai.unpruuf.R
+import com.nexonai.unpruuf.domain.AppEdition
+import com.nexonai.unpruuf.domain.network.MessageTtl
 import kotlinx.coroutines.delay
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -66,19 +72,32 @@ fun ChatScreen(
     onNavigateToSettings: () -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel()
 ) {
+    // Whistleblower: a chat IS a case — two tabs, "Status" and "Messages". A brand-new case
+    // opens on Messages (the report still has to be written), an existing one on Status.
+    val caseMode = AppEdition.isWhistleblower
+    var caseTab by rememberSaveable { mutableStateOf(-1) }
+    var showRemoveCaseDialog by remember { mutableStateOf(false) }
     val contact by viewModel.contact.collectAsState()
+    LaunchedEffect(contact != null) {
+        if (caseMode && caseTab == -1 && contact != null) caseTab = if (contact?.caseNumber == null) 1 else 0
+    }
     val messages by viewModel.messages.collectAsState()
     val sendError by viewModel.sendError.collectAsState()
     val revoked by viewModel.revoked.collectAsState()
     val deliveredIds by viewModel.deliveredIds.collectAsState()
+    val guestIssues by viewModel.guestIssues.collectAsState()
     var inputText by remember { mutableStateOf("") }
     var showRevokeDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showTtlDialog by remember { mutableStateOf(false) }
+    var showGuestDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf("") }
     var cameraPermissionDenied by remember { mutableStateOf(false) }
     var fullscreenImage by remember { mutableStateOf<RamMessage?>(null) }
     var showTempNodeDialog by remember { mutableStateOf(false) }
     val tempNodeError by viewModel.tempNodeError.collectAsState()
+    val phoneNodeState by viewModel.phoneTempNodeState.collectAsState()
+    val tempNodeScanPrompt = stringResource(R.string.chat_temp_node_scan_prompt)
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -125,7 +144,7 @@ fun ChatScreen(
             tempNodeScanLauncher.launch(
                 ScanOptions().apply {
                     setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                    setPrompt("Scan Temp Node connection string")
+                    setPrompt(tempNodeScanPrompt)
                     setBeepEnabled(false)
                     setBarcodeImageEnabled(false)
                     setOrientationLocked(true)
@@ -157,6 +176,7 @@ fun ChatScreen(
 
     if (showRevokeDialog) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { showRevokeDialog = false },
             icon = {
                 Icon(
@@ -165,13 +185,13 @@ fun ChatScreen(
                     tint = MaterialTheme.colorScheme.error
                 )
             },
-            title = { Text("Delete chat?") },
+            title = { Text(stringResource(R.string.chat_delete_chat_title)) },
             text = {
                 Text(
-                    "All messages with ${contact?.displayName ?: "this contact"} will be " +
-                    "wiped from RAM immediately – on both sides. " +
-                    "The contact stays.\n\n" +
-                    "This action cannot be undone.",
+                    stringResource(
+                        R.string.chat_delete_chat_body,
+                        contact?.displayName ?: stringResource(R.string.chat_this_contact)
+                    ),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -185,26 +205,89 @@ fun ChatScreen(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Delete chat", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.chat_delete_chat_button), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRevokeDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.chat_cancel))
                 }
+            }
+        )
+    }
+
+    if (showTtlDialog) {
+        val current = MessageTtl.normalize(contact?.messageTtlHours)
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { showTtlDialog = false },
+            title = { Text(stringResource(R.string.chat_ttl_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.chat_ttl_body), style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+                    MessageTtl.STEPS_HOURS.forEach { hours ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setMessageTtl(hours)
+                                    showTtlDialog = false
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = hours == current, onClick = {
+                                viewModel.setMessageTtl(hours)
+                                showTtlDialog = false
+                            })
+                            Text(stringResource(R.string.chat_ttl_option, hours))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTtlDialog = false }) { Text(stringResource(R.string.chat_cancel)) }
+            }
+        )
+    }
+
+    if (showGuestDialog && contact?.guestRenewal != null) {
+        val policy = com.nexonai.unpruuf.domain.network.GuestRenewal.decodePolicy(contact?.guestRenewal)
+        val renewing = policy?.renewing == true
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { showGuestDialog = false },
+            title = { Text(stringResource(R.string.guest_access_title)) },
+            text = {
+                Text(
+                    if (renewing) stringResource(R.string.guest_access_renewing, policy?.validityDays ?: 7)
+                    else stringResource(R.string.guest_access_stopped),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setGuestRenewing(!renewing)
+                    showGuestDialog = false
+                }) { Text(stringResource(if (renewing) R.string.guest_access_stop else R.string.guest_access_resume)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGuestDialog = false }) { Text(stringResource(R.string.chat_cancel)) }
             }
         )
     }
 
     if (showRenameDialog) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename contact") },
+            title = { Text(stringResource(R.string.chat_rename_contact_title)) },
             text = {
                 OutlinedTextField(
                     value = renameText,
                     onValueChange = { renameText = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.chat_name_field)) },
                     singleLine = true
                 )
             },
@@ -216,21 +299,22 @@ fun ChatScreen(
                         }
                         showRenameDialog = false
                     }
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.chat_save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRenameDialog = false }) { Text(stringResource(R.string.chat_cancel)) }
             }
         )
     }
 
     if (cameraPermissionDenied) {
         AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
             onDismissRequest = { cameraPermissionDenied = false },
-            title = { Text("Camera permission needed") },
-            text = { Text("Allow camera access in system settings to take a photo.") },
+            title = { Text(stringResource(R.string.chat_camera_permission_title)) },
+            text = { Text(stringResource(R.string.chat_camera_permission_body)) },
             confirmButton = {
-                TextButton(onClick = { cameraPermissionDenied = false }) { Text("OK") }
+                TextButton(onClick = { cameraPermissionDenied = false }) { Text(stringResource(R.string.chat_ok)) }
             }
         )
     }
@@ -246,7 +330,7 @@ fun ChatScreen(
                     tempNodeScanLauncher.launch(
                         ScanOptions().apply {
                             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                            setPrompt("Scan Temp Node connection string")
+                            setPrompt(tempNodeScanPrompt)
                             setBeepEnabled(false)
                             setBarcodeImageEnabled(false)
                             setOrientationLocked(true)
@@ -258,6 +342,10 @@ fun ChatScreen(
                 }
             },
             onPaste = { raw -> viewModel.activateTempNode(raw) },
+            phoneSupported = viewModel.phoneTempNodeSupported,
+            phoneState = phoneNodeState,
+            phoneBusyElsewhere = viewModel.phoneTempNodeBusyElsewhere(),
+            onStartPhone = { viewModel.startPhoneTempNode() },
             onDeactivate = {
                 viewModel.deactivateTempNode()
                 showTempNodeDialog = false
@@ -271,7 +359,12 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column(
+                    if (caseMode) {
+                        Text(
+                            contact?.caseNumber ?: stringResource(R.string.case_new_title),
+                            fontFamily = if (contact?.caseNumber != null) androidx.compose.ui.text.font.FontFamily.Monospace else null
+                        )
+                    } else Column(
                         modifier = Modifier.clickable {
                             renameText = contact?.displayName ?: ""
                             showRenameDialog = true
@@ -279,7 +372,7 @@ fun ChatScreen(
                     ) {
                         Text(contact?.displayName ?: "...")
                         Text(
-                            "End-to-end encrypted • tap to rename",
+                            stringResource(R.string.chat_e2e_encrypted_tap_to_rename),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -287,61 +380,91 @@ fun ChatScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.Default.ArrowBack, stringResource(R.string.chat_cd_back))
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        renameText = contact?.displayName ?: ""
-                        showRenameDialog = true
-                    }) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Rename",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = { viewModel.sendConnectionInfoUpdate() }) {
-                        Icon(
-                            Icons.Default.Sync,
-                            contentDescription = "Send updated connection info",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    // Cross-platform (iOS-interop) contacts only — see CROSS_PLATFORM_PLAN.md.
-                    // Manual wire-tag rotation; these contacts have no automatic hourly clock.
-                    if (contact?.crossPlatform == true) {
-                        IconButton(onClick = { viewModel.wechsel() }) {
+                    if (caseMode) {
+                        IconButton(onClick = { showRemoveCaseDialog = true }) {
                             Icon(
-                                Icons.Default.Autorenew,
-                                contentDescription = "Wechsel (rotate wire tag)",
+                                Icons.Default.DeleteForever,
+                                contentDescription = stringResource(R.string.case_remove),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = {
+                            renameText = contact?.displayName ?: ""
+                            showRenameDialog = true
+                        }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.chat_cd_rename),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                    }
-                    // Temp Node (NODE_MESH_SPEC.md §7) — Node-Mesh contacts only.
-                    if (contact?.nodeMesh == true) {
-                        IconButton(onClick = { showTempNodeDialog = true }) {
+                        IconButton(onClick = { viewModel.sendConnectionInfoUpdate() }) {
                             Icon(
-                                Icons.Default.Router,
-                                contentDescription = "Temp Node",
-                                tint = if (contact?.tempNodeAddress != null) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                Icons.Default.Sync,
+                                contentDescription = stringResource(R.string.chat_cd_send_connection_update),
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                    }
-                    IconButton(onClick = { showRevokeDialog = true }) {
-                        Icon(
-                            Icons.Default.DeleteForever,
-                            contentDescription = "Delete chat",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                        // Cross-platform (iOS-interop) contacts only — see CROSS_PLATFORM_PLAN.md.
+                        // Manual wire-tag rotation; these contacts have no automatic hourly clock.
+                        if (contact?.crossPlatform == true) {
+                            IconButton(onClick = { viewModel.wechsel() }) {
+                                Icon(
+                                    Icons.Default.Autorenew,
+                                    contentDescription = stringResource(R.string.chat_cd_wechsel),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        // How long my packets for this chat wait on the nodes — Node-Mesh contacts only.
+                        if (contact?.nodeMesh == true) {
+                            IconButton(onClick = { showTtlDialog = true }) {
+                                Icon(
+                                    Icons.Default.Timer,
+                                    contentDescription = stringResource(R.string.chat_cd_ttl),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        // Pro app: a guest I invited. Shows and controls the automatic renewal of its access.
+                        if (contact?.guestRenewal != null) {
+                            IconButton(onClick = { showGuestDialog = true }) {
+                                Icon(
+                                    Icons.Default.Autorenew,
+                                    contentDescription = stringResource(R.string.chat_cd_guest_access),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        // Temp Node (NODE_MESH_SPEC.md §7) — Node-Mesh contacts only.
+                        if (contact?.nodeMesh == true) {
+                            IconButton(onClick = { showTempNodeDialog = true }) {
+                                Icon(
+                                    Icons.Default.Router,
+                                    contentDescription = stringResource(R.string.chat_cd_temp_node),
+                                    tint = if (contact?.tempNodeAddress != null) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        IconButton(onClick = { showRevokeDialog = true }) {
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = stringResource(R.string.chat_delete_chat_button),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             )
         },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
+            if (!caseMode || caseTab == 1) Surface(shadowElevation = 8.dp) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -356,7 +479,7 @@ fun ChatScreen(
                         viewModel.beginExternalPickerGrace()
                         filePicker.launch("*/*")
                     }) {
-                        Icon(Icons.Default.AttachFile, "Attach file")
+                        Icon(Icons.Default.AttachFile, stringResource(R.string.chat_cd_attach_file))
                     }
                     IconButton(onClick = {
                         // Same grace as the file picker — the camera (and on some OEMs even
@@ -366,13 +489,13 @@ fun ChatScreen(
                             PackageManager.PERMISSION_GRANTED
                         if (granted) cameraLauncher.launch(null) else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }) {
-                        Icon(Icons.Default.PhotoCamera, "Take photo")
+                        Icon(Icons.Default.PhotoCamera, stringResource(R.string.chat_cd_take_photo))
                     }
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Message…") },
+                        placeholder = { Text(stringResource(R.string.chat_message_placeholder)) },
                         shape = RoundedCornerShape(24.dp),
                         maxLines = 4
                     )
@@ -385,7 +508,7 @@ fun ChatScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Send, "Send")
+                        Icon(Icons.Default.Send, stringResource(R.string.chat_cd_send))
                     }
                 }
             }
@@ -412,71 +535,105 @@ fun ChatScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (oldestPendingAgeMs != null && oldestPendingAgeMs > STILL_CONNECTING_HINT_MS) {
-                StillConnectingHint(
-                    relayConfigured = viewModel.isRelayConfigured(),
-                    onSetUpRelay = onNavigateToSettings
-                )
+            if (caseMode) {
+                TabRow(selectedTabIndex = caseTab.coerceAtLeast(0)) {
+                    Tab(selected = caseTab == 0, onClick = { caseTab = 0 }, text = { Text(stringResource(R.string.case_tab_status)) })
+                    Tab(selected = caseTab == 1, onClick = { caseTab = 1 }, text = { Text(stringResource(R.string.case_tab_messages)) })
+                }
             }
-            if (messages.isEmpty()) {
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (caseMode && caseTab != 1) {
+                com.nexonai.unpruuf.screens.caseview.CaseStatusContent(contact, Modifier.weight(1f).fillMaxWidth())
+            } else {
+                // Free Client app: say plainly what an invitation problem means (never silent).
+                val guestStatus = com.nexonai.unpruuf.domain.network.GuestClient.status(contact?.guestGrants, System.currentTimeMillis())
+                val guestIssue = contact?.id?.let { guestIssues[it] }
+                val guestHint = when {
+                    guestStatus == com.nexonai.unpruuf.domain.network.GuestClient.Status.EXPIRED -> R.string.guest_status_expired
+                    guestIssue == com.nexonai.unpruuf.domain.network.P2PNetworkManager.GuestIssue.REFUSED -> R.string.guest_status_refused
+                    guestIssue == com.nexonai.unpruuf.domain.network.P2PNetworkManager.GuestIssue.QUOTA -> R.string.guest_status_quota
+                    guestStatus == com.nexonai.unpruuf.domain.network.GuestClient.Status.EXPIRING -> R.string.guest_status_expiring
+                    else -> null
+                }
+                if (guestHint != null) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
                         Text(
-                            "No messages",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Messages are stored only in RAM\nand wiped when the screen locks",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
+                            stringResource(guestHint),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
                     }
                 }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    // The RAM wipe made visible: a quiet marker where history ends. Everything
-                    // before this point is gone by design (5-min TTL, background/lock wipes) —
-                    // absence shown deliberately instead of pretending history starts here.
-                    item(key = "ram-ghost") {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = androidx.compose.ui.graphics.Color.Transparent,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                                )
-                            ) {
-                                Text(
-                                    "older messages wiped from RAM",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                                )
-                            }
+                if (oldestPendingAgeMs != null && oldestPendingAgeMs > STILL_CONNECTING_HINT_MS) {
+                    StillConnectingHint(
+                        relayConfigured = viewModel.isRelayConfigured(),
+                        onSetUpRelay = onNavigateToSettings
+                    )
+                }
+                if (messages.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                stringResource(R.string.chat_no_messages),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.chat_no_messages_body),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
-                    items(messages, key = { it.id }) { message ->
-                        MessageBubble(
-                            message = message,
-                            displayText = viewModel.getDisplayText(message),
-                            delivered = message.id in deliveredIds,
-                            onImageTap = { fullscreenImage = message }
-                        )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        // The RAM wipe made visible: a quiet marker where history ends. Everything
+                        // before this point is gone by design (5-min TTL, background/lock wipes) —
+                        // absence shown deliberately instead of pretending history starts here.
+                        item(key = "ram-ghost") {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = androidx.compose.ui.graphics.Color.Transparent,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                                    )
+                                ) {
+                                    Text(
+                                        stringResource(R.string.chat_older_messages_wiped),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+                        items(messages, key = { it.id }) { message ->
+                            MessageBubble(
+                                message = message,
+                                displayText = viewModel.getDisplayText(message),
+                                delivered = message.id in deliveredIds,
+                                onImageTap = { fullscreenImage = message }
+                            )
+                        }
                     }
                 }
             }
@@ -485,6 +642,24 @@ fun ChatScreen(
 
     fullscreenImage?.let { message ->
         FullscreenImageDialog(message, onDismiss = { fullscreenImage = null })
+    }
+
+    if (showRemoveCaseDialog) {
+        AlertDialog(
+            properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
+            onDismissRequest = { showRemoveCaseDialog = false },
+            title = { Text(stringResource(R.string.case_remove_title)) },
+            text = { Text(stringResource(R.string.case_remove_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRemoveCaseDialog = false
+                    viewModel.removeCaseFromDevice()
+                }) { Text(stringResource(R.string.case_remove_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveCaseDialog = false }) { Text(stringResource(R.string.settings_cancel)) }
+            }
+        )
     }
 }
 
@@ -515,21 +690,21 @@ private fun StillConnectingHint(relayConfigured: Boolean, onSetUpRelay: () -> Un
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Still connecting…",
+                        stringResource(R.string.chat_still_connecting),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "first message on mobile data can take a few minutes",
+                        stringResource(R.string.chat_still_connecting_body),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
                 if (!relayConfigured) {
                     Text(
-                        "Set up a relay to avoid this wait — Settings ›",
+                        stringResource(R.string.chat_set_up_relay_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -558,21 +733,40 @@ private fun TempNodeDialog(
     error: String?,
     onScan: () -> Unit,
     onPaste: (String) -> Boolean,
+    phoneSupported: Boolean,
+    phoneState: com.nexonai.unpruuf.domain.network.PhoneTempNode.State,
+    phoneBusyElsewhere: Boolean,
+    onStartPhone: () -> Unit,
     onDeactivate: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var pasteInput by remember { mutableStateOf("") }
 
     AlertDialog(
+        properties = com.nexonai.unpruuf.ui.SecureDialogProperties,
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Router, contentDescription = null) },
-        title = { Text("Temp Node") },
+        title = { Text(stringResource(R.string.chat_temp_node_title)) },
         text = {
             Column {
                 if (contact.tempNodeAddress != null) {
+                    if (contact.tempNodeOnPhone) {
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_running),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
                     Text(
-                        if (contact.tempNodeActive) "Active — this chat's outgoing traffic uses only this node."
-                        else "Registered, not yet confirmed — sending on both the standard nodes and this one until the first message gets through.",
+                        if (contact.tempNodeActive) stringResource(R.string.chat_temp_node_active)
+                        else stringResource(R.string.chat_temp_node_pending),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(8.dp))
@@ -582,15 +776,47 @@ private fun TempNodeDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
+                    if (phoneSupported) {
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_title),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.chat_temp_node_phone_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        val starting = phoneState is com.nexonai.unpruuf.domain.network.PhoneTempNode.State.Starting
+                        Button(
+                            onClick = onStartPhone,
+                            enabled = !starting && !phoneBusyElsewhere,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(if (starting) R.string.chat_temp_node_phone_starting else R.string.chat_temp_node_phone_start))
+                        }
+                        if (phoneBusyElsewhere) {
+                            Text(
+                                stringResource(R.string.msg_phone_tn_busy),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(12.dp))
+                    }
                     Text(
-                        "Use a second device (phone, tablet, laptop) as an extra node for just this chat — scan or paste the connection string it prints on startup.",
+                        stringResource(R.string.chat_temp_node_intro),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = pasteInput,
                         onValueChange = { pasteInput = it },
-                        label = { Text("Connection string") },
+                        label = { Text(stringResource(R.string.chat_temp_node_connection_string_field)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -608,33 +834,32 @@ private fun TempNodeDialog(
         confirmButton = {
             if (contact.tempNodeAddress != null) {
                 TextButton(onClick = onDeactivate) {
-                    Text("Deactivate", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.chat_temp_node_deactivate), color = MaterialTheme.colorScheme.error)
                 }
             } else {
                 TextButton(onClick = {
                     if (pasteInput.isNotBlank() && onPaste(pasteInput)) pasteInput = ""
-                }) { Text("Add") }
+                }) { Text(stringResource(R.string.chat_temp_node_add)) }
             }
         },
         dismissButton = {
             Row {
                 if (contact.tempNodeAddress == null) {
-                    TextButton(onClick = onScan) { Text("Scan") }
+                    TextButton(onClick = onScan) { Text(stringResource(R.string.chat_temp_node_scan)) }
                 }
-                TextButton(onClick = onDismiss) { Text("Close") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.chat_close)) }
             }
         }
     )
 }
 
-private fun decodeImage(body: ByteArray) =
-    runCatching { BitmapFactory.decodeByteArray(body, 0, body.size)?.asImageBitmap() }.getOrNull()
+private fun decodeImage(body: ByteArray) = com.nexonai.unpruuf.ui.SafeImage.decode(body)
 
 @Composable
 private fun FullscreenImageDialog(message: RamMessage, onDismiss: () -> Unit) {
     val body = message.content ?: return
     val bitmap = remember(message.id) { decodeImage(body) }
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss, properties = com.nexonai.unpruuf.ui.SecureDialogProperties) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -696,7 +921,7 @@ private fun MessageBubble(message: RamMessage, displayText: String, delivered: B
                     )
                 } else {
                     Text(
-                        "📷 ${message.fileName ?: "Photo"}",
+                        "📷 ${message.fileName ?: stringResource(R.string.chat_photo_fallback)}",
                         color = if (isOutgoing) MaterialTheme.colorScheme.onPrimaryContainer
                         else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(8.dp)

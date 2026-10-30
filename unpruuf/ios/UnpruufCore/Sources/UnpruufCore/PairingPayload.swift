@@ -29,21 +29,34 @@ public struct PairingPayload: Equatable {
     /// send messages addressed to me. First entry is preferred/primary; a contact tries the rest
     /// only if it fails. Capped at `RelayConnectionString.maxPoolSize` by `buildList`/`fromJSON`.
     public let relayConnectionStrings: [String]
+    /// Optional edition tag (`"e"` on the wire). Nil for the normal consumer app, whose QR has never
+    /// carried one. unpruuf Compliance uses it: the reporting office's QR says `"officer"` and a
+    /// reporter's own code says `"whistleblower"` — the officer-app refuses anything else, and the
+    /// reporter app refuses a QR that is not an office's.
+    public let appEdition: String?
 
-    public init(userId: String, messageKeyBase64: String, x25519RatchetPublicKeyBase64: String, relayConnectionStrings: [String]) {
+    public init(
+        userId: String, messageKeyBase64: String, x25519RatchetPublicKeyBase64: String,
+        relayConnectionStrings: [String], appEdition: String? = nil
+    ) {
         self.version = 2
         self.userId = userId
         self.messageKeyBase64 = messageKeyBase64
         self.x25519RatchetPublicKeyBase64 = x25519RatchetPublicKeyBase64
         self.relayConnectionStrings = relayConnectionStrings
+        self.appEdition = appEdition
     }
 
-    private init(version: Int, userId: String, messageKeyBase64: String, x25519RatchetPublicKeyBase64: String, relayConnectionStrings: [String]) {
+    private init(
+        version: Int, userId: String, messageKeyBase64: String, x25519RatchetPublicKeyBase64: String,
+        relayConnectionStrings: [String], appEdition: String?
+    ) {
         self.version = version
         self.userId = userId
         self.messageKeyBase64 = messageKeyBase64
         self.x25519RatchetPublicKeyBase64 = x25519RatchetPublicKeyBase64
         self.relayConnectionStrings = relayConnectionStrings
+        self.appEdition = appEdition
     }
 
     /// Encodes to the compact wire JSON. `n` (relay connection pool, `;`-joined) already contains
@@ -52,7 +65,8 @@ public struct PairingPayload: Equatable {
     public func toJSON() -> String {
         let u = Self.compactUserId(userId) ?? userId
         let n = RelayConnectionString.buildList(relayConnectionStrings)
-        return "{\"v\":\(version),\"u\":\"\(u)\",\"p\":\"\(messageKeyBase64)\",\"k\":\"\(x25519RatchetPublicKeyBase64)\",\"n\":\"\(Self.escape(n))\"}"
+        let e = appEdition.map { ",\"e\":\"\(Self.escape($0))\"" } ?? ""
+        return "{\"v\":\(version),\"u\":\"\(u)\",\"p\":\"\(messageKeyBase64)\",\"k\":\"\(x25519RatchetPublicKeyBase64)\",\"n\":\"\(Self.escape(n))\"\(e)}"
     }
 
     /// Accepts both today's list-valued `n` and — forwards/backwards compatibility isn't the
@@ -66,7 +80,10 @@ public struct PairingPayload: Equatable {
         let v = map["v"].flatMap { Int($0) } ?? 1
         let relays = Array(RelayConnectionString.parseList(Self.unescape(n)).prefix(RelayConnectionString.maxPoolSize))
         guard !relays.isEmpty else { return nil }
-        return PairingPayload(version: v, userId: userId, messageKeyBase64: p, x25519RatchetPublicKeyBase64: k, relayConnectionStrings: relays)
+        return PairingPayload(
+            version: v, userId: userId, messageKeyBase64: p, x25519RatchetPublicKeyBase64: k,
+            relayConnectionStrings: relays, appEdition: map["e"]
+        )
     }
 
     /// 36-char dashed UUID string -> 22-char unpadded Base64 of its 16 raw bytes — same encoding

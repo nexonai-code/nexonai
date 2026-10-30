@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -17,8 +19,8 @@ android {
         // Bump both fields together on every delivery — versionCode must strictly
         // increase for Play/internal distribution, versionName is what's shown in
         // Settings (see SettingsScreen's "App version" row). See STATUS.md "Versioning".
-        versionCode = 15
-        versionName = "1.14"
+        versionCode = 18
+        versionName = "1.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -38,8 +40,48 @@ android {
         )
     }
 
+    // Fester NexonAI-Testschluessel fuer Debug-Builds: Wer die zwei Dateien unpruuf-test.jks und
+    // keystore.properties in den Ordner unpruuf/ legt, baut Debug-APKs mit demselben Schluessel wie
+    // jeder andere Build mit diesen Dateien (Updates ohne Deinstallieren, auch zwischen PC und
+    // Cloud-Builds). Ohne die Dateien: normaler Android-Studio-Debug-Schluessel, nichts bricht.
+    // Die Dateien stehen in .gitignore und gehoeren nie ins Repository. Nur fuer Tests, nie fuer Kunden.
+    val testKeystoreProps = Properties().apply {
+        val f = file("../keystore.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val testKeystoreFile = testKeystoreProps.getProperty("storeFile")?.let { file("../keystore.properties").resolveSibling(it) }
+    // Release-Schluessel fuer Kunden-Builds: release.properties + unpruuf-release.jks in unpruuf/ (nie im
+    // Repository). Fehlen sie, bleibt der Release-Build UNSIGNIERT, er faellt nie auf einen Test-Schluessel zurueck.
+    val releaseKeystoreProps = Properties().apply {
+        val f = file("../release.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val releaseKeystoreFile = releaseKeystoreProps.getProperty("storeFile")?.let { file("../release.properties").resolveSibling(it) }
+    signingConfigs {
+        if (releaseKeystoreFile != null && releaseKeystoreFile.exists()) {
+            create("nexonaiRelease") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystoreProps.getProperty("storePassword")
+                keyAlias = releaseKeystoreProps.getProperty("keyAlias")
+                keyPassword = releaseKeystoreProps.getProperty("keyPassword")
+            }
+        }
+        if (testKeystoreFile != null && testKeystoreFile.exists()) {
+            create("nexonaiTest") {
+                storeFile = testKeystoreFile
+                storePassword = testKeystoreProps.getProperty("storePassword")
+                keyAlias = testKeystoreProps.getProperty("keyAlias")
+                keyPassword = testKeystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfigs.findByName("nexonaiTest")?.let { signingConfig = it }
+        }
         release {
+            signingConfigs.findByName("nexonaiRelease")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -91,6 +133,42 @@ android {
             buildConfigField("String", "EDITION", "\"client\"")
             resValue("string", "app_name", "unpruuf Client")
         }
+        // unpruuf Pro Groups: the Pro (Business) app plus local groups (a group message is sent as
+        // one ordinary 1:1 message per member; see domain/group/ and EDITIONS.md). Own install id
+        // so it sits next to Pro; pairs only with other Groups installs (AppEdition.canAdd).
+        create("group") {
+            dimension = "edition"
+            applicationIdSuffix = ".group"
+            versionNameSuffix = "-group"
+            buildConfigField("String", "EDITION", "\"group\"")
+            resValue("string", "app_name", "unpruuf Pro Groups")
+        }
+        // Compliance/whistleblower product line (separate from Standard/Pro/Client — see
+        // CROSS_PLATFORM_PLAN.md "Two separate product lines" and AppEdition.kt). Deliberately
+        // has NO app/src/whistleblower/res of its own and no dedicated accent color (Theme.kt
+        // falls through to the Standard teal scheme) — an app that visibly announces itself as
+        // "Whistleblower" on a reporter's home screen or launcher is itself a safety risk if
+        // someone else glances at the phone. It inherits Standard's launcher icon/colors
+        // unchanged; the only visible difference is in Settings → About (deliberately NOT
+        // glanceable) and the pairing/relay behavior (see RelayManager.isMandatory()).
+        create("whistleblower") {
+            dimension = "edition"
+            applicationIdSuffix = ".whistleblower"
+            versionNameSuffix = "-whistleblower"
+            buildConfigField("String", "EDITION", "\"whistleblower\"")
+            resValue("string", "app_name", "unpruuf")
+        }
+        // unpruuf Press: the free reporting app for sources writing to a journalist (the
+        // officer-app's press edition). Same behaviour as "whistleblower" (AppEdition.isWhistleblower
+        // is true for both), its own wording in app/src/press/res (English, values-ro Romanian) and
+        // its own install id, so it can sit next to the other editions. Neutral name on the phone.
+        create("press") {
+            dimension = "edition"
+            applicationIdSuffix = ".press"
+            versionNameSuffix = "-press"
+            buildConfigField("String", "EDITION", "\"press\"")
+            resValue("string", "app_name", "unpruuf")
+        }
     }
 
     packaging {
@@ -131,7 +209,10 @@ dependencies {
     implementation("androidx.sqlite:sqlite-ktx:2.4.0")
 
     // Tor (Guardian Project — bindet Tor-Binary + jtorctl transitiv)
-    implementation("info.guardianproject:tor-android:0.4.8.16")
+    implementation("info.guardianproject:tor-android:0.4.9.8") {
+        // The library asks for Kotlin 2.2 stdlib; this project compiles with Kotlin 1.9 and brings its own.
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    }
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     // Pluggable transports (obfs4/Snowflake) for DPI-censored networks — see
@@ -163,4 +244,13 @@ dependencies {
 
 kapt {
     correctErrorTypes = true
+}
+
+// tor-android 0.4.9.8 (newest the Java-21 toolchain of AGP 8.2.2 can dex; 0.4.9.9+ are built with Java 24) is needed because the Tor network now requires protocols (Desc=3, Microdesc=3)
+// that 0.4.8.x lacks: Tor 0.4.8.16 ended the whole app process at start (28.10.2026 debug reports).
+// The library is built against Android API 37 and declares that as minCompileSdk, but we only use
+// its stable Java surface (TorService, jtorctl) and compile against 34 with AGP 8.2.2, so the
+// metadata version check is switched off. The runtime needs no newer Android.
+tasks.configureEach {
+    if (name.endsWith("AarMetadata")) enabled = false
 }

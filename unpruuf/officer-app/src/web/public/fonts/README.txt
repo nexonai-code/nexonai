@@ -1,0 +1,1 @@
+IBM Plex Sans and IBM Plex Mono (Latin and Latin Extended subsets), (c) IBM Corp., licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). Bundled so the officer dashboard looks the same without internet.

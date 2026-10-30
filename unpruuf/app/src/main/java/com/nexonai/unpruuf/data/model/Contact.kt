@@ -102,6 +102,30 @@ data class Contact(
     // P2PNetworkManager) is what updates one entry in place if one of their nodes moves.
     val theirNodeAddresses: String? = null,
 
+    // ─── Per-contact own pairing values (Node-Mesh) ─────────────────────────────────────────
+    // Generated fresh for THIS pairing only and shown only in the QR this contact scanned, so no
+    // two contacts ever see the same key, seed or node from me. Null means a contact paired
+    // before per-contact values existed; the device-global values in IdentityManager apply then.
+    // The DB itself is encrypted (see AppModule), same as tempNodeOwnerSecret below.
+    val myPairMessageKey: String? = null,
+    val myPairRatchetPrivateKey: String? = null,
+    val myPairRatchetPublicKey: String? = null,
+    val myPairRoutingSeed: String? = null,
+    // My own nodes assigned to this contact (NODE_ADDRESS_PREFIX entries, ';'-joined): the only
+    // ones I deposit to for them and the only ones they ever learn. Null = legacy, whole pool.
+    val myNodeAddresses: String? = null,
+    // Free Client app only: the guest grants the inviter (a Pro user) issued for the nodes in
+    // [myNodeAddresses], `;`-joined and index-aligned with them (an empty slot = no grant for that
+    // node). With these the Client deposits on the INVITER's servers instead of its own (it has
+    // none) — see GuestClient and GUEST_LOCKERS_BUILD_SPEC.md. Null for every other contact.
+    // The DB itself is encrypted (see AppModule), same as the temp node owner secret below.
+    val guestGrants: String? = null,
+    // Pro app only, guests it invited (GRANT_RENEW, GuestRenewal.kt): what it promised this guest
+    // (`7:NORMAL`, `!7:NORMAL` after "stop renewing") and when it last sent new grants. Null for
+    // every other contact.
+    val guestRenewal: String? = null,
+    val guestRenewedAtMs: Long? = null,
+
     // ─── Temp Node (NODE_MESH_SPEC.md §7, Node-Mesh only) ───────────────────────────────────
     // Exceptional, per-chat, one-off additional own node — e.g. a second device run just for
     // this one contact while traveling. Independent of the standard node pool in
@@ -128,5 +152,25 @@ data class Contact(
     // theirNodeAddresses in pollNodeMeshOnce() rather than switched to exclusively — fetch has
     // no delete-on-fetch side effect, so polling both costs an extra request but never risks
     // missing a message during the other side's own activation/fallback transitions.
-    val theirTempNodeAddress: String? = null
+    val theirTempNodeAddress: String? = null,
+    // ── Whistleblower edition: the reporter's case (see officer-app/src/officer/caseSignals.ts).
+    // Filled from the officer's UNPRUUF_CASE_V1 signal; null until the receipt arrived.
+    val caseNumber: String? = null,
+    /** "acknowledged" | "in_progress" | "closed" */
+    val caseStatus: String? = null,
+    val caseOpenedAt: Long? = null,
+    val caseAckDueAt: Long? = null,
+    val caseFeedbackDueAt: Long? = null,
+    val caseUpdatedAt: Long? = null,
+    /** When this device first sent its intake to the organisation's letterbox (null = no intake
+     *  needed, e.g. not an officer contact). Retried until [caseNumber] is known. */
+    val intakeStartedAt: Long? = null,
+    val intakeLastSentAt: Long? = null,
+    /** How long my packets for this contact may wait on a Node-Mesh node: 1, 6 or 24 hours
+     *  (null = 24, the node's maximum). Sent as the deposit's ttl; a node never keeps a packet
+     *  longer than its own profile allows, whatever is asked. See [MessageTtl]. */
+    val messageTtlHours: Int? = null,
+    /** The registered Temp Node is the one running on THIS phone (Pro Groups, see PhoneTempNode):
+     *  it vanishes with the app process, so a start finds and clears it. */
+    val tempNodeOnPhone: Boolean = false
 )

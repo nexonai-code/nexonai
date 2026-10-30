@@ -8,10 +8,28 @@ import { NextFunction, Request, Response } from "express";
  * asks one question: "is this the owner's own app writing to its own node?" — never "is this a
  * known contact?", because contacts never get write access to this node at all.
  */
-export function requireOwner(ownerSecret: string) {
+export type OwnerSecretSource = string | (() => string);
+
+export function resolveOwnerSecret(source: OwnerSecretSource): string {
+  return typeof source === "function" ? source() : source;
+}
+
+/** The same check as [requireOwner], as a value: lets a route count failures and successes apart. */
+export function checkOwner(req: Request, ownerSecret: OwnerSecretSource): "ok" | "locked" | "bad" {
+  const secret = resolveOwnerSecret(ownerSecret);
+  if (!secret) return "locked";
+  return timingSafeEqual(req.header("authorization") ?? "", `Bearer ${secret}`) ? "ok" : "bad";
+}
+
+export function requireOwner(ownerSecret: OwnerSecretSource) {
   return (req: Request, res: Response, next: NextFunction) => {
     const header = req.header("authorization") ?? "";
-    const expected = `Bearer ${ownerSecret}`;
+    // Read per request, so a rotated secret takes effect immediately without a restart.
+    const secret = resolveOwnerSecret(ownerSecret);
+    // Empty = a sealed server that hasn't been unlocked since its restart (nodeIdentity.ts):
+    // there is no secret in memory to compare against, so nothing owner-only can run yet.
+    if (!secret) return res.status(423).json({ error: "locked" });
+    const expected = `Bearer ${secret}`;
     if (!timingSafeEqual(header, expected)) {
       return res.status(401).json({ error: "unauthorized" });
     }

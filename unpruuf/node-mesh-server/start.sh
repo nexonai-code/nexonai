@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# unpruuf Business Node server (Linux/macOS). Usage: ./start.sh [slot 1-3] [profile]
+#   The number of nodes comes from the licence (max 250) — it is not a setting.
+#   NODE_MESH_STORE=ram keeps waiting packets in memory only (a restart drops them); default: disk
+#   profile: standard (6h, default) | high-security (1h) | offline-tolerant (24h)
+set -euo pipefail
+cd "$(dirname "$0")"
+if [ ! -d node_modules ]; then npm install; fi
+npm run build
+export NODE_SLOT="${1:-${NODE_SLOT:-1}}"
+export NODE_PROFILE="${2:-${NODE_PROFILE:-standard}}"
+echo "Node list for your app: ./export-list.sh (while this server runs)."
+echo "Setup page: the link with the access token is printed below once the server is up (new at every start)."
+exec node dist/index.js

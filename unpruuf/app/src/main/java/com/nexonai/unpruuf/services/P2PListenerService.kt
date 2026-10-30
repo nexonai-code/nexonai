@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.services
 
+import com.nexonai.unpruuf.R
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -29,9 +31,12 @@ class P2PListenerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: P2PListenerService onCreate")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: P2P foreground started, calling p2p.start()")
         p2pNetworkManager.start()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: p2p.start() returned")
     }
 
     private fun buildNotification(): Notification {
@@ -42,7 +47,7 @@ class P2PListenerService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("unpruuf")
-            .setContentText("Ready to receive")
+            .setContentText(getString(R.string.msg_ready_to_receive))
             .setSmallIcon(android.R.drawable.ic_menu_send)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

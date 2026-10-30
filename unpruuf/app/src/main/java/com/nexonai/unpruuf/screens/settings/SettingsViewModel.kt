@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.screens.settings
 
+import com.nexonai.unpruuf.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexonai.unpruuf.domain.license.LicenseManager
@@ -19,6 +21,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val bridgeManager: BridgeManager,
     private val torManager: TorManager,
     private val relayManager: RelayManager,
@@ -29,6 +32,8 @@ class SettingsViewModel @Inject constructor(
     private val nodeMeshManager: NodeMeshManager,
     private val p2pNetworkManager: P2PNetworkManager
 ) : ViewModel() {
+    private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
 
     private val _biometricEnabled = MutableStateFlow(pinManager.isBiometricEnabled())
     val biometricEnabled = _biometricEnabled.asStateFlow()
@@ -78,6 +83,30 @@ class SettingsViewModel @Inject constructor(
     private val _backupRelayStatus = MutableStateFlow<String?>(null)
     val backupRelayStatus = _backupRelayStatus.asStateFlow()
 
+    // ─── Automatic connection (see TorManager.runAssistant) ───
+    private val _autoConnect = MutableStateFlow(bridgeManager.isAutomatic())
+    val autoConnect = _autoConnect.asStateFlow()
+
+    val connection = torManager.connection
+
+    private val _companyBridgeCount = MutableStateFlow(bridgeManager.companyLines().size)
+    val companyBridgeCount = _companyBridgeCount.asStateFlow()
+
+    fun onAutoConnectChange(on: Boolean) {
+        _autoConnect.value = on
+        bridgeManager.setAutomatic(on)
+        viewModelScope.launch { torManager.reapplyBridges() }
+    }
+
+    fun retryConnection() { torManager.retryConnection() }
+
+    fun refreshCompanyBridges() { _companyBridgeCount.value = bridgeManager.companyLines().size }
+
+    fun clearCompanyBridges() {
+        bridgeManager.clearCompanyLines()
+        refreshCompanyBridges()
+    }
+
     fun onBridgesEnabledChange(enabled: Boolean) { _bridgesEnabled.value = enabled }
     fun onBridgeTextChange(text: String) { _bridgeText.value = text }
 
@@ -86,13 +115,10 @@ class SettingsViewModel @Inject constructor(
         bridgeManager.setBridgeText(_bridgeText.value)
 
         _status.value = when {
-            !_bridgesEnabled.value -> "Bridges disabled."
-            bridgeManager.needsPluggableTransport() ->
-                "Note: your bridges (obfs4/snowflake) need the upcoming " +
-                "Snowflake update. Vanilla bridges (IP:Port Fingerprint) work immediately."
-            bridgeManager.usableVanillaLines().isEmpty() ->
-                "No valid bridge lines detected."
-            else -> "Bridges active. Reconnecting Tor…"
+            !_bridgesEnabled.value -> str(R.string.msg_bridges_off)
+            bridgeManager.usableVanillaLines().isEmpty() && bridgeManager.pluggableTransportLines().isEmpty() ->
+                str(R.string.msg_bridges_none)
+            else -> str(R.string.msg_bridges_on)
         }
 
         viewModelScope.launch { torManager.reapplyBridges() }
@@ -118,17 +144,17 @@ class SettingsViewModel @Inject constructor(
                 _relayConfiguredOnion.value = relayManager.getRelayOnion()
                 _relayInput.value = ""
             } else {
-                _relayStatus.value = "Unreadable connection string — check the QR/text and try again."
+                _relayStatus.value = str(R.string.msg_conn_unreadable)
                 return
             }
         }
 
         _relayStatus.value = when {
-            _relayMode.value == RelayManager.RelayMode.OFF -> "Relay disabled."
-            !relayManager.isUsable() -> "Scan or paste a relay connection string to activate the relay."
+            _relayMode.value == RelayManager.RelayMode.OFF -> str(R.string.msg_relay_off)
+            !relayManager.isUsable() -> str(R.string.msg_relay_setup)
             _relayMode.value == RelayManager.RelayMode.MANDATORY ->
-                "Relay mandatory — every contact routes through the relay, LAN/Tor-direct skipped."
-            else -> "Relay active — used when a contact can't be reached directly, or for transfers over 2 MB."
+                str(R.string.msg_relay_mandatory)
+            else -> str(R.string.msg_relay_active)
         }
     }
 
@@ -142,18 +168,18 @@ class SettingsViewModel @Inject constructor(
             .filter { it.isNotEmpty() }
         if (entered.isEmpty()) {
             relayManager.setExtraConnectionStrings(emptyList())
-            _backupRelayStatus.value = "Backup relays cleared."
+            _backupRelayStatus.value = str(R.string.msg_backup_cleared)
             return
         }
         if (entered.any { RelayManager.parseConnectionString(it) == null }) {
-            _backupRelayStatus.value = "Unreadable connection string — check the QR/text and try again."
+            _backupRelayStatus.value = str(R.string.msg_conn_unreadable)
             return
         }
         relayManager.setExtraConnectionStrings(entered)
         _backupRelayStatus.value = if (entered.size == 1) {
-            "Backup relay saved — used if the primary is unreachable."
+            str(R.string.msg_backup_one)
         } else {
-            "Both backup relays saved — tried in order if the primary is unreachable."
+            str(R.string.msg_backup_two)
         }
     }
 
@@ -175,7 +201,7 @@ class SettingsViewModel @Inject constructor(
         val error = licenseManager.applyLicenseCode(pasted)
         if (error == null) {
             _licenseInput.value = ""
-            _licenseStatus.value = "License activated."
+            _licenseStatus.value = str(R.string.msg_license_ok)
         } else {
             _licenseStatus.value = error
         }
@@ -200,7 +226,7 @@ class SettingsViewModel @Inject constructor(
         val error = relayPoolManager.importManifest(pasted)
         if (error == null) {
             _relayPoolInput.value = ""
-            _relayPoolStatus.value = "Relay list imported."
+            _relayPoolStatus.value = str(R.string.msg_relay_list_ok)
             // Keep the backup-relay field's displayed value in sync — importManifest just
             // replaced RelayManager's extra-connection-strings wholesale.
             _backupRelayInput.value = relayManager.getExtraConnectionStrings().firstOrNull() ?: ""
@@ -219,8 +245,7 @@ class SettingsViewModel @Inject constructor(
      *  contacts are unaffected — see regenerateUserId()'s doc comment. */
     fun regeneratePairingIdentity() {
         identityManager.regenerateUserId()
-        _identityStatus.value = "Pairing identity renewed. Existing contacts are unaffected " +
-            "— this only changes your own QR code going forward."
+        _identityStatus.value = str(R.string.msg_identity_renewed)
     }
 
     fun clearIdentityStatus() { _identityStatus.value = null }
@@ -253,19 +278,41 @@ class SettingsViewModel @Inject constructor(
         if (nodeMeshManager.addMyNode(pasted)) {
             _nodeMeshInput.value = ""
             _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
-            _nodeMeshStatus.value = "Node added."
+            _nodeMeshStatus.value = str(R.string.msg_node_added_looking)
+            p2pNetworkManager.refreshNodePoolNow { added ->
+                _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
+                _nodeMeshStatus.value = if (added > 0) str(R.string.msg_node_added_more, added) else str(R.string.msg_node_added)
+            }
         } else {
-            _nodeMeshStatus.value = "Unreadable node string, or already at the ${NodeMeshManager.NODE_POOL_MAX_SIZE}-node limit — check the QR/text and try again."
+            _nodeMeshStatus.value = str(R.string.msg_node_unreadable, NodeMeshManager.OWN_NODES_MAX)
         }
     }
 
     fun removeMyNode(address: String) {
         nodeMeshManager.removeMyNode(address)
         _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
-        _nodeMeshStatus.value = "Node removed."
+        _nodeMeshStatus.value = str(R.string.msg_node_removed)
     }
 
     fun clearNodeMeshStatus() { _nodeMeshStatus.value = null }
+
+    // ─── Sealed own servers: locked after a restart until unlocked here ──────────────────────
+    val lockedServers = p2pNetworkManager.lockedServers
+
+    // true = unlocked, false = failed, null = nothing to show.
+    private val _unlockResult = MutableStateFlow<Boolean?>(null)
+    val unlockResult = _unlockResult.asStateFlow()
+
+    fun checkLockedServers() = p2pNetworkManager.checkLockedServersNow()
+
+    fun unlockServer(server: NodeMeshManager.LockedServer) {
+        p2pNetworkManager.unlockServer(server) { ok ->
+            _unlockResult.value = ok
+            if (ok) _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
+        }
+    }
+
+    fun clearUnlockResult() { _unlockResult.value = null }
 
     // ─── Node address migration (NODE_MESH_SPEC.md §6) ─────────────────────────────────────
     // Which of this device's own nodes (by its current address) is being migrated right now, if
@@ -299,11 +346,11 @@ class SettingsViewModel @Inject constructor(
         if (nodeMeshManager.migrateMyNode(oldAddress, newAddress)) {
             p2pNetworkManager.sendNodeMigrationSignalToAll(oldAddress, newAddress)
             _myNodeAddresses.value = nodeMeshManager.getMyAdvertisedAddresses()
-            _nodeMeshStatus.value = "Node migrated — contacts notified."
+            _nodeMeshStatus.value = str(R.string.msg_node_migrated)
             _migratingAddress.value = null
             _migrateInput.value = ""
         } else {
-            _nodeMeshStatus.value = "Migration failed — that address isn't currently configured."
+            _nodeMeshStatus.value = str(R.string.msg_node_migrate_failed)
         }
     }
 }

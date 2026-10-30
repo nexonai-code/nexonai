@@ -12,6 +12,7 @@ import android.net.NetworkCapabilities
 import android.os.IBinder
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.nexonai.unpruuf.data.db.ContactDao
+import com.nexonai.unpruuf.domain.AppEdition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,12 +27,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import net.freehaven.tor.control.TorControlCommands
 import net.freehaven.tor.control.TorControlConnection
 import org.torproject.jni.TorService
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Where the automatic connection stands, for the settings screen. */
+data class TorConnectionState(
+    val phase: Phase = Phase.IDLE,
+    /** The path being tried, or the one that worked. */
+    val path: TorPath? = null,
+    val progress: Int = 0
+) {
+    enum class Phase { IDLE, CONNECTING, CONNECTED, FAILED }
+}
 
 @Singleton
 class TorManager @Inject constructor(
@@ -46,8 +59,19 @@ class TorManager @Inject constructor(
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
+    private val _connection = MutableStateFlow(TorConnectionState())
+    val connection: StateFlow<TorConnectionState> = _connection.asStateFlow()
+    private val assistantMutex = Mutex()
+    private var assistantJob: Job? = null
+
     private val _onionAddress = MutableStateFlow<String?>(null)
     val onionAddress: StateFlow<String?> = _onionAddress.asStateFlow()
+
+    // True only while this device publishes an onion service of its own. Whistleblower and
+    // Node-Mesh/relay-only users never need one (they only dial out), so it stays off for them
+    // until an onion-based pairing actually asks for it via ensureMainOnion().
+    private val _hostingOwnOnion = MutableStateFlow(false)
+    val hostingOwnOnion: StateFlow<Boolean> = _hostingOwnOnion.asStateFlow()
 
     // TorService populates its socks port only AFTER bootstrap (GETINFO net/listeners/socks),
     // so it must be read lazily at send time — never cached at bind time.
@@ -90,10 +114,24 @@ class TorManager @Inject constructor(
     fun start() {
         if (started) return
         started = true
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: start()")
+        // Diagnosis (debug builds only): let Tor write its own log next to the app's data, so the
+        // reason of a startup failure is readable in the debug report. The user torrc is ours to write.
+        if (com.nexonai.unpruuf.BuildConfig.DEBUG) runCatching {
+            val log = java.io.File(context.filesDir, "tor-debug.log")
+            if (log.length() > 200_000) log.delete()
+            val rc = TorService.getTorrc(context)
+            rc.parentFile?.mkdirs()
+            val line = "Log notice file ${log.absolutePath}\n"
+            val text = if (rc.exists()) rc.readText() else ""
+            if (!text.contains("tor-debug.log")) rc.writeText(text + (if (text.isEmpty() || text.endsWith("\n")) "" else "\n") + line)
+            com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: debug log on, torrc=${rc.absolutePath}")
+        }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
+                com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: status=${intent.getStringExtra(TorService.EXTRA_STATUS)}")
                 when (intent.getStringExtra(TorService.EXTRA_STATUS)) {
-                    TorService.STATUS_ON -> scope.launch { setupHiddenService() }
+                    TorService.STATUS_ON -> scope.launch { onTorUp() }
                     TorService.STATUS_OFF, TorService.STATUS_STOPPING -> _isReady.value = false
                 }
             }
@@ -106,6 +144,10 @@ class TorManager @Inject constructor(
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
                 torService = (binder as TorService.LocalBinder).service
+                com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: service connected")
+                // Tor has begun bootstrapping by itself (direct). The assistant watches that and,
+                // if the network blocks it, tries the other paths. See runAssistant().
+                startAssistant(preferRemembered = true)
             }
             override fun onServiceDisconnected(name: ComponentName?) {
                 torService = null
@@ -219,67 +261,179 @@ class TorManager @Inject constructor(
         // couldn't run.
         delay(1_500)
         _networkChanged.emit(Unit)
+        // A new network may block what the old one allowed: if Tor has no circuit 25 s after the
+        // switch, let the assistant look again (fresh, direct path first).
+        scope.launch {
+            delay(25_000)
+            val c = torService?.torControlConnection ?: return@launch
+            if (!circuitEstablished(c)) startAssistant(preferRemembered = false)
+        }
     }
 
-    // Wendet die Bridge-Konfiguration an. SICHERHEIT: Es werden nur Bridges
-    // aktiviert, die OHNE Pluggable Transport funktionieren (Vanilla). Reine
-    // PT-Bridges (obfs4/snowflake) wuerden Tor ohne die IPtProxy-Binaries
-    // komplett lahmlegen — daher werden sie hier bewusst NICHT gesetzt, bis
-    // der PT-Client verfuegbar ist. So kann die Einstellung Tor nie zerstoeren.
+    // Wendet die HANDGEPFLEGTEN Bridges an (Einstellungen, Schalter "Tor-Bridges verwenden").
+    // SICHERHEIT: Ein Transport ohne laufenden lokalen Client wird nicht eingetragen, Tor kann so
+    // nie in einen halb konfigurierten Bridge-Zustand geraten. Ohne eigene Bridges bleibt es bei
+    // der automatischen Verbindung (siehe runAssistant), die selbst entscheidet.
     private suspend fun applyBridges(ctrl: TorControlConnection) {
         runCatching {
             if (!bridgeManager.isEnabled()) {
-                ctrl.setConf("UseBridges", "0")
+                if (!bridgeManager.isAutomatic()) setDirect(ctrl)
                 return
             }
-            val vanilla = bridgeManager.usableVanillaLines()
-            val ptLines = bridgeManager.pluggableTransportLines()
-            val neededTransports = ptLines.mapNotNull { line ->
-                line.substringBefore(' ').lowercase().takeIf { it == "obfs4" || it == "snowflake" }
-            }.toSet()
+            if (!applyBridgeLines(ctrl, bridgeManager.usableVanillaLines(), bridgeManager.pluggableTransportLines())) setDirect(ctrl)
+        }
+    }
 
-            // Start each configured PT client and see which ones actually came up. A PT that
-            // fails to start (missing native lib, resolution mismatch, anything) simply isn't in
-            // this map — its bridge lines get skipped below rather than left half-configured.
-            val livePorts = if (neededTransports.isEmpty()) emptyMap()
-                else runCatching { pluggableTransportManager.ensureStarted(neededTransports) }.getOrDefault(emptyMap())
+    private fun setDirect(ctrl: TorControlConnection) {
+        runCatching { ctrl.resetConf(listOf("Bridge", "ClientTransportPlugin")) }
+        ctrl.setConf("UseBridges", "0")
+    }
 
-            if (vanilla.isEmpty() && livePorts.isEmpty()) {
-                // Nothing usable right now (no vanilla bridges, and either no PT bridges
-                // configured or none of them actually started) → keep the direct connection
-                // instead of leaving Tor in a broken bridge state.
-                ctrl.setConf("UseBridges", "0")
+    /**
+     * Starts the local client of every transport the PT lines need, and puts Tor on exactly those
+     * bridges. False (and nothing changed) if nothing usable came up.
+     */
+    private suspend fun applyBridgeLines(ctrl: TorControlConnection, vanilla: List<String>, ptLines: List<String>): Boolean {
+        val needed = ptLines.mapNotNull { line ->
+            line.substringBefore(' ').lowercase().takeIf { it == "obfs4" || it == "snowflake" }
+        }.toSet()
+        val live = if (needed.isEmpty()) emptyMap()
+            else runCatching { pluggableTransportManager.ensureStarted(needed) }.getOrDefault(emptyMap())
+        val ptUsable = ptLines.filter { it.substringBefore(' ').lowercase() in live }
+        if (vanilla.isEmpty() && ptUsable.isEmpty()) return false
+        runCatching { ctrl.resetConf(listOf("Bridge", "ClientTransportPlugin")) }
+        val conf = mutableListOf("UseBridges 1")
+        live.forEach { (transport, port) -> conf.add("ClientTransportPlugin $transport socks5 127.0.0.1:$port") }
+        vanilla.forEach { conf.add("Bridge $it") }
+        ptUsable.forEach { conf.add("Bridge $it") }
+        ctrl.setConf(conf)
+        return true
+    }
+
+    // ─── Automatic connection ───────────────────────────────────────────────────────────────
+    // Tor starts bootstrapping by itself, direct. The assistant watches that. If the network
+    // blocks Tor, it tries the next paths (company bridge, obfs4, Snowflake; see ConnectionPaths)
+    // until one reaches "Bootstrapped 100%" and remembers which one did. The user is never asked
+    // for bridge lines. Hand-entered bridges (Settings) always win: then the assistant stays out.
+
+    /** (Re)starts the assistant. [preferRemembered]: app start only, not after a network change. */
+    fun startAssistant(preferRemembered: Boolean) {
+        if (bridgeManager.isEnabled()) {
+            // Hand-entered bridges: apply them right away. (TorService only announces "on" after the
+            // first circuit exists, so waiting for that would never come on a network that blocks Tor.)
+            scope.launch { awaitControlConnection(tries = 120)?.let { applyBridges(it) } }
+            return
+        }
+        if (!bridgeManager.isAutomatic()) return
+        assistantJob?.cancel()
+        assistantJob = scope.launch { assistantMutex.withLock { runAssistant(preferRemembered) } }
+    }
+
+    private fun bootstrapProgress(ctrl: TorControlConnection): Int =
+        ConnectionPaths.parseBootstrapProgress(runCatching { ctrl.getInfo("status/bootstrap-phase") }.getOrNull())
+
+    private fun circuitEstablished(ctrl: TorControlConnection): Boolean =
+        runCatching { ctrl.getInfo("status/circuit-established") }.getOrNull()?.trim() == "1"
+
+    /** Waits until Tor says "Bootstrapped 100%" or [seconds] have passed. */
+    private suspend fun waitForBootstrap(ctrl: TorControlConnection, path: TorPath, seconds: Int): Boolean {
+        var lastLogged = -2
+        repeat(seconds) {
+            val p = bootstrapProgress(ctrl)
+            if (p != lastLogged) { lastLogged = p; com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: bootstrap $p% on $path") }
+            _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, path, p.coerceAtLeast(0))
+            if (p >= 100) return true
+            delay(1_000)
+        }
+        return bootstrapProgress(ctrl) >= 100
+    }
+
+    private suspend fun applyPath(ctrl: TorControlConnection, path: TorPath): Boolean = runCatching {
+        when (path) {
+            TorPath.DIRECT -> { setDirect(ctrl); true }
+            TorPath.COMPANY -> {
+                val lines = bridgeManager.companyLines()
+                applyBridgeLines(ctrl, lines.filter { !ConnectionPaths.isObfs4(it) }, lines.filter { ConnectionPaths.isObfs4(it) })
+            }
+            TorPath.OBFS4 -> applyBridgeLines(ctrl, emptyList(), ConnectionPaths.BUILT_IN_OBFS4)
+            TorPath.SNOWFLAKE -> applyBridgeLines(ctrl, emptyList(), ConnectionPaths.BUILT_IN_SNOWFLAKE)
+        }
+    }.getOrDefault(false)
+
+    private suspend fun runAssistant(preferRemembered: Boolean) {
+        var ctrl = torService?.torControlConnection
+        var waited = 0
+        while (ctrl == null && waited < 60) { delay(1_000); waited++; ctrl = torService?.torControlConnection }
+        if (ctrl == null) return
+
+        // Already connected (a restart of the app with Tor still warm): nothing to do.
+        if (bootstrapProgress(ctrl) >= 100) {
+            _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTED, bridgeManager.lastPath() ?: TorPath.DIRECT, 100)
+            return
+        }
+        val order = ConnectionPaths.order(bridgeManager.lastPath(), bridgeManager.companyLines().isNotEmpty(), preferRemembered)
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: assistant order=$order")
+        for (path in order) {
+            com.nexonai.unpruuf.ui.DebugCrashReport.t("tor: try path=$path")
+            _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, path, 0)
+            if (!applyPath(ctrl, path)) continue
+            if (waitForBootstrap(ctrl, path, ConnectionPaths.budgetSeconds(path))) {
+                bridgeManager.setLastPath(path)
+                _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTED, path, 100)
                 return
             }
-
-            val conf = mutableListOf("UseBridges 1")
-            livePorts.forEach { (transport, port) ->
-                conf.add("ClientTransportPlugin $transport socks5 127.0.0.1:$port")
-            }
-            vanilla.forEach { conf.add("Bridge $it") }
-            ptLines.forEach { line ->
-                val transport = line.substringBefore(' ').lowercase()
-                if (transport in livePorts) conf.add("Bridge $line")
-            }
-            ctrl.setConf(conf)
+        }
+        // Nothing worked. Back to the direct path (the quiet default) and look again in a few minutes.
+        runCatching { setDirect(ctrl) }
+        _connection.value = TorConnectionState(TorConnectionState.Phase.FAILED, null, 0)
+        scope.launch {
+            delay(5 * 60_000L)
+            if (_connection.value.phase == TorConnectionState.Phase.FAILED) startAssistant(preferRemembered = false)
         }
     }
 
     /** Bridges nach einer Einstellungsaenderung sofort neu anwenden. */
     suspend fun reapplyBridges() {
         val ctrl = torService?.torControlConnection ?: return
-        applyBridges(ctrl)
-        bounceTorNetwork()
+        if (bridgeManager.isEnabled()) {
+            applyBridges(ctrl)
+            bounceTorNetwork()
+        } else {
+            setDirect(ctrl)
+            startAssistant(preferRemembered = false)
+        }
     }
 
-    private suspend fun awaitControlConnection(): TorControlConnection? {
+    /** "Try again now" in the settings. */
+    fun retryConnection() {
+        _connection.value = TorConnectionState(TorConnectionState.Phase.CONNECTING, TorPath.DIRECT, 0)
+        startAssistant(preferRemembered = false)
+    }
+
+    private suspend fun awaitControlConnection(tries: Int = 20): TorControlConnection? {
         var ctrl = torService?.torControlConnection
-        repeat(20) {
+        repeat(tries) {
             if (ctrl != null) return@repeat
             delay(500)
             ctrl = torService?.torControlConnection
         }
         return ctrl
+    }
+
+    private suspend fun ownOnionNeeded(): Boolean {
+        if (AppEdition.isWhistleblower) return false
+        val contacts = runCatching { contactDao.getAllContactsOnce() }.getOrNull() ?: return true
+        return contacts.any { !it.nodeMesh && !it.crossPlatform }
+    }
+
+    private suspend fun onTorUp() {
+        if (_hostingOwnOnion.value || ownOnionNeeded()) {
+            setupHiddenService()
+            return
+        }
+        val ctrl = awaitControlConnection() ?: return
+        applyBridges(ctrl)
+        _isReady.value = true
     }
 
     private suspend fun setupHiddenService() {
@@ -298,6 +452,7 @@ class TorManager @Inject constructor(
             val serviceId = result[TorControlCommands.HS_ADDRESS] ?: return
             result[TorControlCommands.HS_PRIVKEY]?.let { identityManager.saveTorPrivKey(it) }
             _onionAddress.value = "$serviceId.onion"
+            _hostingOwnOnion.value = true
             _isReady.value = true
         }
         // Rückwärtskompatibel: auch früher gekoppelte per-Kontakt-Onions wieder
@@ -392,6 +547,7 @@ class TorManager @Inject constructor(
      * damit dort nie "pending.onion" landet, solange Tor erreichbar ist.
      */
     suspend fun ensureMainOnion(): String {
+        if (AppEdition.isWhistleblower) return "pending.onion"
         _onionAddress.value?.let { return it }
         val ctrl = awaitControlConnection() ?: return "pending.onion"
         val portMap = mapOf(P2PNetworkManager.ONION_PORT to "127.0.0.1:${P2PNetworkManager.LOCAL_PORT}")
@@ -402,6 +558,7 @@ class TorManager @Inject constructor(
             result[TorControlCommands.HS_PRIVKEY]?.let { identityManager.saveTorPrivKey(it) }
             val addr = "$serviceId.onion"
             _onionAddress.value = addr
+            _hostingOwnOnion.value = true
             _isReady.value = true
             addr
         }.getOrDefault(_onionAddress.value ?: "pending.onion")
@@ -426,6 +583,7 @@ class TorManager @Inject constructor(
      * changed or Tor wasn't reachable right now (harmless; the next periodic check retries).
      */
     suspend fun ensureVerifiedOnion(): String? {
+        if (!_hostingOwnOnion.value) return null
         val today = identityManager.currentDayBucket()
         if (identityManager.getLastVerifiedOnionDay() == today && _verifiedOnionAddress.value != null) {
             return null
@@ -438,7 +596,12 @@ class TorManager @Inject constructor(
             val serviceId = result[TorControlCommands.HS_ADDRESS] ?: return null
             identityManager.getLastVerifiedOnionServiceId()?.let { old ->
                 if (old != serviceId) {
-                    runCatching { ctrl.sendAndWaitForResponse("DEL_ONION $old", null) }
+                    // Was a raw "DEL_ONION $old" via sendAndWaitForResponse — that method is
+                    // protected in jtorctl's TorControlConnection (confirmed via javap against
+                    // the real info.guardianproject:jtorctl:0.4.5.7 jar, not assumed), so this
+                    // never compiled; the first real build of this file surfaced it. delOnion()
+                    // is jtorctl's actual public API for the same DEL_ONION command.
+                    runCatching { ctrl.delOnion(old) }
                 }
             }
             identityManager.saveLastVerifiedOnionServiceId(serviceId)
@@ -447,6 +610,25 @@ class TorManager @Inject constructor(
             _verifiedOnionAddress.value = addr
             addr
         }.getOrNull()
+    }
+
+    /**
+     * A short-lived onion service for a phone-hosted Temp Node (see [PhoneTempNode]): [virtualPort]
+     * forwards to 127.0.0.1:[localPort]. The key Tor hands back is dropped on purpose, so the address
+     * cannot be brought back after [removeEphemeralOnion] or when Tor stops. Null if Tor is not ready.
+     */
+    suspend fun addEphemeralOnion(virtualPort: Int, localPort: Int): String? {
+        val ctrl = awaitControlConnection() ?: return null
+        return runCatching {
+            val result = ctrl.addOnion(mapOf(virtualPort to "127.0.0.1:$localPort"))
+            val id = result[TorControlCommands.HS_ADDRESS] ?: return null
+            "$id.onion"
+        }.getOrNull()
+    }
+
+    fun removeEphemeralOnion(address: String) {
+        val ctrl = torService?.torControlConnection ?: return
+        runCatching { ctrl.delOnion(address.removeSuffix(".onion")) }
     }
 
     /** Alle eigenen veröffentlichten Onion-Adressen (Haupt- + je Kontakt + Verified). */

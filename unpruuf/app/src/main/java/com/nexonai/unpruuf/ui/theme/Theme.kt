@@ -66,6 +66,7 @@ fun UnpruufTheme(content: @Composable () -> Unit) {
     // Farbschema nach Edition — sofort sichtbar, welche Version läuft.
     val scheme = when (AppEdition.current) {
         AppEdition.PRO -> schemeFor(ProAccent, ProAccentDark)
+        AppEdition.GROUP -> schemeFor(GroupAccent, GroupAccentDark)
         AppEdition.CLIENT -> schemeFor(ClientAccent, ClientAccentDark)
         else -> schemeFor(StandardAccent, StandardAccentDark)
     }

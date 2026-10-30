@@ -1,0 +1,55 @@
+{
+ "v": 4,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-06T17:32:01Z"
+ },
+ "lists": "css",
+ "title": "unpruuf Compliance",
+ "order": [
+  "cover",
+  "obligatia",
+  "problema",
+  "instrumentul",
+  "functionare",
+  "qr-unic",
+  "caz",
+  "nu-exista",
+  "cine-vede",
+  "panou",
+  "doua-cai",
+  "cadru-legal",
+  "instalare",
+  "stadiu",
+  "pasi"
+ ],
+ "sections": {
+  "s1": {
+   "description": "Obligația legală și problema soluțiilor clasice.",
+   "start": "cover"
+  },
+  "s2": {
+   "description": "Soluția: nodul organizației, un cod QR pentru toți, nimic care identifică.",
+   "start": "instrumentul"
+  },
+  "s3": {
+   "description": "Model de securitate, panou, căi de raportare și cadru legal.",
+   "start": "cine-vede"
+  },
+  "s4": {
+   "description": "Instalare, stadiu și pașii următori.",
+   "start": "instalare"
+  }
+ },
+ "faces": {
+  "archivo": {
+   "family": "Archivo",
+   "href": "https://fonts.googleapis.com/css2?family=Archivo:wght@500..800&display=swap"
+  },
+  "ibm-plex-sans": {
+   "family": "IBM Plex Sans",
+   "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+  }
+ },
+ "designSystems": []
+}

@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.domain.license
 
+import com.nexonai.unpruuf.R
+
 import android.content.Context
 import android.provider.Settings
 import android.util.Base64
@@ -72,11 +74,11 @@ class LicenseManager @Inject constructor(
      * check only ever rejects a code arriving already bound to a DIFFERENT device.
      */
     fun applyLicenseCode(code: String): String? {
-        if (parseAndVerify(code) == null) return "This license code isn't valid."
+        if (parseAndVerify(code) == null) return context.getString(R.string.msg_license_invalid)
         val boundHash = prefs.getString(KEY_DEVICE_HASH, null)
         val thisHash = deviceFingerprint()
         if (boundHash != null && boundHash != thisHash) {
-            return "This license is already activated on a different device."
+            return context.getString(R.string.msg_license_other_device)
         }
         prefs.edit()
             .putString(KEY_CODE, code)
@@ -93,10 +95,10 @@ class LicenseManager @Inject constructor(
     private fun computeState(): LicenseState {
         val code = prefs.getString(KEY_CODE, null) ?: return LicenseState.NotConfigured
         val info = parseAndVerify(code)
-            ?: return LicenseState.Invalid("The stored license failed re-verification.")
+            ?: return LicenseState.Invalid(context.getString(R.string.msg_license_reverify))
         val boundHash = prefs.getString(KEY_DEVICE_HASH, null)
         if (boundHash != null && boundHash != deviceFingerprint()) {
-            return LicenseState.Invalid("This license is activated on a different device.")
+            return LicenseState.Invalid(context.getString(R.string.msg_license_other_device2))
         }
         val now = trustedNowMs()
         val daysLeft = (info.expiresAtMs - now) / MS_PER_DAY
@@ -124,7 +126,7 @@ class LicenseManager @Inject constructor(
         val fields = String(payload, Charsets.UTF_8).split("|")
         if (fields.size != 6 || fields[0] != "1") return null
         val edition = fields[1]
-        if (edition != AppEdition.STANDARD && edition != AppEdition.PRO && edition != AppEdition.CLIENT) return null
+        if (edition != AppEdition.STANDARD && edition != AppEdition.PRO && edition != AppEdition.CLIENT && edition != AppEdition.GROUP) return null
         // A genuinely-signed license for one edition must not unlock a build of another —
         // otherwise a cheaper Standard code activates the Pro build just as well, since
         // nothing else here is edition-gated. license-tool/issue.js's own --edition flag
@@ -182,6 +184,6 @@ class LicenseManager @Inject constructor(
         // it can only VERIFY signatures, never create new ones. Rotating it (running keygen.js
         // again) invalidates every license issued under the old key; every future app build
         // would need the new value here.
-        const val PUBLIC_KEY_B64 = "67A_r4YeFkvYoXDF30gar2gRBcufokgvYQd5dVeEwKE"
+        const val PUBLIC_KEY_B64 = "t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4"
     }
 }

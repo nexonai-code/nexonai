@@ -23,7 +23,11 @@ struct RootView: View {
             } else if !appLockManager.unlocked {
                 PinLockView(viewModel: lockViewModel)
             } else {
-                ContactListView(env: env)
+                if Edition.isCompliance {
+                    CasesHomeView(env: env)
+                } else {
+                    ContactListView(env: env)
+                }
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.screens.chat
 
+import com.nexonai.unpruuf.R
+
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -12,6 +14,7 @@ import com.nexonai.unpruuf.data.repository.InMemoryMessageStore
 import com.nexonai.unpruuf.data.repository.MessageType
 import com.nexonai.unpruuf.data.repository.RamMessage
 import com.nexonai.unpruuf.domain.network.MessagePayload
+import com.nexonai.unpruuf.domain.network.MessageTtl
 import com.nexonai.unpruuf.domain.network.NodeMeshManager
 import com.nexonai.unpruuf.domain.network.P2PNetworkManager
 import com.nexonai.unpruuf.domain.network.RelayManager
@@ -33,12 +36,17 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ChatViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val messageStore: InMemoryMessageStore,
     private val contactDao: ContactDao,
     private val p2pNetworkManager: P2PNetworkManager,
     private val appLockManager: AppLockManager,
-    private val relayManager: RelayManager
+    private val relayManager: RelayManager,
+    private val whistleblowerCases: com.nexonai.unpruuf.domain.WhistleblowerCases,
+    private val phoneTempNode: com.nexonai.unpruuf.domain.network.PhoneTempNode
 ) : ViewModel() {
+    private fun str(@androidx.annotation.StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+
 
     // Read fresh each time (cheap SharedPreferences check) rather than cached — the whole point
     // is that StillConnectingHint reflects whatever the user just changed in Settings, without
@@ -54,6 +62,7 @@ class ChatViewModel @Inject constructor(
      */
     fun beginExternalPickerGrace() = appLockManager.beginExternalIntentGrace()
 
+    private var contactJob: kotlinx.coroutines.Job? = null
     private val _contact = MutableStateFlow<Contact?>(null)
     val contact = _contact.asStateFlow()
 
@@ -67,6 +76,9 @@ class ChatViewModel @Inject constructor(
     // IDs ausgehender Nachrichten, die der Empfänger per ACK bestätigt hat
     val deliveredIds = p2pNetworkManager.deliveredIds
 
+    /** Free Client app: what this chat's guest deposits ran into (see P2PNetworkManager.GuestIssue). */
+    val guestIssues = p2pNetworkManager.guestIssues
+
     val messages = _contact
         .flatMapLatest { contact ->
             if (contact == null) flowOf(emptyList())
@@ -76,8 +88,11 @@ class ChatViewModel @Inject constructor(
 
     fun loadContact(contactId: String) {
         _revoked.value = false
-        viewModelScope.launch {
-            _contact.value = contactDao.getContactById(contactId)
+        // Observed, not read once: the Whistleblower case banner must update live when the
+        // officer's receipt or a status change arrives while this chat is open.
+        contactJob?.cancel()
+        contactJob = viewModelScope.launch {
+            contactDao.observeContact(contactId).collect { _contact.value = it }
         }
         // Tor-Pfad zum Kontakt vorwärmen + aktiv warm halten, solange der Chat
         // offen ist → erste und folgende Nachrichten ohne Kaltstart (~10–20 s),
@@ -121,8 +136,8 @@ class ChatViewModel @Inject constructor(
             val payload = if (isImage) prepareImage(bytes) else bytes
             val limit = if (isImage) MAX_IMAGE_BYTES else MAX_FILE_BYTES
             if (payload.size > limit) {
-                _sendError.value = if (isImage) "Photo too large (max ${MAX_IMAGE_BYTES / 1024 / 1024} MB)."
-                else "File too large (max ${MAX_FILE_BYTES / 1024 / 1024} MB)."
+                _sendError.value = if (isImage) str(R.string.msg_photo_too_large, MAX_IMAGE_BYTES / 1024 / 1024)
+                else str(R.string.msg_file_too_large, MAX_FILE_BYTES / 1024 / 1024)
                 return@launch
             }
             val messageId = UUID.randomUUID().toString()
@@ -204,6 +219,16 @@ class ChatViewModel @Inject constructor(
     /** Camera capture: same as [sendFile] but the bytes never touched disk (see ChatScreen). */
     fun sendImage(bytes: ByteArray) = sendFile("Photo.jpg", bytes, isImage = true)
 
+    /** Whistleblower: wipe this case from the phone only (the reporting office keeps it). */
+    fun removeCaseFromDevice() {
+        val contact = _contact.value ?: return
+        viewModelScope.launch {
+            contactJob?.cancel()
+            whistleblowerCases.removeCaseFromDevice(contact.id)
+            _revoked.value = true
+        }
+    }
+
     // GRAL Säule 5: Revoke — löscht Chat auf beiden Seiten, Kontakt bleibt erhalten
     fun revokeContact() {
         val contact = _contact.value ?: return
@@ -222,7 +247,7 @@ class ChatViewModel @Inject constructor(
         val contact = _contact.value ?: return
         viewModelScope.launch {
             p2pNetworkManager.sendMainOnionUpdate(contact.id)
-            _sendError.value = "Updated connection info sent."
+            _sendError.value = str(R.string.contacts_updated_sent)
         }
     }
 
@@ -233,7 +258,7 @@ class ChatViewModel @Inject constructor(
         if (!contact.crossPlatform) return
         viewModelScope.launch {
             p2pNetworkManager.wechsel(contact.id)
-            _sendError.value = "Wechsel sent."
+            _sendError.value = str(R.string.msg_wechsel_sent)
         }
     }
 
@@ -254,7 +279,7 @@ class ChatViewModel @Inject constructor(
         val contact = _contact.value ?: return false
         val parsed = NodeMeshManager.parseOwnerConnectionString(raw.trim())
         if (parsed == null) {
-            _tempNodeError.value = "That doesn't look like a node connection string."
+            _tempNodeError.value = str(R.string.msg_temp_node_invalid)
             return false
         }
         viewModelScope.launch {
@@ -273,7 +298,67 @@ class ChatViewModel @Inject constructor(
             contactDao.clearTempNode(contact.id)
             _contact.value = contactDao.getContactById(contact.id)
             p2pNetworkManager.sendTempNodeDeactivate(contact.id)
+            // When the Temp Node is this phone, ending it also removes its address and every waiting packet.
+            if (contact.tempNodeOnPhone) phoneTempNode.stop()
         }
+    }
+
+    // ─── Temp Node on this phone (Pro Groups) ────────────────────────────────────────────────
+
+    /** State of the phone-hosted Temp Node (one at a time, for one chat). */
+    val phoneTempNodeState = phoneTempNode.state
+
+    /** Whether this build offers the phone as a Temp Node. */
+    val phoneTempNodeSupported: Boolean = com.nexonai.unpruuf.domain.AppEdition.isGroup
+
+    /** True if the phone's Temp Node runs for ANOTHER chat than this one. */
+    fun phoneTempNodeBusyElsewhere(): Boolean {
+        val running = phoneTempNode.runningFor()
+        return running != null && running != _contact.value?.id
+    }
+
+    /**
+     * Starts a Temp Node on this phone for this chat: a fresh onion address, memory only. Registered
+     * like any Temp Node (so the existing routing, heartbeat and fallback apply) and announced to the
+     * contact through the normal servers. Errors go to [tempNodeError].
+     */
+    fun startPhoneTempNode() {
+        val contact = _contact.value ?: return
+        if (!phoneTempNodeSupported || !contact.nodeMesh) return
+        viewModelScope.launch {
+            when (val r = phoneTempNode.start(contact.id)) {
+                is com.nexonai.unpruuf.domain.network.PhoneTempNode.StartResult.Started -> {
+                    _tempNodeError.value = null
+                    contactDao.updatePhoneTempNode(contact.id, r.address, r.ownerSecret)
+                    _contact.value = contactDao.getContactById(contact.id)
+                    p2pNetworkManager.sendTempNodeAnnouncement(contact.id, r.address)
+                }
+                is com.nexonai.unpruuf.domain.network.PhoneTempNode.StartResult.Failed -> {
+                    _tempNodeError.value = str(
+                        when (r.reason) {
+                            com.nexonai.unpruuf.domain.network.PhoneTempNode.Reason.TOR_NOT_READY -> R.string.msg_phone_tn_tor
+                            com.nexonai.unpruuf.domain.network.PhoneTempNode.Reason.ALREADY_RUNNING -> R.string.msg_phone_tn_busy
+                            else -> R.string.msg_phone_tn_failed
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    /** Sets how long my packets for this contact may wait on the nodes (1 / 6 / 24 h). */
+    fun setMessageTtl(hours: Int) {
+        val contact = _contact.value ?: return
+        viewModelScope.launch {
+            contactDao.setMessageTtlHours(contact.id, MessageTtl.normalize(hours))
+            _contact.value = contactDao.getContactById(contact.id)
+        }
+    }
+
+    /** Pro app, guest contacts: stop or resume the automatic renewal of this guest's access. */
+    fun setGuestRenewing(renewing: Boolean) {
+        val contact = _contact.value ?: return
+        p2pNetworkManager.setGuestRenewing(contact.id, renewing)
     }
 
     fun renameContact(newName: String) {

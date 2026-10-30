@@ -1,10 +1,15 @@
 import { Router } from "express";
 import { NodeStore } from "../store/nodeStore";
-import { MAX_BLOB_BYTES, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
-import { requireOwner } from "../middleware/ownerAuth";
-import { rateLimited, TokenBucket } from "../middleware/rateLimit";
+import { MAX_BLOB_BYTES, MAX_FETCH_MANY_BLOBS, MAX_FETCH_MANY_TAGS, MAX_WAIT_MS } from "../config";
+import { checkOwner, OwnerSecretSource, requireOwner } from "../middleware/ownerAuth";
+import { GuestOptions, requireOwnerOrGuest } from "../middleware/depositAuth";
+import { GuestQuota } from "../guest/guestQuota";
+import { KeyedTokenBuckets, rateLimited, rateLimitedPerHost, TokenBucket } from "../middleware/rateLimit";
 
 const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
+// Standard base64 with padding, nothing else. Buffer.from(x, "base64") never throws and silently
+// skips illegal characters, so the shape has to be checked by hand (the Android Temp Node does the same).
+const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 /**
  * NODE_MESH_SPEC.md §8's API surface — deliberately just these three routes, mirroring the
@@ -12,13 +17,73 @@ const TAG_RE = /^[A-Za-z0-9+/=_-]{1,64}$/;
  * that already speaks that format needs no new parsing logic, only a different auth/delete
  * contract per endpoint (see each route's own comment for what changed and why).
  */
-export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
-  const router = Router();
-  const fetchRateLimit = new TokenBucket(30, 5); // burst of 30, refills 5/sec
+/** Sealed-key servers only (nodeIdentity.ts): lets the owner app see and lift the lock. */
+export interface LockControl {
+  isLocked: () => boolean;
+  /** Checks the presented owner secret and, if right, publishes the node onions. Resolves with
+   *  every node address, or null for a wrong secret. */
+  unlock: (ownerSecret: string) => Promise<string[] | null>;
+  controlAddress: () => string | null;
+}
 
-  // Owner-only — see ownerAuth.ts's doc comment. No contact, no stranger who merely learns this
-  // node's address can ever write here, regardless of whether they know a valid routing_tag.
-  router.put("/deposit", requireOwner(ownerSecret), (req, res) => {
+export function nodeRouter(
+  store: NodeStore,
+  ownerSecret: OwnerSecretSource,
+  addresses: () => string[] = () => [],
+  lock?: LockControl,
+  guest: GuestOptions = { enabled: false, maxValidityMs: 0 },
+  quota: GuestQuota = new GuestQuota(1, 1),
+): Router {
+  // Exact paths only: /DEPOSIT and /deposit/ are not routes.
+  const router = Router({ caseSensitive: true, strict: true });
+  // Per node address (see KeyedTokenBuckets): burst of 30, refills 5/sec for each.
+  const fetchRateLimit = new KeyedTokenBuckets(30, 5);
+  // Separate buckets, so a stranger who knows an address (or the control address) can use up only
+  // the allowance of his own kind of request: asking /lock-status, or a wrong secret on /pool,
+  // never the owner's right secret on /pool, and never /unlock.
+  const lockStatusLimit = new TokenBucket(5, 1);
+  const poolOwnerLimit = new TokenBucket(5, 1);
+  const poolFailLimit = new TokenBucket(10, 1);
+  // /unlock has to try the secret to know whether it is right (a key derivation), so its attempts
+  // are bounded as a whole. The setup page is the owner's way around a blocked /unlock.
+  const unlockRateLimit = new TokenBucket(5, 0.2);
+
+  // Owner-only: every onion address this process serves. The owner's app scans ONE address +
+  // the owner secret and learns all sibling nodes here, so a server with hundreds of nodes still
+  // needs only one QR. Contacts never call this — they only ever learn the nodes assigned to them.
+  // `control` (sealed servers) is the address the app reaches this server at after a restart.
+  router.get("/pool", (req, res) => {
+    const who = checkOwner(req, ownerSecret);
+    if (who === "locked") return res.status(423).json({ error: "locked" });
+    if (who === "bad") {
+      if (!poolFailLimit.tryTake()) return res.status(429).json({ error: "rate limit exceeded" });
+      return res.status(401).json({ error: "unauthorized" });
+    }
+    if (!poolOwnerLimit.tryTake()) return res.status(429).json({ error: "rate limit exceeded" });
+    const control = lock?.controlAddress() ?? null;
+    return res.status(200).json(control ? { control, addresses: addresses() } : { addresses: addresses() });
+  });
+
+  // Sealed servers: no secret needed to ASK — the app checks this on the control onion without
+  // sending anything secret, so a stranger answering on a stolen control address learns nothing.
+  router.get("/lock-status", rateLimited(lockStatusLimit), (_req, res) => {
+    return res.status(200).json({ locked: lock ? lock.isLocked() : false });
+  });
+
+  // Sealed servers: the owner app sends the owner secret after the user confirmed it.
+  router.post("/unlock", rateLimited(unlockRateLimit), async (req, res) => {
+    if (!lock) return res.status(404).json({ error: "not a sealed server" });
+    const header = req.header("authorization") ?? "";
+    const secret = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
+    const result = secret ? await lock.unlock(secret).catch(() => null) : null;
+    if (!result) return res.status(401).json({ error: "unauthorized" });
+    return res.status(200).json({ unlocked: true, addresses: result });
+  });
+
+  // Owner, or a guest with a valid grant (only if guests are enabled) — see depositAuth.ts and
+  // ownerAuth.ts. No contact and no stranger who merely learns this node's address can write here,
+  // regardless of whether they know a valid routing_tag.
+  router.put("/deposit", requireOwnerOrGuest(ownerSecret, guest), (req, res) => {
     const { routing_tag, ciphertext, ttl } = req.body ?? {};
     if (typeof routing_tag !== "string" || !TAG_RE.test(routing_tag)) {
       return res.status(400).json({ error: "invalid routing_tag" });
@@ -26,14 +91,19 @@ export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
     if (typeof ciphertext !== "string" || ciphertext.length === 0) {
       return res.status(400).json({ error: "invalid ciphertext" });
     }
-    let decodedLength: number;
-    try {
-      decodedLength = Buffer.from(ciphertext, "base64").length;
-    } catch {
+    // Longest legal value is the base64 of MAX_BLOB_BYTES; test the length first so the regex never runs on a huge string.
+    if (ciphertext.length > Math.ceil(MAX_BLOB_BYTES / 3) * 4) {
+      return res.status(413).json({ error: `ciphertext must be 1..${MAX_BLOB_BYTES} bytes` });
+    }
+    if (!BASE64_RE.test(ciphertext)) {
       return res.status(400).json({ error: "ciphertext is not valid base64" });
     }
+    const decodedLength = Buffer.from(ciphertext, "base64").length;
     if (decodedLength === 0 || decodedLength > MAX_BLOB_BYTES) {
       return res.status(413).json({ error: `ciphertext must be 1..${MAX_BLOB_BYTES} bytes` });
+    }
+    if (req.guestGrant && !quota.tryTake(req.guestGrant, decodedLength)) {
+      return res.status(429).json({ error: "guest quota reached" });
     }
     let ttlMs: number | undefined;
     if (ttl !== undefined) {
@@ -41,6 +111,9 @@ export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
         return res.status(400).json({ error: "invalid ttl" });
       }
       ttlMs = ttl;
+    }
+    if (store.isFull()) {
+      return res.status(507).json({ error: "node store full" });
     }
     const stored = store.put(routing_tag, ciphertext, ttlMs);
     if (!stored) {
@@ -53,7 +126,7 @@ export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
   // NODE_MESH_SPEC.md §2): it's HKDF-derived from the pairing secret, so knowing a valid one
   // already proves the caller was paired. Never deletes what it returns (§4) — only the TTL
   // sweep (nodeStore.ts) ever removes a row.
-  router.get("/fetch", rateLimited(fetchRateLimit), (req, res) => {
+  router.get("/fetch", rateLimitedPerHost(fetchRateLimit, addresses), (req, res) => {
     const tag = req.query.tag;
     if (typeof tag !== "string" || !TAG_RE.test(tag)) {
       return res.status(400).json({ error: "invalid tag" });
@@ -65,8 +138,8 @@ export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
   // Batched + optionally long-polling sibling of GET /fetch — same contract as the consumer
   // relay's POST /v1/fetchMany (server/src/routes/relay.ts), reused deliberately so a client
   // already speaking that format needs no new parsing. Read-only here too — see GET /fetch above.
-  router.post("/fetchMany", rateLimited(fetchRateLimit), async (req, res) => {
-    const { tags, waitMs } = req.body ?? {};
+  router.post("/fetchMany", rateLimitedPerHost(fetchRateLimit, addresses), async (req, res) => {
+    const { tags, waitMs, since } = req.body ?? {};
     if (!Array.isArray(tags) || tags.length === 0 || tags.length > MAX_FETCH_MANY_TAGS) {
       return res.status(400).json({ error: `tags must be a non-empty array of at most ${MAX_FETCH_MANY_TAGS}` });
     }
@@ -77,20 +150,38 @@ export function nodeRouter(store: NodeStore, ownerSecret: string): Router {
       ? Math.max(0, Math.min(waitMs, MAX_WAIT_MS))
       : 0;
 
-    const takeAll = (): Record<string, string[]> => {
-      const result: Record<string, string[]> = {};
-      for (const tag of tags as string[]) {
-        result[tag] = store.fetchAll(tag);
-      }
-      return result;
+    // Optional cursor: only blobs newer than what this client already has. Without it the
+    // response is every unexpired blob, exactly as before. With it, `cursor` comes back FIRST in
+    // the JSON so clients that parse `blobs` as the last object keep working.
+    const sinceId = typeof since === "number" && Number.isInteger(since) && since >= 0 ? since : null;
+
+    // The same tag twice would be read, and sent, twice: ask for each tag once.
+    const uniqueTags = [...new Set(tags as string[])];
+    const from = sinceId ?? 0;
+
+    // One bounded read across the tags. `cursor` is derived from what this caller asked for
+    // (the highest packet id it is handed, or the `since` it sent), never from a counter of the
+    // whole server: a stranger who knows an address cannot watch the server's traffic through it,
+    // nor tell which addresses belong to one server. `more` means the answer was cut at
+    // MAX_FETCH_MANY_BLOBS; asking again with the cursor continues exactly there.
+    const take = () => {
+      const rows = store.fetchRows(uniqueTags, from, MAX_FETCH_MANY_BLOBS + 1);
+      const more = rows.length > MAX_FETCH_MANY_BLOBS;
+      const used = more ? rows.slice(0, MAX_FETCH_MANY_BLOBS) : rows;
+      const blobs: Record<string, string[]> = {};
+      for (const tag of uniqueTags) blobs[tag] = [];
+      for (const r of used) blobs[r.tag].push(r.blob);
+      const cursor = used.length > 0 ? Math.max(from, used[used.length - 1].id) : from;
+      return { blobs, cursor, more, empty: used.length === 0 };
     };
 
-    let blobs = takeAll();
-    if (wait > 0 && Object.values(blobs).every((v) => v.length === 0)) {
-      await store.waitForAny(tags as string[], wait);
-      blobs = takeAll();
+    let got = take();
+    if (wait > 0 && got.empty) {
+      await store.waitForAny(uniqueTags, wait);
+      got = take();
     }
-    return res.status(200).json({ blobs });
+    if (sinceId === null && !got.more) return res.status(200).json({ blobs: got.blobs });
+    return res.status(200).json(got.more ? { cursor: got.cursor, more: true, blobs: got.blobs } : { cursor: got.cursor, blobs: got.blobs });
   });
 
   return router;

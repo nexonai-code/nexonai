@@ -1,5 +1,7 @@
 package com.nexonai.unpruuf.services
 
+import com.nexonai.unpruuf.R
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -41,11 +43,15 @@ class TorForegroundService : Service() {
     @Inject
     lateinit var torManager: TorManager
 
+    @Inject
+    lateinit var phoneTempNode: com.nexonai.unpruuf.domain.network.PhoneTempNode
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
+        com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: TorForegroundService onCreate")
         createNotificationChannel()
         acquireWakeLock()
     }
@@ -66,6 +72,7 @@ class TorForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 startForeground(NOTIFICATION_ID, buildNotification("Connecting to Tor…"))
+                com.nexonai.unpruuf.ui.DebugCrashReport.t("svc: Tor foreground started, calling torManager.start()")
                 torManager.start()
                 observeTorStatus()
             }
@@ -79,10 +86,21 @@ class TorForegroundService : Service() {
     }
 
     private fun observeTorStatus() {
+        // While this phone is a Temp Node the notification says so: the owner must know the phone
+        // is serving, and that stopping the app ends it.
+        serviceScope.launch {
+            phoneTempNode.state.collect { st ->
+                if (torManager.isReady.value) {
+                    updateNotification(
+                        if (st is com.nexonai.unpruuf.domain.network.PhoneTempNode.State.Running) getString(R.string.tor_notif_temp_node) else "Tor active"
+                    )
+                }
+            }
+        }
         serviceScope.launch {
             torManager.isReady.collect { ready ->
                 if (ready) {
-                    updateNotification("Tor active")
+                    updateNotification(if (phoneTempNode.isRunning()) getString(R.string.tor_notif_temp_node) else "Tor active")
                     scheduleDummyTraffic()
                 } else {
                     updateNotification("Connecting to Tor…")
@@ -125,7 +143,7 @@ class TorForegroundService : Service() {
             "unpruuf Tor Connection",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Shows the Tor connection status"
+            description = getString(R.string.msg_tor_channel_desc)
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)

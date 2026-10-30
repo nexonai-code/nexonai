@@ -10,12 +10,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nexonai.unpruuf.domain.AppEdition
+import com.nexonai.unpruuf.screens.cases.CasesScreen
 import com.nexonai.unpruuf.screens.chat.ChatScreen
 import com.nexonai.unpruuf.screens.contactdetail.ContactDetailScreen
 import com.nexonai.unpruuf.screens.contacts.ContactsScreen
+import com.nexonai.unpruuf.screens.groups.GroupChatScreen
+import com.nexonai.unpruuf.screens.groups.GroupEditScreen
+import com.nexonai.unpruuf.screens.groups.GroupsScreen
 import com.nexonai.unpruuf.screens.home.HomeScreen
 import com.nexonai.unpruuf.screens.home.HomeViewModel
+import com.nexonai.unpruuf.screens.qrpair.GuestInviteScreen
 import com.nexonai.unpruuf.screens.qrpair.QrPairScreen
+import com.nexonai.unpruuf.screens.nodelists.NodeListsScreen
 import com.nexonai.unpruuf.screens.settings.SettingsScreen
 
 object Routes {
@@ -23,11 +30,21 @@ object Routes {
     const val CONTACTS = "contacts"
     const val CHAT = "chat/{contactId}"
     const val QR_PAIR = "qr_pair"
+    const val GUEST_INVITE = "guest_invite"
     const val SETTINGS = "settings"
+    const val NODE_LISTS = "node_lists"
     const val CONTACT_DETAIL = "contact_detail/{contactId}"
+    const val CASES = "cases"
+    const val GROUPS = "groups"
+    /** groupId "new" = create. */
+    const val GROUP_EDIT = "group_edit/{groupId}"
+    const val GROUP_CHAT = "group_chat/{groupId}"
 
+    fun groupEditRoute(groupId: String) = "group_edit/$groupId"
+    fun groupChatRoute(groupId: String) = "group_chat/$groupId"
     fun chatRoute(contactId: String) = "chat/$contactId"
     fun contactDetailRoute(contactId: String) = "contact_detail/$contactId"
+
 }
 
 @Composable
@@ -49,7 +66,14 @@ fun AppNavigation(
 
     // Contacts is the start screen. The former home/status screen is now
     // reachable from Settings ("Network & security status").
-    NavHost(navController = navController, startDestination = Routes.CONTACTS) {
+    // Whistleblower: no contacts list at all — "My cases" (with the first-start scan) is home.
+    NavHost(navController = navController, startDestination = if (AppEdition.isWhistleblower) Routes.CASES else Routes.CONTACTS) {
+        composable(Routes.CASES) {
+            CasesScreen(
+                onOpenCase = { id -> navController.navigate(Routes.chatRoute(id)) },
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
+            )
+        }
         composable(Routes.CONTACTS) {
             ContactsScreen(
                 onContactClick = { contact ->
@@ -59,7 +83,41 @@ fun AppNavigation(
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
                 onVerifyContact = { contact ->
                     navController.navigate(Routes.contactDetailRoute(contact.id))
-                }
+                },
+                onOpenGroups = { navController.navigate(Routes.GROUPS) }
+            )
+        }
+        composable(Routes.GROUPS) {
+            GroupsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenGroup = { id -> navController.navigate(Routes.groupChatRoute(id)) },
+                onNewGroup = { navController.navigate(Routes.groupEditRoute("new")) }
+            )
+        }
+        composable(
+            route = Routes.GROUP_CHAT,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) { backStack ->
+            val groupId = backStack.arguments?.getString("groupId") ?: return@composable
+            GroupChatScreen(
+                groupId = groupId,
+                onNavigateBack = { navController.popBackStack() },
+                onEdit = { navController.navigate(Routes.groupEditRoute(groupId)) }
+            )
+        }
+        composable(
+            route = Routes.GROUP_EDIT,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) { backStack ->
+            val groupId = backStack.arguments?.getString("groupId") ?: return@composable
+            GroupEditScreen(
+                groupId = groupId.takeIf { it != "new" },
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = { id ->
+                    navController.popBackStack(Routes.GROUPS, inclusive = false)
+                    navController.navigate(Routes.groupChatRoute(id))
+                },
+                onDeleted = { navController.popBackStack(Routes.GROUPS, inclusive = false) }
             )
         }
         composable(Routes.HOME) {
@@ -82,7 +140,13 @@ fun AppNavigation(
             )
         }
         composable(Routes.QR_PAIR) {
-            QrPairScreen(onNavigateBack = { navController.popBackStack() })
+            QrPairScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onInviteGuest = { navController.navigate(Routes.GUEST_INVITE) }
+            )
+        }
+        composable(Routes.GUEST_INVITE) {
+            GuestInviteScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(
             route = Routes.CONTACT_DETAIL,
@@ -97,8 +161,12 @@ fun AppNavigation(
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToInfo = { navController.navigate(Routes.HOME) }
+                onNavigateToInfo = { navController.navigate(Routes.HOME) },
+                onNavigateToNodeLists = { navController.navigate(Routes.NODE_LISTS) }
             )
+        }
+        composable(Routes.NODE_LISTS) {
+            NodeListsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

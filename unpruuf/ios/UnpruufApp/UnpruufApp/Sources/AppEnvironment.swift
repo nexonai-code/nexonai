@@ -13,6 +13,9 @@ final class AppEnvironment: ObservableObject {
     let messageStore = InMemoryMessageStore()
     let torController = TorController()
     let relayService: RelayService
+    /// unpruuf Compliance only (see `Edition`): the reporter's cases and their relay traffic.
+    let caseStore: CaseStore
+    let complianceService: ComplianceService
     let pinManager: PinManager
     let appLockManager = AppLockManager()
     let relayPoolManager = RelayPoolManager()
@@ -117,13 +120,22 @@ final class AppEnvironment: ObservableObject {
             identity: identity, contactStore: contactStore, messageStore: messageStore,
             keychain: keychain, torController: torController
         )
+        let caseStore = CaseStore(keychain: keychain)
+        self.caseStore = caseStore
+        self.complianceService = ComplianceService(
+            caseStore: caseStore, messageStore: messageStore, keychain: keychain, torController: torController
+        )
     }
 
     /// Starts Tor + the relay poll loop — call when the app becomes active (foreground-scoped Tor,
     /// per `CROSS_PLATFORM_PLAN.md` §6).
     func start() {
         torController.start()
-        relayService.startPolling()
+        if Edition.isCompliance {
+            complianceService.startPolling()
+        } else {
+            relayService.startPolling()
+        }
     }
 
     /// Called when the app leaves the foreground. Stops the network side (Tor, relay polling —
@@ -134,6 +146,7 @@ final class AppEnvironment: ObservableObject {
     /// PANIC-PIN-equivalent action, not what a routine background transition should ever do.
     func stop() {
         relayService.stopPolling()
+        complianceService.stopPolling()
         torController.stop()
         messageStore.wipeAll()
     }
@@ -145,6 +158,7 @@ final class AppEnvironment: ObservableObject {
     /// device entirely" action, distinct from the panic-PIN's "erase relationships, keep the
     /// device usable" behavior.
     func wipeAll() {
+        complianceService.wipeEverything()
         contactStore.wipeAll()
         messageStore.wipeAll()
         keychain.removeAll()
@@ -161,5 +175,7 @@ final class AppEnvironment: ObservableObject {
     func wipeContactsAndMessages() {
         messageStore.wipeAll()
         contactStore.wipeAll()
+        // Compliance: the cases, their keys and the remembered organisation QR go too.
+        complianceService.wipeEverything()
     }
 }

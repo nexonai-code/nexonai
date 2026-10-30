@@ -57,6 +57,28 @@ interface ContactDao {
     @Query("SELECT * FROM contacts WHERE remoteUserId = :remoteUserId LIMIT 1")
     suspend fun getContactByRemoteUserId(remoteUserId: String): Contact?
 
+    /** Re-scan check for Node-Mesh pairings, which carry no userId — see
+     *  QrPairViewModel.handleScannedNodeMeshQr. */
+    @Query("SELECT * FROM contacts WHERE publicKey = :publicKey AND nodeMesh = 1 LIMIT 1")
+    suspend fun getNodeMeshContactByPublicKey(publicKey: String): Contact?
+
+    @Query("UPDATE contacts SET myNodeAddresses = :addresses WHERE id = :id")
+    suspend fun updateMyNodeAddresses(id: String, addresses: String)
+
+    /** Guest (Client app): new nodes and grants from a GRANT_RENEW; both node columns hold the inviter's nodes. */
+    @Query("UPDATE contacts SET myNodeAddresses = :nodes, theirNodeAddresses = :nodes, guestGrants = :grants WHERE id = :id")
+    suspend fun updateGuestNodesAndGrants(id: String, nodes: String, grants: String)
+
+    /** Owner (Pro): the renewal promise for a guest (`7:NORMAL`, `!…` = stopped). */
+    @Query("UPDATE contacts SET guestRenewal = :renewal WHERE id = :id")
+    suspend fun updateGuestRenewal(id: String, renewal: String?)
+
+    @Query("UPDATE contacts SET guestRenewedAtMs = :at WHERE id = :id")
+    suspend fun updateGuestRenewedAt(id: String, at: Long)
+
+    @Query("SELECT * FROM contacts WHERE guestRenewal IS NOT NULL")
+    suspend fun getGuestContacts(): List<Contact>
+
     /** Sets or clears (pass null) the manual relay-owner override — see
      *  P2PNetworkManager.switchRelayOwner()/IdentityManager.relayOwnerIsMine(). [owner] is
      *  "mine", "theirs", or null to fall back to the automatic rhythm. */
@@ -74,13 +96,17 @@ interface ContactDao {
 
     /** Registers a freshly scanned/pasted temp node for this one chat — always starts
      *  unconfirmed (see P2PNetworkManager's dual-deposit-until-first-success handling). */
-    @Query("UPDATE contacts SET tempNodeAddress = :address, tempNodeOwnerSecret = :ownerSecret, tempNodeActive = 0 WHERE id = :id")
+    @Query("UPDATE contacts SET tempNodeAddress = :address, tempNodeOwnerSecret = :ownerSecret, tempNodeActive = 0, tempNodeOnPhone = 0 WHERE id = :id")
     suspend fun updateTempNode(id: String, address: String, ownerSecret: String)
+
+    /** The same registration for a Temp Node that runs on this phone (see PhoneTempNode). */
+    @Query("UPDATE contacts SET tempNodeAddress = :address, tempNodeOwnerSecret = :ownerSecret, tempNodeActive = 0, tempNodeOnPhone = 1 WHERE id = :id")
+    suspend fun updatePhoneTempNode(id: String, address: String, ownerSecret: String)
 
     /** Explicit deactivation (§7 step 8's "sauberer Übergang zurück auf Standard-Nodes") —
      *  unlike the automatic heartbeat-timeout fallback in [setTempNodeActive], this drops the
      *  registration entirely rather than leaving it around to retry. */
-    @Query("UPDATE contacts SET tempNodeAddress = NULL, tempNodeOwnerSecret = NULL, tempNodeActive = 0 WHERE id = :id")
+    @Query("UPDATE contacts SET tempNodeAddress = NULL, tempNodeOwnerSecret = NULL, tempNodeActive = 0, tempNodeOnPhone = 0 WHERE id = :id")
     suspend fun clearTempNode(id: String)
 
     /** Flips the confirmed/active state — see Contact.tempNodeActive's doc comment for the
@@ -95,4 +121,30 @@ interface ContactDao {
      *  clears it (the OFF signal). */
     @Query("UPDATE contacts SET theirTempNodeAddress = :address WHERE id = :id")
     suspend fun updateTheirTempNodeAddress(id: String, address: String?)
+
+    /** Whistleblower: the officer's case receipt / status update arrived (see P2PNetworkManager's
+     *  CASE_SIGNAL_PREFIX handling). Also ends the intake retries. */
+    @Query(
+        "UPDATE contacts SET caseNumber = :number, caseStatus = :status, caseOpenedAt = :openedAt, " +
+            "caseAckDueAt = :ackDueAt, caseFeedbackDueAt = :feedbackDueAt, caseUpdatedAt = :updatedAt, " +
+            "intakeStartedAt = NULL WHERE id = :id"
+    )
+    suspend fun updateCaseInfo(
+        id: String, number: String, status: String, openedAt: Long?, ackDueAt: Long?, feedbackDueAt: Long?, updatedAt: Long
+    )
+
+    @Query("UPDATE contacts SET intakeStartedAt = :startedAt, intakeLastSentAt = NULL WHERE id = :id")
+    suspend fun startIntake(id: String, startedAt: Long)
+
+    @Query("UPDATE contacts SET intakeLastSentAt = :sentAt WHERE id = :id")
+    suspend fun markIntakeSent(id: String, sentAt: Long)
+
+    @Query("UPDATE contacts SET intakeStartedAt = NULL WHERE id = :id")
+    suspend fun stopIntake(id: String)
+
+    @Query("UPDATE contacts SET messageTtlHours = :hours WHERE id = :id")
+    suspend fun setMessageTtlHours(id: String, hours: Int?)
+
+    @Query("SELECT * FROM contacts WHERE id = :id")
+    fun observeContact(id: String): Flow<Contact?>
 }
