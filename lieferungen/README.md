@@ -11,6 +11,7 @@ Regeln:
 |---|---|
 | 02_Apps_Software | Officer-App unpruuf Compliance (Löschen/Export, 30.10.), NexonGraph 1.2 (Windows + macOS), Android-Screenshot-Paket, Guest Lockers, Press-Oberfläche, Press-Tippseite |
 | 03_Material | Whitepaper v7 (EN+RO), Präsentationen (RO, Compliance EN wortgetreu und regelkonform, Compliance-Kurzpräsentation EN/RO 30.10.), Compliance-Video v2, Architekturvideo v1, Website v12, Press-Einseiter v2, Wissensseite als Einzeldatei (für Floretta), Vertrieb: Compliance-Ansprache EN/RO |
+| 04_Kunden | Zielliste unpruuf Compliance Welle 1 (50 Firmen, 30.10.), auch als Google Sheet in Drive |
 | 05_Piloten | Pilotbriefe UAB und Alba Carolina TV (30.10.), Alba Carolina TV: Leitfaden DE/RO, Pilotvereinbarung EN/RO (Entwurf), Audit-Liste DE/EN |
 | 06_Angebote_Preise | Paket und Preise unpruuf Compliance Start EN/RO |
 | 08_Audit_Sicherheit | Compliance-Belegpaket für Datenschutzbeauftragte EN/RO, Brief für den Auditor (RO), Security-Audit-Roadmap (EN) |
