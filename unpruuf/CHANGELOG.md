@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: pairing and contacts of unpruuf Business (package B3)
+
+**What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshContact`, `NodeMeshContactStore` (one Keychain item with the per-contact keys and the open pairing code), `NodeMeshEdition` (rule of `AppEdition.canAdd` for `pro`), `NodeMeshPairingFlow` (from `QrPairViewModel`: list choice, code kept until bound, one binding per screen, re-scan, changed key, edition refusal). `NodePairingView` (list, QR, copy, scan, paste, name) and `NodeContactDetailView` (safety number, verify). Part of the panic wipe set, including an open pairing code. Code keys must be 32 bytes, stricter than Android.
+
+**Checked.** `swift test` 186 tests, 182 green, the 4 real server tests skipped in this run. Two simulated phones pair from each other's JSON, agree on pair secret, routing, safety number and addresses, and open one ratchet message. `UnpruufAppTests` 10 of 10 on iOS 27.2. By hand on the Simulator: unlock, owner code, QR shown, foreign code pasted, contact added, safety number shown.
+
+**Not checked.** A QR scan, on any device. Pairing with a real Android Pro phone: the QR is not known to read there, and the JSON was only compared with the shared vectors. Sending, receiving and contact removal do not exist yet (B4).
+
+**Known limits.** No guest invitations on iOS: an invitation is refused with the Android text, a guest's answer with a plain message. A contact's ratchet session is created in B4.
+
+---
+
 ## 2026‑10‑30 · iOS: third app unpruuf Business, node list screens (decision 9.1: own app)
 
 **What was done.** `Info-Business.plist`, `Edition.isBusiness`, `RootView` opens `BusinessHomeView`, `AppEnvironment.start` runs no relay poll in this edition. New in `UnpruufApp/Sources/Business`: `NodeListsModel`, `BusinessHomeView` (lists, locked servers with confirmation, Tor line, "Not independently audited"), `NodeListDetailView` (rename, delete), `NodeImportView` (QR, file, paste, target list). `Podfile` now names all three apps. `UnpruufCompliance` is a real target in the local project for the first time.

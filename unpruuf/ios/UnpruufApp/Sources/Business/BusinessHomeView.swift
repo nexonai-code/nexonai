@@ -7,6 +7,8 @@ struct BusinessHomeView: View {
     @ObservedObject private var torController: TorController
     @StateObject private var model: NodeListsModel
     @State private var showImport = false
+    @State private var showPairing = false
+    @State private var contacts: [NodeMeshContact] = []
     @State private var serverToUnlock: NodeMeshStore.LockedServer?
     @State private var unlockFailed = false
 
@@ -31,6 +33,21 @@ struct BusinessHomeView: View {
                             .font(.footnote)
                         Button(L.t("Deblochează", "Unlock")) { serverToUnlock = server }
                     }
+                }
+                Section(L.t("Contacte", "Contacts")) {
+                    if contacts.isEmpty {
+                        Text(L.t("Încă nu există contacte.", "No contacts yet."))
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(contacts) { contact in
+                        NavigationLink {
+                            NodeContactDetailView(store: env.nodeMeshContacts, contactId: contact.id)
+                        } label: {
+                            Text(contact.displayName)
+                        }
+                    }
+                    Button(L.t("Adaugă contact", "Add contact")) { showPairing = true }
+                        .disabled(model.lists.isEmpty)
                 }
                 Section(L.t("Liste de noduri", "Node lists")) {
                     if model.lists.isEmpty {
@@ -64,6 +81,10 @@ struct BusinessHomeView: View {
             }
             .refreshable { await model.searchServers() }
             .sheet(isPresented: $showImport) { NodeImportView(model: model) }
+            .sheet(isPresented: $showPairing, onDismiss: reloadContacts) {
+                NodePairingView(nodes: env.nodeMeshStore, contacts: env.nodeMeshContacts, lists: model.lists)
+            }
+            .onAppear(perform: reloadContacts)
             .confirmationDialog(L.t("Deblochezi serverul?", "Unlock this server?"),
                                 isPresented: Binding(get: { serverToUnlock != nil }, set: { if !$0 { serverToUnlock = nil } }),
                                 presenting: serverToUnlock) { server in
@@ -81,6 +102,10 @@ struct BusinessHomeView: View {
         .task(id: torController.isReady) {
             if torController.isReady { await model.searchServers() }
         }
+    }
+
+    private func reloadContacts() {
+        contacts = env.nodeMeshContacts.contacts.sorted { $0.displayName < $1.displayName }
     }
 
     private func summary(_ list: NodeList) -> String {

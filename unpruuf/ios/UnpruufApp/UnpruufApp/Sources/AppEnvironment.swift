@@ -22,6 +22,7 @@ final class AppEnvironment: ObservableObject {
     let relayPoolManager: RelayPoolManager
     let archivedRelayStore: ArchivedRelayStore
     let nodeMeshStore: NodeMeshStore
+    let nodeMeshContacts: NodeMeshContactStore
     let nodeMeshClient: NodeMeshClient
 
     /// The relay I currently advertise to new contacts (and, by default, use when Wechsel-ing an
@@ -120,6 +121,7 @@ final class AppEnvironment: ObservableObject {
         self.relayPoolManager = RelayPoolManager(keychain: keychain)
         self.archivedRelayStore = ArchivedRelayStore(keychain: keychain)
         self.nodeMeshStore = NodeMeshStore(store: KeychainStore.nodeMesh())
+        self.nodeMeshContacts = NodeMeshContactStore(store: KeychainStore.nodeMesh())
         let torController = self.torController
         self.nodeMeshClient = NodeMeshClient(transport: TorNodeTransport(socksPort: { await torController.socksPort }))
         self.defaultRelayConnectionString = keychain.getString(Self.defaultRelayKey) ?? ""
@@ -178,7 +180,7 @@ final class AppEnvironment: ObservableObject {
     /// and the one place that defines the panic wipe set. Deliberately narrower than `wipeAll()`
     /// above: wipes contacts (and their Double Ratchet session state), RAM messages, the send
     /// queue and half-received chunks, this device's relay setup, the imported relay pool, kept
-    /// relay addresses, own nodes with their owner secrets, and the Compliance cases, but leaves this device's own
+    /// relay addresses, own nodes with their owner secrets, Node-Mesh contacts with an open pairing code, and the Compliance cases, but leaves this device's own
     /// identity (`userId`/`myMessageKey`/X25519 ratchet keypair) and the PIN/panic-PIN hashes
     /// themselves untouched — same as Android, so a panicked user's device still works and can
     /// still show a QR to re-pair afterward, rather than resetting to a broken, identity-less
@@ -201,5 +203,6 @@ final class AppEnvironment: ObservableObject {
         relayPoolManager.wipe()
         archivedRelayStore.wipeAll()
         nodeMeshStore.wipe()
+        nodeMeshContacts.wipe()
     }
 }

@@ -41,6 +41,8 @@ final class LocalProtectionTests: XCTestCase {
         env.backupRelayLabel = "VM"
         env.archivedRelayStore.archive(label: "old", connectionString: relay)
         XCTAssertTrue(env.nodeMeshStore.addNode(ownerString: "unpruuf-node-owner:v1:p5ncnam7fxml4mfdbz4nfr6pkkys2af73yefvopoxvkke2dtli2ldfad.onion:secret_0123456789"))
+        XCTAssertNotNil(NodeMeshPairingFlow(nodes: env.nodeMeshStore, contacts: env.nodeMeshContacts).myCode())
+        XCTAssertNotNil(env.nodeMeshContacts.pending)
         await env.relayService.sendControlSignal(Data("x".utf8), to: "c1")
         XCTAssertEqual(env.relayService.pendingDeliveryCount, 1)
         let contactFile = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -66,6 +68,8 @@ final class LocalProtectionTests: XCTestCase {
         XCTAssertNil(env.keychain.getData("archived_relays"))
         XCTAssertTrue(env.nodeMeshStore.nodes.isEmpty)
         XCTAssertNil(KeychainStore.nodeMesh().getString("node_mesh_state"))
+        XCTAssertNil(env.nodeMeshContacts.pending, "an open pairing code goes too")
+        XCTAssertNil(KeychainStore.nodeMesh().getString("node_mesh_contacts"))
 
         XCTAssertEqual(env.identity.myMessageKey, identityKey)
         XCTAssertEqual(env.pinManager.check("1234"), .normal)
