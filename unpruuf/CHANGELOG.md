@@ -5,13 +5,25 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: packet interop with the Android sources (package A4 finished)
+
+**What was done.** New `ios/interop-jvm`: compiles the Android files `DoubleRatchet.kt`, `RatchetHeader.kt`, `RatchetFrame.kt` and `NetworkObfuscation.kt` unchanged, without an Android SDK. With fixed per-contact keys it writes `android-packets.txt`, and it checks `swift-packets.txt`. Both fixtures are committed.
+
+**Checked.** A text and a chunked 10 000 byte message built by the Android code open in Swift (`swift test` 137 of 137), and the same two built by Swift open in the Android code (`opened 2 messages`). Plaintext compared, nonces are random.
+
+**Not checked.** Replies after the first ratchet step across platforms (each side's unit tests only; relay mode did it on real phones). `CryptoManager` and `RatchetSessionManager` need Android classes, so `Interop.kt` repeats their outer encryption and root key lines instead of running them.
+
+**Known limits.** JDK 17 is Temurin in `~/.local/temurin-17`, not installed system-wide (Homebrew cannot write on this Mac account). Set `JAVA_HOME` to its `Contents/Home`.
+
+---
+
 ## 2026‑10‑30 · iOS: Node-Mesh foundation in UnpruufCore (packages A1, A2, A4 logic)
 
 **What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshRouting` (tags, epochs, window of 26), `NodeConnectionStrings` (owner and address strings, node choice), `NodeListFile`, `NodeLists.cleanName`, `MessageTtl`, `GuestGrant`, `NodeMeshPairingPayload` (v2 with `g` and `i`), `NodeMeshPairKeys` and `NodeMeshCrypto` (per-contact session, seal, open). Nothing in the app uses them yet. `GuestGrant` came forward from the guest order because the pairing code needs it.
 
 **Checked.** `swift test` 135 of 135. Routing known answers from the spec, guest grant vectors byte for byte, pairing vectors decoded and re-encoded to the same bytes, a node-list fixture written by the real `buildNodeListFile` of the server, chunked round trip in both directions between two Swift sides.
 
-**Not checked.** A4 is not done: the Android fixture both ways needs a JVM test and this Mac has no Java runtime. So no packet built by Android has been opened here, nor the reverse. Node lists against a running server.
+**Not checked.** Node lists against a running server.
 
 **Known limits.** `OnionAddress` checks the checksum, Android does not. Android test fixtures with made-up addresses (`aaaa…`) are refused here, real addresses pass; a test server handing out addresses without a checksum would be refused too. The node-list storage rules of `NodeLists` come with `NodeMeshStore`.
 

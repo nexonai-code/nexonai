@@ -1,3 +1,4 @@
+import CryptoKit
 import XCTest
 @testable import UnpruufCore
 
@@ -308,6 +309,68 @@ final class NodeMeshCryptoTests: XCTestCase {
                                             theirMessageKey: first.0.keys.messageKey)
         XCTAssertGreaterThan(reply.count, 1)
         XCTAssertEqual(try open(reply, with: first.1, secret: secretA, myKey: first.0.keys.messageKey), big)
+    }
+
+    // Fixed keys, same values as interop-jvm/src/interop/Interop.kt.
+    private func interopSides() throws -> (sender: NodeMeshPairKeys, receiver: NodeMeshPairKeys) {
+        func keys(_ message: UInt8, _ priv: UInt8) throws -> NodeMeshPairKeys {
+            let privateKey = Data(repeating: priv, count: 32)
+            let publicKey = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: privateKey).publicKey.rawRepresentation
+            return NodeMeshPairKeys(messageKey: Data(repeating: message, count: 32),
+                                    ratchetKeyPair: DoubleRatchet.KeyPair(privateKey: privateKey, publicKey: publicKey),
+                                    routingSeed: Data(count: 32))
+        }
+        let a = try keys(0x11, 0x31), b = try keys(0x22, 0x41)
+        return [UInt8](a.ratchetKeyPair.publicKey).lexicographicallyPrecedes([UInt8](b.ratchetKeyPair.publicKey)) ? (a, b) : (b, a)
+    }
+
+    private func unhex(_ hex: Substring) -> Data {
+        var out = Data(capacity: hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            out.append(UInt8(hex[index..<next], radix: 16)!)
+            index = next
+        }
+        return out
+    }
+
+    /// `android-packets.txt` comes from the Android sources through interop-jvm.
+    func test_packetsBuiltByAndroid_openHere() throws {
+        let (sender, receiver) = try interopSides()
+        let secret = NodeMeshCrypto.pairSecret(myMessageKey: receiver.messageKey, theirMessageKey: sender.messageKey)
+        let state = try NodeMeshCrypto.createSession(myRatchetKeyPair: receiver.ratchetKeyPair,
+                                                     theirRatchetPublicKey: sender.ratchetKeyPair.publicKey, pairSecret: secret)
+        let file = iosDir.appendingPathComponent("UnpruufCore/Tests/UnpruufCoreTests/Fixtures/android-packets.txt")
+        var messages: [(plaintext: Data, packets: [Data])] = []
+        for line in try String(contentsOf: file, encoding: .utf8).split(separator: "\n") {
+            let value = unhex(line.dropFirst(2))
+            if line.hasPrefix("M ") { messages.append((value, [])) } else { messages[messages.count - 1].packets.append(value) }
+        }
+        XCTAssertEqual(messages.count, 2)
+        XCTAssertEqual(messages[0].packets.count, 1)
+        XCTAssertGreaterThan(messages[1].packets.count, 1)
+        for message in messages {
+            XCTAssertEqual(try open(message.packets, with: state, secret: secret, myKey: receiver.messageKey), message.plaintext)
+        }
+    }
+
+    /// Writes the file interop-jvm checks: `INTEROP_WRITE=<path> swift test --filter writeSwiftPackets`.
+    func test_writeSwiftPackets() throws {
+        guard let path = ProcessInfo.processInfo.environment["INTEROP_WRITE"] else { return }
+        let (sender, receiver) = try interopSides()
+        let secret = NodeMeshCrypto.pairSecret(myMessageKey: sender.messageKey, theirMessageKey: receiver.messageKey)
+        let state = try NodeMeshCrypto.createSession(myRatchetKeyPair: sender.ratchetKeyPair,
+                                                     theirRatchetPublicKey: receiver.ratchetKeyPair.publicKey, pairSecret: secret)
+        func hex(_ data: Data) -> String { data.map { String(format: "%02x", $0) }.joined() }
+        var text = ""
+        for plaintext in [MessagePayload.encodeText("Hallo von iOS"), Data((0..<10_000).map { UInt8($0 % 251) })] {
+            text += "M \(hex(plaintext))\n"
+            for packet in try NodeMeshCrypto.seal(plaintext: plaintext, state: state, pairSecret: secret, theirMessageKey: receiver.messageKey) {
+                text += "P \(hex(packet))\n"
+            }
+        }
+        try text.write(toFile: path, atomically: true, encoding: .utf8)
     }
 
     func test_packetForAnotherContact_doesNotOpen() throws {

@@ -24,3 +24,8 @@ Podfile.lock
 *.ipa
 
 .DS_Store
+
+# JVM interop project
+interop-jvm/.gradle/
+interop-jvm/.kotlin/
+interop-jvm/build/
