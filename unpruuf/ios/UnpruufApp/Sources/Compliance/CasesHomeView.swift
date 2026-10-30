@@ -97,8 +97,7 @@ struct CasesHomeView: View {
                 TextField(L.t("…sau lipește codul", "…or paste the code"), text: $pasted, axis: .vertical)
                     .lineLimit(2...5)
                     .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
+                    .codeInput()
                 Button(L.t("Conectează", "Connect")) { connect(pasted); pasted = "" }
                     .buttonStyle(.bordered)
                     .disabled(pasted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

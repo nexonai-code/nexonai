@@ -44,6 +44,8 @@ final class RelayService: ObservableObject {
         var isComplete: Bool { received == pieces.count }
     }
     private var chunkReassembly: [String: ChunkReassembly] = [:] // keyed by senderId
+    /// Bumped by `wipeRuntimeState`, so a delivery pass still running cannot put the queue back.
+    private var wipeCount = 0
 
     init(identity: Identity, contactStore: ContactStore, messageStore: InMemoryMessageStore, keychain: KeychainStore, torController: TorController) {
         self.identity = identity
@@ -154,6 +156,15 @@ final class RelayService: ObservableObject {
 
     private func hasPendingDeliveries() -> Bool { !deliveryQueue.isEmpty }
 
+    var pendingDeliveryCount: Int { deliveryQueue.count }
+
+    /// Panic PIN: nothing queued goes out any more, half-received transfers are forgotten.
+    func wipeRuntimeState() {
+        wipeCount += 1
+        deliveryQueue.removeAll()
+        chunkReassembly.removeAll()
+    }
+
     /// Gives already-enqueued outbound deliveries a bounded window to actually finish — see
     /// `UnpruufApp.swift`'s `.background` handling for why this exists. Real bug found from a user
     /// report, 2026‑09‑02: a message sent immediately before backgrounding could be silently lost
@@ -181,7 +192,9 @@ final class RelayService: ObservableObject {
         var anyDelivered = false
         var failedContacts: Set<String> = []
         var remaining: [PendingDelivery] = []
-        for item in deliveryQueue {
+        let pass = deliveryQueue
+        let wipesAtStart = wipeCount
+        for item in pass {
             if failedContacts.contains(item.contactId) { remaining.append(item); continue }
             if await attemptDelivery(item) {
                 anyDelivered = true
@@ -192,8 +205,10 @@ final class RelayService: ObservableObject {
                 failedContacts.insert(item.contactId)
                 remaining.append(item)
             }
+            if wipeCount != wipesAtStart { return false }
         }
-        deliveryQueue = remaining
+        // Anything enqueued while this pass was waiting on the network stays queued.
+        deliveryQueue = remaining + deliveryQueue.dropFirst(pass.count)
         return anyDelivered
     }
 

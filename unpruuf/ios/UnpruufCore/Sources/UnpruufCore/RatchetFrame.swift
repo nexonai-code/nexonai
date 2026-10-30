@@ -18,6 +18,10 @@ public enum RatchetFrame {
     /// Ciphertext bytes per outer packet — comfortably under the ~4015-4059 byte budget of every frame kind.
     public static let ciphertextChunkSize = 4000
 
+    /// A transfer of more pieces than this is refused: 2048 x 4000 bytes is about 8 MB, above the
+    /// largest attachment. Same value as Android's `MAX_TOTAL_CHUNKS`.
+    public static let maxTotalChunks: Int32 = 2048
+
     public enum Frame {
         case single(header: RatchetHeader, ciphertext: Data)
         /// Always chunk index 0.
@@ -75,14 +79,14 @@ public enum RatchetFrame {
         case kindChunkStart:
             guard raw.count >= 1 + 4 + RatchetHeader.size else { return nil }
             let totalChunks = readInt(raw, at: base + 1)
-            guard totalChunks >= 2 else { return nil } // a real multi-chunk transfer always has >= 2 pieces
+            guard totalChunks >= 2, totalChunks <= maxTotalChunks else { return nil } // a real transfer has >= 2 pieces, and never absurdly many
             guard let header = try? RatchetHeader.decode(raw, offset: 1 + 4) else { return nil }
             let piece = raw.subdata(in: (base + 1 + 4 + RatchetHeader.size)..<raw.endIndex)
             return .chunkStart(totalChunks: totalChunks, header: header, piece: piece)
         case kindChunkCont:
             guard raw.count >= 1 + 4 else { return nil }
             let index = readInt(raw, at: base + 1)
-            guard index >= 1 else { return nil } // 0 is reserved for chunkStart's own piece
+            guard index >= 1, index < maxTotalChunks else { return nil } // 0 is reserved for chunkStart's own piece
             let piece = raw.subdata(in: (base + 1 + 4)..<raw.endIndex)
             return .chunkCont(index: index, piece: piece)
         default:

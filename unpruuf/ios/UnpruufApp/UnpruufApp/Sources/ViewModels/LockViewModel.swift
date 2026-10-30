@@ -6,6 +6,8 @@ import Foundation
 @MainActor
 final class LockViewModel: ObservableObject {
     @Published var errorMessage: String?
+    /// Seconds the PIN pad is locked for after too many wrong tries; 0 when it is free.
+    @Published private(set) var lockSeconds = 0
 
     private let env: AppEnvironment
     private var pinManager: PinManager { env.pinManager }
@@ -20,7 +22,7 @@ final class LockViewModel: ObservableObject {
 
     /// First-time setup: normal PIN + a separate panic PIN.
     func setupPins(pin: String, panicPin: String) {
-        guard pin.count >= 4 else { errorMessage = "PIN must be at least 4 digits."; return }
+        guard pin.count >= 4, panicPin.count >= 4 else { errorMessage = "PIN must be at least 4 digits."; return }
         guard pin != panicPin else { errorMessage = "Panic PIN must differ from the PIN."; return }
         pinManager.setPins(pin: pin, panicPin: panicPin)
         appLockManager.unlock()
@@ -40,6 +42,23 @@ final class LockViewModel: ObservableObject {
             appLockManager.unlock()
         case .wrong:
             errorMessage = "Wrong PIN."
+            refreshLock()
+        case .locked:
+            refreshLock()
+        }
+    }
+
+    /// Called once a second by the lock screen, so the remaining time counts down.
+    func refreshLock() {
+        let seconds = Int((pinManager.lockRemainingMs() + 999) / 1000)
+        guard seconds != lockSeconds else { return }
+        lockSeconds = seconds
+        if seconds >= 60 {
+            errorMessage = "Too many wrong tries. Try again in \((seconds + 59) / 60) min."
+        } else if seconds > 0 {
+            errorMessage = "Too many wrong tries. Try again in \(seconds) s."
+        } else {
+            errorMessage = nil
         }
     }
 
@@ -51,5 +70,5 @@ final class LockViewModel: ObservableObject {
         appLockManager.unlock()
     }
 
-    func clearError() { errorMessage = nil }
+    func clearError() { if lockSeconds == 0 { errorMessage = nil } }
 }

@@ -9,37 +9,41 @@ import UnpruufCore
 @MainActor
 final class ContactStore: ObservableObject {
     @Published private(set) var contacts: [Contact] = []
+    /// The contact file exists but cannot be read. It is then left alone: nothing is saved over
+    /// it, new changes live in memory only, and `RootView` says so.
+    @Published private(set) var isUnreadable = false
 
     private let keychain: KeychainStore
     private let fileURL: URL
+    private static let fileKeyName = "contacts_file_key"
 
-    init(keychain: KeychainStore) {
+    init(keychain: KeychainStore, fileURL: URL? = nil) {
         self.keychain = keychain
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        self.fileURL = dir.appendingPathComponent("contacts.enc")
+        self.fileURL = fileURL ?? dir.appendingPathComponent("contacts.enc")
         load()
     }
 
-    private var fileKey: Data {
-        if let existing = keychain.getData("contacts_file_key") { return existing }
-        var key = Data(count: 32)
-        _ = key.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
-        keychain.setData("contacts_file_key", key)
-        return key
-    }
-
     private func load() {
-        guard let encrypted = try? Data(contentsOf: fileURL) else { return }
-        guard let decrypted = try? OuterEnvelope.decrypt(data: encrypted, myKey32: fileKey) else { return }
-        guard let decoded = try? JSONDecoder().decode([Contact].self, from: decrypted) else { return }
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        guard let encrypted = try? Data(contentsOf: fileURL),
+              let key = keychain.fileKey(named: Self.fileKeyName, fileURL: fileURL),
+              let decrypted = try? OuterEnvelope.decrypt(data: encrypted, myKey32: key),
+              let decoded = try? JSONDecoder().decode([Contact].self, from: decrypted) else {
+            isUnreadable = true
+            return
+        }
         contacts = decoded
     }
 
     private func persist() {
-        guard let plaintext = try? JSONEncoder().encode(contacts) else { return }
-        guard let encrypted = try? OuterEnvelope.encrypt(plaintext: plaintext, contactKey32: fileKey) else { return }
+        guard !isUnreadable,
+              let key = keychain.fileKey(named: Self.fileKeyName, fileURL: fileURL),
+              let plaintext = try? JSONEncoder().encode(contacts),
+              let encrypted = try? OuterEnvelope.encrypt(plaintext: plaintext, contactKey32: key) else { return }
         try? encrypted.write(to: fileURL, options: .atomic)
+        BackupExclusion.mark(fileURL)
     }
 
     func add(_ contact: Contact) {
@@ -132,5 +136,7 @@ final class ContactStore: ObservableObject {
         for c in contacts { keychain.deleteRatchetState(contactId: c.id) }
         contacts.removeAll()
         try? FileManager.default.removeItem(at: fileURL)
+        keychain.removeData(Self.fileKeyName)
+        isUnreadable = false
     }
 }

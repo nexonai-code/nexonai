@@ -25,16 +25,18 @@ struct ArchivedRelay: Codable, Identifiable, Equatable {
 /// Re-pairing when they return still means scanning a fresh QR: that's what re-establishes the
 /// actual cryptographic identity and Double Ratchet session, which nothing here substitutes for.
 ///
-/// Read-only from the outside except for `archive`/`remove`; storage is plain `UserDefaults`
-/// (Codable-encoded), the same trust level `AppEnvironment`'s own relay strings already use — not
-/// a new, weaker place for this data to live.
+/// Read-only from the outside except for `archive`/`remove`; stored Codable-encoded in the
+/// Keychain, like `AppEnvironment`'s own relay strings.
 @MainActor
 final class ArchivedRelayStore: ObservableObject {
     @Published private(set) var entries: [ArchivedRelay] = []
 
     private let key = "archived_relays"
+    private let keychain: KeychainStore
 
-    init() {
+    init(keychain: KeychainStore) {
+        self.keychain = keychain
+        keychain.migrateFromDefaults(key)
         load()
     }
 
@@ -55,13 +57,19 @@ final class ArchivedRelayStore: ObservableObject {
         persist()
     }
 
+    /// Panic PIN: kept addresses go too.
+    func wipeAll() {
+        entries.removeAll()
+        keychain.removeData(key)
+    }
+
     private func persist() {
         guard let data = try? JSONEncoder().encode(entries) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+        keychain.setData(key, data)
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = keychain.getData(key),
               let decoded = try? JSONDecoder().decode([ArchivedRelay].self, from: data) else { return }
         entries = decoded
     }

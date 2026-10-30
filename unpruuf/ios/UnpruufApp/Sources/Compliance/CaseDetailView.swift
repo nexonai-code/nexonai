@@ -83,7 +83,7 @@ struct CaseDetailView: View {
                             Text(number).font(.system(size: 28, weight: .bold, design: .monospaced))
                             Spacer()
                             Button {
-                                UIPasteboard.general.string = number
+                                SensitiveClipboard.copy(number)
                             } label: {
                                 Image(systemName: "doc.on.doc")
                             }
@@ -188,6 +188,7 @@ struct CaseDetailView: View {
             Divider()
             HStack(alignment: .bottom) {
                 TextField(L.t("Mesaj", "Message"), text: $inputText, axis: .vertical)
+                    .noKeyboardLearning()
                     .lineLimit(1...5)
                     .textFieldStyle(.roundedBorder)
                 Button {

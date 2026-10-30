@@ -47,8 +47,7 @@ struct MyRelayRow: View {
                 .font(.footnote)
             TextField(placeholder, text: $address, axis: .vertical)
                 .font(.system(.footnote, design: .monospaced))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+                .codeInput()
             HStack {
                 Button("Save") { onSave(trimmedAddress, trimmedLabel) }
                     .disabled(trimmedAddress.isEmpty || isUnchanged)
@@ -97,8 +96,7 @@ struct ContactRelayRow: View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("unpruuf-relay:v1:...", text: $address, axis: .vertical)
                 .font(.system(.footnote, design: .monospaced))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+                .codeInput()
             HStack {
                 Button("Save") { onSave(trimmedAddress) }
                     .disabled(trimmedAddress.isEmpty || trimmedAddress == initialAddress)
@@ -132,8 +130,7 @@ struct AddContactRelayRow: View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("Add a backup relay for \(contactName) (optional)", text: $address, axis: .vertical)
                 .font(.system(.footnote, design: .monospaced))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+                .codeInput()
             Button("Save") {
                 let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { return }

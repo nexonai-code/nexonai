@@ -68,6 +68,7 @@ struct ChatView: View {
                     .accessibilityLabel("Take a photo")
                 }
                 TextField("Message…", text: $inputText, axis: .vertical)
+                    .noKeyboardLearning()
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...4)
                 Button {
@@ -150,6 +151,7 @@ struct ChatView: View {
                 }
                 Section("Relay (optional — leave as-is to keep the current one)") {
                     TextField("unpruuf-relay:v1:...", text: $wechselRelayText, axis: .vertical)
+                        .codeInput()
                         .font(.system(.footnote, design: .monospaced))
                 }
             }
@@ -177,16 +179,11 @@ struct ChatView: View {
                 // Images render as the actual picture. Before this, a received photo showed only
                 // "🖼 Photo.jpg" — the bytes arrived and were decrypted correctly, but there was
                 // no way to look at them.
-                if message.type == .image, let uiImage = UIImage(data: message.content) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 220, maxHeight: 280)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .onTapGesture {
-                            activeCover = .photo(messageId: message.id, image: uiImage)
-                        }
-                        .accessibilityLabel(message.isOutgoing ? "Photo you sent" : "Photo you received")
+                if message.type == .image, SafeImage.isDecodable(message.content) {
+                    ChatImage(data: message.content) { uiImage in
+                        activeCover = .photo(messageId: message.id, image: uiImage)
+                    }
+                    .accessibilityLabel(message.isOutgoing ? "Photo you sent" : "Photo you received")
                 } else {
                     Text(viewModel.displayText(for: message))
                         .padding(10)
@@ -205,5 +202,31 @@ struct ChatView: View {
             }
             if !message.isOutgoing { Spacer(minLength: 40) }
         }
+    }
+}
+
+/// Decodes once per row and keeps the picture only as long as the row exists, so a redraw of the
+/// chat never decodes again and a wiped message takes its pixels with it.
+private struct ChatImage: View {
+    let data: Data
+    let onTap: (UIImage) -> Void
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 280)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .onTapGesture { onTap(image) }
+            } else {
+                Color(.secondarySystemBackground)
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .task(id: data) { image = SafeImage.decode(data) }
     }
 }

@@ -18,15 +18,16 @@ final class AppEnvironment: ObservableObject {
     let complianceService: ComplianceService
     let pinManager: PinManager
     let appLockManager = AppLockManager()
-    let relayPoolManager = RelayPoolManager()
-    let archivedRelayStore = ArchivedRelayStore()
+    let privacyShield = PrivacyShield()
+    let relayPoolManager: RelayPoolManager
+    let archivedRelayStore: ArchivedRelayStore
 
     /// The relay I currently advertise to new contacts (and, by default, use when Wechsel-ing an
     /// existing one) — set once in Settings. Contacts can still each end up pointed at a different
     /// relay over time (per-contact `myRelayConnectionString`, see `Contact`), matching
     /// `CROSS_PLATFORM_PLAN.md`'s per-contact node model; this is just the default new pairings start from.
     @Published var defaultRelayConnectionString: String {
-        didSet { UserDefaults.standard.set(defaultRelayConnectionString, forKey: "default_relay_connection_string") }
+        didSet { keychain.setString(Self.defaultRelayKey, defaultRelayConnectionString) }
     }
 
     /// Backup relay(s) advertised alongside `defaultRelayConnectionString` in new pairing QRs —
@@ -35,10 +36,7 @@ final class AppEnvironment: ObservableObject {
     /// own relay pool (`Contact.theirRelayConnectionStrings`) and for the wire format itself.
     @Published var extraRelayConnectionStrings: [String] {
         didSet {
-            UserDefaults.standard.set(
-                RelayConnectionString.buildList(extraRelayConnectionStrings),
-                forKey: "extra_relay_connection_strings"
-            )
+            keychain.setString(Self.extraRelaysKey, RelayConnectionString.buildList(extraRelayConnectionStrings))
         }
     }
 
@@ -104,15 +102,24 @@ final class AppEnvironment: ObservableObject {
         }
     }
 
+    // A relay string carries its token, so these live in the Keychain, not in `UserDefaults`.
+    private static let defaultRelayKey = "default_relay_connection_string"
+    private static let extraRelaysKey = "extra_relay_connection_strings"
+
     init() {
+        BackupExclusion.apply()
         let keychain = KeychainStore()
         self.keychain = keychain
+        keychain.migrateFromDefaults(Self.defaultRelayKey)
+        keychain.migrateFromDefaults(Self.extraRelaysKey)
         self.identity = Identity(store: keychain)
         self.contactStore = ContactStore(keychain: keychain)
         self.pinManager = PinManager(keychain: keychain)
-        self.defaultRelayConnectionString = UserDefaults.standard.string(forKey: "default_relay_connection_string") ?? ""
+        self.relayPoolManager = RelayPoolManager(keychain: keychain)
+        self.archivedRelayStore = ArchivedRelayStore(keychain: keychain)
+        self.defaultRelayConnectionString = keychain.getString(Self.defaultRelayKey) ?? ""
         self.extraRelayConnectionStrings = RelayConnectionString.parseList(
-            UserDefaults.standard.string(forKey: "extra_relay_connection_strings") ?? ""
+            keychain.getString(Self.extraRelaysKey) ?? ""
         )
         self.myRelayLabel = UserDefaults.standard.string(forKey: "my_relay_label") ?? ""
         self.backupRelayLabel = UserDefaults.standard.string(forKey: "backup_relay_label") ?? ""
@@ -158,24 +165,35 @@ final class AppEnvironment: ObservableObject {
     /// device entirely" action, distinct from the panic-PIN's "erase relationships, keep the
     /// device usable" behavior.
     func wipeAll() {
-        complianceService.wipeEverything()
-        contactStore.wipeAll()
-        messageStore.wipeAll()
+        wipeContactsAndMessages()
         keychain.removeAll()
-        UserDefaults.standard.removeObject(forKey: "default_relay_connection_string")
     }
 
-    /// What the panic PIN actually triggers — port of Android's `LockViewModel.wipeEverything()`.
-    /// Deliberately narrower than `wipeAll()` above: wipes contacts (and their Double Ratchet
-    /// session state, via `ContactStore.wipeAll()`) and RAM messages, but leaves this device's own
+    /// What the panic PIN actually triggers — port of Android's `LockViewModel.wipeEverything()`,
+    /// and the one place that defines the panic wipe set. Deliberately narrower than `wipeAll()`
+    /// above: wipes contacts (and their Double Ratchet session state), RAM messages, the send
+    /// queue and half-received chunks, this device's relay setup, the imported relay pool, kept
+    /// relay addresses and the Compliance cases, but leaves this device's own
     /// identity (`userId`/`myMessageKey`/X25519 ratchet keypair) and the PIN/panic-PIN hashes
     /// themselves untouched — same as Android, so a panicked user's device still works and can
     /// still show a QR to re-pair afterward, rather than resetting to a broken, identity-less
     /// state.
     func wipeContactsAndMessages() {
+        relayService.wipeRuntimeState()
         messageStore.wipeAll()
         contactStore.wipeAll()
         // Compliance: the cases, their keys and the remembered organisation QR go too.
         complianceService.wipeEverything()
+        keychain.removeAllRatchetStates()
+        defaultRelayConnectionString = ""
+        extraRelayConnectionStrings = []
+        myRelayLabel = ""
+        backupRelayLabel = ""
+        keychain.removeData(Self.defaultRelayKey)
+        keychain.removeData(Self.extraRelaysKey)
+        UserDefaults.standard.removeObject(forKey: "my_relay_label")
+        UserDefaults.standard.removeObject(forKey: "backup_relay_label")
+        relayPoolManager.wipe()
+        archivedRelayStore.wipeAll()
     }
 }

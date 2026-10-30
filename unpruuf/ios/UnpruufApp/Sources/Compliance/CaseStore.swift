@@ -7,6 +7,8 @@ import UnpruufCore
 @MainActor
 final class CaseStore: ObservableObject {
     @Published private(set) var cases: [ReportCase] = []
+    /// Same rule as `ContactStore.isUnreadable`.
+    @Published private(set) var isUnreadable = false
     /// The scanned reporting-office QR, nil until the first scan. New cases reuse it, so "+ New
     /// case" needs no new scan.
     @Published private(set) var organization: PairingPayload?
@@ -14,6 +16,7 @@ final class CaseStore: ObservableObject {
     private let keychain: KeychainStore
     private let fileURL: URL
     private static let organizationKey = "wb_office_qr"
+    private static let fileKeyName = "cases_file_key"
 
     init(keychain: KeychainStore) {
         self.keychain = keychain
@@ -26,25 +29,25 @@ final class CaseStore: ObservableObject {
         load()
     }
 
-    private var fileKey: Data {
-        if let existing = keychain.getData("cases_file_key") { return existing }
-        var key = Data(count: 32)
-        _ = key.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
-        keychain.setData("cases_file_key", key)
-        return key
-    }
-
     private func load() {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         guard let encrypted = try? Data(contentsOf: fileURL),
-              let decrypted = try? OuterEnvelope.decrypt(data: encrypted, myKey32: fileKey),
-              let decoded = try? JSONDecoder().decode([ReportCase].self, from: decrypted) else { return }
+              let key = keychain.fileKey(named: Self.fileKeyName, fileURL: fileURL),
+              let decrypted = try? OuterEnvelope.decrypt(data: encrypted, myKey32: key),
+              let decoded = try? JSONDecoder().decode([ReportCase].self, from: decrypted) else {
+            isUnreadable = true
+            return
+        }
         cases = decoded
     }
 
     private func persist() {
-        guard let plaintext = try? JSONEncoder().encode(cases),
-              let encrypted = try? OuterEnvelope.encrypt(plaintext: plaintext, contactKey32: fileKey) else { return }
+        guard !isUnreadable,
+              let key = keychain.fileKey(named: Self.fileKeyName, fileURL: fileURL),
+              let plaintext = try? JSONEncoder().encode(cases),
+              let encrypted = try? OuterEnvelope.encrypt(plaintext: plaintext, contactKey32: key) else { return }
         try? encrypted.write(to: fileURL, options: .atomic)
+        BackupExclusion.mark(fileURL)
     }
 
     // MARK: Organisation
@@ -121,5 +124,7 @@ final class CaseStore: ObservableObject {
         cases.removeAll()
         forgetOrganization()
         try? FileManager.default.removeItem(at: fileURL)
+        keychain.removeData(Self.fileKeyName)
+        isUnreadable = false
     }
 }

@@ -4,8 +4,8 @@ import UnpruufCore
 
 /// App-level glue around `UnpruufCore.RelayPoolManifest`'s pure verifier — see that type's doc
 /// comment for the wire format and cross-runtime verification story. This class owns *where* an
-/// imported manifest is remembered (`UserDefaults`, same pattern `AppEnvironment` already uses
-/// for `extraRelayConnectionStrings`). Applying a successfully-verified manifest to
+/// imported manifest is remembered (the relay strings carry their token, so they go in the
+/// Keychain, like `AppEnvironment`'s `extraRelayConnectionStrings`). Applying a successfully-verified manifest to
 /// `env.extraRelayConnectionStrings` is left to the caller (`SettingsView`) rather than done
 /// here, so this type has no dependency on `AppEnvironment` — the same split already used there
 /// for the hand-entered backup-relay field. Import is deliberately unrestricted (no device
@@ -19,10 +19,14 @@ final class RelayPoolManager: ObservableObject {
 
     @Published private(set) var lastImported: RelayPoolManifest.Info?
 
-    init() {
+    private let keychain: KeychainStore
+
+    init(keychain: KeychainStore) {
+        self.keychain = keychain
+        keychain.migrateFromDefaults(Self.relaysKey)
         if let org = UserDefaults.standard.string(forKey: Self.orgKey) {
             let issuedAtMs = UserDefaults.standard.object(forKey: Self.issuedAtKey) as? Int64 ?? -1
-            let relays = RelayConnectionString.parseList(UserDefaults.standard.string(forKey: Self.relaysKey) ?? "")
+            let relays = RelayConnectionString.parseList(keychain.getString(Self.relaysKey) ?? "")
             if issuedAtMs >= 0, !relays.isEmpty {
                 self.lastImported = RelayPoolManifest.Info(org: org, issuedAtMs: issuedAtMs, relays: relays)
             }
@@ -30,7 +34,7 @@ final class RelayPoolManager: ObservableObject {
     }
 
     /// Verifies `code` and, on success, remembers it as the last-imported manifest (both in
-    /// memory and in `UserDefaults`). Returns the parsed info on success — the caller is
+    /// memory and on the device). Returns the parsed info on success — the caller is
     /// responsible for applying `info.relays` wherever it needs to go — or `nil` if `code` isn't
     /// a validly-signed manifest.
     func importManifest(_ code: String) -> RelayPoolManifest.Info? {
@@ -39,9 +43,17 @@ final class RelayPoolManager: ObservableObject {
         }
         UserDefaults.standard.set(info.org, forKey: Self.orgKey)
         UserDefaults.standard.set(info.issuedAtMs, forKey: Self.issuedAtKey)
-        UserDefaults.standard.set(RelayConnectionString.buildList(info.relays), forKey: Self.relaysKey)
+        keychain.setString(Self.relaysKey, RelayConnectionString.buildList(info.relays))
         lastImported = info
         return info
+    }
+
+    /// Panic PIN: the imported manifest goes too.
+    func wipe() {
+        UserDefaults.standard.removeObject(forKey: Self.orgKey)
+        UserDefaults.standard.removeObject(forKey: Self.issuedAtKey)
+        keychain.removeData(Self.relaysKey)
+        lastImported = nil
     }
 
     private static let orgKey = "relay_pool_manifest_org"

@@ -130,6 +130,7 @@ struct PairingView: View {
             Form {
                 Section("Contact's code") {
                     TextEditor(text: $manualPasteText)
+                        .codeInput()
                         .frame(minHeight: 120)
                         .font(.system(.footnote, design: .monospaced))
                 }

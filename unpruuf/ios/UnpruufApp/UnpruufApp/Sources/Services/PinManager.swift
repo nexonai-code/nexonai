@@ -1,7 +1,9 @@
 import CryptoKit
 import Foundation
+import UnpruufCore
 
-enum PinResult { case normal, panic, wrong }
+/// `locked`: too many wrong tries in a row, the PIN was not even compared.
+enum PinResult { case normal, panic, wrong, locked }
 
 /// Local PIN + panic-PIN storage — Swift port of the Android app's `PinManager.kt`. Stores salted
 /// PBKDF2-HMAC-SHA256 hashes only, the PIN itself is never stored anywhere.
@@ -38,19 +40,59 @@ final class PinManager {
         keychain.setData("pin_salt", salt)
         keychain.setData("pin_hash", Self.hash(pin, salt: salt))
         keychain.setData("panic_hash", Self.hash(panicPin, salt: salt))
+        clearFailures()
+    }
+
+    /// Milliseconds until the PIN pad accepts a try again; 0 when it is not locked. Kept in the
+    /// Keychain, so closing or reinstalling the app does not end a pause.
+    func lockRemainingMs() -> Int64 {
+        PinLockout.remainingLockMs(
+            wallUntil: stored("pin_locked_until") ?? 0, wallNow: Self.wallMs,
+            lockedForMs: stored("pin_locked_for") ?? 0, elapsedAtLock: stored("pin_locked_rt") ?? -1,
+            elapsedNow: Self.monotonicMs
+        )
     }
 
     func check(_ input: String) -> PinResult {
+        if lockRemainingMs() > 0 { return .locked }
         guard let salt = keychain.getData("pin_salt") else { return .wrong }
         let candidate = Self.hash(input, salt: salt)
         if let pinHash = keychain.getData("pin_hash"), Self.constantTimeEquals(candidate, pinHash) {
+            clearFailures()
             return .normal
         }
         if let panicHash = keychain.getData("panic_hash"), Self.constantTimeEquals(candidate, panicHash) {
+            clearFailures()
             return .panic
         }
+        recordFailure()
         return .wrong
     }
+
+    private func recordFailure() {
+        let fails = Int(stored("pin_fail_count") ?? 0) + 1
+        keychain.setString("pin_fail_count", String(fails))
+        guard let delay = PinLockout.lockDelayMs(fails: fails) else { return }
+        keychain.setString("pin_locked_until", String(Self.wallMs + delay))
+        // The same pause on the monotonic clock: moving the date forward does not shorten it.
+        keychain.setString("pin_locked_for", String(delay))
+        keychain.setString("pin_locked_rt", String(Self.monotonicMs))
+    }
+
+    private func clearFailures() {
+        for key in ["pin_fail_count", "pin_locked_until", "pin_locked_for", "pin_locked_rt"] {
+            keychain.removeData(key)
+        }
+    }
+
+    private func stored(_ key: String) -> Int64? {
+        keychain.getString(key).flatMap { Int64($0) }
+    }
+
+    private static var wallMs: Int64 { Int64(Date().timeIntervalSince1970 * 1000) }
+
+    /// Keeps counting while the phone sleeps, starts again at a restart.
+    private static var monotonicMs: Int64 { Int64(clock_gettime_nsec_np(CLOCK_MONOTONIC) / 1_000_000) }
 
     private static func hash(_ pin: String, salt: Data) -> Data {
         pbkdf2SHA256(password: Data(pin.utf8), salt: salt, iterations: iterations)

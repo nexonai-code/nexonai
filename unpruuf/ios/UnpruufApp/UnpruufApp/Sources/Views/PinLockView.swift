@@ -8,6 +8,7 @@ import SwiftUI
 struct PinLockView: View {
     @ObservedObject var viewModel: LockViewModel
     @State private var pin = ""
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack {
@@ -74,7 +75,11 @@ struct PinLockView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
         .onAppear {
+            viewModel.refreshLock()
             if biometricAvailable { attemptBiometricUnlock() }
+        }
+        .onReceive(ticker) { _ in
+            viewModel.refreshLock()
         }
     }
 
@@ -90,7 +95,8 @@ struct PinLockView: View {
     private func padKey(_ key: String) -> some View {
         switch key {
         case "\u{2713}":
-            padButton(label: key, emphasized: pin.count >= 4, enabled: pin.count >= 4) {
+            let canSubmit = pin.count >= 4 && viewModel.lockSeconds == 0
+            padButton(label: key, emphasized: canSubmit, enabled: canSubmit) {
                 viewModel.submitPin(pin)
                 pin = ""
             }

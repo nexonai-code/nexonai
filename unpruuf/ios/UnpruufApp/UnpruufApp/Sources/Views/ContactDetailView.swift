@@ -34,6 +34,7 @@ struct ContactDetailView: View {
 
             Section {
                 TextField("Code they read you", text: $enteredCode)
+                    .noKeyboardLearning()
                     .keyboardType(.numberPad)
                     .onChange(of: enteredCode) { _ in viewModel.clearVerifyResult() }
                 Button("Save") {

@@ -51,6 +51,8 @@ final class ComplianceService: ObservableObject {
         var isComplete: Bool { received == pieces.count }
     }
     private var chunkReassembly: [String: ChunkReassembly] = [:]
+    /// Bumped by `wipeEverything`, so a delivery pass still running cannot put the queue back.
+    private var wipeCount = 0
 
     init(caseStore: CaseStore, messageStore: InMemoryMessageStore, keychain: KeychainStore, torController: TorController) {
         self.caseStore = caseStore
@@ -117,6 +119,7 @@ final class ComplianceService: ObservableObject {
     }
 
     func wipeEverything() {
+        wipeCount += 1
         deliveryQueue.removeAll()
         chunkReassembly.removeAll()
         identities.removeAll()
@@ -230,7 +233,9 @@ final class ComplianceService: ObservableObject {
         var anyDelivered = false
         var failedCases: Set<String> = []
         var remaining: [PendingDelivery] = []
-        for item in deliveryQueue {
+        let pass = deliveryQueue
+        let wipesAtStart = wipeCount
+        for item in pass {
             if failedCases.contains(item.caseId) { remaining.append(item); continue }
             if await push(tag: item.tag, padded: item.padded, relays: item.relays) {
                 anyDelivered = true
@@ -239,8 +244,10 @@ final class ComplianceService: ObservableObject {
                 failedCases.insert(item.caseId)
                 remaining.append(item)
             }
+            if wipeCount != wipesAtStart { return false }
         }
-        deliveryQueue = remaining
+        // Anything enqueued while this pass was waiting on the network stays queued.
+        deliveryQueue = remaining + deliveryQueue.dropFirst(pass.count)
         return anyDelivered
     }
 

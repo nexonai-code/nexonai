@@ -5,6 +5,22 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: security alignment (list of 21.10. section 4, handover sections 5 and 6)
+
+**What was done.** PIN lock-out as on Android (from the 5th wrong try 30 s, doubling, at most 1 h), kept in the Keychain, measured on wall and monotonic clock, remaining time shown; panic PIN length checked in `LockViewModel`. One panic wipe set in `AppEnvironment.wipeContactsAndMessages`: contacts, ratchet states including orphans, file keys, messages, send queue, half-received chunks, relay setup, imported relay pool, kept relays, Compliance cases. `ContactStore` and `CaseStore` no longer create a new file key while an old file exists; an unreadable file stays untouched and `RootView` says so. Relay strings (they carry their token) moved from `UserDefaults` to the Keychain, with migration. `Library` and `Documents` out of backups. `SafeImage` (reads the size first, 50 million pixels, 20 000 px edge, decodes to 2048), `SensitiveClipboard` (local only, 60 s), keyboard modifiers on message and code fields, `PrivacyShield` (opaque window while inactive or while the screen is captured), screenshot hint. `RatchetFrame.maxTotalChunks` 2048. `OnionAddress` (v3 form, version byte, checksum), for the Node-Mesh code that comes with the work packages; relay mode is unchanged. `ITSAppUsesNonExemptEncryption` = true in both plists.
+
+**Which bugs appeared.** A wipe during a delivery pass was undone when the pass wrote the queue back, in `RelayService` and `ComplianceService`; the same line dropped anything enqueued during the pass. A timer created in `PinLockView.body` went with an unresponsive lock screen in the Simulator; the cause was not isolated.
+
+**How it was fixed.** Delivery passes stop after a wipe and keep what was enqueued meanwhile. The timer is created once and the lock state only changes when the seconds change; the screen no longer stopped responding.
+
+**Checked.** `swift test` 106 of 106. New target `UnpruufAppTests` (hosted, local project) 9 of 9 on the Simulator: panic wipe set, file key rule, backup flags, migration, lock-out, image limits. By hand in the Simulator: PIN setup, lock after backgrounding, countdown after the 5th wrong try, right PIN after the pause.
+
+**Not checked.** Real device, real Tor traffic. Shield in the app switcher and during screen recording, screenshot hint, clipboard expiry after 60 s, panic PIN through the screens, an actual iCloud backup, Compliance as its own target.
+
+**Known limits.** Not ported: `lock_err_store_lost` (iOS has no sealed hashes). Third-party keyboard block not built, team decision. `secure_delete` does not apply (no database on iOS). `isCaptured` covers recording and mirroring only; screenshots cannot be blocked.
+
+---
+
 ## 2026‑10‑30 · iOS: branch brought up to android, app builds and starts on Xcode 27.1, AppLicense with the new public key
 
 **What was done.** `origin/android` merged into `ios` (CHANGELOG conflict only, both sides kept). Fresh local Xcode project (not tracked). `AppLicense` in `UnpruufCore/NodeMesh`: verify and state logic ported from `LicenseManager.kt`, production public key `t7ZQMSMx3iMbLZ9ke7c-2hYSkgRvyw43HZzaIyvyVC4`, tests against `ios/vectors/ios-vectors-2026-10-27.json` (throw-away key). There was no licence code on iOS before, so nothing was replaced.

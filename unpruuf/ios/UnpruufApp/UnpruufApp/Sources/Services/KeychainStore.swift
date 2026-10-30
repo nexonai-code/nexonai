@@ -73,6 +73,73 @@ final class KeychainStore: KeyValueStore {
     }
 }
 
+// MARK: - Local storage helpers
+
+extension KeychainStore {
+    /// Key of an encrypted file. Never creates a new one while the file exists: the next save would
+    /// overwrite the old file with one nobody can read the old contents from. `nil` means the file
+    /// is there and its key is not.
+    func fileKey(named name: String, fileURL: URL) -> Data? {
+        if let existing = getData(name) { return existing }
+        guard !FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+        var key = Data(count: 32)
+        guard key.withUnsafeMutableBytes({ SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }) == errSecSuccess else {
+            return nil
+        }
+        setData(name, key)
+        return getData(name)
+    }
+
+    /// Moves a value an older install left in `UserDefaults` (which ends up in backups) here.
+    func migrateFromDefaults(_ key: String) {
+        let defaults = UserDefaults.standard
+        if getData(key) == nil {
+            if let text = defaults.string(forKey: key) {
+                setString(key, text)
+            } else if let data = defaults.data(forKey: key) {
+                setData(key, data)
+            }
+        }
+        if getData(key) != nil { defaults.removeObject(forKey: key) }
+    }
+
+    /// Ratchet states left behind by contacts that are no longer in the contact file, too.
+    func removeAllRatchetStates() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let items = result as? [[String: Any]] else { return }
+        for account in items.compactMap({ $0[kSecAttrAccount as String] as? String })
+        where account.hasPrefix("ratchet_state_") {
+            removeData(account)
+        }
+    }
+}
+
+/// Keeps the app's files out of iCloud and iTunes backups. The flag on `Library` and `Documents`
+/// covers what is inside; a file replaced by an atomic write gets it again with `mark`.
+enum BackupExclusion {
+    static func apply() {
+        let manager = FileManager.default
+        for directory in [FileManager.SearchPathDirectory.libraryDirectory, .documentDirectory] {
+            mark(manager.urls(for: directory, in: .userDomainMask)[0])
+        }
+        mark(manager.urls(for: .libraryDirectory, in: .userDomainMask)[0].appendingPathComponent("Preferences"))
+    }
+
+    static func mark(_ url: URL) {
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var target = url
+        try? target.setResourceValues(values)
+    }
+}
+
 // MARK: - Per-contact ratchet session persistence
 
 /// Codable mirror of `RatchetStateEntity`/`DoubleRatchet.RatchetState`, for Keychain persistence.

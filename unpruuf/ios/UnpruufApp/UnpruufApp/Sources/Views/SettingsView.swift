@@ -62,8 +62,7 @@ struct SettingsView: View {
                     }
                     TextField("unpruuf-relaypool:v1:...", text: $relayPoolText, axis: .vertical)
                         .font(.system(.footnote, design: .monospaced))
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
+                        .codeInput()
                     Button("Import") {
                         if let info = env.relayPoolManager.importManifest(
                             relayPoolText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -291,7 +290,7 @@ struct SettingsView: View {
                         .textSelection(.enabled)
                     HStack {
                         Button {
-                            UIPasteboard.general.string = entry.connectionString
+                            SensitiveClipboard.copy(entry.connectionString)
                         } label: {
                             Label("Copy", systemImage: "doc.on.doc")
                         }
