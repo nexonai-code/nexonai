@@ -18,3 +18,4 @@ date: '2026-10-30'
 - Rules extract for writers: unpruuf/vertrieb/RULES_FOR_MATERIAL.md.
 - Contracts, DPA and employee information are templates; review by a lawyer before signing.
 - Durations in the sales process and demo are estimates.
+- Short deck (6 slides, EN/RO, PPTX+PDF): unpruuf/vertrieb/praesentation/build_deck.py; no prices on slides; example case codes in the illustration are made up.
