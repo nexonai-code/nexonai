@@ -11,7 +11,9 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 **Checked.** All three targets build for the Simulator on Xcode 27.2.
 
-**Not checked.** The screens never ran: during this work the App Store updated Xcode from 27.1 to 27.2, after which CoreSimulator lists no runtime and no simulator boots. So neither `UnpruufBusiness` nor `UnpruufCompliance` has started once, and `UnpruufAppTests` was not repeated after this change. Romanian texts not reviewed by a native speaker. No String Catalog yet (B6), texts use `L.t` like Compliance. App icon is the empty catalog.
+**Checked afterwards, on iOS 27.2.** The App Store updated Xcode to 27.2 during this work, and the simulators stayed unavailable until the iOS 27.2 runtime was downloaded. By hand in the Simulator: PIN setup, empty home screen, owner code added by typing into the paste field (a damaged code is refused with a clear message), list shows up in "Standard", detail screen, delete with confirmation, Tor line turns to connected. `UnpruufAppTests` 10 of 10. `UnpruufCompliance` starts to its PIN setup.
+
+**Not checked.** List file import through the file picker and the paste field, QR scan (no camera in the Simulator), target list choice, the locked-server card, sibling import over real Tor, a real device. Romanian texts not reviewed by a native speaker. No String Catalog yet (B6), texts use `L.t` like Compliance. App icon is the empty catalog.
 
 **Known limits.** Bundle id and app name `unpruuf Business` are provisional, Gabriel has not confirmed them. A contact count on deleting a list comes with B3.
 

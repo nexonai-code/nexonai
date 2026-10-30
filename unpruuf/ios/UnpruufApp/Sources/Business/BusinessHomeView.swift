@@ -84,8 +84,8 @@ struct BusinessHomeView: View {
     }
 
     private func summary(_ list: NodeList) -> String {
-        L.t("\(list.addresses.count) noduri, \(model.serverCount(list)) servere",
-            "\(list.addresses.count) nodes, \(model.serverCount(list)) servers")
+        L.t("Noduri: \(list.addresses.count) · Servere: \(model.serverCount(list))",
+            "Nodes: \(list.addresses.count) · Servers: \(model.serverCount(list))")
     }
 }
 

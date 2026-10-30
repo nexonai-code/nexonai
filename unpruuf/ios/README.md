@@ -74,6 +74,9 @@ local project must have `UnpruufApp`, `UnpruufBusiness` and `UnpruufCompliance` 
 Building a second target into the same DerivedData fails with `can't link a dylib with itself` (the
 `Tor` pod and its `tor.xcframework` differ only in case): delete `Build/` in DerivedData first.
 
+A build with `CODE_SIGNING_ALLOWED=NO` runs but cannot write to the Keychain, so the PIN setup seems
+to do nothing. Keep the default ad-hoc signing for the Simulator.
+
 ### Building the Compliance app in Xcode (two minutes, no command line)
 
 The consumer target stays as it is. Add a second target from it:
