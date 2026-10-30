@@ -5,6 +5,18 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑30 · iOS: node client (package B1)
+
+**What was done.** New in `UnpruufCore/NodeMesh`: `NodeMeshClient` (deposit, guest deposit, fetchMany, pool, lock status, unlock, health, feed), `NodeHTTPResponse` (reply limits), `Socks5` (user name per RFC 1929, fails closed), `TorNodeTransport` (only Tor's SOCKS port, no fallback, nothing sent while Tor is not ready). Every address is checked again before connecting. Deposit returns a result per status (402, 423, 429 with Retry-After, 507), fetchMany reports `more` and 429 with Retry-After. The app does not use it yet. In `UnpruufCore` rather than `UnpruufApp/Sources/Business` as the spec proposes, so `swift test` covers it; the loopback transport exists in the test target only.
+
+**Checked.** `swift test` 158 tests, 155 green. The other 3 are skipped by default and run against the real `node-mesh-server` (`NODE_MESH_TOR=0 EPHEMERAL=1`, Node 22): 3 of 3 green (deposit, fetch with cursor, long-poll, wrong secret, oversize, bad tag). SOCKS5 against a scripted proxy. Simulator build of the app.
+
+**Not checked.** The SOCKS path against a real Tor: `TorNodeTransport` has not carried a request yet. Stream isolation with Tor. 402, 423, 429 and 507 from a real server (scripted replies only). Guest deposit against a real server. `/fetchMany` truncation at 256 packets from a real server.
+
+**Known limits.** Retry-After is capped at 1 hour against a hostile node. `node-mesh-server/package-lock.json` is out of step with `package.json` (`npm ci` fails on missing `@esbuild` entries), and `better-sqlite3` does not install on Node 26.
+
+---
+
 ## 2026‑10‑30 · iOS: packet interop with the Android sources (package A4 finished)
 
 **What was done.** New `ios/interop-jvm`: compiles the Android files `DoubleRatchet.kt`, `RatchetHeader.kt`, `RatchetFrame.kt` and `NetworkObfuscation.kt` unchanged, without an Android SDK. With fixed per-contact keys it writes `android-packets.txt`, and it checks `swift-packets.txt`. Both fixtures are committed.
