@@ -51,5 +51,5 @@ struct QRScannerView: UIViewControllerRepresentable {
 /// Availability guard — `DataScannerViewController` requires a physical device with a camera and
 /// isn't available on the Simulator; callers should check this before presenting `QRScannerView`.
 enum QRScanner {
-    static var isSupported: Bool { DataScannerViewController.isSupported && DataScannerViewController.isAvailable }
+    @MainActor static var isSupported: Bool { DataScannerViewController.isSupported && DataScannerViewController.isAvailable }
 }

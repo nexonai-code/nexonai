@@ -251,7 +251,13 @@ final class TorController: ObservableObject {
         // the socket be accessible only by the current user (0700), and iOS's shared per-app
         // tmp root doesn't satisfy that. Fixed by creating our own single-character
         // subdirectory with explicit 0700 permissions just for this socket.
+        #if targetEnvironment(simulator)
+        // A Simulator container path alone is over the 104 bytes, and Network.framework aborts
+        // the process on an endpoint that long. The host's /tmp is reachable from the Simulator.
+        let socketDir = URL(fileURLWithPath: "/tmp/unpruuf-t", isDirectory: true)
+        #else
         let socketDir = FileManager.default.temporaryDirectory.appendingPathComponent("t", isDirectory: true)
+        #endif
         try? FileManager.default.createDirectory(at: socketDir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: socketDir.path)
         let socketURL = socketDir.appendingPathComponent("c")

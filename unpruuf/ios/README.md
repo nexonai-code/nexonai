@@ -193,6 +193,11 @@ project file that silently won't open. Instead:
    `UnpruufApp/Info.plist` (relative to the target folder). Do **not** let
    Xcode generate a fresh one and merge into it — use the tracked file as-is,
    or every fresh setup silently loses the camera/Face ID permission strings.
+   **Xcode 27.1, 2026‑10‑30**: the tracked file has no `CFBundleIdentifier` or
+   `CFBundleExecutable`, so with "Generate Info.plist File" = No a project built
+   from scratch gives an app that will not install. Set it to **Yes** and keep
+   "Info.plist File" pointing at the tracked file: Xcode then adds the standard
+   keys and keeps ours.
    **Real gotcha, confirmed on real hardware**: after pointing "Info.plist
    File" at the tracked file, also check Build Phases → Copy Bundle
    Resources — if `Info.plist` is listed there too, remove it (Xcode
