@@ -392,6 +392,37 @@ limits. These are known, real gaps — not hidden ones.
    established cryptographic reasoning — it has not been reviewed by an
    external, independent security firm. Treat this as an engineering
    self-assessment, not a certification.
+10. **The bridge fallbacks (obfs4, Snowflake) are contact with third parties, and
+    Snowflake can show your network address to them.** On the direct path the
+    app talks only to the Tor network. If Tor is blocked, the app may switch
+    to a bridge (`ConnectionPaths`, `PluggableTransportManager`, built on the
+    third-party Go library IPtProxy). The Snowflake path contacts a broker
+    through a CDN front and uses STUN servers; because Snowflake is built on
+    WebRTC, the STUN servers and the helper that is picked can see the phone's
+    network address while the connection is set up. That is how Snowflake works
+    and it is a way around blocking, not an anonymity gain. The app uses the
+    path only when the direct way fails, and remembers it only for the next start
+    (see `NODE_MESH_SPEC.md`, "Automatic connection"). We have not tested what
+    the library reveals in detail, and its code is not ours: crashes or leaks in
+    that Go library can only be fixed by updating it. The app sets no cloud
+    credentials of its own for this (checked 2026-10-31: the library file contains
+    the names of cloud-service settings, as every build of that library does, but
+    no key, and our code sets none; the optional queue-based broker path is not
+    used).
+11. **The built-in Tor client ages, and the network turns old versions away.** On
+    2026-10-28 debug reports showed that Tor 0.4.8.16 (inside the app until then)
+    no longer works as a client: the network requires protocols (Desc=3,
+    Microdesc=3) that this version does not have, and the Tor library ended the
+    whole app process at start. Fixed by moving to Tor 0.4.9.8
+    (`tor-android`). Consequence we state openly: an installed app version
+    stops connecting at some point if its Tor part is not updated, so releases
+    must keep the library current. The newest library versions (0.4.9.9 and later)
+    cannot yet be built with our current toolchain; moving the toolchain is
+    planned work. The Windows and Linux server programs use the Tor Expert Bundle 15.0.19
+    (pinned by hash). Checked on 2026-10-31 against the Linux archive (hash
+    matches the pin): it contains Tor 0.4.9.11 with Desc=1-4 and Microdesc=1-3, so
+    those programs are not affected by this finding (Windows archive not
+    unpacked here).
 
 ---
 
