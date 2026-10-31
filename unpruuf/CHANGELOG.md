@@ -5,6 +5,19 @@ and **how it was fixed**. Full current state: `STATUS.md`.
 
 ---
 
+## 2026‑10‑31 · Delivery v35: new Tor in all Android apps (the apps ended themselves at start)
+
+- **Bug:** Pro, Client and the Android node ended their own process within about a second of starting Tor. Debug reports of 28.10. (Tor log, exit info, system log) showed the cause: the built-in Tor 0.4.8.16 no longer works as a client, because the Tor network now requires the protocols Desc=3 and Microdesc=3. The Tor library ended the whole app.
+- **Fix:** `tor-android` 0.4.8.16 to 0.4.9.8 (app and `relay-android`); checked in the package: Desc=1-4, Microdesc=1-3. Kotlin stdlib of the library excluded (project builds with Kotlin 1.9), AAR metadata check off (the library declares compileSdk 37). 0.4.9.9 and later are built with Java 24 and need a newer Android Gradle plugin (planned, not done).
+- **Diagnosis kept in debug builds only:** trail of start events, Tor log, exit info, report file in Downloads (`DebugCrashReport`). No effect in release builds.
+- **PIN setup screen:** two steps (PIN, then panic PIN) with Back; did not cure the crash but stays.
+- **Windows installer 2026.10.31:** presets (everything, Business test, Compliance/Press test, own choice) and a tag per program (REQUIRED, RECOMMENDED, OPTIONAL, NEXONAI ONLY); built and silently installed on a Windows runner.
+- **Docs:** `SECURITY_CLAIMS.md` points 10 (bridges and Snowflake are third-party contact, network address visible) and 11 (the built-in Tor client ages); concept paper "Officer app for several people" (EN/RO); iOS decision 9.1 (Business as its own app).
+- **APKs:** six app variants and the Android node, debug-signed with the same debug key as v32 to v34 (over-install works), arm64 only.
+- **Not tested:** on a phone, only built. Whether Tor now starts on the real phone is Gabriel's test.
+
+---
+
 ## 2026‑10‑28 · Audit RFQ v2: contact address and quote comparison table
 
 - Contact address in RFQ (EN/RO) and the DOCISIA/VĂZDUH reply changed to gabriel@nexonai.ro.

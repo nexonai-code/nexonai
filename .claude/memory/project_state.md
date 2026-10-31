@@ -1,12 +1,13 @@
 ---
 name: Projektstand
 type: project
-updated: 2026-10-25
+updated: 2026-10-31
 ---
 - Produkte auf einem System: unpruuf Business (Hauptprodukt), unpruuf Compliance (Meldekanal, früher safeline), unpruuf Press (Pilot), kostenlose Client-App. Technische Namen mit "safeline" bleiben absichtlich.
 - Kern: zwei Teile, App und eigener Server des Kunden (NexonAI betreibt keine Server). Keine Identitäten, Tor von Anfang an. Nicht auditiert.
 - Übergabe: `unpruuf/handover/UEBERGABE_2026-10-25.md`. Stand `android` = `main`.
 - Branch `android` = Hauptlinie, `main` wird nachgezogen. Tor Client Edition auf `tor-client-edition`, nur auf Wunsch pushen.
+- 31.10.: v35 geliefert (Projekt + 7 APKs) mit **Tor 0.4.9.8**: die Apps beendeten sich beim Start, weil das Tor-Netz Tor 0.4.8.16 abweist (Desc=3/Microdesc=3). Auf dem Telefon noch nicht getestet. Windows-Installer 2026.10.31 mit Vorgaben und Stichworten. Offen: Telefontest Pro/Node/Client, neueres Tor (0.4.9.9+) braucht neueres Android-Gradle-Plugin. iOS 9.1 entschieden: Business eigene App.
 - 27.10.: iOS-Übergabe für Norbert geliefert (`unpruuf_iOS_Norbert_2026-10-27_v1.zip`, Dokument `ios/IOS_UEBERGABE_FUER_NORBERT_2026-10-27.md`, Vektoren `ios/vectors/`). Norbert braucht den neuen öffentlichen Lizenzschlüssel; privater Schlüssel nie weitergeben.
 - 27.10.: v34 geliefert (Projekt + 7 APKs) und neuer Windows-Installer, beide mit dem NEUEN Lizenzschlüssel; Testlizenzen als Datei. Alte Lizenzen ungültig.
 - 27.10.: Windows-Installer gebaut (Setup.exe mit Node.js, portables ZIP) über GitHub-Workflow `windows-installer.yml` auf Windows-Runner; Quelle `unpruuf/windows-installer/`. Nicht signiert. Neu bauen: Actions > Windows installer > Run workflow (oder per Tool `run_workflow`).
