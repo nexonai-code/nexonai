@@ -31,17 +31,24 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
 
 [Types]
-Name: "full"; Description: "Everything"
-Name: "custom"; Description: "Choose parts"; Flags: iscustom
+Name: "full"; Description: "Everything (test phase, all programs)"
+Name: "business"; Description: "Business test: node server and Control"
+Name: "compliance"; Description: "Compliance / Press test: dashboard, relay and web reporter"
+Name: "custom"; Description: "Choose parts myself"; Flags: iscustom
 
+; The tag in front of each line says how much you need it:
+;   REQUIRED     nothing of that product works without it
+;   RECOMMENDED  works without it, but you want it
+;   OPTIONAL     only for special cases
+;   NEXONAI ONLY for us, not for customers (leave it out on a customer PC)
 [Components]
-Name: "runtime"; Description: "Node.js runtime (needed by all parts)"; Types: full custom; Flags: fixed
-Name: "nodeserver"; Description: "Node server (your own server with 250 node addresses, Temp Node)"; Types: full
-Name: "officer"; Description: "Compliance dashboard and Press newsroom (officer app)"; Types: full
-Name: "control"; Description: "unpruuf Control (licence stock, install servers, node lists)"; Types: full
-Name: "licensetool"; Description: "Licence tool (issue app and server codes)"; Types: full
-Name: "webreporter"; Description: "Web reporter (browser page for reporters)"; Types: full
-Name: "relay"; Description: "Optional relay (store-and-forward, off by default in the app)"; Types: full
+Name: "runtime"; Description: "[REQUIRED for everything] Node.js runtime, included"; Types: full business compliance custom; Flags: fixed
+Name: "nodeserver"; Description: "[REQUIRED for Business] Node server and Temp Node (needs a server licence; Temp Node does not)"; Types: full business
+Name: "control"; Description: "[RECOMMENDED for Business] Control: licence stock, node lists, install servers"; Types: full business
+Name: "officer"; Description: "[REQUIRED for Compliance and Press] Officer app: Compliance dashboard and Press newsroom"; Types: full compliance
+Name: "relay"; Description: "[REQUIRED for Compliance and Press] Relay: the mailbox they work with (or use the Android relay app instead)"; Types: full compliance
+Name: "webreporter"; Description: "[OPTIONAL] Web reporter: browser page for reporters who cannot install the app"; Types: full compliance
+Name: "licensetool"; Description: "[NEXONAI ONLY] Licence tool: issue app and server codes (needs your private-key.json)"; Types: full
 
 [Files]
 Source: "{#StageDir}\runtime\*"; DestDir: "{app}\runtime"; Flags: recursesubdirs ignoreversion; Components: runtime

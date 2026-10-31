@@ -1,6 +1,6 @@
 # unpruuf Windows installer
 
-`unpruuf-Setup-<yyyy.MM.dd>.exe` installs every unpruuf program that runs on Windows, with Node.js included (no separate install): node server, Compliance dashboard and Press newsroom (officer app), Control, licence tool, web reporter, optional relay. Per-user install (`%LOCALAPPDATA%\unpruuf`), no administrator rights, Start menu group "unpruuf". Also built as a portable ZIP.
+`unpruuf-Setup-<yyyy.MM.dd>.exe` installs every unpruuf program that runs on Windows, with Node.js included (no separate install): node server, Compliance dashboard and Press newsroom (officer app), Control, licence tool, web reporter, optional relay. In the wizard you pick what to install: four presets (everything, Business test, Compliance/Press test, own choice), and every program carries a tag REQUIRED / RECOMMENDED / OPTIONAL / NEXONAI ONLY. Per-user install (`%LOCALAPPDATA%\unpruuf`), no administrator rights, Start menu group "unpruuf". Also built as a portable ZIP.
 
 ## Get the files
 GitHub > Actions > "Windows installer" > Run workflow (branch `android`). The result is the artifact `unpruuf-windows` on the run page: Setup exe, portable ZIP, `SHA256.txt`. The workflow runs on a real Windows runner and checks before it hands anything over: SQLite loads in node server, officer app and relay; Control, web reporter and licence GUI start and answer; no key or customer file is inside; the installer installs silently, contains every program, loads SQLite from the installed copy and uninstalls.

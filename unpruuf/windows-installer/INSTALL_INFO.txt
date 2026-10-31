@@ -17,6 +17,16 @@ optional relay. Node.js is included, nothing else has to be installed.
 * The node server needs a server licence from NexonAI. Paste it with "unpruuf Paste server licence"
   (or on the setup page). Without a licence you can only try the "unpruuf Temp Node".
 
+WHAT DO I NEED? (shown in the installer next to every program)
+  REQUIRED      nothing of that product works without it
+  RECOMMENDED   works without it, but you want it
+  OPTIONAL      only for special cases
+  NEXONAI ONLY  for us, not for customers
+  Business test:             node server (REQUIRED), Control (RECOMMENDED)
+  Compliance / Press test:   officer app (REQUIRED), relay (REQUIRED, or the Android relay app),
+                             web reporter (OPTIONAL)
+  Licence tool:              NEXONAI ONLY, issues the codes the apps and servers ask for
+
 ROMANA
 Aceasta instalează programele unpruuf care rulează pe un PC sau server Windows: propriul server de
 noduri, tabloul de bord Compliance și redacția Press, unpruuf Control, instrumentul de licențe,
@@ -32,3 +42,13 @@ web-reporter și releul opțional. Node.js este inclus, nu trebuie instalat nimi
 * Pornește programele din meniul Start, grupul „unpruuf".
 * Serverul de noduri are nevoie de o licență de server de la NexonAI. Lipește-o cu „unpruuf Paste server
   licence" (sau pe pagina de configurare). Fără licență poți încerca doar „unpruuf Temp Node".
+
+DE CE AM NEVOIE? (apare în instalator lângă fiecare program)
+  NECESAR         fără el nu funcționează nimic din produs
+  RECOMANDAT      funcționează și fără, dar îl vrei
+  OPȚIONAL        doar pentru cazuri speciale
+  DOAR NEXONAI    pentru noi, nu pentru clienți
+  Test Business:             server de noduri (NECESAR), Control (RECOMANDAT)
+  Test Compliance / Press:   aplicația de ofițer (NECESAR), releu (NECESAR, sau aplicația Android de releu),
+                             web-reporter (OPȚIONAL)
+  Instrument de licențe:     DOAR NEXONAI, emite codurile cerute de aplicații și servere
